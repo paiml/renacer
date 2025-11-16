@@ -102,12 +102,26 @@ See `roadmap.yaml` for detailed implementation plan:
 
 ## [Unreleased]
 
+### Added (Post-v0.1.0)
+
+#### Sprint 9-10: Advanced Filtering
+- **Syscall Filtering**: `-e trace=EXPR` flag for filtering syscalls
+  - Individual syscalls: `-e trace=open,read,write`
+  - Syscall classes: `-e trace=file`, `-e trace=network`, `-e trace=process`, `-e trace=memory`
+  - Mixed mode: `-e trace=file,socket,brk`
+- **Filter Module**: Robust parsing and evaluation of filter expressions
+- **Zero Overhead**: Filtering at display time, no performance impact on unfiltered tracing
+- **6 Integration Tests**: Comprehensive coverage of filtering functionality
+
 ### Planned for 0.2.0
 - ✅ DWARF .debug_line parsing using addr2line crate (COMPLETED in v0.1.0)
 - ✅ `--source` flag infrastructure (COMPLETED in v0.1.0)
+- ✅ Basic syscall filtering (COMPLETED post-v0.1.0)
 - Stack unwinding to attribute syscalls to user code frames
 - Source-aware output showing file:line for each syscall (requires stack unwinding)
 - Function name attribution from DWARF .debug_info (requires stack unwinding)
+- `-c` statistics mode (syscall counts and timing)
+- `-f` follow forks
 
 ---
 
