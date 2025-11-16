@@ -119,16 +119,49 @@ fn handle_syscall_entry(child: Pid) -> Result<()> {
     let arg2 = regs.rsi;
     let arg3 = regs.rdx;
 
-    // Sprint 3-4: Trace all syscalls with basic argument display
-    if name == "unknown" {
-        print!("syscall_{}({:#x}, {:#x}, {:#x}) = ", syscall_num, arg1, arg2, arg3);
-    } else {
-        print!("{}({:#x}, {:#x}, {:#x}) = ", name, arg1, arg2, arg3);
-    }
+    // Sprint 3-4: Decode arguments based on syscall type
+    let formatted = match name {
+        "openat" => {
+            // openat(dfd, filename, flags, mode)
+            let filename = read_string(child, arg2 as usize).unwrap_or_else(|_| format!("{:#x}", arg2));
+            format!("{}({:#x}, \"{}\", {:#x}) = ", name, arg1, filename, arg3)
+        }
+        "unknown" => {
+            format!("syscall_{}({:#x}, {:#x}, {:#x}) = ", syscall_num, arg1, arg2, arg3)
+        }
+        _ => {
+            format!("{}({:#x}, {:#x}, {:#x}) = ", name, arg1, arg2, arg3)
+        }
+    };
 
+    print!("{}", formatted);
     std::io::Write::flush(&mut std::io::stdout()).ok();
 
     Ok(())
+}
+
+/// Read a null-terminated string from the tracee's memory
+fn read_string(child: Pid, addr: usize) -> Result<String> {
+    use nix::sys::uio::{process_vm_readv, RemoteIoVec};
+    use std::io::IoSliceMut;
+
+    // Read up to 4096 bytes (max path length)
+    let mut buf = vec![0u8; 4096];
+    let mut local_iov = [IoSliceMut::new(&mut buf)];
+    let remote_iov = [RemoteIoVec { base: addr, len: 4096 }];
+
+    let bytes_read = process_vm_readv(child, &mut local_iov, &remote_iov)
+        .context("Failed to read string from tracee memory")?;
+
+    if bytes_read == 0 {
+        anyhow::bail!("Read 0 bytes from tracee");
+    }
+
+    // Find null terminator
+    let null_pos = buf.iter().position(|&b| b == 0).unwrap_or(bytes_read);
+
+    // Convert to UTF-8 string (lossy - invalid UTF-8 will be replaced with �)
+    Ok(String::from_utf8_lossy(&buf[..null_pos]).to_string())
 }
 
 /// Handle syscall exit - print return value
