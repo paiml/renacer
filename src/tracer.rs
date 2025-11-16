@@ -1,6 +1,6 @@
 //! System call tracing using ptrace
 //!
-//! Sprint 1-2 MVP: Trace write syscall only
+//! Sprint 3-4: Trace all syscalls with name resolution
 
 use anyhow::{Context, Result};
 use nix::sys::ptrace;
@@ -9,13 +9,14 @@ use nix::unistd::{fork, ForkResult, Pid};
 use std::os::unix::process::CommandExt;
 use std::process::Command;
 
-const SYS_WRITE: i64 = 1; // x86_64 syscall number for write
+use crate::syscalls;
 
 /// Trace a command and print syscalls to stdout
 ///
-/// # Sprint 1-2 Scope
-/// - Intercept `write` syscall only
-/// - Print format: `write(fd, buf, count) = result`
+/// # Sprint 3-4 Scope
+/// - Intercept ALL syscalls
+/// - Resolve syscall number → name
+/// - Print format: `syscall_name(args...) = result`
 pub fn trace_command(command: &[String]) -> Result<()> {
     if command.is_empty() {
         anyhow::bail!("Command array is empty");
@@ -110,17 +111,22 @@ fn handle_syscall_entry(child: Pid) -> Result<()> {
     // On x86_64: syscall number in orig_rax
     let syscall_num = regs.orig_rax as i64;
 
-    // Sprint 1-2: Only trace write syscall
-    if syscall_num == SYS_WRITE {
-        // Arguments in rdi, rsi, rdx for x86_64
-        let fd = regs.rdi;
-        let _buf = regs.rsi; // buffer address (not reading contents in MVP)
-        let count = regs.rdx;
+    // Get syscall name
+    let name = syscalls::syscall_name(syscall_num);
 
-        // Print syscall entry (result will be printed on exit)
-        print!("write({}, ..., {}) = ", fd, count);
-        std::io::Write::flush(&mut std::io::stdout()).ok();
+    // Arguments in rdi, rsi, rdx, r10, r8, r9 for x86_64
+    let arg1 = regs.rdi;
+    let arg2 = regs.rsi;
+    let arg3 = regs.rdx;
+
+    // Sprint 3-4: Trace all syscalls with basic argument display
+    if name == "unknown" {
+        print!("syscall_{}({:#x}, {:#x}, {:#x}) = ", syscall_num, arg1, arg2, arg3);
+    } else {
+        print!("{}({:#x}, {:#x}, {:#x}) = ", name, arg1, arg2, arg3);
     }
+
+    std::io::Write::flush(&mut std::io::stdout()).ok();
 
     Ok(())
 }
@@ -129,14 +135,10 @@ fn handle_syscall_entry(child: Pid) -> Result<()> {
 fn handle_syscall_exit(child: Pid) -> Result<()> {
     let regs = ptrace::getregs(child).context("Failed to get registers")?;
 
-    let syscall_num = regs.orig_rax as i64;
-
-    // Sprint 1-2: Only trace write syscall
-    if syscall_num == SYS_WRITE {
-        // Return value in rax
-        let result = regs.rax as i64;
-        println!("{}", result);
-    }
+    // Sprint 3-4: Print result for all syscalls
+    // Return value in rax (may be negative for errors)
+    let result = regs.rax as i64;
+    println!("{}", result);
 
     Ok(())
 }
