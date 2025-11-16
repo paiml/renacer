@@ -23,6 +23,7 @@ anyhow = "1.0"
 thiserror = "1.0"
 
 # DWARF debug info parsing
+addr2line = "0.24"
 gimli = "0.31"
 object = "0.37"
 memmap2 = "0.9"

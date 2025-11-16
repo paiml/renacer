@@ -51,9 +51,7 @@ pub fn trace_command(command: &[String], enable_source: bool) -> Result<()> {
 }
 
 /// Trace a child process, printing write syscalls only
-fn trace_child(child: Pid, _enable_source: bool) -> Result<i32> {
-    // Sprint 5-6: DWARF context will be loaded here if enable_source is true
-    // For now, we just pass the flag through but don't use it yet
+fn trace_child(child: Pid, enable_source: bool) -> Result<i32> {
     // Wait for initial SIGSTOP from PTRACE_TRACEME
     waitpid(child, None).context("Failed to wait for child")?;
 
@@ -66,9 +64,30 @@ fn trace_child(child: Pid, _enable_source: bool) -> Result<i32> {
     .context("Failed to set ptrace options")?;
 
     let mut in_syscall = false;
+    let mut dwarf_ctx: Option<crate::dwarf::DwarfContext> = None;
+    let mut dwarf_loaded = false;
     let exit_code;
 
     loop {
+        // Sprint 5-6: Load DWARF context on first syscall if --source is enabled
+        // We wait until after exec() has happened to get the right binary
+        if enable_source && !dwarf_loaded {
+            dwarf_loaded = true; // Only try once
+            // Read /proc/PID/exe to get binary path
+            if let Ok(exe_path) = std::fs::read_link(format!("/proc/{}/exe", child)) {
+                match crate::dwarf::DwarfContext::load(&exe_path) {
+                    Ok(ctx) => {
+                        eprintln!("[renacer: DWARF debug info loaded from {}]", exe_path.display());
+                        dwarf_ctx = Some(ctx);
+                    }
+                    Err(e) => {
+                        eprintln!("[renacer: Warning - failed to load DWARF: {}]", e);
+                        eprintln!("[renacer: Continuing without source correlation]");
+                    }
+                }
+            }
+        }
+
         // Continue and wait for next syscall or exit
         ptrace::syscall(child, None).context("Failed to PTRACE_SYSCALL")?;
 
@@ -90,7 +109,7 @@ fn trace_child(child: Pid, _enable_source: bool) -> Result<i32> {
                 // Syscall entry or exit
                 if !in_syscall {
                     // Syscall entry
-                    handle_syscall_entry(child)?;
+                    handle_syscall_entry(child, dwarf_ctx.as_ref())?;
                     in_syscall = true;
                 } else {
                     // Syscall exit
@@ -110,7 +129,7 @@ fn trace_child(child: Pid, _enable_source: bool) -> Result<i32> {
 }
 
 /// Handle syscall entry - record syscall number and arguments
-fn handle_syscall_entry(child: Pid) -> Result<()> {
+fn handle_syscall_entry(child: Pid, dwarf_ctx: Option<&crate::dwarf::DwarfContext>) -> Result<()> {
     let regs = ptrace::getregs(child).context("Failed to get registers")?;
 
     // On x86_64: syscall number in orig_rax
@@ -123,6 +142,15 @@ fn handle_syscall_entry(child: Pid) -> Result<()> {
     let arg1 = regs.rdi;
     let arg2 = regs.rsi;
     let arg3 = regs.rdx;
+
+    // Sprint 5-6: Look up source location using instruction pointer if DWARF is available
+    let source_info = if let Some(ctx) = dwarf_ctx {
+        // Instruction pointer in rip register
+        let ip = regs.rip;
+        ctx.lookup(ip).ok().flatten()
+    } else {
+        None
+    };
 
     // Sprint 3-4: Decode arguments based on syscall type
     let formatted = match name {
@@ -139,6 +167,13 @@ fn handle_syscall_entry(child: Pid) -> Result<()> {
         }
     };
 
+    // Print syscall with optional source location
+    if let Some(src) = source_info {
+        print!("{}:{} ", src.file, src.line);
+        if let Some(func) = src.function {
+            print!("{} ", func);
+        }
+    }
     print!("{}", formatted);
     std::io::Write::flush(&mut std::io::stdout()).ok();
 

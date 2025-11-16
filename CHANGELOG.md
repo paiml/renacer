@@ -67,7 +67,11 @@ Built using EXTREME TDD following Toyota Way principles:
 ### Known Limitations
 
 - **x86_64 Only**: aarch64 support planned for future release
-- **Source Correlation**: `--source` flag infrastructure present but DWARF parsing deferred to v0.2.0
+- **Source Correlation Partial**: `--source` flag loads DWARF debug info, but syscall attribution requires stack unwinding (deferred to v0.2.0)
+  - DWARF .debug_line parsing: ✅ Implemented with addr2line crate
+  - Binary debug info loading: ✅ Implemented
+  - Syscall-to-source attribution: ⚠️ Requires stack unwinding (syscalls happen in libc, not user code)
+  - Planned for v0.2.0: Full call stack unwinding to attribute syscalls to user code frames
 - **Basic Argument Decoding**: Currently supports filenames; advanced decoding (buffers, structures) planned
 
 ### Future Roadmap
@@ -99,9 +103,11 @@ See `roadmap.yaml` for detailed implementation plan:
 ## [Unreleased]
 
 ### Planned for 0.2.0
-- Complete DWARF .debug_line parsing using addr2line crate
-- Source-aware output showing file:line for each syscall
-- Function name attribution from DWARF .debug_info
+- ✅ DWARF .debug_line parsing using addr2line crate (COMPLETED in v0.1.0)
+- ✅ `--source` flag infrastructure (COMPLETED in v0.1.0)
+- Stack unwinding to attribute syscalls to user code frames
+- Source-aware output showing file:line for each syscall (requires stack unwinding)
+- Function name attribution from DWARF .debug_info (requires stack unwinding)
 
 ---
 
