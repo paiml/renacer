@@ -4,7 +4,7 @@
 //!
 //! These tests will FAIL initially, then we implement to make them PASS
 
-use assert_cmd::{assert::OutputAssertExt, Command};
+use assert_cmd::Command;
 use predicates::prelude::*;
 use std::fs;
 use tempfile::TempDir;
