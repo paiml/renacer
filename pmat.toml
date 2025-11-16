@@ -1,0 +1,33 @@
+# PMAT Configuration for Renacer
+# Following Toyota Way and EXTREME TDD principles
+
+[project]
+name = "renacer"
+description = "Pure Rust system call tracer with source correlation"
+languages = ["rust"]
+
+[quality]
+# EXTREME TDD requirements
+min_coverage = 90
+min_mutation_score = 80
+max_tdg_score = 25  # A+ grade minimum
+
+[testing]
+# Sprint 1-2: Focus on unit tests
+test_command = "cargo test --all-features"
+coverage_command = "cargo tarpaulin --all-features --out Xml --output-dir coverage"
+
+[mutation]
+# Mutation testing configuration
+target_dirs = ["src/"]
+exclude_dirs = ["tests/", "benches/", "examples/"]
+timeout_multiplier = 2.0
+
+[tdg]
+# Technical Debt Grading
+include_comments = true
+language_specific_rules = true
+
+[hooks]
+# Git hooks (to be installed with pmat hooks install)
+pre_commit = ["cargo test --all-features", "cargo clippy -- -D warnings"]

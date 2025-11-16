@@ -1,0 +1,182 @@
+project: renacer
+version: 0.1.0
+start_date: 2025-11-16
+methodology: EXTREME TDD + Spec-Driven Development + Toyota Way
+
+objectives:
+  - title: "Best-in-class Rust system call tracer with source correlation"
+    description: "Pure Rust strace replacement focusing on Rust binary tracing with DWARF-based source mapping"
+    metrics:
+      - "2-5x faster than strace on typical workloads"
+      - "95%+ DWARF accuracy on opt-level=1"
+      - "90%+ test coverage"
+      - "80%+ mutation score"
+
+milestones:
+  - name: "Sprint 1-2: Minimal Viable Tracer (Weeks 1-4)"
+    target_date: 2025-12-14
+    objectives:
+      - "renacer -- ./hello-world works"
+    deliverables:
+      - "CLI accepting -- COMMAND"
+      - "Ptrace attach to child process (x86_64)"
+      - "Intercept write syscall only"
+      - "Print: write(1, \"Hello\\n\", 6) = 6"
+      - "90%+ test coverage"
+    acceptance_criteria:
+      - "Compares favorably with strace -e write"
+      - "Zero crashes on 100 test programs"
+      - "All unit tests pass"
+      - "assert_cmd integration tests pass"
+    risks:
+      - "Ptrace API complexity"
+      - "x86_64 register conventions"
+
+  - name: "Sprint 3-4: Full Syscall Coverage (Weeks 5-8)"
+    target_date: 2026-01-11
+    objectives:
+      - "Trace all syscalls, not just write"
+    deliverables:
+      - "Syscall number → name resolution (x86_64)"
+      - "Decode common args (openat, read, close, mmap)"
+      - "Handle process exit gracefully"
+    acceptance_criteria:
+      - "renacer -- ls -la matches strace structurally"
+      - "<2x slowdown vs strace"
+      - "90%+ coverage maintained"
+    risks:
+      - "Syscall argument decoding complexity"
+      - "Memory safety in ptrace operations"
+
+  - name: "Sprint 5-6: DWARF Source Correlation (Weeks 9-12)"
+    target_date: 2026-02-08
+    objectives:
+      - "Show source file:line for Rust binaries"
+    deliverables:
+      - "ELF + DWARF .debug_line parser (gimli)"
+      - "Instruction pointer → source mapping"
+      - "Enhanced output with source annotations"
+    acceptance_criteria:
+      - "95%+ accuracy on opt-level=1"
+      - "80%+ accuracy on opt-level=2"
+      - "<10% DWARF lookup overhead"
+    risks:
+      - "DWARF accuracy on optimized code (RISK 1 from spec)"
+      - "Performance impact of source lookups"
+
+  - name: "Sprint 7-8: Multi-Architecture (Weeks 13-16)"
+    target_date: 2026-03-08
+    objectives:
+      - "Add aarch64 support"
+    deliverables:
+      - "Architecture-specific syscall tables"
+      - "Register mapping abstraction"
+      - "CI matrix testing (QEMU)"
+    acceptance_criteria:
+      - "aarch64 tests pass via QEMU"
+      - "Code coverage >90%"
+    risks:
+      - "Cross-platform testing complexity (RISK 5 from spec)"
+
+  - name: "Sprint 9-10: Advanced Features & Polish (Weeks 17-20)"
+    target_date: 2026-04-05
+    objectives:
+      - "strace feature parity"
+    deliverables:
+      - "-p PID attach to running process"
+      - "-f follow forks"
+      - "-e trace=FILE filtering"
+      - "-c statistics mode"
+      - "-T timing per syscall"
+      - "--format json output"
+    acceptance_criteria:
+      - "90% strace compatibility"
+      - "JSON schema documented"
+    risks:
+      - "Fork following complexity"
+
+  - name: "Sprint 11-12: Hardening & 1.0 Release (Weeks 21-24)"
+    target_date: 2026-05-03
+    objectives:
+      - "Production-ready 1.0 release"
+    deliverables:
+      - "90%+ test coverage enforced"
+      - "24hr fuzz runs (zero crashes)"
+      - "Benchmark suite vs strace"
+      - "Complete documentation"
+      - "crates.io publication"
+    acceptance_criteria:
+      - "All quality gates pass"
+      - "2-5x faster than strace measured"
+      - "Security audit complete"
+      - "3+ beta testers validated"
+
+quality_gates:
+  pre_commit:
+    - "cargo test --all-features"
+    - "cargo clippy -- -D warnings"
+    - "pmat analyze tdg (no regressions)"
+
+  pre_release:
+    - "coverage ≥90%"
+    - "mutation score ≥80%"
+    - "all tests pass"
+    - "cargo bench (baseline established)"
+    - "pmat repo-score ≥80/100"
+    - "zero fuzzing crashes (24hr run)"
+
+risks:
+  - risk: "DWARF accuracy in optimized code"
+    mitigation: "Test matrix across opt-levels, confidence flagging"
+    status: "monitoring"
+    reference: "Specification Section 5, Risk 1"
+
+  - risk: "eBPF performance claims (future)"
+    mitigation: "Test before claiming, honest benchmarks"
+    status: "deferred (post-1.0)"
+    reference: "Specification Section 5, Risk 2"
+
+  - risk: "Async runtime brittleness"
+    mitigation: "De-prioritized to post-1.0"
+    status: "deferred"
+    reference: "Specification Section 5, Risk 3"
+
+  - risk: "WASM toolchain heterogeneity"
+    mitigation: "Post-1.0, start with Rust-to-WASM only"
+    status: "deferred"
+    reference: "Specification Section 5, Risk 4"
+
+  - risk: "Multi-architecture complexity"
+    mitigation: "x86_64 + aarch64 only for 1.0"
+    status: "monitoring"
+    reference: "Specification Section 5, Risk 5"
+
+toyota_way_principles:
+  jidoka: "Automated quality gates, continuous fuzzing, pre-commit hooks"
+  andon_cord: "Quality gates block bad code, 90%+ coverage enforced"
+  genchi_genbutsu: "Benchmark-driven performance claims, measured overhead"
+  kaizen: "2-week sprints with validation, iterative improvement"
+  zero_defects: "100% test pass rate, zero clippy warnings, zero fuzzing crashes"
+
+post_1_0_roadmap:
+  v1_1_ebpf_backend:
+    sprints: "13-18 (3 months)"
+    target: "<5% overhead on production workloads"
+    risk: "High - requires extensive validation (Risk 2)"
+
+  v1_2_wasm_analysis:
+    sprints: "19-22 (2 months)"
+    target: "Parse 1000+ public WASM modules"
+    risk: "Medium - toolchain heterogeneity (Risk 4)"
+
+  v1_3_async_support:
+    sprints: "23-26 (2 months)"
+    target: "Experimental Tokio task attribution"
+    risk: "High - brittleness (Risk 3), may be deprecated"
+
+  v1_4_ecosystem:
+    sprints: "27-31 (2.5 months)"
+    features:
+      - "Trueno export (structured traces)"
+      - "Ruchy Ruby VM tracing"
+      - "OpenTelemetry span export"
