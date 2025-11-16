@@ -4,7 +4,9 @@
 //!
 //! Simplified implementation for MVP - full gimli integration deferred to future sprints
 
-use anyhow::{Context, Result};
+#![allow(dead_code)]
+
+use anyhow::Result;
 use std::collections::HashMap;
 use std::path::Path;
 
@@ -27,6 +29,7 @@ pub struct SourceLocation {
 /// Full gimli-based parsing will be added in future sprints
 pub struct DwarfContext {
     /// Mapping from instruction pointer to source location
+    #[allow(dead_code)]
     cache: HashMap<u64, Option<SourceLocation>>,
     /// Binary path
     _binary_path: std::path::PathBuf,
