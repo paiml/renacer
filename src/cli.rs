@@ -7,6 +7,10 @@ use clap::Parser;
 #[command(version)]
 #[command(about = "Pure Rust system call tracer with source correlation", long_about = None)]
 pub struct Cli {
+    /// Enable source code correlation using DWARF debug info
+    #[arg(short, long)]
+    pub source: bool,
+
     /// Command to trace (everything after --)
     #[arg(last = true)]
     pub command: Option<Vec<String>>,
