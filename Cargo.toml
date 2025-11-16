@@ -1,0 +1,39 @@
+[package]
+name = "renacer"
+version = "0.1.0"
+edition = "2021"
+authors = ["Pragmatic AI Labs <info@paiml.com>"]
+description = "Pure Rust system call tracer with source-aware correlation for Rust binaries"
+license = "MIT"
+repository = "https://github.com/paiml/renacer"
+readme = "README.md"
+keywords = ["strace", "tracing", "syscall", "debugging", "profiling"]
+categories = ["development-tools::debugging", "development-tools::profiling"]
+
+[dependencies]
+# CLI and argument parsing
+clap = { version = "4.5", features = ["derive", "cargo"] }
+
+# Ptrace and system calls
+nix = { version = "0.29", features = ["ptrace", "process", "signal"] }
+libc = "0.2"
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+[dev-dependencies]
+# Testing
+assert_cmd = "2.0"
+predicates = "3.1"
+tempfile = "3.13"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
+
+[profile.dev]
+opt-level = 0
+debug = true
