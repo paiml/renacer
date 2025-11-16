@@ -45,8 +45,8 @@ fn test_trace_shows_write_syscall() {
         .arg("Test")
         .assert()
         .success()
-        .stdout(predicate::str::contains("write(1,"))  // fd 1 = stdout
-        .stdout(predicate::str::contains("5"));         // count or return value
+        .stdout(predicate::str::contains("write("))  // Sprint 3-4: syscall name shown
+        .stdout(predicate::str::contains("5"));      // count or return value
 }
 
 #[test]

@@ -2,6 +2,7 @@ use anyhow::Result;
 use clap::Parser;
 
 mod cli;
+mod syscalls;
 mod tracer;
 
 use cli::Cli;
