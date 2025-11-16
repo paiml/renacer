@@ -2,7 +2,7 @@
 //!
 //! Sprint 5-6: Map instruction pointers to source file:line using DWARF .debug_line
 //!
-//! MVP Implementation: Stub that allows --source flag to work without crashing
+//! Simplified implementation for MVP - full gimli integration deferred to future sprints
 
 use anyhow::{Context, Result};
 use std::collections::HashMap;
@@ -22,23 +22,29 @@ pub struct SourceLocation {
 }
 
 /// DWARF debug info context for a binary
+///
+/// Sprint 5-6 MVP: Simplified implementation
+/// Full gimli-based parsing will be added in future sprints
 pub struct DwarfContext {
     /// Mapping from instruction pointer to source location
     cache: HashMap<u64, Option<SourceLocation>>,
-    /// Binary path for future DWARF parsing
+    /// Binary path
     _binary_path: std::path::PathBuf,
 }
 
 impl DwarfContext {
     /// Load DWARF debug info from an ELF binary
     ///
-    /// Sprint 5-6 MVP: This is a stub implementation that doesn't crash
-    /// Full implementation will use gimli to parse .debug_line sections
+    /// Sprint 5-6 MVP: Validates binary exists, full DWARF parsing deferred
     pub fn load(binary_path: &Path) -> Result<Self> {
         // Verify binary exists
         if !binary_path.exists() {
             anyhow::bail!("Binary does not exist: {}", binary_path.display());
         }
+
+        // Sprint 5-6 MVP: Basic validation only
+        // Full implementation will use gimli + addr2line crate for robust parsing
+        // This is documented as technical debt for Sprint 7-8
 
         Ok(Self {
             cache: HashMap::new(),
@@ -48,14 +54,13 @@ impl DwarfContext {
 
     /// Look up source location for an instruction pointer
     ///
-    /// Sprint 5-6 MVP: Returns None (DWARF parsing not yet implemented)
-    /// This allows --source flag to work without crashing
+    /// Sprint 5-6 MVP: Returns None (DWARF parsing deferred)
+    /// Full implementation planned for Sprint 7-8
     pub fn lookup(&mut self, _ip: u64) -> Result<Option<SourceLocation>> {
-        // MVP: Always return None
-        // Full implementation will:
-        // 1. Parse .debug_line section with gimli
-        // 2. Binary search line number program
-        // 3. Return file:line mapping
+        // MVP: Return None
+        // TODO(Sprint 7-8): Implement full DWARF .debug_line parsing
+        // Recommended approach: Use addr2line crate which wraps gimli
+        // See: https://docs.rs/addr2line/latest/addr2line/
         Ok(None)
     }
 }
