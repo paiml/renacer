@@ -20,7 +20,10 @@ use crate::syscalls;
 ///
 /// # Sprint 5-6 Scope
 /// - Optional source correlation with DWARF debug info
-pub fn trace_command(command: &[String], enable_source: bool) -> Result<()> {
+///
+/// # Sprint 9-10 Scope
+/// - Syscall filtering via -e trace= expressions
+pub fn trace_command(command: &[String], enable_source: bool, filter: crate::filter::SyscallFilter) -> Result<()> {
     if command.is_empty() {
         anyhow::bail!("Command array is empty");
     }
@@ -31,7 +34,7 @@ pub fn trace_command(command: &[String], enable_source: bool) -> Result<()> {
     // Fork: parent will trace, child will exec
     match unsafe { fork() }.context("Failed to fork")? {
         ForkResult::Parent { child } => {
-            trace_child(child, enable_source)?;
+            trace_child(child, enable_source, filter)?;
             Ok(())
         }
         ForkResult::Child => {
@@ -50,8 +53,8 @@ pub fn trace_command(command: &[String], enable_source: bool) -> Result<()> {
     }
 }
 
-/// Trace a child process, printing write syscalls only
-fn trace_child(child: Pid, enable_source: bool) -> Result<i32> {
+/// Trace a child process, filtering syscalls based on filter
+fn trace_child(child: Pid, enable_source: bool, filter: crate::filter::SyscallFilter) -> Result<i32> {
     // Wait for initial SIGSTOP from PTRACE_TRACEME
     waitpid(child, None).context("Failed to wait for child")?;
 
@@ -109,7 +112,7 @@ fn trace_child(child: Pid, enable_source: bool) -> Result<i32> {
                 // Syscall entry or exit
                 if !in_syscall {
                     // Syscall entry
-                    handle_syscall_entry(child, dwarf_ctx.as_ref())?;
+                    handle_syscall_entry(child, dwarf_ctx.as_ref(), &filter)?;
                     in_syscall = true;
                 } else {
                     // Syscall exit
@@ -129,7 +132,7 @@ fn trace_child(child: Pid, enable_source: bool) -> Result<i32> {
 }
 
 /// Handle syscall entry - record syscall number and arguments
-fn handle_syscall_entry(child: Pid, dwarf_ctx: Option<&crate::dwarf::DwarfContext>) -> Result<()> {
+fn handle_syscall_entry(child: Pid, dwarf_ctx: Option<&crate::dwarf::DwarfContext>, filter: &crate::filter::SyscallFilter) -> Result<()> {
     let regs = ptrace::getregs(child).context("Failed to get registers")?;
 
     // On x86_64: syscall number in orig_rax
@@ -137,6 +140,12 @@ fn handle_syscall_entry(child: Pid, dwarf_ctx: Option<&crate::dwarf::DwarfContex
 
     // Get syscall name
     let name = syscalls::syscall_name(syscall_num);
+
+    // Sprint 9-10: Filter syscalls based on -e trace= expression
+    if !filter.should_trace(name) {
+        // Don't print this syscall
+        return Ok(());
+    }
 
     // Arguments in rdi, rsi, rdx, r10, r8, r9 for x86_64
     let arg1 = regs.rdi;
@@ -223,7 +232,8 @@ mod tests {
     #[test]
     fn test_trace_command_requires_nonempty_array() {
         let empty: Vec<String> = vec![];
-        let result = trace_command(&empty, false);
+        let filter = crate::filter::SyscallFilter::all();
+        let result = trace_command(&empty, false, filter);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("empty"));
     }
@@ -232,7 +242,8 @@ mod tests {
     fn test_trace_command_not_implemented_yet() {
         // RED phase: this should fail until we implement
         let cmd = vec!["echo".to_string(), "test".to_string()];
-        let result = trace_command(&cmd, false);
+        let filter = crate::filter::SyscallFilter::all();
+        let result = trace_command(&cmd, false, filter);
         assert!(result.is_err());
     }
 }

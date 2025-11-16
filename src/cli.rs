@@ -11,6 +11,10 @@ pub struct Cli {
     #[arg(short, long)]
     pub source: bool,
 
+    /// Filter syscalls to trace (e.g., -e trace=open,read,write or -e trace=file)
+    #[arg(short = 'e', long = "expr", value_name = "EXPR")]
+    pub filter: Option<String>,
+
     /// Command to trace (everything after --)
     #[arg(last = true)]
     pub command: Option<Vec<String>>,
