@@ -22,6 +22,11 @@ libc = "0.2"
 anyhow = "1.0"
 thiserror = "1.0"
 
+# DWARF debug info parsing
+gimli = "0.31"
+object = "0.37"
+memmap2 = "0.9"
+
 [dev-dependencies]
 # Testing
 assert_cmd = "2.0"

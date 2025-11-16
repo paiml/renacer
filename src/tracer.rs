@@ -17,7 +17,10 @@ use crate::syscalls;
 /// - Intercept ALL syscalls
 /// - Resolve syscall number → name
 /// - Print format: `syscall_name(args...) = result`
-pub fn trace_command(command: &[String]) -> Result<()> {
+///
+/// # Sprint 5-6 Scope
+/// - Optional source correlation with DWARF debug info
+pub fn trace_command(command: &[String], enable_source: bool) -> Result<()> {
     if command.is_empty() {
         anyhow::bail!("Command array is empty");
     }
@@ -28,7 +31,7 @@ pub fn trace_command(command: &[String]) -> Result<()> {
     // Fork: parent will trace, child will exec
     match unsafe { fork() }.context("Failed to fork")? {
         ForkResult::Parent { child } => {
-            trace_child(child)?;
+            trace_child(child, enable_source)?;
             Ok(())
         }
         ForkResult::Child => {
@@ -48,7 +51,9 @@ pub fn trace_command(command: &[String]) -> Result<()> {
 }
 
 /// Trace a child process, printing write syscalls only
-fn trace_child(child: Pid) -> Result<i32> {
+fn trace_child(child: Pid, _enable_source: bool) -> Result<i32> {
+    // Sprint 5-6: DWARF context will be loaded here if enable_source is true
+    // For now, we just pass the flag through but don't use it yet
     // Wait for initial SIGSTOP from PTRACE_TRACEME
     waitpid(child, None).context("Failed to wait for child")?;
 
@@ -183,7 +188,7 @@ mod tests {
     #[test]
     fn test_trace_command_requires_nonempty_array() {
         let empty: Vec<String> = vec![];
-        let result = trace_command(&empty);
+        let result = trace_command(&empty, false);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("empty"));
     }
@@ -192,7 +197,7 @@ mod tests {
     fn test_trace_command_not_implemented_yet() {
         // RED phase: this should fail until we implement
         let cmd = vec!["echo".to_string(), "test".to_string()];
-        let result = trace_command(&cmd);
+        let result = trace_command(&cmd, false);
         assert!(result.is_err());
     }
 }

@@ -2,6 +2,7 @@ use anyhow::Result;
 use clap::Parser;
 
 mod cli;
+mod dwarf;
 mod syscalls;
 mod tracer;
 
@@ -11,7 +12,7 @@ fn main() -> Result<()> {
     let args = Cli::parse();
 
     if let Some(command) = args.command {
-        tracer::trace_command(&command)?;
+        tracer::trace_command(&command, args.source)?;
     } else {
         anyhow::bail!("No command specified. Usage: renacer -- COMMAND [ARGS...]");
     }
