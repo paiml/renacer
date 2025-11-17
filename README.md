@@ -57,6 +57,12 @@ cat profile.txt | flamegraph.pl > flamegraph.svg
 # JSON output for scripting
 renacer --format json -- echo "test" > trace.json
 
+# CSV output for spreadsheet analysis (Sprint 17)
+renacer --format csv -- echo "test" > trace.csv
+renacer --format csv -T -- ls > trace-with-timing.csv
+renacer --format csv --source -- ./my-binary > trace-with-source.csv
+renacer --format csv -c -- cargo build > stats.csv
+
 # Filter syscalls
 renacer -e trace=file -- cat file.txt       # File operations only
 renacer -e trace=open,read,write -- ls      # Specific syscalls
