@@ -1,4 +1,5 @@
 //! Sprint 1-2 MVP Tests - GREEN Phase Complete!
+#![allow(deprecated)]  // suppress assert_cmd::Command::cargo_bin deprecation in tests
 //!
 //! Goal: renacer -- COMMAND works and traces write syscall only
 

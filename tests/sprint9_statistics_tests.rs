@@ -1,4 +1,5 @@
 //! Sprint 9-10: Statistics mode tests
+#![allow(deprecated)]  // suppress assert_cmd::Command::cargo_bin deprecation in tests
 //!
 //! Test -c flag for syscall statistics summary
 

@@ -1,4 +1,5 @@
 //! Sprint 3-4: Full Syscall Coverage Tests - RED Phase
+#![allow(deprecated)]  // suppress assert_cmd::Command::cargo_bin deprecation in tests
 //!
 //! Goal: Trace all syscalls, not just write
 //!

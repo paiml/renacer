@@ -1,4 +1,5 @@
 // Integration tests for stack unwinding functionality (GitHub Issue #1)
+#![allow(deprecated)]  // suppress assert_cmd::Command::cargo_bin deprecation in tests
 // Sprint 13-14: Stack unwinding for function profiling
 
 use assert_cmd::Command;

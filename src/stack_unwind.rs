@@ -144,6 +144,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::assertions_on_constants)]  // Testing constant invariants
     fn test_max_stack_depth_constant() {
         assert_eq!(MAX_STACK_DEPTH, 64);
         assert!(MAX_STACK_DEPTH > 0);
