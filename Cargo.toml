@@ -35,8 +35,8 @@ memmap2 = "0.9"
 # Stack unwinding for function profiling
 backtrace = "0.3"
 
-# High-performance SIMD/GPU compute (sister project)
-trueno = { path = "../trueno" }
+# High-performance SIMD/GPU compute (sister project - published on crates.io)
+trueno = "0.1.0"
 
 [dev-dependencies]
 # Testing
