@@ -1,5 +1,5 @@
 //! Sprint 9-10: Syscall filtering tests
-#![allow(deprecated)]  // suppress assert_cmd::Command::cargo_bin deprecation in tests
+#![allow(deprecated)] // suppress assert_cmd::Command::cargo_bin deprecation in tests
 //!
 //! Test -e trace= expression filtering
 

@@ -1,6 +1,6 @@
 // Integration tests for stack unwinding functionality (GitHub Issue #1)
-#![allow(deprecated)]  // suppress assert_cmd::Command::cargo_bin deprecation in tests
-// Sprint 13-14: Stack unwinding for function profiling
+#![allow(deprecated)] // suppress assert_cmd::Command::cargo_bin deprecation in tests
+                      // Sprint 13-14: Stack unwinding for function profiling
 
 use assert_cmd::Command;
 
@@ -26,17 +26,14 @@ fn test_stack_unwinding_with_simple_program() {
     cmd.arg("--function-time")
         .arg("--source")
         .arg("--")
-        .arg("true");  // Simplest possible program
+        .arg("true"); // Simplest possible program
 
     let output = cmd.output().unwrap();
     assert!(output.status.success());
 
     let stderr = String::from_utf8_lossy(&output.stderr);
     // Should either find functions or report no data
-    assert!(
-        stderr.contains("Function") ||
-        stderr.contains("No function profiling data")
-    );
+    assert!(stderr.contains("Function") || stderr.contains("No function profiling data"));
 }
 
 #[test]
@@ -58,7 +55,7 @@ fn test_stack_unwinding_does_not_crash() {
 fn test_stack_unwinding_with_function_time_disabled() {
     // Verify that without --function-time, stack unwinding is not attempted
     let mut cmd = Command::cargo_bin("renacer").unwrap();
-    cmd.arg("--source")  // Source enabled but not function-time
+    cmd.arg("--source") // Source enabled but not function-time
         .arg("--")
         .arg("echo")
         .arg("test");
@@ -82,7 +79,8 @@ fn test_stack_unwinding_max_depth_protection() {
         .arg("echo")
         .arg("deep recursion test");
 
-    let output = cmd.timeout(std::time::Duration::from_secs(5))
+    let output = cmd
+        .timeout(std::time::Duration::from_secs(5))
         .output()
         .unwrap();
 

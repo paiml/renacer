@@ -1,5 +1,5 @@
 //! Integration tests for --format json output (Sprint 9-10)
-#![allow(deprecated)]  // suppress assert_cmd::Command::cargo_bin deprecation in tests
+#![allow(deprecated)] // suppress assert_cmd::Command::cargo_bin deprecation in tests
 
 use assert_cmd::Command;
 use predicates::prelude::*;
@@ -70,7 +70,10 @@ fn test_json_with_timing() {
     // At least some syscalls should have duration_us
     let syscalls = parsed["syscalls"].as_array().unwrap();
     let has_duration = syscalls.iter().any(|s| s["duration_us"].is_number());
-    assert!(has_duration, "Expected at least one syscall with duration_us");
+    assert!(
+        has_duration,
+        "Expected at least one syscall with duration_us"
+    );
 }
 
 #[test]
@@ -103,10 +106,7 @@ fn test_json_with_filtering() {
 fn test_json_summary_fields() {
     // Test that summary contains expected fields
     let mut cmd = Command::cargo_bin("renacer").unwrap();
-    cmd.arg("--format")
-        .arg("json")
-        .arg("--")
-        .arg("true"); // Simple command
+    cmd.arg("--format").arg("json").arg("--").arg("true"); // Simple command
 
     let output = cmd.output().unwrap();
     let stdout = String::from_utf8_lossy(&output.stdout);

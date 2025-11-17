@@ -1,5 +1,5 @@
 //! Sprint 3-4: Full Syscall Coverage Tests - RED Phase
-#![allow(deprecated)]  // suppress assert_cmd::Command::cargo_bin deprecation in tests
+#![allow(deprecated)] // suppress assert_cmd::Command::cargo_bin deprecation in tests
 //!
 //! Goal: Trace all syscalls, not just write
 //!
@@ -19,9 +19,9 @@ fn test_trace_shows_multiple_syscalls() {
         .arg("-la")
         .assert()
         .success()
-        .stdout(predicate::str::contains("openat("))  // ls opens directory
-        .stdout(predicate::str::contains("read("))    // ls reads directory entries
-        .stdout(predicate::str::contains("write("));  // ls writes output
+        .stdout(predicate::str::contains("openat(")) // ls opens directory
+        .stdout(predicate::str::contains("read(")) // ls reads directory entries
+        .stdout(predicate::str::contains("write(")); // ls writes output
 }
 
 #[test]
@@ -37,9 +37,9 @@ fn test_trace_file_operations() {
         .arg(&test_file)
         .assert()
         .success()
-        .stdout(predicate::str::contains("openat("))  // cat opens file
-        .stdout(predicate::str::contains("read("))    // cat reads file
-        .stdout(predicate::str::contains("close("));  // cat closes file
+        .stdout(predicate::str::contains("openat(")) // cat opens file
+        .stdout(predicate::str::contains("read(")) // cat reads file
+        .stdout(predicate::str::contains("close(")); // cat closes file
 }
 
 #[test]
@@ -51,8 +51,8 @@ fn test_syscall_names_not_numbers() {
         .arg("test")
         .assert()
         .success()
-        .stdout(predicate::str::contains("write("))  // Name, not number
-        .stdout(predicate::str::contains("257").not());  // Should NOT show raw syscall numbers
+        .stdout(predicate::str::contains("write(")) // Name, not number
+        .stdout(predicate::str::contains("257").not()); // Should NOT show raw syscall numbers
 }
 
 #[test]
@@ -68,7 +68,7 @@ fn test_trace_shows_syscall_arguments() {
         .arg(&test_file)
         .assert()
         .success()
-        .stdout(predicate::str::contains("myfile.txt"));  // Filename should be shown
+        .stdout(predicate::str::contains("myfile.txt")); // Filename should be shown
 }
 
 #[test]
@@ -77,7 +77,7 @@ fn test_unknown_syscalls_show_number() {
     // (This is for future-proofing when new syscalls are added)
     let mut cmd = Command::cargo_bin("renacer").unwrap();
     cmd.arg("--")
-        .arg("true")  // Simple program with minimal syscalls
+        .arg("true") // Simple program with minimal syscalls
         .assert()
         .success();
     // Success is enough - we just verify it doesn't crash on unknown syscalls

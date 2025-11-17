@@ -149,25 +149,67 @@ mod tests {
     fn test_all_known_syscalls() {
         // Test all known syscall numbers (comprehensive coverage)
         let known_syscalls = vec![
-            (0, "read"), (1, "write"), (2, "open"), (3, "close"),
-            (4, "stat"), (5, "fstat"), (6, "lstat"), (7, "poll"),
-            (8, "lseek"), (9, "mmap"), (10, "mprotect"), (11, "munmap"),
-            (12, "brk"), (13, "rt_sigaction"), (14, "rt_sigprocmask"),
-            (15, "rt_sigreturn"), (16, "ioctl"), (17, "pread64"),
-            (18, "pwrite64"), (19, "readv"), (20, "writev"), (21, "access"),
-            (22, "pipe"), (39, "getpid"), (56, "clone"), (57, "fork"),
-            (58, "vfork"), (59, "execve"), (60, "exit"), (61, "wait4"),
-            (62, "kill"), (63, "uname"), (72, "fcntl"), (79, "getcwd"),
-            (80, "chdir"), (89, "readlink"), (96, "gettimeofday"),
-            (102, "getuid"), (104, "getgid"), (105, "setuid"), (107, "setgid"),
-            (108, "geteuid"), (109, "getegid"), (186, "gettid"), (228, "clock_gettime"),
-            (231, "exit_group"), (257, "openat"), (262, "newfstatat"),
-            (273, "set_robust_list"), (318, "getrandom"), (332, "statx"),
+            (0, "read"),
+            (1, "write"),
+            (2, "open"),
+            (3, "close"),
+            (4, "stat"),
+            (5, "fstat"),
+            (6, "lstat"),
+            (7, "poll"),
+            (8, "lseek"),
+            (9, "mmap"),
+            (10, "mprotect"),
+            (11, "munmap"),
+            (12, "brk"),
+            (13, "rt_sigaction"),
+            (14, "rt_sigprocmask"),
+            (15, "rt_sigreturn"),
+            (16, "ioctl"),
+            (17, "pread64"),
+            (18, "pwrite64"),
+            (19, "readv"),
+            (20, "writev"),
+            (21, "access"),
+            (22, "pipe"),
+            (39, "getpid"),
+            (56, "clone"),
+            (57, "fork"),
+            (58, "vfork"),
+            (59, "execve"),
+            (60, "exit"),
+            (61, "wait4"),
+            (62, "kill"),
+            (63, "uname"),
+            (72, "fcntl"),
+            (79, "getcwd"),
+            (80, "chdir"),
+            (89, "readlink"),
+            (96, "gettimeofday"),
+            (102, "getuid"),
+            (104, "getgid"),
+            (105, "setuid"),
+            (107, "setgid"),
+            (108, "geteuid"),
+            (109, "getegid"),
+            (186, "gettid"),
+            (228, "clock_gettime"),
+            (231, "exit_group"),
+            (257, "openat"),
+            (262, "newfstatat"),
+            (273, "set_robust_list"),
+            (318, "getrandom"),
+            (332, "statx"),
         ];
 
         for (num, expected_name) in known_syscalls {
-            assert_eq!(syscall_name(num), expected_name,
-                "Syscall {} should be named {}", num, expected_name);
+            assert_eq!(
+                syscall_name(num),
+                expected_name,
+                "Syscall {} should be named {}",
+                num,
+                expected_name
+            );
         }
     }
 
@@ -176,7 +218,11 @@ mod tests {
         // Property: syscall_name should never panic for any i64
         for num in [-1000, -1, 0, 1, 100, 500, 1000, 9999, i64::MAX] {
             let name = syscall_name(num);
-            assert!(!name.is_empty(), "Syscall name should never be empty for {}", num);
+            assert!(
+                !name.is_empty(),
+                "Syscall name should never be empty for {}",
+                num
+            );
         }
     }
 

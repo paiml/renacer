@@ -1,5 +1,5 @@
 //! Integration tests for -p PID attach (Sprint 9-10)
-#![allow(deprecated)]  // suppress assert_cmd::Command::cargo_bin deprecation in tests
+#![allow(deprecated)] // suppress assert_cmd::Command::cargo_bin deprecation in tests
 
 use assert_cmd::Command;
 use predicates::prelude::*;
@@ -19,11 +19,7 @@ fn test_pid_flag_exists() {
 fn test_pid_and_command_mutual_exclusion() {
     // Test that -p and command cannot both be specified
     let mut cmd = Command::cargo_bin("renacer").unwrap();
-    cmd.arg("-p")
-        .arg("1234")
-        .arg("--")
-        .arg("echo")
-        .arg("test");
+    cmd.arg("-p").arg("1234").arg("--").arg("echo").arg("test");
 
     cmd.assert()
         .failure()
@@ -34,8 +30,7 @@ fn test_pid_and_command_mutual_exclusion() {
 fn test_invalid_pid() {
     // Test that invalid PID format is rejected
     let mut cmd = Command::cargo_bin("renacer").unwrap();
-    cmd.arg("-p")
-        .arg("not_a_number");
+    cmd.arg("-p").arg("not_a_number");
 
     cmd.assert()
         .failure()
@@ -47,8 +42,7 @@ fn test_nonexistent_pid() {
     // Test that non-existent PID is handled gracefully
     // Use PID 99999999 which is very unlikely to exist
     let mut cmd = Command::cargo_bin("renacer").unwrap();
-    cmd.arg("-p")
-        .arg("99999999");
+    cmd.arg("-p").arg("99999999");
 
     cmd.assert()
         .failure()
@@ -60,9 +54,9 @@ fn test_no_command_no_pid() {
     // Test that either command or PID must be specified
     let mut cmd = Command::cargo_bin("renacer").unwrap();
 
-    cmd.assert()
-        .failure()
-        .stderr(predicate::str::contains("Must specify either -p PID or command"));
+    cmd.assert().failure().stderr(predicate::str::contains(
+        "Must specify either -p PID or command",
+    ));
 }
 
 // Note: Testing actual PID attachment requires special permissions

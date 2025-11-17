@@ -71,7 +71,7 @@ pub fn trace_command(command: &[String], config: TracerConfig) -> Result<()> {
 
     // Fork: parent will trace, child will exec
     match unsafe { fork() }.context("Failed to fork")? {
-        ForkResult::Parent { child} => {
+        ForkResult::Parent { child } => {
             trace_child(child, config)?;
             Ok(())
         }
@@ -80,9 +80,7 @@ pub fn trace_command(command: &[String], config: TracerConfig) -> Result<()> {
             ptrace::traceme().context("Failed to PTRACE_TRACEME")?;
 
             // Use std::process::Command for exec
-            let err = Command::new(program)
-                .args(args)
-                .exec();
+            let err = Command::new(program).args(args).exec();
 
             // If we get here, exec failed
             eprintln!("Failed to exec {}: {}", program, err);
@@ -113,8 +111,7 @@ fn trace_child(child: Pid, config: TracerConfig) -> Result<i32> {
     waitpid(child, None).context("Failed to wait for child")?;
 
     // Set ptrace options to trace syscalls
-    let mut options = ptrace::Options::PTRACE_O_TRACESYSGOOD
-        | ptrace::Options::PTRACE_O_EXITKILL;
+    let mut options = ptrace::Options::PTRACE_O_TRACESYSGOOD | ptrace::Options::PTRACE_O_EXITKILL;
 
     // Add fork following options if enabled
     if config.follow_forks {
@@ -123,8 +120,7 @@ fn trace_child(child: Pid, config: TracerConfig) -> Result<i32> {
             | ptrace::Options::PTRACE_O_TRACECLONE;
     }
 
-    ptrace::setoptions(child, options)
-        .context("Failed to set ptrace options")?;
+    ptrace::setoptions(child, options).context("Failed to set ptrace options")?;
 
     let mut in_syscall = false;
     let mut current_syscall_entry: Option<SyscallEntry> = None;
@@ -148,11 +144,14 @@ fn trace_child(child: Pid, config: TracerConfig) -> Result<i32> {
         // We wait until after exec() has happened to get the right binary
         if config.enable_source && !dwarf_loaded {
             dwarf_loaded = true; // Only try once
-            // Read /proc/PID/exe to get binary path
+                                 // Read /proc/PID/exe to get binary path
             if let Ok(exe_path) = std::fs::read_link(format!("/proc/{}/exe", child)) {
                 match crate::dwarf::DwarfContext::load(&exe_path) {
                     Ok(ctx) => {
-                        eprintln!("[renacer: DWARF debug info loaded from {}]", exe_path.display());
+                        eprintln!(
+                            "[renacer: DWARF debug info loaded from {}]",
+                            exe_path.display()
+                        );
                         dwarf_ctx = Some(ctx);
                     }
                     Err(e) => {
@@ -192,10 +191,24 @@ fn trace_child(child: Pid, config: TracerConfig) -> Result<i32> {
                     // Profile syscall entry handling
                     current_syscall_entry = if let Some(prof) = profiling_ctx.as_mut() {
                         prof.measure(crate::profiling::ProfilingCategory::Other, || {
-                            handle_syscall_entry(child, dwarf_ctx.as_ref(), &config.filter, config.statistics_mode, in_json_mode, config.function_time)
+                            handle_syscall_entry(
+                                child,
+                                dwarf_ctx.as_ref(),
+                                &config.filter,
+                                config.statistics_mode,
+                                in_json_mode,
+                                config.function_time,
+                            )
                         })?
                     } else {
-                        handle_syscall_entry(child, dwarf_ctx.as_ref(), &config.filter, config.statistics_mode, in_json_mode, config.function_time)?
+                        handle_syscall_entry(
+                            child,
+                            dwarf_ctx.as_ref(),
+                            &config.filter,
+                            config.statistics_mode,
+                            in_json_mode,
+                            config.function_time,
+                        )?
                     };
 
                     in_syscall = true;
@@ -209,13 +222,30 @@ fn trace_child(child: Pid, config: TracerConfig) -> Result<i32> {
 
                     // Profile syscall exit handling
                     if let Some(prof) = profiling_ctx.as_mut() {
-                        let result = prof.measure(crate::profiling::ProfilingCategory::Other, || {
-                            handle_syscall_exit(child, &current_syscall_entry, stats_tracker.as_mut(), json_output.as_mut(), function_profiler.as_mut(), config.timing_mode, duration_us)
-                        });
+                        let result =
+                            prof.measure(crate::profiling::ProfilingCategory::Other, || {
+                                handle_syscall_exit(
+                                    child,
+                                    &current_syscall_entry,
+                                    stats_tracker.as_mut(),
+                                    json_output.as_mut(),
+                                    function_profiler.as_mut(),
+                                    config.timing_mode,
+                                    duration_us,
+                                )
+                            });
                         result?;
                         prof.record_syscall();
                     } else {
-                        handle_syscall_exit(child, &current_syscall_entry, stats_tracker.as_mut(), json_output.as_mut(), function_profiler.as_mut(), config.timing_mode, duration_us)?;
+                        handle_syscall_exit(
+                            child,
+                            &current_syscall_entry,
+                            stats_tracker.as_mut(),
+                            json_output.as_mut(),
+                            function_profiler.as_mut(),
+                            config.timing_mode,
+                            duration_us,
+                        )?;
                     }
 
                     current_syscall_entry = None;
@@ -274,14 +304,20 @@ struct SyscallEntry {
 /// the first non-libc function.
 ///
 /// Returns the function name if found, None otherwise.
-#[allow(dead_code)]  // Reserved for future use (available as helper function)
-fn find_user_function_via_unwinding(child: Pid, dwarf_ctx: &crate::dwarf::DwarfContext) -> Option<String> {
+#[allow(dead_code)] // Reserved for future use (available as helper function)
+fn find_user_function_via_unwinding(
+    child: Pid,
+    dwarf_ctx: &crate::dwarf::DwarfContext,
+) -> Option<String> {
     find_user_function_with_caller(child, dwarf_ctx).map(|(func, _)| func)
 }
 
 /// Find user function and its caller from stack unwinding
 /// Returns (current_function, caller_function)
-fn find_user_function_with_caller(child: Pid, dwarf_ctx: &crate::dwarf::DwarfContext) -> Option<(String, Option<String>)> {
+fn find_user_function_with_caller(
+    child: Pid,
+    dwarf_ctx: &crate::dwarf::DwarfContext,
+) -> Option<(String, Option<String>)> {
     // Unwind the stack to get all frames
     let frames = match crate::stack_unwind::unwind_stack(child) {
         Ok(frames) => frames,
@@ -296,10 +332,10 @@ fn find_user_function_with_caller(child: Pid, dwarf_ctx: &crate::dwarf::DwarfCon
         if let Some(source_info) = dwarf_ctx.lookup(frame.rip).ok().flatten() {
             if let Some(func_name) = source_info.function {
                 // Filter out libc/system functions
-                let is_libc = func_name.starts_with("__") ||
-                              func_name.contains("libc") ||
-                              func_name.contains("@plt") ||
-                              func_name.contains("@@GLIBC");
+                let is_libc = func_name.starts_with("__")
+                    || func_name.contains("libc")
+                    || func_name.contains("@plt")
+                    || func_name.contains("@@GLIBC");
 
                 if !is_libc {
                     user_functions.push(func_name.to_string());
@@ -318,7 +354,14 @@ fn find_user_function_with_caller(child: Pid, dwarf_ctx: &crate::dwarf::DwarfCon
 
 /// Handle syscall entry - record syscall number and arguments
 /// Returns the syscall entry data if it should be traced, None otherwise
-fn handle_syscall_entry(child: Pid, dwarf_ctx: Option<&crate::dwarf::DwarfContext>, filter: &crate::filter::SyscallFilter, statistics_mode: bool, json_mode: bool, function_profiling_enabled: bool) -> Result<Option<SyscallEntry>> {
+fn handle_syscall_entry(
+    child: Pid,
+    dwarf_ctx: Option<&crate::dwarf::DwarfContext>,
+    filter: &crate::filter::SyscallFilter,
+    statistics_mode: bool,
+    json_mode: bool,
+    function_profiling_enabled: bool,
+) -> Result<Option<SyscallEntry>> {
     let regs = ptrace::getregs(child).context("Failed to get registers")?;
 
     // On x86_64: syscall number in orig_rax
@@ -353,11 +396,20 @@ fn handle_syscall_entry(child: Pid, dwarf_ctx: Option<&crate::dwarf::DwarfContex
         match name {
             "openat" => {
                 // openat(dfd, filename, flags, mode)
-                let filename = read_string(child, arg2 as usize).unwrap_or_else(|_| format!("{:#x}", arg2));
-                vec![format!("{:#x}", arg1), format!("\"{}\"", filename), format!("{:#x}", arg3)]
+                let filename =
+                    read_string(child, arg2 as usize).unwrap_or_else(|_| format!("{:#x}", arg2));
+                vec![
+                    format!("{:#x}", arg1),
+                    format!("\"{}\"", filename),
+                    format!("{:#x}", arg3),
+                ]
             }
             _ => {
-                vec![format!("{:#x}", arg1), format!("{:#x}", arg2), format!("{:#x}", arg3)]
+                vec![
+                    format!("{:#x}", arg1),
+                    format!("{:#x}", arg2),
+                    format!("{:#x}", arg3),
+                ]
             }
         }
     } else {
@@ -379,11 +431,15 @@ fn handle_syscall_entry(child: Pid, dwarf_ctx: Option<&crate::dwarf::DwarfContex
         match name {
             "openat" => {
                 // Read filename for display
-                let filename = read_string(child, arg2 as usize).unwrap_or_else(|_| format!("{:#x}", arg2));
+                let filename =
+                    read_string(child, arg2 as usize).unwrap_or_else(|_| format!("{:#x}", arg2));
                 print!("{}({:#x}, \"{}\", {:#x}) = ", name, arg1, filename, arg3);
             }
             "unknown" => {
-                print!("syscall_{}({:#x}, {:#x}, {:#x}) = ", syscall_num, arg1, arg2, arg3);
+                print!(
+                    "syscall_{}({:#x}, {:#x}, {:#x}) = ",
+                    syscall_num, arg1, arg2, arg3
+                );
             }
             _ => {
                 print!("{}({:#x}, {:#x}, {:#x}) = ", name, arg1, arg2, arg3);
@@ -396,23 +452,30 @@ fn handle_syscall_entry(child: Pid, dwarf_ctx: Option<&crate::dwarf::DwarfContex
     let (function_name, caller_name) = if function_profiling_enabled {
         if let Some(ctx) = dwarf_ctx {
             // Use stack unwinding to find the user function and its caller
-            find_user_function_with_caller(child, ctx).map_or((None, None), |(func, caller)| (Some(func), caller))
+            find_user_function_with_caller(child, ctx)
+                .map_or((None, None), |(func, caller)| (Some(func), caller))
         } else {
             // Fallback to using instruction pointer (may point to libc)
-            let func = source_info.as_ref().and_then(|src| src.function.clone().map(|s| s.to_string()));
+            let func = source_info
+                .as_ref()
+                .and_then(|src| src.function.clone().map(|s| s.to_string()));
             (func, None)
         }
     } else {
         // Fallback to using instruction pointer (may point to libc)
-        let func = source_info.as_ref().and_then(|src| src.function.clone().map(|s| s.to_string()));
+        let func = source_info
+            .as_ref()
+            .and_then(|src| src.function.clone().map(|s| s.to_string()));
         (func, None)
     };
 
-    let json_source = source_info.as_ref().map(|src| crate::json_output::JsonSourceLocation {
-        file: src.file.to_string(),
-        line: src.line,
-        function: src.function.clone().map(|s| s.to_string()),
-    });
+    let json_source = source_info
+        .as_ref()
+        .map(|src| crate::json_output::JsonSourceLocation {
+            file: src.file.to_string(),
+            line: src.line,
+            function: src.function.clone().map(|s| s.to_string()),
+        });
 
     // Return syscall entry data
     Ok(Some(SyscallEntry {
@@ -432,7 +495,10 @@ fn read_string(child: Pid, addr: usize) -> Result<String> {
     // Read up to 4096 bytes (max path length)
     let mut buf = vec![0u8; 4096];
     let mut local_iov = [IoSliceMut::new(&mut buf)];
-    let remote_iov = [RemoteIoVec { base: addr, len: 4096 }];
+    let remote_iov = [RemoteIoVec {
+        base: addr,
+        len: 4096,
+    }];
 
     let bytes_read = process_vm_readv(child, &mut local_iov, &remote_iov)
         .context("Failed to read string from tracee memory")?;
@@ -449,7 +515,15 @@ fn read_string(child: Pid, addr: usize) -> Result<String> {
 }
 
 /// Handle syscall exit - print return value and record statistics
-fn handle_syscall_exit(child: Pid, syscall_entry: &Option<SyscallEntry>, stats_tracker: Option<&mut crate::stats::StatsTracker>, json_output: Option<&mut crate::json_output::JsonOutput>, function_profiler: Option<&mut crate::function_profiler::FunctionProfiler>, timing_mode: bool, duration_us: u64) -> Result<()> {
+fn handle_syscall_exit(
+    child: Pid,
+    syscall_entry: &Option<SyscallEntry>,
+    stats_tracker: Option<&mut crate::stats::StatsTracker>,
+    json_output: Option<&mut crate::json_output::JsonOutput>,
+    function_profiler: Option<&mut crate::function_profiler::FunctionProfiler>,
+    timing_mode: bool,
+    duration_us: u64,
+) -> Result<()> {
     let regs = ptrace::getregs(child).context("Failed to get registers")?;
 
     // Return value in rax (may be negative for errors)
@@ -484,7 +558,12 @@ fn handle_syscall_exit(child: Pid, syscall_entry: &Option<SyscallEntry>, stats_t
     // Record function profiling if enabled
     if let (Some(entry), Some(profiler)) = (syscall_entry, function_profiler) {
         if let Some(function_name) = &entry.function_name {
-            profiler.record(function_name, &entry.name, duration_us, entry.caller_name.as_deref());
+            profiler.record(
+                function_name,
+                &entry.name,
+                duration_us,
+                entry.caller_name.as_deref(),
+            );
         }
     }
 
@@ -595,6 +674,10 @@ mod tests {
         assert!(result.is_err());
         // Error message should mention attach failure
         let err_msg = result.unwrap_err().to_string();
-        assert!(err_msg.contains("attach") || err_msg.contains("Failed"), "Error: {}", err_msg);
+        assert!(
+            err_msg.contains("attach") || err_msg.contains("Failed"),
+            "Error: {}",
+            err_msg
+        );
     }
 }

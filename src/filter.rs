@@ -27,7 +27,10 @@ impl SyscallFilter {
         if let Some(trace_spec) = expr.strip_prefix("trace=") {
             Self::from_trace_spec(trace_spec)
         } else {
-            bail!("Invalid filter expression: {}. Expected format: trace=SPEC", expr);
+            bail!(
+                "Invalid filter expression: {}. Expected format: trace=SPEC",
+                expr
+            );
         }
     }
 
@@ -42,34 +45,73 @@ impl SyscallFilter {
             match part {
                 "file" => {
                     // File operations
-                    syscalls.extend([
-                        "open", "openat", "close", "read", "write",
-                        "lseek", "stat", "fstat", "newfstatat",
-                        "access", "mkdir", "rmdir", "unlink",
-                    ].iter().map(|s| s.to_string()));
+                    syscalls.extend(
+                        [
+                            "open",
+                            "openat",
+                            "close",
+                            "read",
+                            "write",
+                            "lseek",
+                            "stat",
+                            "fstat",
+                            "newfstatat",
+                            "access",
+                            "mkdir",
+                            "rmdir",
+                            "unlink",
+                        ]
+                        .iter()
+                        .map(|s| s.to_string()),
+                    );
                 }
                 "network" => {
                     // Network operations
-                    syscalls.extend([
-                        "socket", "connect", "accept", "bind", "listen",
-                        "send", "recv", "sendto", "recvfrom",
-                        "setsockopt", "getsockopt",
-                    ].iter().map(|s| s.to_string()));
+                    syscalls.extend(
+                        [
+                            "socket",
+                            "connect",
+                            "accept",
+                            "bind",
+                            "listen",
+                            "send",
+                            "recv",
+                            "sendto",
+                            "recvfrom",
+                            "setsockopt",
+                            "getsockopt",
+                        ]
+                        .iter()
+                        .map(|s| s.to_string()),
+                    );
                 }
                 "process" => {
                     // Process operations
-                    syscalls.extend([
-                        "fork", "vfork", "clone", "execve",
-                        "exit", "exit_group", "wait4", "waitid",
-                        "kill", "tkill", "tgkill",
-                    ].iter().map(|s| s.to_string()));
+                    syscalls.extend(
+                        [
+                            "fork",
+                            "vfork",
+                            "clone",
+                            "execve",
+                            "exit",
+                            "exit_group",
+                            "wait4",
+                            "waitid",
+                            "kill",
+                            "tkill",
+                            "tgkill",
+                        ]
+                        .iter()
+                        .map(|s| s.to_string()),
+                    );
                 }
                 "memory" => {
                     // Memory operations
-                    syscalls.extend([
-                        "mmap", "munmap", "mprotect", "mremap",
-                        "brk", "sbrk",
-                    ].iter().map(|s| s.to_string()));
+                    syscalls.extend(
+                        ["mmap", "munmap", "mprotect", "mremap", "brk", "sbrk"]
+                            .iter()
+                            .map(|s| s.to_string()),
+                    );
                 }
                 _ => {
                     // Individual syscall name

@@ -217,7 +217,10 @@ mod tests {
         let duration = Duration::from_millis(100);
 
         ctx.record_time(ProfilingCategory::Formatting, duration);
-        assert_eq!(ctx.time_in_category(ProfilingCategory::Formatting), duration);
+        assert_eq!(
+            ctx.time_in_category(ProfilingCategory::Formatting),
+            duration
+        );
 
         ctx.record_time(ProfilingCategory::Formatting, duration);
         assert_eq!(
