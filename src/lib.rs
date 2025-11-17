@@ -10,6 +10,7 @@ pub mod csv_output;
 pub mod dwarf;
 pub mod filter;
 pub mod function_profiler;
+pub mod hpu;
 pub mod json_output;
 pub mod profiling;
 pub mod stack_unwind;
