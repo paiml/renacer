@@ -21,7 +21,7 @@ fn main() -> Result<()> {
             filter::SyscallFilter::all()
         };
 
-        tracer::trace_command(&command, args.source, filter, args.statistics)?;
+        tracer::trace_command(&command, args.source, filter, args.statistics, args.timing)?;
     } else {
         anyhow::bail!("No command specified. Usage: renacer -- COMMAND [ARGS...]");
     }
