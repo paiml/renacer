@@ -7,6 +7,7 @@ mod filter;
 mod function_profiler;
 mod json_output;
 mod profiling;
+mod stack_unwind;
 mod stats;
 mod syscalls;
 mod tracer;

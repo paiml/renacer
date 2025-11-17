@@ -32,6 +32,9 @@ gimli = "0.31"
 object = "0.37"
 memmap2 = "0.9"
 
+# Stack unwinding for function profiling
+backtrace = "0.3"
+
 # High-performance SIMD/GPU compute (sister project)
 trueno = { path = "../trueno" }
 
