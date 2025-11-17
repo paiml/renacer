@@ -24,6 +24,8 @@ fn main() -> Result<()> {
         function_time: args.function_time,
         stats_extended: args.stats_extended,       // Sprint 19
         anomaly_threshold: args.anomaly_threshold, // Sprint 19
+        anomaly_realtime: args.anomaly_realtime,   // Sprint 20
+        anomaly_window_size: args.anomaly_window_size, // Sprint 20
     };
 
     // Either attach to PID or trace command (mutually exclusive)

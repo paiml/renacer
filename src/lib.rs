@@ -4,6 +4,7 @@
 //! in Rust binaries, with support for DWARF debug information, function profiling,
 //! and comprehensive filtering.
 
+pub mod anomaly;
 pub mod cli;
 pub mod csv_output;
 pub mod dwarf;

@@ -66,6 +66,18 @@ pub struct Cli {
     )]
     pub anomaly_threshold: f32,
 
+    /// Enable real-time anomaly detection (Sprint 20)
+    #[arg(long = "anomaly-realtime")]
+    pub anomaly_realtime: bool,
+
+    /// Sliding window size for real-time anomaly detection (default: 100)
+    #[arg(
+        long = "anomaly-window-size",
+        value_name = "SIZE",
+        default_value = "100"
+    )]
+    pub anomaly_window_size: usize,
+
     /// Command to trace (everything after --)
     #[arg(last = true)]
     pub command: Option<Vec<String>>,
