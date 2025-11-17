@@ -381,6 +381,8 @@ fn print_summaries(
     exit_code: i32,
     stats_extended: bool,
     anomaly_threshold: f32,
+    hpu_analysis: bool,
+    hpu_cpu_only: bool,
 ) {
     let Tracers {
         stats_tracker,
@@ -418,7 +420,7 @@ fn print_summaries(
 
     // Print CSV statistics output if in CSV + statistics mode
     if let Some(mut csv_stats) = csv_stats_output {
-        if let Some(tracker) = stats_tracker {
+        if let Some(ref tracker) = stats_tracker {
             // Convert stats_tracker data to CSV format
             for (syscall_name, stats) in tracker.stats_map() {
                 csv_stats.add_stat(crate::csv_output::CsvStat {
@@ -449,6 +451,24 @@ fn print_summaries(
     // Sprint 20: Print anomaly detection summary if enabled
     if let Some(detector) = anomaly_detector {
         detector.print_summary();
+    }
+
+    // Sprint 21: HPU-accelerated analysis if enabled
+    if hpu_analysis {
+        if let Some(ref tracker) = stats_tracker {
+            // Convert stats to HPU format: HashMap<String, (count, total_time_ns)>
+            let mut hpu_data = std::collections::HashMap::new();
+            for (syscall_name, stats) in tracker.stats_map() {
+                // Convert microseconds to nanoseconds for HPU
+                let total_time_ns = stats.total_time_us * 1000;
+                hpu_data.insert(syscall_name.clone(), (stats.count, total_time_ns));
+            }
+
+            // Run HPU analysis
+            let profiler = crate::hpu::HPUProfiler::new(hpu_cpu_only);
+            let report = profiler.analyze(&hpu_data);
+            print!("{}", report.format());
+        }
     }
 }
 
@@ -593,6 +613,8 @@ fn trace_child(child: Pid, config: TracerConfig) -> Result<i32> {
         main_exit_code,
         config.stats_extended,
         config.anomaly_threshold,
+        config.hpu_analysis,
+        config.hpu_cpu_only,
     );
     std::process::exit(main_exit_code);
 }
