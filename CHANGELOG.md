@@ -502,6 +502,66 @@ Filtering overhead: ~8% improvement with -e trace=open
 - Source-aware output showing file:line for each syscall (requires stack unwinding)
 - Function name attribution from DWARF .debug_info (requires stack unwinding)
 
+#### Sprint 15: Advanced Filtering - Negation Operator (2025-11-17)
+
+**Goal:** Extend filtering with negation operator for excluding syscalls
+
+**Implementation** (EXTREME TDD - RED → GREEN → REFACTOR):
+- **RED Phase**: Created 7 integration tests (tests/sprint15_negation_tests.rs)
+- **GREEN Phase**: Added `exclude: HashSet<String>` to SyscallFilter
+- **REFACTOR Phase**: Extracted validate_trace_spec() and parse_syscall_sets()
+
+**Features:**
+- `-e trace=!close` - Exclude specific syscalls
+- `-e trace=!file` - Exclude syscall classes
+- `-e trace=file,!close` - Mixed inclusion + exclusion
+- Exclusions have highest priority (checked first)
+
+**Results:**
+- **Tests**: 178 total (16 new - 7 integration + 9 unit)
+- **Complexity**: All functions ≤10 (max: 8) ✅
+- **Clippy**: Zero warnings ✅
+- **TDG Score**: 94.5/100 maintained
+
+**Examples:**
+```bash
+renacer -e trace=!close -- ls               # All syscalls except close
+renacer -e trace=!file -- curl example.com  # All except file operations
+renacer -e trace=file,!close -- cat file    # File operations except close
+```
+
+#### Sprint 16: Advanced Filtering - Regex Patterns (2025-11-17)
+
+**Goal:** Add regex pattern matching for powerful syscall selection
+
+**Implementation** (EXTREME TDD - RED → GREEN → REFACTOR):
+- **RED Phase**: Created 9 integration tests (tests/sprint16_regex_filtering_tests.rs)
+- **GREEN Phase**: Added `include_regex` and `exclude_regex` fields to SyscallFilter
+- **REFACTOR Phase**: Extracted parse_regex_pattern(), created ParseResult type alias
+
+**Features:**
+- `/pattern/` syntax for regex patterns
+- Support for prefix, suffix, OR patterns
+- Case-insensitive matching with `(?i)` flag
+- Mixed regex + literals + negation
+- Proper error handling for invalid regex
+
+**Results:**
+- **Tests**: 201 total (23 new - 9 integration + 14 unit)
+- **Complexity**: All functions ≤10 (max: 8) ✅
+- **Clippy**: Zero warnings ✅
+- **Coverage**: 93.73% overall (filter.rs: 98.76%)
+- **TDG Score**: 94.5/100 maintained
+
+**Examples:**
+```bash
+renacer -e 'trace=/^open.*/' -- ls          # All syscalls starting with "open"
+renacer -e 'trace=/.*at$/' -- cat file      # All syscalls ending with "at"
+renacer -e 'trace=/read|write/' -- app      # Syscalls matching read OR write
+renacer -e 'trace=/^open.*/,!/openat/' -- ls  # open* except openat
+renacer -e 'trace=/(?i)OPEN/' -- ls         # Case-insensitive matching
+```
+
 ### Planned for 0.3.0
 - `-f` follow forks (multi-process tracking with refactored trace loop)
 - See GitHub Issue #2 for detailed implementation plan
