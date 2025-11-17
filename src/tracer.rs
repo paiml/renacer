@@ -11,12 +11,24 @@ use std::process::Command;
 
 use crate::syscalls;
 
+/// Configuration for tracer behavior
+pub struct TracerConfig {
+    pub enable_source: bool,
+    pub filter: crate::filter::SyscallFilter,
+    pub statistics_mode: bool,
+    pub timing_mode: bool,
+    pub output_format: crate::cli::OutputFormat,
+    pub follow_forks: bool,
+    pub profile_self: bool,
+    pub function_time: bool,
+}
+
 /// Attach to a running process by PID and trace syscalls
 ///
 /// # Sprint 9-10 Scope
 /// - `-p PID` flag to attach to running processes
 /// - Uses PTRACE_ATTACH instead of fork() + PTRACE_TRACEME
-pub fn attach_to_pid(pid: i32, enable_source: bool, filter: crate::filter::SyscallFilter, statistics_mode: bool, timing_mode: bool, output_format: crate::cli::OutputFormat, follow_forks: bool) -> Result<()> {
+pub fn attach_to_pid(pid: i32, config: TracerConfig) -> Result<()> {
     let pid = Pid::from_raw(pid);
 
     // Attach to the running process
@@ -28,7 +40,7 @@ pub fn attach_to_pid(pid: i32, enable_source: bool, filter: crate::filter::Sysca
     eprintln!("[renacer: Attached to process {}]", pid);
 
     // Use the same tracing logic as trace_command
-    trace_child(pid, enable_source, filter, statistics_mode, timing_mode, output_format, follow_forks)?;
+    trace_child(pid, config)?;
 
     Ok(())
 }
@@ -49,7 +61,7 @@ pub fn attach_to_pid(pid: i32, enable_source: bool, filter: crate::filter::Sysca
 /// - Timing per syscall via -T flag
 /// - JSON output via --format json
 /// - Fork following via -f flag
-pub fn trace_command(command: &[String], enable_source: bool, filter: crate::filter::SyscallFilter, statistics_mode: bool, timing_mode: bool, output_format: crate::cli::OutputFormat, follow_forks: bool) -> Result<()> {
+pub fn trace_command(command: &[String], config: TracerConfig) -> Result<()> {
     if command.is_empty() {
         anyhow::bail!("Command array is empty");
     }
@@ -59,8 +71,8 @@ pub fn trace_command(command: &[String], enable_source: bool, filter: crate::fil
 
     // Fork: parent will trace, child will exec
     match unsafe { fork() }.context("Failed to fork")? {
-        ForkResult::Parent { child } => {
-            trace_child(child, enable_source, filter, statistics_mode, timing_mode, output_format, follow_forks)?;
+        ForkResult::Parent { child} => {
+            trace_child(child, config)?;
             Ok(())
         }
         ForkResult::Child => {
@@ -80,8 +92,23 @@ pub fn trace_command(command: &[String], enable_source: bool, filter: crate::fil
 }
 
 /// Trace a child process, filtering syscalls based on filter
-fn trace_child(child: Pid, enable_source: bool, filter: crate::filter::SyscallFilter, statistics_mode: bool, timing_mode: bool, output_format: crate::cli::OutputFormat, follow_forks: bool) -> Result<i32> {
+fn trace_child(child: Pid, config: TracerConfig) -> Result<i32> {
     use crate::cli::OutputFormat;
+
+    // Initialize profiling context if enabled
+    let mut profiling_ctx = if config.profile_self {
+        Some(crate::profiling::ProfilingContext::new())
+    } else {
+        None
+    };
+
+    // Initialize function profiler if enabled
+    let mut function_profiler = if config.function_time {
+        Some(crate::function_profiler::FunctionProfiler::new())
+    } else {
+        None
+    };
+
     // Wait for initial SIGSTOP from PTRACE_TRACEME
     waitpid(child, None).context("Failed to wait for child")?;
 
@@ -90,7 +117,7 @@ fn trace_child(child: Pid, enable_source: bool, filter: crate::filter::SyscallFi
         | ptrace::Options::PTRACE_O_EXITKILL;
 
     // Add fork following options if enabled
-    if follow_forks {
+    if config.follow_forks {
         options |= ptrace::Options::PTRACE_O_TRACEFORK
             | ptrace::Options::PTRACE_O_TRACEVFORK
             | ptrace::Options::PTRACE_O_TRACECLONE;
@@ -104,12 +131,12 @@ fn trace_child(child: Pid, enable_source: bool, filter: crate::filter::SyscallFi
     let mut syscall_entry_time: Option<std::time::Instant> = None;
     let mut dwarf_ctx: Option<crate::dwarf::DwarfContext> = None;
     let mut dwarf_loaded = false;
-    let mut stats_tracker = if statistics_mode {
+    let mut stats_tracker = if config.statistics_mode {
         Some(crate::stats::StatsTracker::new())
     } else {
         None
     };
-    let mut json_output = if matches!(output_format, OutputFormat::Json) {
+    let mut json_output = if matches!(config.output_format, OutputFormat::Json) {
         Some(crate::json_output::JsonOutput::new())
     } else {
         None
@@ -119,7 +146,7 @@ fn trace_child(child: Pid, enable_source: bool, filter: crate::filter::SyscallFi
     loop {
         // Sprint 5-6: Load DWARF context on first syscall if --source is enabled
         // We wait until after exec() has happened to get the right binary
-        if enable_source && !dwarf_loaded {
+        if config.enable_source && !dwarf_loaded {
             dwarf_loaded = true; // Only try once
             // Read /proc/PID/exe to get binary path
             if let Ok(exe_path) = std::fs::read_link(format!("/proc/{}/exe", child)) {
@@ -158,10 +185,19 @@ fn trace_child(child: Pid, enable_source: bool, filter: crate::filter::SyscallFi
                 let in_json_mode = json_output.is_some();
                 if !in_syscall {
                     // Syscall entry - record start time if timing enabled
-                    if timing_mode || statistics_mode || in_json_mode {
+                    if config.timing_mode || config.statistics_mode || in_json_mode {
                         syscall_entry_time = Some(std::time::Instant::now());
                     }
-                    current_syscall_entry = handle_syscall_entry(child, dwarf_ctx.as_ref(), &filter, statistics_mode, in_json_mode)?;
+
+                    // Profile syscall entry handling
+                    current_syscall_entry = if let Some(prof) = profiling_ctx.as_mut() {
+                        prof.measure(crate::profiling::ProfilingCategory::Other, || {
+                            handle_syscall_entry(child, dwarf_ctx.as_ref(), &config.filter, config.statistics_mode, in_json_mode)
+                        })?
+                    } else {
+                        handle_syscall_entry(child, dwarf_ctx.as_ref(), &config.filter, config.statistics_mode, in_json_mode)?
+                    };
+
                     in_syscall = true;
                 } else {
                     // Syscall exit - calculate duration
@@ -170,7 +206,18 @@ fn trace_child(child: Pid, enable_source: bool, filter: crate::filter::SyscallFi
                     } else {
                         0
                     };
-                    handle_syscall_exit(child, &current_syscall_entry, stats_tracker.as_mut(), json_output.as_mut(), timing_mode, duration_us)?;
+
+                    // Profile syscall exit handling
+                    if let Some(prof) = profiling_ctx.as_mut() {
+                        let result = prof.measure(crate::profiling::ProfilingCategory::Other, || {
+                            handle_syscall_exit(child, &current_syscall_entry, stats_tracker.as_mut(), json_output.as_mut(), function_profiler.as_mut(), config.timing_mode, duration_us)
+                        });
+                        result?;
+                        prof.record_syscall();
+                    } else {
+                        handle_syscall_exit(child, &current_syscall_entry, stats_tracker.as_mut(), json_output.as_mut(), function_profiler.as_mut(), config.timing_mode, duration_us)?;
+                    }
+
                     current_syscall_entry = None;
                     syscall_entry_time = None;
                     in_syscall = false;
@@ -197,6 +244,16 @@ fn trace_child(child: Pid, enable_source: bool, filter: crate::filter::SyscallFi
         }
     }
 
+    // Print profiling summary if enabled
+    if let Some(ctx) = profiling_ctx {
+        ctx.print_summary();
+    }
+
+    // Print function profiling summary if enabled
+    if let Some(profiler) = function_profiler {
+        profiler.print_summary();
+    }
+
     // Exit with traced program's exit code
     std::process::exit(exit_code);
 }
@@ -206,6 +263,7 @@ struct SyscallEntry {
     name: String,
     args: Vec<String>,
     source: Option<crate::json_output::JsonSourceLocation>,
+    function_name: Option<String>,
 }
 
 /// Handle syscall entry - record syscall number and arguments
@@ -284,11 +342,12 @@ fn handle_syscall_entry(child: Pid, dwarf_ctx: Option<&crate::dwarf::DwarfContex
         std::io::Write::flush(&mut std::io::stdout()).ok();
     }
 
-    // Convert source_info to JsonSourceLocation if needed
-    let json_source = source_info.map(|src| crate::json_output::JsonSourceLocation {
+    // Convert source_info to JsonSourceLocation and extract function name
+    let function_name = source_info.as_ref().and_then(|src| src.function.clone().map(|s| s.to_string()));
+    let json_source = source_info.as_ref().map(|src| crate::json_output::JsonSourceLocation {
         file: src.file.to_string(),
         line: src.line,
-        function: src.function.map(|s| s.to_string()),
+        function: src.function.clone().map(|s| s.to_string()),
     });
 
     // Return syscall entry data
@@ -296,6 +355,7 @@ fn handle_syscall_entry(child: Pid, dwarf_ctx: Option<&crate::dwarf::DwarfContex
         name: name.to_string(),
         args,
         source: json_source,
+        function_name,
     }))
 }
 
@@ -324,7 +384,7 @@ fn read_string(child: Pid, addr: usize) -> Result<String> {
 }
 
 /// Handle syscall exit - print return value and record statistics
-fn handle_syscall_exit(child: Pid, syscall_entry: &Option<SyscallEntry>, stats_tracker: Option<&mut crate::stats::StatsTracker>, json_output: Option<&mut crate::json_output::JsonOutput>, timing_mode: bool, duration_us: u64) -> Result<()> {
+fn handle_syscall_exit(child: Pid, syscall_entry: &Option<SyscallEntry>, stats_tracker: Option<&mut crate::stats::StatsTracker>, json_output: Option<&mut crate::json_output::JsonOutput>, function_profiler: Option<&mut crate::function_profiler::FunctionProfiler>, timing_mode: bool, duration_us: u64) -> Result<()> {
     let regs = ptrace::getregs(child).context("Failed to get registers")?;
 
     // Return value in rax (may be negative for errors)
@@ -356,6 +416,13 @@ fn handle_syscall_exit(child: Pid, syscall_entry: &Option<SyscallEntry>, stats_t
         });
     }
 
+    // Record function profiling if enabled
+    if let (Some(entry), Some(profiler)) = (syscall_entry, function_profiler) {
+        if let Some(function_name) = &entry.function_name {
+            profiler.record(function_name, duration_us);
+        }
+    }
+
     // Print result only if not in statistics or JSON mode
     if syscall_entry.is_some() && !in_stats_mode && !in_json_mode {
         if timing_mode && duration_us > 0 {
@@ -375,8 +442,17 @@ mod tests {
     #[test]
     fn test_trace_command_requires_nonempty_array() {
         let empty: Vec<String> = vec![];
-        let filter = crate::filter::SyscallFilter::all();
-        let result = trace_command(&empty, false, filter, false, false, crate::cli::OutputFormat::Text, false);
+        let config = TracerConfig {
+            enable_source: false,
+            filter: crate::filter::SyscallFilter::all(),
+            statistics_mode: false,
+            timing_mode: false,
+            output_format: crate::cli::OutputFormat::Text,
+            follow_forks: false,
+            profile_self: false,
+            function_time: false,
+        };
+        let result = trace_command(&empty, config);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("empty"));
     }
@@ -385,8 +461,17 @@ mod tests {
     fn test_trace_command_not_implemented_yet() {
         // RED phase: this should fail until we implement
         let cmd = vec!["echo".to_string(), "test".to_string()];
-        let filter = crate::filter::SyscallFilter::all();
-        let result = trace_command(&cmd, false, filter, false, false, crate::cli::OutputFormat::Text, false);
+        let config = TracerConfig {
+            enable_source: false,
+            filter: crate::filter::SyscallFilter::all(),
+            statistics_mode: false,
+            timing_mode: false,
+            output_format: crate::cli::OutputFormat::Text,
+            follow_forks: false,
+            profile_self: false,
+            function_time: false,
+        };
+        let result = trace_command(&cmd, config);
         assert!(result.is_err());
     }
 
@@ -396,10 +481,12 @@ mod tests {
             name: "open".to_string(),
             args: vec!["arg1".to_string(), "arg2".to_string()],
             source: None,
+            function_name: None,
         };
         assert_eq!(entry.name, "open");
         assert_eq!(entry.args.len(), 2);
         assert!(entry.source.is_none());
+        assert!(entry.function_name.is_none());
     }
 
     #[test]
@@ -413,6 +500,7 @@ mod tests {
             name: "read".to_string(),
             args: vec![],
             source: Some(source),
+            function_name: Some("main".to_string()),
         };
         assert_eq!(entry.name, "read");
         assert!(entry.source.is_some());
@@ -420,13 +508,23 @@ mod tests {
         assert_eq!(src.file, "test.rs");
         assert_eq!(src.line, 42);
         assert_eq!(src.function, Some("main".to_string()));
+        assert_eq!(entry.function_name, Some("main".to_string()));
     }
 
     #[test]
     fn test_attach_to_pid_invalid_pid() {
         // Test attaching to a non-existent PID (should fail)
-        let filter = crate::filter::SyscallFilter::all();
-        let result = attach_to_pid(999999, false, filter, false, false, crate::cli::OutputFormat::Text, false);
+        let config = TracerConfig {
+            enable_source: false,
+            filter: crate::filter::SyscallFilter::all(),
+            statistics_mode: false,
+            timing_mode: false,
+            output_format: crate::cli::OutputFormat::Text,
+            follow_forks: false,
+            profile_self: false,
+            function_time: false,
+        };
+        let result = attach_to_pid(999999, config);
         assert!(result.is_err());
         // Error message should mention attach failure
         let err_msg = result.unwrap_err().to_string();
