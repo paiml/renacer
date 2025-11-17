@@ -104,14 +104,19 @@ See `roadmap.yaml` for detailed implementation plan:
 
 ### Added (Post-v0.1.0)
 
-#### Sprint 9-10: Advanced Filtering
+#### Sprint 9-10: Advanced Filtering & Statistics
 - **Syscall Filtering**: `-e trace=EXPR` flag for filtering syscalls
   - Individual syscalls: `-e trace=open,read,write`
   - Syscall classes: `-e trace=file`, `-e trace=network`, `-e trace=process`, `-e trace=memory`
   - Mixed mode: `-e trace=file,socket,brk`
 - **Filter Module**: Robust parsing and evaluation of filter expressions
-- **Zero Overhead**: Filtering at display time, no performance impact on unfiltered tracing
-- **6 Integration Tests**: Comprehensive coverage of filtering functionality
+- **Statistics Mode**: `-c` flag for syscall summary (strace-compatible)
+  - Per-syscall call counts and error counts
+  - Percentage distribution
+  - Summary table with totals
+  - Compatible with filtering
+- **Zero Overhead**: Filtering/statistics at display time, no performance impact when disabled
+- **10 Integration Tests**: Comprehensive coverage of filtering and statistics functionality
 
 ### Planned for 0.2.0
 - ✅ DWARF .debug_line parsing using addr2line crate (COMPLETED in v0.1.0)
