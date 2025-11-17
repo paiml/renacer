@@ -22,6 +22,8 @@ fn main() -> Result<()> {
         follow_forks: args.follow_forks,
         profile_self: args.profile_self,
         function_time: args.function_time,
+        stats_extended: args.stats_extended,       // Sprint 19
+        anomaly_threshold: args.anomaly_threshold, // Sprint 19
     };
 
     // Either attach to PID or trace command (mutually exclusive)

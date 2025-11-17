@@ -54,6 +54,18 @@ pub struct Cli {
     #[arg(long = "function-time")]
     pub function_time: bool,
 
+    /// Enable extended statistics with percentiles and anomaly detection (requires -c)
+    #[arg(long = "stats-extended")]
+    pub stats_extended: bool,
+
+    /// Anomaly detection threshold in standard deviations (default: 3.0)
+    #[arg(
+        long = "anomaly-threshold",
+        value_name = "SIGMA",
+        default_value = "3.0"
+    )]
+    pub anomaly_threshold: f32,
+
     /// Command to trace (everything after --)
     #[arg(last = true)]
     pub command: Option<Vec<String>>,
@@ -102,5 +114,44 @@ mod tests {
     fn test_cli_function_time_default_false() {
         let cli = Cli::parse_from(["renacer", "--", "echo", "test"]);
         assert!(!cli.function_time);
+    }
+
+    #[test]
+    fn test_cli_stats_extended_flag() {
+        let cli = Cli::parse_from(["renacer", "--stats-extended", "--", "echo", "test"]);
+        assert!(cli.stats_extended);
+        assert!(cli.command.is_some());
+    }
+
+    #[test]
+    fn test_cli_stats_extended_default_false() {
+        let cli = Cli::parse_from(["renacer", "--", "echo", "test"]);
+        assert!(!cli.stats_extended);
+    }
+
+    #[test]
+    fn test_cli_anomaly_threshold_default() {
+        let cli = Cli::parse_from(["renacer", "--", "echo", "test"]);
+        assert_eq!(cli.anomaly_threshold, 3.0);
+    }
+
+    #[test]
+    fn test_cli_anomaly_threshold_custom() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "--anomaly-threshold",
+            "2.5",
+            "--",
+            "echo",
+            "test",
+        ]);
+        assert_eq!(cli.anomaly_threshold, 2.5);
+    }
+
+    #[test]
+    fn test_cli_stats_extended_with_statistics() {
+        let cli = Cli::parse_from(["renacer", "-c", "--stats-extended", "--", "echo", "test"]);
+        assert!(cli.statistics);
+        assert!(cli.stats_extended);
     }
 }
