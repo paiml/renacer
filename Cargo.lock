@@ -633,6 +633,7 @@ dependencies = [
  "object 0.37.3",
  "predicates",
  "proptest",
+ "regex",
  "serde",
  "serde_json",
  "tempfile",
