@@ -40,6 +40,10 @@ pub struct Cli {
     #[arg(short = 'p', long = "pid", value_name = "PID")]
     pub pid: Option<i32>,
 
+    /// Follow forks (trace child processes)
+    #[arg(short = 'f', long = "follow-forks")]
+    pub follow_forks: bool,
+
     /// Command to trace (everything after --)
     #[arg(last = true)]
     pub command: Option<Vec<String>>,

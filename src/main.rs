@@ -25,11 +25,11 @@ fn main() -> Result<()> {
     match (args.pid, args.command) {
         (Some(pid), None) => {
             // Attach to running process
-            tracer::attach_to_pid(pid, args.source, filter, args.statistics, args.timing, args.format)?;
+            tracer::attach_to_pid(pid, args.source, filter, args.statistics, args.timing, args.format, args.follow_forks)?;
         }
         (None, Some(command)) => {
             // Trace command
-            tracer::trace_command(&command, args.source, filter, args.statistics, args.timing, args.format)?;
+            tracer::trace_command(&command, args.source, filter, args.statistics, args.timing, args.format, args.follow_forks)?;
         }
         (Some(_), Some(_)) => {
             anyhow::bail!("Cannot specify both -p PID and command. Choose one.");
