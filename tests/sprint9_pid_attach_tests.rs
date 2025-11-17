@@ -1,4 +1,5 @@
 //! Integration tests for -p PID attach (Sprint 9-10)
+#![allow(deprecated)]  // suppress assert_cmd::Command::cargo_bin deprecation in tests
 
 use assert_cmd::Command;
 use predicates::prelude::*;

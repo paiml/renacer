@@ -1,4 +1,5 @@
 //! Integration tests for self-profiling feature (Sprint 13-14)
+#![allow(deprecated)]  // suppress assert_cmd::Command::cargo_bin deprecation in tests
 //!
 //! Tests for --profile-self flag and ProfilingContext
 
@@ -8,7 +9,7 @@ use assert_cmd::Command;
 fn test_profile_self_flag_outputs_summary() {
     // Test that --profile-self produces profiling summary to stderr
     let mut cmd = Command::cargo_bin("renacer").unwrap();
-    cmd.args(&["--profile-self", "--", "echo", "test"]);
+    cmd.args(["--profile-self", "--", "echo", "test"]);
 
     let output = cmd.output().expect("Failed to execute command");
 
@@ -56,7 +57,7 @@ fn test_profile_self_flag_outputs_summary() {
 fn test_profile_self_without_flag_no_output() {
     // Test that without --profile-self, no profiling summary appears
     let mut cmd = Command::cargo_bin("renacer").unwrap();
-    cmd.args(&["--", "echo", "test"]);
+    cmd.args(["--", "echo", "test"]);
 
     let output = cmd.output().expect("Failed to execute command");
 
@@ -78,7 +79,7 @@ fn test_profile_self_without_flag_no_output() {
 fn test_profile_self_with_statistics_mode() {
     // Test that --profile-self works with -c (statistics mode)
     let mut cmd = Command::cargo_bin("renacer").unwrap();
-    cmd.args(&["--profile-self", "-c", "--", "echo", "test"]);
+    cmd.args(["--profile-self", "-c", "--", "echo", "test"]);
 
     let output = cmd.output().expect("Failed to execute command");
 
@@ -106,7 +107,7 @@ fn test_profile_self_with_statistics_mode() {
 fn test_profile_self_reports_nonzero_syscalls() {
     // Test that profiling reports > 0 syscalls for a real command
     let mut cmd = Command::cargo_bin("renacer").unwrap();
-    cmd.args(&["--profile-self", "--", "ls", "/tmp"]);
+    cmd.args(["--profile-self", "--", "ls", "/tmp"]);
 
     let output = cmd.output().expect("Failed to execute command");
 
@@ -141,7 +142,7 @@ fn test_profile_self_reports_nonzero_syscalls() {
 fn test_profile_self_with_filtering() {
     // Test that --profile-self works with syscall filtering
     let mut cmd = Command::cargo_bin("renacer").unwrap();
-    cmd.args(&["--profile-self", "-e", "trace=open", "--", "echo", "test"]);
+    cmd.args(["--profile-self", "-e", "trace=open", "--", "echo", "test"]);
 
     let output = cmd.output().expect("Failed to execute command");
 

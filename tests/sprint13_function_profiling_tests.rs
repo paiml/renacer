@@ -1,4 +1,5 @@
 // Integration tests for --function-time flag (GitHub Issue #1)
+#![allow(deprecated)]  // suppress assert_cmd::Command::cargo_bin deprecation in tests
 // Sprint 13-14: Function-level profiling with DWARF correlation
 
 use assert_cmd::Command;
