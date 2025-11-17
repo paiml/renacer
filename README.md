@@ -6,24 +6,25 @@ Renacer (Spanish: "to be reborn") is a next-generation binary inspection and tra
 
 ## Project Status
 
-**Current Version:** 0.3.0-dev (Sprint 16 in progress)
-**Status:** Production-Ready (v0.2.0) + Advanced Filtering (Sprint 15-16)
+**Current Version:** 0.3.0-dev (Sprint 18 complete)
+**Status:** Production-Ready (v0.2.0) + Advanced Filtering (Sprint 15-18)
 **TDG Score:** 94.5/100 (A grade)
-**Test Coverage:** 201 tests (all passing)
+**Test Coverage:** 243+ tests (all passing)
 **Specification:** [docs/specifications/deep-strace-rust-wasm-binary-spec.md](docs/specifications/deep-strace-rust-wasm-binary-spec.md)
 
 ## Features
 
-### Core Tracing (Sprint 1-10)
+### Core Tracing (Sprint 1-10, 15-18)
 - ✅ **Full syscall tracing** - All 335 Linux syscalls supported
 - ✅ **DWARF debug info** - Source file and line number correlation
 - ✅ **Statistics mode** (-c flag) - Call counts, error rates, timing
-- ✅ **JSON output** (--format json) - Machine-readable trace export
+- ✅ **JSON/CSV output** (--format json/csv) - Machine-readable trace export
 - ✅ **Advanced filtering** (-e trace=SPEC) - File, network, process, memory classes
 - ✅ **Negation operator** (Sprint 15) - Exclude syscalls with ! prefix
 - ✅ **Regex patterns** (Sprint 16) - Pattern matching with /regex/ syntax
 - ✅ **PID attachment** (-p PID) - Attach to running processes
 - ✅ **Timing mode** (-T) - Microsecond-precision syscall durations
+- ✅ **Multi-process tracing** (Sprint 18) - Follow fork/vfork/clone with -f flag
 
 ### Function Profiling (Sprint 13-14)
 - ✅ **I/O Bottleneck Detection** - Automatic detection of slow I/O (>1ms)
@@ -74,6 +75,11 @@ renacer -e 'trace=/^open.*/' -- ls          # All syscalls starting with "open"
 renacer -e 'trace=/.*at$/' -- cat file      # All syscalls ending with "at"
 renacer -e 'trace=/read|write/' -- app      # Syscalls matching read OR write
 renacer -e 'trace=/^open.*/,!/openat/' -- ls  # open* except openat
+
+# Multi-process tracing (Sprint 18)
+renacer -f -- bash -c "echo parent && (echo child &)"  # Follow forks
+renacer -f -e trace=file -- make clean      # Follow forks with filtering
+renacer -f -c -- python app.py              # Multi-process statistics
 
 # Statistics summary
 renacer -c -T -- cargo build
