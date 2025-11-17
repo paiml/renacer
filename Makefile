@@ -1,7 +1,7 @@
 # Renacer Makefile
 # Following bashrs and paiml-mcp-agent-toolkit patterns
 
-.PHONY: help test coverage coverage-html coverage-clean clean build release lint format check
+.PHONY: help test coverage coverage-html coverage-clean mutants mutants-quick clean build release lint format check
 
 help: ## Show this help message
 	@echo "Renacer - Pure Rust strace alternative"
@@ -86,3 +86,23 @@ clean: ## Clean build artifacts
 benchmark: ## Run performance benchmarks
 	@echo "📊 Running benchmarks..."
 	@cargo test --test benchmark_vs_strace -- --nocapture --test-threads=1
+
+mutants: ## Run mutation testing (full analysis)
+	@echo "🧬 Running mutation testing..."
+	@echo "🔍 Checking for cargo-mutants..."
+	@which cargo-mutants > /dev/null 2>&1 || (echo "📦 Installing cargo-mutants..." && cargo install cargo-mutants --locked)
+	@echo "🧬 Running cargo-mutants (this may take several minutes)..."
+	@cargo mutants --output target/mutants.out || echo "⚠️  Some mutants survived"
+	@echo ""
+	@echo "📊 Mutation Testing Results:"
+	@cat target/mutants.out/mutants.out 2>/dev/null || echo "Check target/mutants.out/ for detailed results"
+
+mutants-quick: ## Run mutation testing (quick check on changed files only)
+	@echo "🧬 Running quick mutation testing..."
+	@echo "🔍 Checking for cargo-mutants..."
+	@which cargo-mutants > /dev/null 2>&1 || (echo "📦 Installing cargo-mutants..." && cargo install cargo-mutants --locked)
+	@echo "🧬 Running cargo-mutants on uncommitted changes..."
+	@cargo mutants --in-diff git:HEAD --output target/mutants-quick.out || echo "⚠️  Some mutants survived"
+	@echo ""
+	@echo "📊 Quick Mutation Testing Results:"
+	@cat target/mutants-quick.out/mutants.out 2>/dev/null || echo "Check target/mutants-quick.out/ for detailed results"

@@ -375,4 +375,47 @@ mod tests {
         let result = trace_command(&cmd, false, filter, false, false, crate::cli::OutputFormat::Text, false);
         assert!(result.is_err());
     }
+
+    #[test]
+    fn test_syscall_entry_creation() {
+        let entry = SyscallEntry {
+            name: "open".to_string(),
+            args: vec!["arg1".to_string(), "arg2".to_string()],
+            source: None,
+        };
+        assert_eq!(entry.name, "open");
+        assert_eq!(entry.args.len(), 2);
+        assert!(entry.source.is_none());
+    }
+
+    #[test]
+    fn test_syscall_entry_with_source() {
+        let source = crate::json_output::JsonSourceLocation {
+            file: "test.rs".to_string(),
+            line: 42,
+            function: Some("main".to_string()),
+        };
+        let entry = SyscallEntry {
+            name: "read".to_string(),
+            args: vec![],
+            source: Some(source),
+        };
+        assert_eq!(entry.name, "read");
+        assert!(entry.source.is_some());
+        let src = entry.source.unwrap();
+        assert_eq!(src.file, "test.rs");
+        assert_eq!(src.line, 42);
+        assert_eq!(src.function, Some("main".to_string()));
+    }
+
+    #[test]
+    fn test_attach_to_pid_invalid_pid() {
+        // Test attaching to a non-existent PID (should fail)
+        let filter = crate::filter::SyscallFilter::all();
+        let result = attach_to_pid(999999, false, filter, false, false, crate::cli::OutputFormat::Text, false);
+        assert!(result.is_err());
+        // Error message should mention attach failure
+        let err_msg = result.unwrap_err().to_string();
+        assert!(err_msg.contains("attach") || err_msg.contains("Failed"), "Error: {}", err_msg);
+    }
 }
