@@ -23,6 +23,8 @@ pub struct TracerConfig {
     pub function_time: bool,
     pub stats_extended: bool,   // Sprint 19: Extended statistics with Trueno
     pub anomaly_threshold: f32, // Sprint 19: Anomaly detection threshold (σ)
+    pub anomaly_realtime: bool, // Sprint 20: Real-time anomaly detection
+    pub anomaly_window_size: usize, // Sprint 20: Sliding window size
 }
 
 /// Attach to a running process by PID and trace syscalls
@@ -99,6 +101,7 @@ struct Tracers {
     json_output: Option<crate::json_output::JsonOutput>,
     csv_output: Option<crate::csv_output::CsvOutput>,
     csv_stats_output: Option<crate::csv_output::CsvStatsOutput>,
+    anomaly_detector: Option<crate::anomaly::AnomalyDetector>, // Sprint 20
 }
 
 /// Initialize all tracers and profilers based on config
@@ -146,6 +149,15 @@ fn initialize_tracers(config: &TracerConfig) -> Tracers {
             None
         };
 
+    let anomaly_detector = if config.anomaly_realtime {
+        Some(crate::anomaly::AnomalyDetector::new(
+            config.anomaly_window_size,
+            config.anomaly_threshold,
+        ))
+    } else {
+        None
+    };
+
     Tracers {
         profiling_ctx,
         function_profiler,
@@ -153,6 +165,7 @@ fn initialize_tracers(config: &TracerConfig) -> Tracers {
         json_output,
         csv_output,
         csv_stats_output,
+        anomaly_detector,
     }
 }
 
@@ -374,6 +387,7 @@ fn print_summaries(
         csv_stats_output,
         profiling_ctx,
         function_profiler,
+        anomaly_detector,
     } = tracers;
     // Print statistics summary if in statistics mode (text format)
     if stats_tracker.is_some() && csv_stats_output.is_none() {
@@ -428,6 +442,11 @@ fn print_summaries(
     // Print function profiling summary if enabled
     if let Some(profiler) = function_profiler {
         profiler.print_summary();
+    }
+
+    // Sprint 20: Print anomaly detection summary if enabled
+    if let Some(detector) = anomaly_detector {
+        detector.print_summary();
     }
 }
 
@@ -984,6 +1003,25 @@ fn handle_syscall_exit(
         duration_us,
     );
 
+    // Sprint 20: Real-time anomaly detection
+    if let (Some(entry), Some(detector)) = (syscall_entry, tracers.anomaly_detector.as_mut()) {
+        if let Some(anomaly) = detector.record_and_check(&entry.name, duration_us) {
+            // Print real-time anomaly alert to stderr
+            eprintln!(
+                "⚠️  ANOMALY: {} took {} μs ({:.1}σ from baseline {:.1} μs) - {}",
+                anomaly.syscall_name,
+                anomaly.duration_us,
+                anomaly.z_score.abs(),
+                anomaly.baseline_mean,
+                match anomaly.severity {
+                    crate::anomaly::AnomalySeverity::Low => "🟢 Low",
+                    crate::anomaly::AnomalySeverity::Medium => "🟡 Medium",
+                    crate::anomaly::AnomalySeverity::High => "🔴 High",
+                }
+            );
+        }
+    }
+
     // Print result if not in statistics, JSON, or CSV mode
     if syscall_entry.is_some() && !in_stats_mode && !in_json_mode && !in_csv_mode {
         print_syscall_result(result, timing_mode, duration_us);
@@ -1008,8 +1046,10 @@ mod tests {
             follow_forks: false,
             profile_self: false,
             function_time: false,
-            stats_extended: false,  // Sprint 19
-            anomaly_threshold: 3.0, // Sprint 19
+            stats_extended: false,    // Sprint 19
+            anomaly_threshold: 3.0,   // Sprint 19
+            anomaly_realtime: false,  // Sprint 20
+            anomaly_window_size: 100, // Sprint 20
         };
         let result = trace_command(&empty, config);
         assert!(result.is_err());
@@ -1029,8 +1069,10 @@ mod tests {
             follow_forks: false,
             profile_self: false,
             function_time: false,
-            stats_extended: false,  // Sprint 19
-            anomaly_threshold: 3.0, // Sprint 19
+            stats_extended: false,    // Sprint 19
+            anomaly_threshold: 3.0,   // Sprint 19
+            anomaly_realtime: false,  // Sprint 20
+            anomaly_window_size: 100, // Sprint 20
         };
         let result = trace_command(&cmd, config);
         assert!(result.is_err());
@@ -1086,8 +1128,10 @@ mod tests {
             follow_forks: false,
             profile_self: false,
             function_time: false,
-            stats_extended: false,  // Sprint 19
-            anomaly_threshold: 3.0, // Sprint 19
+            stats_extended: false,    // Sprint 19
+            anomaly_threshold: 3.0,   // Sprint 19
+            anomaly_realtime: false,  // Sprint 20
+            anomaly_window_size: 100, // Sprint 20
         };
         let result = attach_to_pid(999999, config);
         assert!(result.is_err());
