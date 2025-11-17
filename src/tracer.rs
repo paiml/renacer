@@ -16,7 +16,7 @@ use crate::syscalls;
 /// # Sprint 9-10 Scope
 /// - `-p PID` flag to attach to running processes
 /// - Uses PTRACE_ATTACH instead of fork() + PTRACE_TRACEME
-pub fn attach_to_pid(pid: i32, enable_source: bool, filter: crate::filter::SyscallFilter, statistics_mode: bool, timing_mode: bool, output_format: crate::cli::OutputFormat) -> Result<()> {
+pub fn attach_to_pid(pid: i32, enable_source: bool, filter: crate::filter::SyscallFilter, statistics_mode: bool, timing_mode: bool, output_format: crate::cli::OutputFormat, follow_forks: bool) -> Result<()> {
     let pid = Pid::from_raw(pid);
 
     // Attach to the running process
@@ -28,7 +28,7 @@ pub fn attach_to_pid(pid: i32, enable_source: bool, filter: crate::filter::Sysca
     eprintln!("[renacer: Attached to process {}]", pid);
 
     // Use the same tracing logic as trace_command
-    trace_child(pid, enable_source, filter, statistics_mode, timing_mode, output_format)?;
+    trace_child(pid, enable_source, filter, statistics_mode, timing_mode, output_format, follow_forks)?;
 
     Ok(())
 }
@@ -48,7 +48,8 @@ pub fn attach_to_pid(pid: i32, enable_source: bool, filter: crate::filter::Sysca
 /// - Statistics mode via -c flag
 /// - Timing per syscall via -T flag
 /// - JSON output via --format json
-pub fn trace_command(command: &[String], enable_source: bool, filter: crate::filter::SyscallFilter, statistics_mode: bool, timing_mode: bool, output_format: crate::cli::OutputFormat) -> Result<()> {
+/// - Fork following via -f flag
+pub fn trace_command(command: &[String], enable_source: bool, filter: crate::filter::SyscallFilter, statistics_mode: bool, timing_mode: bool, output_format: crate::cli::OutputFormat, follow_forks: bool) -> Result<()> {
     if command.is_empty() {
         anyhow::bail!("Command array is empty");
     }
@@ -59,7 +60,7 @@ pub fn trace_command(command: &[String], enable_source: bool, filter: crate::fil
     // Fork: parent will trace, child will exec
     match unsafe { fork() }.context("Failed to fork")? {
         ForkResult::Parent { child } => {
-            trace_child(child, enable_source, filter, statistics_mode, timing_mode, output_format)?;
+            trace_child(child, enable_source, filter, statistics_mode, timing_mode, output_format, follow_forks)?;
             Ok(())
         }
         ForkResult::Child => {
@@ -79,18 +80,24 @@ pub fn trace_command(command: &[String], enable_source: bool, filter: crate::fil
 }
 
 /// Trace a child process, filtering syscalls based on filter
-fn trace_child(child: Pid, enable_source: bool, filter: crate::filter::SyscallFilter, statistics_mode: bool, timing_mode: bool, output_format: crate::cli::OutputFormat) -> Result<i32> {
+fn trace_child(child: Pid, enable_source: bool, filter: crate::filter::SyscallFilter, statistics_mode: bool, timing_mode: bool, output_format: crate::cli::OutputFormat, follow_forks: bool) -> Result<i32> {
     use crate::cli::OutputFormat;
     // Wait for initial SIGSTOP from PTRACE_TRACEME
     waitpid(child, None).context("Failed to wait for child")?;
 
     // Set ptrace options to trace syscalls
-    ptrace::setoptions(
-        child,
-        ptrace::Options::PTRACE_O_TRACESYSGOOD
-            | ptrace::Options::PTRACE_O_EXITKILL,
-    )
-    .context("Failed to set ptrace options")?;
+    let mut options = ptrace::Options::PTRACE_O_TRACESYSGOOD
+        | ptrace::Options::PTRACE_O_EXITKILL;
+
+    // Add fork following options if enabled
+    if follow_forks {
+        options |= ptrace::Options::PTRACE_O_TRACEFORK
+            | ptrace::Options::PTRACE_O_TRACEVFORK
+            | ptrace::Options::PTRACE_O_TRACECLONE;
+    }
+
+    ptrace::setoptions(child, options)
+        .context("Failed to set ptrace options")?;
 
     let mut in_syscall = false;
     let mut current_syscall_entry: Option<SyscallEntry> = None;
@@ -355,7 +362,7 @@ mod tests {
     fn test_trace_command_requires_nonempty_array() {
         let empty: Vec<String> = vec![];
         let filter = crate::filter::SyscallFilter::all();
-        let result = trace_command(&empty, false, filter, false, false, crate::cli::OutputFormat::Text);
+        let result = trace_command(&empty, false, filter, false, false, crate::cli::OutputFormat::Text, false);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("empty"));
     }
@@ -365,7 +372,7 @@ mod tests {
         // RED phase: this should fail until we implement
         let cmd = vec!["echo".to_string(), "test".to_string()];
         let filter = crate::filter::SyscallFilter::all();
-        let result = trace_command(&cmd, false, filter, false, false, crate::cli::OutputFormat::Text);
+        let result = trace_command(&cmd, false, filter, false, false, crate::cli::OutputFormat::Text, false);
         assert!(result.is_err());
     }
 }
