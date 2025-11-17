@@ -6,10 +6,10 @@ Renacer (Spanish: "to be reborn") is a next-generation binary inspection and tra
 
 ## Project Status
 
-**Current Version:** 0.2.0
-**Status:** Production-Ready
-**TDG Score:** 94.2/100 (A grade)
-**Test Coverage:** 142 tests (all passing)
+**Current Version:** 0.3.0-dev (Sprint 15 in progress)
+**Status:** Production-Ready (v0.2.0) + Advanced Filtering (Sprint 15)
+**TDG Score:** 94.5/100 (A grade)
+**Test Coverage:** 178 tests (all passing)
 **Specification:** [docs/specifications/deep-strace-rust-wasm-binary-spec.md](docs/specifications/deep-strace-rust-wasm-binary-spec.md)
 
 ## Features
@@ -20,6 +20,7 @@ Renacer (Spanish: "to be reborn") is a next-generation binary inspection and tra
 - ✅ **Statistics mode** (-c flag) - Call counts, error rates, timing
 - ✅ **JSON output** (--format json) - Machine-readable trace export
 - ✅ **Advanced filtering** (-e trace=SPEC) - File, network, process, memory classes
+- ✅ **Negation operator** (Sprint 15) - Exclude syscalls with ! prefix
 - ✅ **PID attachment** (-p PID) - Attach to running processes
 - ✅ **Timing mode** (-T) - Microsecond-precision syscall durations
 
@@ -58,6 +59,8 @@ renacer --format json -- echo "test" > trace.json
 # Filter syscalls
 renacer -e trace=file -- cat file.txt       # File operations only
 renacer -e trace=open,read,write -- ls      # Specific syscalls
+renacer -e trace=!close -- ls               # All syscalls except close (Sprint 15)
+renacer -e trace=file,!close -- cat file    # File ops except close (Sprint 15)
 
 # Statistics summary
 renacer -c -T -- cargo build
