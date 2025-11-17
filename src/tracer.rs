@@ -468,7 +468,7 @@ fn handle_syscall_exit(child: Pid, syscall_entry: &Option<SyscallEntry>, stats_t
     // Record function profiling if enabled
     if let (Some(entry), Some(profiler)) = (syscall_entry, function_profiler) {
         if let Some(function_name) = &entry.function_name {
-            profiler.record(function_name, duration_us);
+            profiler.record(function_name, &entry.name, duration_us);
         }
     }
 
