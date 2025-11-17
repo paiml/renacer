@@ -84,6 +84,38 @@ impl FunctionProfiler {
         }
     }
 
+    /// Export profiling data in flamegraph format
+    ///
+    /// Generates flamegraph-compatible output format (folded stacks)
+    /// Each line: "func1;func2;func3 samples"
+    ///
+    /// # Arguments
+    /// * `writer` - Where to write the flamegraph data
+    #[allow(dead_code)]  // Public API for flamegraph export (will be used in CLI)
+    pub fn export_flamegraph<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        // Build flamegraph samples from call graph
+        // Format: "caller;callee sample_count"
+
+        for (function, stats) in &self.stats {
+            // Add root-level functions (no callers)
+            if !self.has_caller(function) {
+                writeln!(writer, "{} {}", function, stats.syscall_count)?;
+            }
+
+            // Add caller->callee relationships
+            for (callee, count) in &stats.callees {
+                writeln!(writer, "{};{} {}", function, callee, count)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Check if a function has any callers
+    fn has_caller(&self, function: &str) -> bool {
+        self.stats.values().any(|stats| stats.callees.contains_key(function))
+    }
+
     /// Print function timing summary to stderr
     pub fn print_summary(&self) {
         if self.stats.is_empty() {
@@ -598,5 +630,166 @@ mod tests {
 
         // print_summary() should only show top 10 in hot path analysis
         profiler.print_summary();
+    }
+
+    #[test]
+    fn test_flamegraph_export_simple() {
+        let mut profiler = FunctionProfiler::new();
+        profiler.record("main", "write", 1000, None);
+
+        let mut output = Vec::new();
+        profiler.export_flamegraph(&mut output).unwrap();
+
+        let flamegraph = String::from_utf8(output).unwrap();
+        assert!(flamegraph.contains("main 1"));
+    }
+
+    #[test]
+    fn test_flamegraph_export_with_call_graph() {
+        let mut profiler = FunctionProfiler::new();
+
+        // main calls helper
+        profiler.record("main", "write", 1000, None);
+        profiler.record("helper", "read", 2000, Some("main"));
+
+        let mut output = Vec::new();
+        profiler.export_flamegraph(&mut output).unwrap();
+
+        let flamegraph = String::from_utf8(output).unwrap();
+
+        // Should have root function
+        assert!(flamegraph.contains("main 1"));
+        // Should have caller->callee
+        assert!(flamegraph.contains("main;helper 1"));
+    }
+
+    #[test]
+    fn test_flamegraph_export_multiple_callees() {
+        let mut profiler = FunctionProfiler::new();
+
+        // main calls multiple functions
+        profiler.record("main", "write", 1000, None);
+        profiler.record("helper_a", "read", 2000, Some("main"));
+        profiler.record("helper_b", "open", 3000, Some("main"));
+        profiler.record("helper_c", "close", 4000, Some("main"));
+
+        let mut output = Vec::new();
+        profiler.export_flamegraph(&mut output).unwrap();
+
+        let flamegraph = String::from_utf8(output).unwrap();
+
+        // Should have all call paths
+        assert!(flamegraph.contains("main;helper_a 1"));
+        assert!(flamegraph.contains("main;helper_b 1"));
+        assert!(flamegraph.contains("main;helper_c 1"));
+    }
+
+    #[test]
+    fn test_flamegraph_export_nested_calls() {
+        let mut profiler = FunctionProfiler::new();
+
+        // main -> helper_a -> helper_b
+        profiler.record("main", "write", 1000, None);
+        profiler.record("helper_a", "read", 2000, Some("main"));
+        profiler.record("helper_b", "open", 3000, Some("helper_a"));
+
+        let mut output = Vec::new();
+        profiler.export_flamegraph(&mut output).unwrap();
+
+        let flamegraph = String::from_utf8(output).unwrap();
+
+        // Should have main as root
+        assert!(flamegraph.contains("main 1"));
+        // Should have first level
+        assert!(flamegraph.contains("main;helper_a 1"));
+        // Should have second level
+        assert!(flamegraph.contains("helper_a;helper_b 1"));
+    }
+
+    #[test]
+    fn test_flamegraph_export_multiple_calls_same_function() {
+        let mut profiler = FunctionProfiler::new();
+
+        // main calls helper multiple times
+        profiler.record("main", "write", 1000, None);
+        profiler.record("helper", "read", 1000, Some("main"));
+        profiler.record("helper", "read", 2000, Some("main"));
+        profiler.record("helper", "open", 3000, Some("main"));
+
+        let mut output = Vec::new();
+        profiler.export_flamegraph(&mut output).unwrap();
+
+        let flamegraph = String::from_utf8(output).unwrap();
+
+        // Should show aggregated call count
+        assert!(flamegraph.contains("main;helper 3"));
+    }
+
+    #[test]
+    fn test_flamegraph_export_empty() {
+        let profiler = FunctionProfiler::new();
+
+        let mut output = Vec::new();
+        profiler.export_flamegraph(&mut output).unwrap();
+
+        let flamegraph = String::from_utf8(output).unwrap();
+        assert!(flamegraph.is_empty());
+    }
+
+    #[test]
+    fn test_flamegraph_export_multiple_roots() {
+        let mut profiler = FunctionProfiler::new();
+
+        // Multiple root functions (no callers)
+        profiler.record("main", "write", 1000, None);
+        profiler.record("worker_thread", "read", 2000, None);
+        profiler.record("signal_handler", "open", 3000, None);
+
+        let mut output = Vec::new();
+        profiler.export_flamegraph(&mut output).unwrap();
+
+        let flamegraph = String::from_utf8(output).unwrap();
+
+        // All should appear as roots
+        assert!(flamegraph.contains("main 1"));
+        assert!(flamegraph.contains("worker_thread 1"));
+        assert!(flamegraph.contains("signal_handler 1"));
+    }
+
+    #[test]
+    fn test_has_caller_helper() {
+        let mut profiler = FunctionProfiler::new();
+
+        profiler.record("main", "write", 1000, None);
+        profiler.record("helper", "read", 2000, Some("main"));
+
+        // main has no caller
+        assert!(!profiler.has_caller("main"));
+        // helper has caller (main)
+        assert!(profiler.has_caller("helper"));
+    }
+
+    #[test]
+    fn test_flamegraph_format_correctness() {
+        let mut profiler = FunctionProfiler::new();
+
+        profiler.record("main", "write", 1000, None);
+        profiler.record("helper", "read", 2000, Some("main"));
+
+        let mut output = Vec::new();
+        profiler.export_flamegraph(&mut output).unwrap();
+
+        let flamegraph = String::from_utf8(output).unwrap();
+        let lines: Vec<&str> = flamegraph.lines().collect();
+
+        // Each line should follow "stack count" format
+        for line in lines {
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            assert!(parts.len() >= 2, "Line should have stack and count: {}", line);
+
+            // Last part should be a number (count)
+            let count_str = parts.last().unwrap();
+            assert!(count_str.parse::<u64>().is_ok(), "Count should be a number: {}", count_str);
+        }
     }
 }
