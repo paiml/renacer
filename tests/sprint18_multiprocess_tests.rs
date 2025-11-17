@@ -1,6 +1,8 @@
 // Sprint 18: Multi-Process Tracing (-f flag)
 // EXTREME TDD: RED phase - Integration tests for fork following
 
+#![allow(deprecated)] // Command::cargo_bin is deprecated but still functional
+
 use assert_cmd::Command;
 use predicates::prelude::*;
 use std::fs;

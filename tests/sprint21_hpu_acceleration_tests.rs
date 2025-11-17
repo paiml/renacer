@@ -1,6 +1,8 @@
 // Sprint 21: HPU Acceleration Foundation
 // EXTREME TDD: RED phase - Integration tests for GPU-accelerated analysis
 
+#![allow(deprecated)] // Command::cargo_bin is deprecated but still functional
+
 use assert_cmd::Command;
 use predicates::prelude::*;
 use std::fs;
