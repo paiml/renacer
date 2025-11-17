@@ -5,6 +5,105 @@ All notable changes to Renacer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2025-11-17
+
+### Added
+
+#### Function-Level Profiling (GitHub Issue #1 - Complete!)
+
+**Complete implementation of function-level profiling with 4 major features:**
+
+1. **I/O Bottleneck Detection** (Commit 000cd50)
+   - Automatic detection of slow I/O operations (>1ms threshold)
+   - Tracks 16 I/O syscall types: `read`, `write`, `readv`, `writev`, `pread64`, `pwrite64`, `openat`, `open`, `close`, `fsync`, `fdatasync`, `sync`, `sendfile`, `splice`, `tee`, `vmsplice`
+   - Visual warnings (⚠️) in output for functions with slow I/O
+   - Helps identify performance bottlenecks in I/O-heavy code
+   - 8 comprehensive unit tests, 100% coverage
+
+2. **Call Graph Tracking** (Commit 4527919)
+   - Tracks parent→child function relationships via stack unwinding
+   - Shows which functions call which other functions
+   - Visual tree display of call graphs in profiling output
+   - Aggregates call frequencies for each relationship
+   - 6 comprehensive unit tests
+
+3. **Hot Path Analysis** (Commit 81a8e22)
+   - Identifies top 10 most time-consuming functions
+   - Shows percentage of total execution time per function
+   - Integrated with call graph display (top 5 callees per hot function)
+   - Helps prioritize optimization efforts
+   - 5 comprehensive unit tests
+
+4. **Flamegraph Export** (Commit 88b1a67)
+   - Exports profiling data in folded stack format
+   - Compatible with standard flamegraph tools: `flamegraph.pl`, `inferno`, `speedscope`
+   - Supports nested call graphs and multi-level stack traces
+   - Format: `func1;func2;func3 count`
+   - Public API: `profiler.export_flamegraph(&mut file)?`
+   - 10 comprehensive unit tests
+
+**Stack Unwinding Infrastructure** (Commit 078cfd8)
+- Manual stack unwinding via frame pointer chain (RBP)
+- Remote process memory reading via `process_vm_readv`
+- Filters out libc functions to identify user code
+- Max depth protection (64 frames) prevents infinite loops
+- 6 unit tests + 5 integration tests
+- Coverage: 98.88% (up from 22.64%)
+
+**Integration & CLI:**
+- All features work together seamlessly
+- Activated with `--function-time --source` flags
+- Output includes: timing summary, hot paths, call graphs, I/O analysis
+- Zero runtime overhead when disabled
+
+### Changed
+
+#### Dependencies
+- **Trueno Integration** (Commit 7270fa8)
+  - Migrated from local path dependency to published crates.io version
+  - Now using `trueno = "0.1.0"` from crates.io
+  - Makes renacer more portable and easier to build
+  - SIMD-accelerated statistics via Trueno Vector operations
+
+#### Code Quality
+- **Clippy Compliance** (Commit c5b4c69)
+  - Fixed all clippy warnings for v0.2.0 release
+  - Suppressed assert_cmd deprecation in tests (11 test files)
+  - Fixed needless borrows in test argument passing
+  - Added allow annotation for constant assertions in tests
+  - Zero clippy errors with `-D warnings`
+
+#### Performance
+- **5-9% Performance Improvement** (Commit 783eeb8)
+  - Lazy formatting: only format syscall output when needed
+  - Reduced allocations in hot paths
+  - String building optimizations
+  - Maintains >90% test coverage
+
+### Quality Metrics (v0.2.0)
+- **TDG Score**: 94.2/100 (A grade)
+- **Tests**: 124 unit tests (29 new tests for Sprint 13-14 Phase 2)
+  - 35 function_profiler tests
+  - 8 stack_unwind tests
+  - All integration tests passing
+- **Coverage**: 91.21% overall
+  - function_profiler.rs: 100%
+  - stack_unwind.rs: 98.88%
+  - filter.rs: 100%
+  - cli.rs: 100%
+  - syscalls.rs: 99.38%
+- **Code Quality**: 0 clippy errors, 0 warnings
+- **Dependencies**: Trueno 0.1.0 from crates.io
+
+### Sprint Accomplishments
+
+#### Sprint 13-14 Phase 2: Advanced Function Profiling
+- **GitHub Issue #1**: Fully complete ✅
+  - All 4 planned features implemented
+  - 29 new comprehensive tests
+  - 100% coverage on profiling modules
+  - Production-ready with full documentation
+
 ## [0.1.0] - 2025-11-16
 
 ### Added
@@ -381,4 +480,5 @@ Filtering overhead: ~8% improvement with -e trace=open
 
 ---
 
+[0.2.0]: https://github.com/paiml/renacer/releases/tag/v0.2.0
 [0.1.0]: https://github.com/paiml/renacer/releases/tag/v0.1.0
