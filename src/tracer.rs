@@ -89,24 +89,52 @@ pub fn trace_command(command: &[String], config: TracerConfig) -> Result<()> {
     }
 }
 
-/// Trace a child process, filtering syscalls based on filter
-fn trace_child(child: Pid, config: TracerConfig) -> Result<i32> {
+/// Tracers and profilers used during tracing
+struct Tracers {
+    profiling_ctx: Option<crate::profiling::ProfilingContext>,
+    function_profiler: Option<crate::function_profiler::FunctionProfiler>,
+    stats_tracker: Option<crate::stats::StatsTracker>,
+    json_output: Option<crate::json_output::JsonOutput>,
+}
+
+/// Initialize all tracers and profilers based on config
+fn initialize_tracers(config: &TracerConfig) -> Tracers {
     use crate::cli::OutputFormat;
 
-    // Initialize profiling context if enabled
-    let mut profiling_ctx = if config.profile_self {
+    let profiling_ctx = if config.profile_self {
         Some(crate::profiling::ProfilingContext::new())
     } else {
         None
     };
 
-    // Initialize function profiler if enabled
-    let mut function_profiler = if config.function_time {
+    let function_profiler = if config.function_time {
         Some(crate::function_profiler::FunctionProfiler::new())
     } else {
         None
     };
 
+    let stats_tracker = if config.statistics_mode {
+        Some(crate::stats::StatsTracker::new())
+    } else {
+        None
+    };
+
+    let json_output = if matches!(config.output_format, OutputFormat::Json) {
+        Some(crate::json_output::JsonOutput::new())
+    } else {
+        None
+    };
+
+    Tracers {
+        profiling_ctx,
+        function_profiler,
+        stats_tracker,
+        json_output,
+    }
+}
+
+/// Initialize ptrace options for the child process
+fn setup_ptrace_options(child: Pid, follow_forks: bool) -> Result<()> {
     // Wait for initial SIGSTOP from PTRACE_TRACEME
     waitpid(child, None).context("Failed to wait for child")?;
 
@@ -114,152 +142,172 @@ fn trace_child(child: Pid, config: TracerConfig) -> Result<i32> {
     let mut options = ptrace::Options::PTRACE_O_TRACESYSGOOD | ptrace::Options::PTRACE_O_EXITKILL;
 
     // Add fork following options if enabled
-    if config.follow_forks {
+    if follow_forks {
         options |= ptrace::Options::PTRACE_O_TRACEFORK
             | ptrace::Options::PTRACE_O_TRACEVFORK
             | ptrace::Options::PTRACE_O_TRACECLONE;
     }
 
     ptrace::setoptions(child, options).context("Failed to set ptrace options")?;
+    Ok(())
+}
 
-    let mut in_syscall = false;
-    let mut current_syscall_entry: Option<SyscallEntry> = None;
-    let mut syscall_entry_time: Option<std::time::Instant> = None;
-    let mut dwarf_ctx: Option<crate::dwarf::DwarfContext> = None;
-    let mut dwarf_loaded = false;
-    let mut stats_tracker = if config.statistics_mode {
-        Some(crate::stats::StatsTracker::new())
-    } else {
-        None
-    };
-    let mut json_output = if matches!(config.output_format, OutputFormat::Json) {
-        Some(crate::json_output::JsonOutput::new())
-    } else {
-        None
-    };
-    let exit_code;
-
-    loop {
-        // Sprint 5-6: Load DWARF context on first syscall if --source is enabled
-        // We wait until after exec() has happened to get the right binary
-        if config.enable_source && !dwarf_loaded {
-            dwarf_loaded = true; // Only try once
-                                 // Read /proc/PID/exe to get binary path
-            if let Ok(exe_path) = std::fs::read_link(format!("/proc/{}/exe", child)) {
-                match crate::dwarf::DwarfContext::load(&exe_path) {
-                    Ok(ctx) => {
-                        eprintln!(
-                            "[renacer: DWARF debug info loaded from {}]",
-                            exe_path.display()
-                        );
-                        dwarf_ctx = Some(ctx);
-                    }
-                    Err(e) => {
-                        eprintln!("[renacer: Warning - failed to load DWARF: {}]", e);
-                        eprintln!("[renacer: Continuing without source correlation]");
-                    }
-                }
+/// Load DWARF debug info for source correlation
+fn load_dwarf_context(child: Pid) -> Option<crate::dwarf::DwarfContext> {
+    if let Ok(exe_path) = std::fs::read_link(format!("/proc/{}/exe", child)) {
+        match crate::dwarf::DwarfContext::load(&exe_path) {
+            Ok(ctx) => {
+                eprintln!(
+                    "[renacer: DWARF debug info loaded from {}]",
+                    exe_path.display()
+                );
+                Some(ctx)
+            }
+            Err(e) => {
+                eprintln!("[renacer: Warning - failed to load DWARF: {}]", e);
+                eprintln!("[renacer: Continuing without source correlation]");
+                None
             }
         }
-
-        // Continue and wait for next syscall or exit
-        ptrace::syscall(child, None).context("Failed to PTRACE_SYSCALL")?;
-
-        match waitpid(child, None).context("Failed to waitpid")? {
-            WaitStatus::Exited(_, code) => {
-                exit_code = code;
-                break;
-            }
-            WaitStatus::Signaled(_, sig, _) => {
-                eprintln!("Child killed by signal: {:?}", sig);
-                exit_code = 128 + sig as i32;
-                break;
-            }
-            WaitStatus::PtraceEvent(_, _, _) => {
-                // Ptrace event, continue
-                continue;
-            }
-            WaitStatus::PtraceSyscall(_) => {
-                // Syscall entry or exit
-                let in_json_mode = json_output.is_some();
-                if !in_syscall {
-                    // Syscall entry - record start time if timing enabled
-                    if config.timing_mode || config.statistics_mode || in_json_mode {
-                        syscall_entry_time = Some(std::time::Instant::now());
-                    }
-
-                    // Profile syscall entry handling
-                    current_syscall_entry = if let Some(prof) = profiling_ctx.as_mut() {
-                        prof.measure(crate::profiling::ProfilingCategory::Other, || {
-                            handle_syscall_entry(
-                                child,
-                                dwarf_ctx.as_ref(),
-                                &config.filter,
-                                config.statistics_mode,
-                                in_json_mode,
-                                config.function_time,
-                            )
-                        })?
-                    } else {
-                        handle_syscall_entry(
-                            child,
-                            dwarf_ctx.as_ref(),
-                            &config.filter,
-                            config.statistics_mode,
-                            in_json_mode,
-                            config.function_time,
-                        )?
-                    };
-
-                    in_syscall = true;
-                } else {
-                    // Syscall exit - calculate duration
-                    let duration_us = if let Some(start) = syscall_entry_time {
-                        start.elapsed().as_micros() as u64
-                    } else {
-                        0
-                    };
-
-                    // Profile syscall exit handling
-                    if let Some(prof) = profiling_ctx.as_mut() {
-                        let result =
-                            prof.measure(crate::profiling::ProfilingCategory::Other, || {
-                                handle_syscall_exit(
-                                    child,
-                                    &current_syscall_entry,
-                                    stats_tracker.as_mut(),
-                                    json_output.as_mut(),
-                                    function_profiler.as_mut(),
-                                    config.timing_mode,
-                                    duration_us,
-                                )
-                            });
-                        result?;
-                        prof.record_syscall();
-                    } else {
-                        handle_syscall_exit(
-                            child,
-                            &current_syscall_entry,
-                            stats_tracker.as_mut(),
-                            json_output.as_mut(),
-                            function_profiler.as_mut(),
-                            config.timing_mode,
-                            duration_us,
-                        )?;
-                    }
-
-                    current_syscall_entry = None;
-                    syscall_entry_time = None;
-                    in_syscall = false;
-                }
-            }
-            _ => {
-                // Other status, continue
-                continue;
-            }
-        }
+    } else {
+        None
     }
+}
 
+/// Handle process exit or signal termination
+fn handle_wait_status(status: WaitStatus) -> Option<i32> {
+    match status {
+        WaitStatus::Exited(_, code) => Some(code),
+        WaitStatus::Signaled(_, sig, _) => {
+            eprintln!("Child killed by signal: {:?}", sig);
+            Some(128 + sig as i32)
+        }
+        _ => None,
+    }
+}
+
+/// Handle syscall event (entry or exit)
+fn handle_syscall_event(
+    child: Pid,
+    in_syscall: &mut bool,
+    current_syscall_entry: &mut Option<SyscallEntry>,
+    syscall_entry_time: &mut Option<std::time::Instant>,
+    dwarf_ctx: Option<&crate::dwarf::DwarfContext>,
+    config: &TracerConfig,
+    tracers: &mut Tracers,
+) -> Result<()> {
+    let in_json_mode = tracers.json_output.is_some();
+
+    if !*in_syscall {
+        // Syscall entry - record start time if timing enabled
+        if config.timing_mode || config.statistics_mode || in_json_mode {
+            *syscall_entry_time = Some(std::time::Instant::now());
+        }
+
+        *current_syscall_entry = process_syscall_entry(
+            child,
+            dwarf_ctx,
+            config,
+            tracers.profiling_ctx.as_mut(),
+            in_json_mode,
+        )?;
+        *in_syscall = true;
+    } else {
+        // Syscall exit - calculate duration
+        let duration_us = syscall_entry_time
+            .map(|start| start.elapsed().as_micros() as u64)
+            .unwrap_or(0);
+
+        process_syscall_exit(
+            child,
+            current_syscall_entry,
+            tracers,
+            config.timing_mode,
+            duration_us,
+        )?;
+
+        *current_syscall_entry = None;
+        *syscall_entry_time = None;
+        *in_syscall = false;
+    }
+    Ok(())
+}
+
+/// Process syscall entry event
+fn process_syscall_entry(
+    child: Pid,
+    dwarf_ctx: Option<&crate::dwarf::DwarfContext>,
+    config: &TracerConfig,
+    profiling_ctx: Option<&mut crate::profiling::ProfilingContext>,
+    in_json_mode: bool,
+) -> Result<Option<SyscallEntry>> {
+    if let Some(prof) = profiling_ctx {
+        prof.measure(crate::profiling::ProfilingCategory::Other, || {
+            handle_syscall_entry(
+                child,
+                dwarf_ctx,
+                &config.filter,
+                config.statistics_mode,
+                in_json_mode,
+                config.function_time,
+            )
+        })
+    } else {
+        handle_syscall_entry(
+            child,
+            dwarf_ctx,
+            &config.filter,
+            config.statistics_mode,
+            in_json_mode,
+            config.function_time,
+        )
+    }
+}
+
+/// Process syscall exit event
+fn process_syscall_exit(
+    child: Pid,
+    current_syscall_entry: &Option<SyscallEntry>,
+    tracers: &mut Tracers,
+    timing_mode: bool,
+    duration_us: u64,
+) -> Result<()> {
+    if let Some(prof) = tracers.profiling_ctx.as_mut() {
+        let result = prof.measure(crate::profiling::ProfilingCategory::Other, || {
+            handle_syscall_exit(
+                child,
+                current_syscall_entry,
+                tracers.stats_tracker.as_mut(),
+                tracers.json_output.as_mut(),
+                tracers.function_profiler.as_mut(),
+                timing_mode,
+                duration_us,
+            )
+        });
+        result?;
+        prof.record_syscall();
+        Ok(())
+    } else {
+        handle_syscall_exit(
+            child,
+            current_syscall_entry,
+            tracers.stats_tracker.as_mut(),
+            tracers.json_output.as_mut(),
+            tracers.function_profiler.as_mut(),
+            timing_mode,
+            duration_us,
+        )
+    }
+}
+
+/// Print all summaries at end of tracing
+fn print_summaries(
+    stats_tracker: Option<crate::stats::StatsTracker>,
+    json_output: Option<crate::json_output::JsonOutput>,
+    profiling_ctx: Option<crate::profiling::ProfilingContext>,
+    function_profiler: Option<crate::function_profiler::FunctionProfiler>,
+    exit_code: i32,
+) {
     // Print statistics summary if in statistics mode
     if let Some(tracker) = stats_tracker {
         tracker.print_summary();
@@ -283,6 +331,64 @@ fn trace_child(child: Pid, config: TracerConfig) -> Result<i32> {
     if let Some(profiler) = function_profiler {
         profiler.print_summary();
     }
+}
+
+/// Trace a child process, filtering syscalls based on filter
+fn trace_child(child: Pid, config: TracerConfig) -> Result<i32> {
+    // Initialize all tracers and profilers
+    let mut tracers = initialize_tracers(&config);
+
+    // Setup ptrace options
+    setup_ptrace_options(child, config.follow_forks)?;
+
+    let mut in_syscall = false;
+    let mut current_syscall_entry: Option<SyscallEntry> = None;
+    let mut syscall_entry_time: Option<std::time::Instant> = None;
+    let mut dwarf_ctx: Option<crate::dwarf::DwarfContext> = None;
+    let mut dwarf_loaded = false;
+    let exit_code;
+
+    loop {
+        // Sprint 5-6: Load DWARF context on first syscall if --source is enabled
+        // We wait until after exec() has happened to get the right binary
+        if config.enable_source && !dwarf_loaded {
+            dwarf_loaded = true; // Only try once
+            dwarf_ctx = load_dwarf_context(child);
+        }
+
+        // Continue and wait for next syscall or exit
+        ptrace::syscall(child, None).context("Failed to PTRACE_SYSCALL")?;
+
+        let status = waitpid(child, None).context("Failed to waitpid")?;
+
+        // Check if process exited or was signaled
+        if let Some(code) = handle_wait_status(status) {
+            exit_code = code;
+            break;
+        }
+
+        // Handle syscall events
+        if matches!(status, WaitStatus::PtraceSyscall(_)) {
+            handle_syscall_event(
+                child,
+                &mut in_syscall,
+                &mut current_syscall_entry,
+                &mut syscall_entry_time,
+                dwarf_ctx.as_ref(),
+                &config,
+                &mut tracers,
+            )?;
+        }
+    }
+
+    // Print all summaries
+    print_summaries(
+        tracers.stats_tracker,
+        tracers.json_output,
+        tracers.profiling_ctx,
+        tracers.function_profiler,
+        exit_code,
+    );
 
     // Exit with traced program's exit code
     std::process::exit(exit_code);
