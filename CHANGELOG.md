@@ -104,7 +104,7 @@ See `roadmap.yaml` for detailed implementation plan:
 
 ### Added (Post-v0.1.0)
 
-#### Sprint 9-10: Advanced Filtering, Statistics & Timing
+#### Sprint 9-10: Advanced Filtering, Statistics, Timing & JSON Output
 - **Syscall Filtering**: `-e trace=EXPR` flag for filtering syscalls
   - Individual syscalls: `-e trace=open,read,write`
   - Syscall classes: `-e trace=file`, `-e trace=network`, `-e trace=process`, `-e trace=memory`
@@ -119,8 +119,12 @@ See `roadmap.yaml` for detailed implementation plan:
   - Displays time in `<seconds>` format after each syscall
   - Integrated with statistics mode (% time, seconds, usecs/call columns)
   - Zero overhead when disabled
+- **JSON Output**: `--format json` for machine-parseable output
+  - Structured renacer-json-v1 schema with syscalls and summary
+  - Compatible with filtering, timing, and source correlation
+  - Ideal for tooling integration and analysis pipelines
 - **Zero Overhead**: Filtering/statistics/timing at display time, no performance impact when disabled
-- **14 Integration Tests**: Comprehensive coverage of filtering, statistics, and timing functionality
+- **19 Integration Tests**: Comprehensive coverage of filtering, statistics, timing, and JSON functionality
 
 ### Planned for 0.2.0
 - ✅ DWARF .debug_line parsing using addr2line crate (COMPLETED in v0.1.0)
@@ -128,12 +132,12 @@ See `roadmap.yaml` for detailed implementation plan:
 - ✅ Basic syscall filtering (COMPLETED post-v0.1.0)
 - ✅ `-c` statistics mode (COMPLETED post-v0.1.0)
 - ✅ `-T` timing mode (COMPLETED post-v0.1.0)
+- ✅ `--format json` JSON output (COMPLETED post-v0.1.0)
 - Stack unwinding to attribute syscalls to user code frames
 - Source-aware output showing file:line for each syscall (requires stack unwinding)
 - Function name attribution from DWARF .debug_info (requires stack unwinding)
 - `-f` follow forks
 - `-p PID` attach to running process
-- `--format json` JSON output
 
 ---
 
