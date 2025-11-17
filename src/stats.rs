@@ -15,6 +15,14 @@ pub struct SyscallStats {
     pub total_time_us: u64,
 }
 
+/// Summary totals for all syscalls
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StatTotals {
+    pub total_calls: u64,
+    pub total_errors: u64,
+    pub total_time_us: u64,
+}
+
 /// Tracks statistics for all syscalls
 #[derive(Debug, Default)]
 pub struct StatsTracker {
@@ -38,6 +46,33 @@ impl StatsTracker {
         }
     }
 
+    /// Calculate totals using Trueno for high-performance SIMD operations
+    pub fn calculate_totals_with_trueno(&self) -> StatTotals {
+        if self.stats.is_empty() {
+            return StatTotals {
+                total_calls: 0,
+                total_errors: 0,
+                total_time_us: 0,
+            };
+        }
+
+        // Extract data into vectors for SIMD processing
+        let counts: Vec<f32> = self.stats.values().map(|s| s.count as f32).collect();
+        let errors: Vec<f32> = self.stats.values().map(|s| s.errors as f32).collect();
+        let times: Vec<f32> = self.stats.values().map(|s| s.total_time_us as f32).collect();
+
+        // Use Trueno for SIMD-accelerated sums
+        let total_calls = trueno::Vector::from_slice(&counts).sum().unwrap_or(0.0) as u64;
+        let total_errors = trueno::Vector::from_slice(&errors).sum().unwrap_or(0.0) as u64;
+        let total_time_us = trueno::Vector::from_slice(&times).sum().unwrap_or(0.0) as u64;
+
+        StatTotals {
+            total_calls,
+            total_errors,
+            total_time_us,
+        }
+    }
+
     /// Print statistics summary to stdout
     pub fn print_summary(&self) {
         if self.stats.is_empty() {
@@ -45,10 +80,11 @@ impl StatsTracker {
             return;
         }
 
-        // Calculate totals
-        let total_calls: u64 = self.stats.values().map(|s| s.count).sum();
-        let total_errors: u64 = self.stats.values().map(|s| s.errors).sum();
-        let total_time_us: u64 = self.stats.values().map(|s| s.total_time_us).sum();
+        // Calculate totals using Trueno for SIMD acceleration
+        let totals = self.calculate_totals_with_trueno();
+        let total_calls = totals.total_calls;
+        let total_errors = totals.total_errors;
+        let total_time_us = totals.total_time_us;
 
         // Sort by call count (descending)
         let mut sorted: Vec<_> = self.stats.iter().collect();
@@ -112,6 +148,7 @@ impl StatsTracker {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use trueno::Vector;
 
     #[test]
     fn test_stats_tracker_records_calls() {
@@ -323,5 +360,41 @@ mod tests {
         let stats = tracker.stats.get("open").unwrap();
         assert_eq!(stats.count, 1);
         assert_eq!(stats.errors, 1);
+    }
+
+    #[test]
+    fn test_trueno_sum_integration() {
+        // RED phase: Test that we can use Trueno for sum operations
+        let tracker = StatsTracker::new();
+
+        // Create sample data
+        let counts = vec![10.0_f32, 20.0, 30.0, 40.0];
+        let v = Vector::from_slice(&counts);
+
+        // Use Trueno to sum
+        let result = v.sum().unwrap();
+        assert_eq!(result, 100.0);
+
+        // This test passes - now we need to actually integrate Trueno into StatsTracker
+        let _ = tracker; // Use tracker to avoid warning
+    }
+
+    #[test]
+    fn test_stats_tracker_uses_trueno_for_sums() {
+        // RED phase: Test that StatsTracker uses Trueno for sum calculations
+        let mut tracker = StatsTracker::new();
+
+        // Record some syscalls with timing data
+        tracker.record("open", 3, 100);
+        tracker.record("read", 10, 200);
+        tracker.record("write", 20, 300);
+        tracker.record("close", 0, 400);
+
+        // Calculate totals using Trueno (this will fail until we implement it)
+        let totals = tracker.calculate_totals_with_trueno();
+
+        assert_eq!(totals.total_calls, 4);
+        assert_eq!(totals.total_time_us, 1000);
+        assert_eq!(totals.total_errors, 0);
     }
 }

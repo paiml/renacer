@@ -44,6 +44,14 @@ pub struct Cli {
     #[arg(short = 'f', long = "follow-forks")]
     pub follow_forks: bool,
 
+    /// Enable self-profiling to measure Renacer's own overhead
+    #[arg(long = "profile-self")]
+    pub profile_self: bool,
+
+    /// Enable function-level timing with DWARF correlation
+    #[arg(long = "function-time")]
+    pub function_time: bool,
+
     /// Command to trace (everything after --)
     #[arg(last = true)]
     pub command: Option<Vec<String>>,
@@ -66,5 +74,31 @@ mod tests {
     fn test_cli_empty_without_command() {
         let cli = Cli::parse_from(["renacer"]);
         assert!(cli.command.is_none());
+    }
+
+    #[test]
+    fn test_cli_profile_self_flag() {
+        let cli = Cli::parse_from(["renacer", "--profile-self", "--", "echo", "test"]);
+        assert!(cli.profile_self);
+        assert!(cli.command.is_some());
+    }
+
+    #[test]
+    fn test_cli_profile_self_default_false() {
+        let cli = Cli::parse_from(["renacer", "--", "echo", "test"]);
+        assert!(!cli.profile_self);
+    }
+
+    #[test]
+    fn test_cli_function_time_flag() {
+        let cli = Cli::parse_from(["renacer", "--function-time", "--", "echo", "test"]);
+        assert!(cli.function_time);
+        assert!(cli.command.is_some());
+    }
+
+    #[test]
+    fn test_cli_function_time_default_false() {
+        let cli = Cli::parse_from(["renacer", "--", "echo", "test"]);
+        assert!(!cli.function_time);
     }
 }

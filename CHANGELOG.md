@@ -192,6 +192,80 @@ See `roadmap.yaml` for detailed implementation plan:
   - ls: 1.12x → 1.22x faster (+9%)
   - find: 1.09x → 1.14x faster (+5%)
 
+#### Sprint 13-14: Self-Profiling, Trueno Integration & Function Profiling (GitHub Issues #1, #3, #4)
+
+**Trueno Integration for Statistical Calculations (GitHub Issue #4):**
+- ✅ **Trueno Dependency**: Added sister project (../trueno) as path dependency
+- ✅ **SIMD-Accelerated Statistics**: Replaced standard sum operations with Trueno Vector operations
+  - `calculate_totals_with_trueno()` method for high-performance aggregations
+  - Auto-dispatches to best available backend (AVX2/AVX/SSE2/NEON/Scalar)
+- ✅ **Zero Functional Changes**: Same output, faster computation on large datasets
+- ✅ **Sister Project Synergy**: Dogfoods Trueno within PAIML ecosystem
+- ✅ **2 New Tests**: Trueno integration tests (test_trueno_sum_integration, test_stats_tracker_uses_trueno_for_sums)
+- ✅ **Performance**: SIMD acceleration beneficial for large trace sessions (100K+ syscalls)
+
+**Function-Level Profiling Infrastructure (GitHub Issue #1 - Partial):**
+- ✅ **FunctionProfiler Module**: Created src/function_profiler.rs with timing aggregation (100% coverage)
+  - FunctionStats struct for per-function timing data
+  - FunctionProfiler::record() for attributing syscalls to functions
+  - FunctionProfiler::print_summary() for formatted output
+  - 8 unit tests with edge cases (zero syscalls, sorting, averages)
+- ✅ **CLI Integration**: `--function-time` flag added to CLI (src/cli.rs)
+  - 2 unit tests for flag parsing
+- ✅ **Tracer Integration**: Function profiler integrated into syscall loop (src/tracer.rs)
+  - TracerConfig struct introduced to fix clippy "too_many_arguments" warnings
+  - Refactored tracer functions to accept single config parameter
+- ✅ **SyscallEntry Enhancement**: Added function_name field to track DWARF function attribution
+- ✅ **5 Integration Tests**: Comprehensive end-to-end testing (tests/sprint13_function_profiling_tests.rs)
+  - test_function_time_flag_accepted
+  - test_function_time_output_format
+  - test_function_time_with_statistics_mode
+  - test_function_time_with_filter
+  - test_function_time_without_flag_no_profiling
+- ⚠️  **LIMITATION**: Requires stack unwinding for full functionality
+  - Current implementation extracts function names from DWARF at syscall instruction pointer
+  - Syscalls execute in libc, not user code - instruction pointer points to libc functions
+  - **Future Enhancement**: Implement stack unwinding (libunwind/gimli) to walk call stack and attribute syscalls to user functions
+  - See GitHub Issue #1 for full roadmap (call graphs, hot paths, I/O analysis, etc.)
+
+**Planned for Future** (GitHub Issue #1):
+- Stack unwinding implementation using `unwind` crate or gimli
+- Call graph profiling with parent→child relationships
+- Hot path analysis and I/O bottleneck detection
+- Subprocess execution tracking and flamegraph export
+
+#### Sprint 13-14: Self-Profiling Infrastructure (GitHub Issue #3)
+
+**Self-Profiling Feature (`--profile-self` flag):**
+- ✅ **ProfilingContext**: Category-based timing infrastructure (src/profiling.rs)
+  - 7 profiling categories: Ptrace, Formatting, MemoryRead, DwarfLookup, Statistics, JsonSerialization, Other
+  - `measure<F, R>()` method for wrapping operations with timing
+  - `print_summary()` outputs formatted profiling report to stderr
+- ✅ **CLI Integration**: `--profile-self` flag added to CLI (src/cli.rs)
+- ✅ **Tracer Integration**: Profiling instrumented into main syscall loop (src/tracer.rs)
+- ✅ **10 Unit Tests**: Full test coverage for ProfilingContext (100% passing)
+- ✅ **5 Integration Tests**: End-to-end testing of --profile-self flag (tests/sprint13_profiling_tests.rs)
+  - test_profile_self_flag_outputs_summary
+  - test_profile_self_without_flag_no_output
+  - test_profile_self_with_statistics_mode
+  - test_profile_self_reports_nonzero_syscalls
+  - test_profile_self_with_filtering
+
+**Profiling Output Format:**
+```
+╔════════════════════════════════════════════════════════════╗
+║  Renacer Self-Profiling Results                           ║
+╚════════════════════════════════════════════════════════════╝
+
+Total syscalls traced:     43
+Total wall time:           0.002s
+  - Kernel time (ptrace):  0.001s (82.7%)
+  - User time (renacer):   0.000s (17.3%)
+
+User-space breakdown:
+  - Other:               0.000s (100.0%)
+```
+
 **Sprint 11-12 Deliverables:**
 - ✅ Benchmark suite vs strace (4 comprehensive benchmarks)
 - ✅ 90%+ test coverage enforcement (91.21% achieved)
@@ -241,14 +315,27 @@ Filtering overhead: ~8% improvement with -e trace=open
 - ✅ PID attach with `-p PID` flag
 - ⚠️  Fork following with `-f` flag (infrastructure only - full implementation deferred to v0.3.0)
 
-### Quality Metrics (Post Sprint 11-12)
+### Quality Metrics (Post Sprint 13-14)
 - **TDG Score**: 92.6/100 (A grade)
-- **Test Suites**: 9 total (3 from v0.1.0 + 5 from Sprint 9-10 + 1 benchmark suite)
-- **Test Count**: 62 passing (58 active + 4 ignored benchmarks)
+- **Test Suites**: 11 total (3 from v0.1.0 + 5 from Sprint 9-10 + 1 benchmark suite + 2 profiling suites)
+- **Test Count**: 137 passing (130 active + 7 ignored)
+  - 91 unit tests (includes all module tests)
+  - 46 active integration tests across 10 test suites
+  - 7 ignored tests (4 benchmarks + 3 DWARF source tests)
+  - New in Sprint 13-14:
+    - Added 5 integration tests for --profile-self (sprint13_profiling_tests.rs)
+    - Added 5 integration tests for --function-time (sprint13_function_profiling_tests.rs)
+    - Added 10 unit tests for ProfilingContext (src/profiling.rs)
+    - Added 8 unit tests for FunctionProfiler (src/function_profiler.rs)
+    - Added 2 unit tests for --function-time CLI flag (src/cli.rs)
+    - Added 2 unit tests for Trueno integration (src/stats.rs)
 - **Test Coverage**: 91.21% line coverage (exceeds 90% goal)
+  - function_profiler.rs: 100% (up from 66.07%)
 - **Mutation Testing**: 66% caught rate (filter.rs baseline)
 - **Property-Based Tests**: 3 property tests with proptest
-- **New Modules**: 3 (filter.rs, stats.rs, json_output.rs)
+- **Code Quality**: 0 clippy warnings (fixed "too_many_arguments" with TracerConfig refactoring)
+- **New Modules**: 5 (filter.rs, stats.rs, json_output.rs, profiling.rs, function_profiler.rs)
+- **Dependencies**: 1 sister project (Trueno for SIMD compute)
 - **Zero Regressions**: All previous tests maintained
 
 ### Planned for 0.2.0

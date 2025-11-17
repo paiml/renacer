@@ -4,7 +4,9 @@ use clap::Parser;
 mod cli;
 mod dwarf;
 mod filter;
+mod function_profiler;
 mod json_output;
+mod profiling;
 mod stats;
 mod syscalls;
 mod tracer;
@@ -21,15 +23,27 @@ fn main() -> Result<()> {
         filter::SyscallFilter::all()
     };
 
+    // Create tracer configuration
+    let config = tracer::TracerConfig {
+        enable_source: args.source,
+        filter,
+        statistics_mode: args.statistics,
+        timing_mode: args.timing,
+        output_format: args.format,
+        follow_forks: args.follow_forks,
+        profile_self: args.profile_self,
+        function_time: args.function_time,
+    };
+
     // Either attach to PID or trace command (mutually exclusive)
     match (args.pid, args.command) {
         (Some(pid), None) => {
             // Attach to running process
-            tracer::attach_to_pid(pid, args.source, filter, args.statistics, args.timing, args.format, args.follow_forks)?;
+            tracer::attach_to_pid(pid, config)?;
         }
         (None, Some(command)) => {
             // Trace command
-            tracer::trace_command(&command, args.source, filter, args.statistics, args.timing, args.format, args.follow_forks)?;
+            tracer::trace_command(&command, config)?;
         }
         (Some(_), Some(_)) => {
             anyhow::bail!("Cannot specify both -p PID and command. Choose one.");
