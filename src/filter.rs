@@ -144,4 +144,76 @@ mod tests {
         let result = SyscallFilter::from_expr("invalid");
         assert!(result.is_err());
     }
+
+    #[test]
+    fn test_filter_process_class() {
+        let filter = SyscallFilter::from_expr("trace=process").unwrap();
+        assert!(filter.should_trace("fork"));
+        assert!(filter.should_trace("clone"));
+        assert!(filter.should_trace("execve"));
+        assert!(filter.should_trace("exit"));
+        assert!(!filter.should_trace("open"));
+        assert!(!filter.should_trace("socket"));
+    }
+
+    #[test]
+    fn test_filter_memory_class() {
+        let filter = SyscallFilter::from_expr("trace=memory").unwrap();
+        assert!(filter.should_trace("mmap"));
+        assert!(filter.should_trace("munmap"));
+        assert!(filter.should_trace("mprotect"));
+        assert!(filter.should_trace("brk"));
+        assert!(!filter.should_trace("open"));
+        assert!(!filter.should_trace("fork"));
+    }
+
+    #[test]
+    fn test_filter_multiple_classes() {
+        let filter = SyscallFilter::from_expr("trace=file,network,process").unwrap();
+        // File class
+        assert!(filter.should_trace("open"));
+        assert!(filter.should_trace("read"));
+        // Network class
+        assert!(filter.should_trace("socket"));
+        assert!(filter.should_trace("connect"));
+        // Process class
+        assert!(filter.should_trace("fork"));
+        assert!(filter.should_trace("execve"));
+        // Not included
+        assert!(!filter.should_trace("mmap"));
+    }
+
+    #[test]
+    fn test_filter_clone() {
+        let filter1 = SyscallFilter::from_expr("trace=open,read").unwrap();
+        let filter2 = filter1.clone();
+        assert!(filter2.should_trace("open"));
+        assert!(filter2.should_trace("read"));
+        assert!(!filter2.should_trace("write"));
+    }
+
+    #[test]
+    fn test_filter_debug() {
+        let filter = SyscallFilter::all();
+        let debug_str = format!("{:?}", filter);
+        assert!(debug_str.contains("SyscallFilter"));
+    }
+
+    #[test]
+    fn test_filter_empty_trace_spec() {
+        // Empty spec should create filter with no syscalls
+        let filter = SyscallFilter::from_expr("trace=").unwrap();
+        // Empty filter should not trace anything (empty HashSet)
+        assert!(!filter.should_trace("open"));
+        assert!(!filter.should_trace("read"));
+    }
+
+    #[test]
+    fn test_filter_whitespace_handling() {
+        let filter = SyscallFilter::from_expr("trace=open, read , write").unwrap();
+        assert!(filter.should_trace("open"));
+        assert!(filter.should_trace("read"));
+        assert!(filter.should_trace("write"));
+        assert!(!filter.should_trace("close"));
+    }
 }

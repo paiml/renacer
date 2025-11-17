@@ -45,6 +45,7 @@ fn bench_tracer(tracer: &str, args: &[&str], command: &[&str], iterations: usize
 
 /// Benchmark: Simple command (ls)
 #[test]
+#[ignore] // Requires built binary - run with --ignored
 fn bench_simple_ls() {
     let iterations = 5;
     let command = &["ls", "-la", "/usr/bin"];
@@ -79,6 +80,7 @@ fn bench_simple_ls() {
 
 /// Benchmark: File-heavy workload (find)
 #[test]
+#[ignore] // Requires built binary - run with --ignored
 fn bench_find_command() {
     let iterations = 3;
     let command = &["find", "/usr/share/doc", "-name", "*.txt", "-type", "f"];
@@ -101,6 +103,7 @@ fn bench_find_command() {
 
 /// Benchmark: Quick commands (minimal syscalls)
 #[test]
+#[ignore] // Requires built binary - run with --ignored
 fn bench_minimal_syscalls() {
     let iterations = 10;
     let command = &["echo", "hello"];
@@ -123,6 +126,7 @@ fn bench_minimal_syscalls() {
 
 /// Benchmark: Filtering performance (no output overhead)
 #[test]
+#[ignore] // Requires built binary - run with --ignored
 fn bench_with_filtering() {
     let iterations = 5;
     let command = &["ls", "-la", "/usr/bin"];

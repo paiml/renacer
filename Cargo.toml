@@ -38,6 +38,9 @@ assert_cmd = "2.0"
 predicates = "3.1"
 tempfile = "3.13"
 
+# Property-based testing
+proptest = "1.5"
+
 [profile.release]
 opt-level = 3
 lto = true
