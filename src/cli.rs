@@ -78,6 +78,14 @@ pub struct Cli {
     )]
     pub anomaly_window_size: usize,
 
+    /// Enable HPU-accelerated analysis (GPU if available) (Sprint 21)
+    #[arg(long = "hpu-analysis")]
+    pub hpu_analysis: bool,
+
+    /// Force CPU backend (disable GPU acceleration)
+    #[arg(long = "hpu-cpu-only")]
+    pub hpu_cpu_only: bool,
+
     /// Command to trace (everything after --)
     #[arg(last = true)]
     pub command: Option<Vec<String>>,
@@ -165,5 +173,52 @@ mod tests {
         let cli = Cli::parse_from(["renacer", "-c", "--stats-extended", "--", "echo", "test"]);
         assert!(cli.statistics);
         assert!(cli.stats_extended);
+    }
+
+    #[test]
+    fn test_cli_hpu_analysis_flag() {
+        let cli = Cli::parse_from(["renacer", "--hpu-analysis", "--", "echo", "test"]);
+        assert!(cli.hpu_analysis);
+        assert!(cli.command.is_some());
+    }
+
+    #[test]
+    fn test_cli_hpu_analysis_default_false() {
+        let cli = Cli::parse_from(["renacer", "--", "echo", "test"]);
+        assert!(!cli.hpu_analysis);
+    }
+
+    #[test]
+    fn test_cli_hpu_cpu_only_flag() {
+        let cli = Cli::parse_from(["renacer", "--hpu-cpu-only", "--", "echo", "test"]);
+        assert!(cli.hpu_cpu_only);
+        assert!(cli.command.is_some());
+    }
+
+    #[test]
+    fn test_cli_hpu_cpu_only_default_false() {
+        let cli = Cli::parse_from(["renacer", "--", "echo", "test"]);
+        assert!(!cli.hpu_cpu_only);
+    }
+
+    #[test]
+    fn test_cli_hpu_with_statistics() {
+        let cli = Cli::parse_from(["renacer", "-c", "--hpu-analysis", "--", "echo", "test"]);
+        assert!(cli.statistics);
+        assert!(cli.hpu_analysis);
+    }
+
+    #[test]
+    fn test_cli_hpu_analysis_with_cpu_only() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "--hpu-analysis",
+            "--hpu-cpu-only",
+            "--",
+            "echo",
+            "test",
+        ]);
+        assert!(cli.hpu_analysis);
+        assert!(cli.hpu_cpu_only);
     }
 }

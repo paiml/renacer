@@ -25,6 +25,8 @@ pub struct TracerConfig {
     pub anomaly_threshold: f32, // Sprint 19: Anomaly detection threshold (σ)
     pub anomaly_realtime: bool, // Sprint 20: Real-time anomaly detection
     pub anomaly_window_size: usize, // Sprint 20: Sliding window size
+    pub hpu_analysis: bool,     // Sprint 21: HPU-accelerated analysis (GPU if available)
+    pub hpu_cpu_only: bool,     // Sprint 21: Force CPU backend (disable GPU)
 }
 
 /// Attach to a running process by PID and trace syscalls
@@ -1050,6 +1052,8 @@ mod tests {
             anomaly_threshold: 3.0,   // Sprint 19
             anomaly_realtime: false,  // Sprint 20
             anomaly_window_size: 100, // Sprint 20
+            hpu_analysis: false,      // Sprint 21
+            hpu_cpu_only: false,      // Sprint 21
         };
         let result = trace_command(&empty, config);
         assert!(result.is_err());
@@ -1073,6 +1077,8 @@ mod tests {
             anomaly_threshold: 3.0,   // Sprint 19
             anomaly_realtime: false,  // Sprint 20
             anomaly_window_size: 100, // Sprint 20
+            hpu_analysis: false,      // Sprint 21
+            hpu_cpu_only: false,      // Sprint 21
         };
         let result = trace_command(&cmd, config);
         assert!(result.is_err());
@@ -1132,6 +1138,8 @@ mod tests {
             anomaly_threshold: 3.0,   // Sprint 19
             anomaly_realtime: false,  // Sprint 20
             anomaly_window_size: 100, // Sprint 20
+            hpu_analysis: false,      // Sprint 21
+            hpu_cpu_only: false,      // Sprint 21
         };
         let result = attach_to_pid(999999, config);
         assert!(result.is_err());
