@@ -52,11 +52,9 @@ impl DwarfContext {
         let file = File::open(binary_path)
             .with_context(|| format!("Failed to open binary: {}", binary_path.display()))?;
 
-        let mmap = unsafe { memmap2::Mmap::map(&file) }
-            .context("Failed to memory-map binary")?;
+        let mmap = unsafe { memmap2::Mmap::map(&file) }.context("Failed to memory-map binary")?;
 
-        let object = object::File::parse(&*mmap)
-            .context("Failed to parse ELF binary")?;
+        let object = object::File::parse(&*mmap).context("Failed to parse ELF binary")?;
 
         // Load DWARF sections from object file
         let endian = if object.is_little_endian() {
@@ -66,23 +64,24 @@ impl DwarfContext {
         };
 
         // Helper to load a DWARF section
-        let load_section = |id: gimli::SectionId| -> Result<gimli::EndianRcSlice<gimli::RunTimeEndian>> {
-            let data = object
-                .section_by_name(id.name())
-                .and_then(|section| section.uncompressed_data().ok())
-                .unwrap_or(std::borrow::Cow::Borrowed(&[]));
-            // Convert Cow<[u8]> to Rc<[u8]> by converting to owned Vec first
-            let bytes: std::rc::Rc<[u8]> = std::rc::Rc::from(data.into_owned());
-            Ok(gimli::EndianRcSlice::new(bytes, endian))
-        };
+        let load_section =
+            |id: gimli::SectionId| -> Result<gimli::EndianRcSlice<gimli::RunTimeEndian>> {
+                let data = object
+                    .section_by_name(id.name())
+                    .and_then(|section| section.uncompressed_data().ok())
+                    .unwrap_or(std::borrow::Cow::Borrowed(&[]));
+                // Convert Cow<[u8]> to Rc<[u8]> by converting to owned Vec first
+                let bytes: std::rc::Rc<[u8]> = std::rc::Rc::from(data.into_owned());
+                Ok(gimli::EndianRcSlice::new(bytes, endian))
+            };
 
         // Load all DWARF sections
         let dwarf = gimli::Dwarf::load(&load_section)
             .context("Failed to load DWARF sections - binary may not have debug symbols. Compile with -g flag.")?;
 
         // Create addr2line context from DWARF
-        let context = addr2line::Context::from_dwarf(dwarf)
-            .context("Failed to create DWARF context")?;
+        let context =
+            addr2line::Context::from_dwarf(dwarf).context("Failed to create DWARF context")?;
 
         Ok(Self { context })
     }
@@ -182,7 +181,11 @@ mod tests {
     fn test_dwarf_context_loads() {
         let (_temp_dir, bin_file) = compile_test_binary();
         let result = DwarfContext::load(&bin_file);
-        assert!(result.is_ok(), "Should load DWARF context: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Should load DWARF context: {:?}",
+            result.err()
+        );
     }
 
     #[test]
@@ -190,7 +193,11 @@ mod tests {
         let (_temp_dir, bin_file) = compile_test_binary();
         let ctx = DwarfContext::load(&bin_file).unwrap();
         let result = ctx.lookup(0x1000);
-        assert!(result.is_ok(), "Lookup should not crash: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Lookup should not crash: {:?}",
+            result.err()
+        );
     }
 
     #[test]
@@ -199,7 +206,11 @@ mod tests {
         let result = DwarfContext::load(std::path::Path::new("/nonexistent/binary"));
         assert!(result.is_err(), "Should fail for nonexistent file");
         let err = result.unwrap_err().to_string();
-        assert!(err.contains("does not exist"), "Error should mention file doesn't exist: {}", err);
+        assert!(
+            err.contains("does not exist"),
+            "Error should mention file doesn't exist: {}",
+            err
+        );
     }
 
     #[test]
@@ -289,8 +300,16 @@ mod tests {
             function: Some("main".to_string()),
         };
         let debug_str = format!("{:?}", loc);
-        assert!(debug_str.contains("test.rs"), "Debug should contain file: {}", debug_str);
-        assert!(debug_str.contains("42"), "Debug should contain line: {}", debug_str);
+        assert!(
+            debug_str.contains("test.rs"),
+            "Debug should contain file: {}",
+            debug_str
+        );
+        assert!(
+            debug_str.contains("42"),
+            "Debug should contain line: {}",
+            debug_str
+        );
     }
 
     #[test]
@@ -348,7 +367,11 @@ mod tests {
         // Test a range of addresses
         for addr in [0x1000, 0x2000, 0x3000, 0x4000, 0x5000] {
             let result = ctx.lookup(addr);
-            assert!(result.is_ok(), "Lookup should not crash for addr {:#x}", addr);
+            assert!(
+                result.is_ok(),
+                "Lookup should not crash for addr {:#x}",
+                addr
+            );
         }
     }
 
@@ -408,7 +431,9 @@ mod tests {
         let bin_file = temp_dir.path().join("complex_bin");
 
         // Write a program with multiple functions
-        fs::write(&src_file, r#"
+        fs::write(
+            &src_file,
+            r#"
 fn helper(x: i32) -> i32 {
     x + 1
 }
@@ -418,7 +443,9 @@ fn main() {
     let b = helper(10);
     println!("Result: {} {}", a, b);
 }
-"#).unwrap();
+"#,
+        )
+        .unwrap();
 
         Command::new("rustc")
             .arg(&src_file)

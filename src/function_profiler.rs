@@ -16,9 +16,22 @@ use std::collections::HashMap;
 
 /// I/O syscalls that should be tracked for bottleneck detection
 const IO_SYSCALLS: &[&str] = &[
-    "read", "write", "readv", "writev", "pread64", "pwrite64",
-    "openat", "open", "close", "fsync", "fdatasync", "sync",
-    "sendfile", "splice", "tee", "vmsplice"
+    "read",
+    "write",
+    "readv",
+    "writev",
+    "pread64",
+    "pwrite64",
+    "openat",
+    "open",
+    "close",
+    "fsync",
+    "fdatasync",
+    "sync",
+    "sendfile",
+    "splice",
+    "tee",
+    "vmsplice",
 ];
 
 /// Threshold for slow I/O operations (1ms = 1000 microseconds)
@@ -62,7 +75,13 @@ impl FunctionProfiler {
     /// * `syscall_name` - Name of the syscall being made (for I/O detection)
     /// * `duration_us` - Duration of the syscall in microseconds
     /// * `caller_name` - Optional name of the function that called this function (for call graph)
-    pub fn record(&mut self, function_name: &str, syscall_name: &str, duration_us: u64, caller_name: Option<&str>) {
+    pub fn record(
+        &mut self,
+        function_name: &str,
+        syscall_name: &str,
+        duration_us: u64,
+        caller_name: Option<&str>,
+    ) {
         let entry = self.stats.entry(function_name.to_string()).or_default();
         entry.syscall_count += 1;
         entry.total_time_us += duration_us;
@@ -80,7 +99,10 @@ impl FunctionProfiler {
         // Track call graph (parent -> child relationship)
         if let Some(caller) = caller_name {
             let caller_entry = self.stats.entry(caller.to_string()).or_default();
-            *caller_entry.callees.entry(function_name.to_string()).or_insert(0) += 1;
+            *caller_entry
+                .callees
+                .entry(function_name.to_string())
+                .or_insert(0) += 1;
         }
     }
 
@@ -91,7 +113,7 @@ impl FunctionProfiler {
     ///
     /// # Arguments
     /// * `writer` - Where to write the flamegraph data
-    #[allow(dead_code)]  // Public API for flamegraph export (will be used in CLI)
+    #[allow(dead_code)] // Public API for flamegraph export (will be used in CLI)
     pub fn export_flamegraph<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
         // Build flamegraph samples from call graph
         // Format: "caller;callee sample_count"
@@ -113,7 +135,9 @@ impl FunctionProfiler {
 
     /// Check if a function has any callers
     fn has_caller(&self, function: &str) -> bool {
-        self.stats.values().any(|stats| stats.callees.contains_key(function))
+        self.stats
+            .values()
+            .any(|stats| stats.callees.contains_key(function))
     }
 
     /// Print function timing summary to stderr
@@ -131,8 +155,10 @@ impl FunctionProfiler {
         eprintln!("║  Function Timing Summary (sorted by total time)                                                   ║");
         eprintln!("╚════════════════════════════════════════════════════════════════════════════════════════════════════╝");
         eprintln!();
-        eprintln!("{:<40} {:>10} {:>12} {:>12} {:>10} {:>10}",
-            "Function", "Calls", "Total Time", "Avg Time", "I/O Ops", "Slow I/O");
+        eprintln!(
+            "{:<40} {:>10} {:>12} {:>12} {:>10} {:>10}",
+            "Function", "Calls", "Total Time", "Avg Time", "I/O Ops", "Slow I/O"
+        );
         eprintln!("{}", "─".repeat(104));
 
         for (function, stats) in &sorted {
@@ -145,12 +171,21 @@ impl FunctionProfiler {
             let avg_seconds = avg_us as f64 / 1_000_000.0;
 
             // Highlight functions with slow I/O
-            let marker = if stats.slow_io_count > 0 { "⚠️ " } else { "   " };
+            let marker = if stats.slow_io_count > 0 {
+                "⚠️ "
+            } else {
+                "   "
+            };
 
             eprintln!(
                 "{}{:<37} {:>10} {:>11.6}s {:>11.6}s {:>10} {:>10}",
-                marker, function, stats.syscall_count, total_seconds, avg_seconds,
-                stats.io_syscalls, stats.slow_io_count
+                marker,
+                function,
+                stats.syscall_count,
+                total_seconds,
+                avg_seconds,
+                stats.io_syscalls,
+                stats.slow_io_count
             );
         }
 
@@ -170,21 +205,35 @@ impl FunctionProfiler {
             for (rank, (function, stats)) in hot_functions.enumerate() {
                 let total_seconds = stats.total_time_us as f64 / 1_000_000.0;
                 let percent = if self.stats.values().map(|s| s.total_time_us).sum::<u64>() > 0 {
-                    (stats.total_time_us as f64 / self.stats.values().map(|s| s.total_time_us).sum::<u64>() as f64) * 100.0
+                    (stats.total_time_us as f64
+                        / self.stats.values().map(|s| s.total_time_us).sum::<u64>() as f64)
+                        * 100.0
                 } else {
                     0.0
                 };
 
-                eprintln!("{}. {} - {:.2}% of total time ({:.6}s, {} syscalls)",
-                    rank + 1, function, percent, total_seconds, stats.syscall_count);
+                eprintln!(
+                    "{}. {} - {:.2}% of total time ({:.6}s, {} syscalls)",
+                    rank + 1,
+                    function,
+                    percent,
+                    total_seconds,
+                    stats.syscall_count
+                );
 
                 // Show call graph for this hot function
                 if !stats.callees.is_empty() {
                     let mut callees: Vec<_> = stats.callees.iter().collect();
                     callees.sort_by(|a, b| b.1.cmp(a.1));
 
-                    for (callee, count) in callees.iter().take(5) {  // Top 5 callees
-                        eprintln!("   └─> {} ({} call{})", callee, count, if **count == 1 { "" } else { "s" });
+                    for (callee, count) in callees.iter().take(5) {
+                        // Top 5 callees
+                        eprintln!(
+                            "   └─> {} ({} call{})",
+                            callee,
+                            count,
+                            if **count == 1 { "" } else { "s" }
+                        );
                     }
                 }
                 eprintln!();
@@ -208,7 +257,12 @@ impl FunctionProfiler {
                     callees.sort_by(|a, b| b.1.cmp(a.1));
 
                     for (callee, count) in callees {
-                        eprintln!("  └─> {} ({} call{})", callee, count, if *count == 1 { "" } else { "s" });
+                        eprintln!(
+                            "  └─> {} ({} call{})",
+                            callee,
+                            count,
+                            if *count == 1 { "" } else { "s" }
+                        );
                     }
                     eprintln!();
                 }
@@ -259,9 +313,9 @@ mod tests {
     fn test_function_profiler_print_summary_with_data() {
         let mut profiler = FunctionProfiler::new();
         profiler.record("main", "write", 1000000, None); // 1 second
-        profiler.record("main", "read", 500000, None);   // 0.5 seconds
+        profiler.record("main", "read", 500000, None); // 0.5 seconds
         profiler.record("helper", "open", 250000, None); // 0.25 seconds
-        profiler.record("foo", "close", 100000, None);    // 0.1 seconds
+        profiler.record("foo", "close", 100000, None); // 0.1 seconds
 
         // This exercises the print_summary() code path with data
         // including sorting, formatting, and calculations
@@ -275,17 +329,26 @@ mod tests {
     fn test_function_profiler_sorting_by_total_time() {
         let mut profiler = FunctionProfiler::new();
         // Record in non-sorted order
-        profiler.record("slow_func", "write", 5000000, None);  // 5 seconds total
-        profiler.record("fast_func", "brk", 100000, None);   // 0.1 seconds total
+        profiler.record("slow_func", "write", 5000000, None); // 5 seconds total
+        profiler.record("fast_func", "brk", 100000, None); // 0.1 seconds total
         profiler.record("medium_func", "read", 1000000, None); // 1 second total
 
         // print_summary() should sort by total time (descending)
         profiler.print_summary();
 
         // Verify data is present
-        assert_eq!(profiler.stats.get("slow_func").unwrap().total_time_us, 5000000);
-        assert_eq!(profiler.stats.get("fast_func").unwrap().total_time_us, 100000);
-        assert_eq!(profiler.stats.get("medium_func").unwrap().total_time_us, 1000000);
+        assert_eq!(
+            profiler.stats.get("slow_func").unwrap().total_time_us,
+            5000000
+        );
+        assert_eq!(
+            profiler.stats.get("fast_func").unwrap().total_time_us,
+            100000
+        );
+        assert_eq!(
+            profiler.stats.get("medium_func").unwrap().total_time_us,
+            1000000
+        );
     }
 
     #[test]
@@ -311,13 +374,16 @@ mod tests {
     fn test_function_profiler_zero_syscalls_edge_case() {
         let mut profiler = FunctionProfiler::new();
         // Manually insert a function with 0 syscalls (edge case)
-        profiler.stats.insert("never_called".to_string(), FunctionStats {
-            syscall_count: 0,
-            total_time_us: 0,
-            callees: HashMap::new(),
-            io_syscalls: 0,
-            slow_io_count: 0,
-        });
+        profiler.stats.insert(
+            "never_called".to_string(),
+            FunctionStats {
+                syscall_count: 0,
+                total_time_us: 0,
+                callees: HashMap::new(),
+                io_syscalls: 0,
+                slow_io_count: 0,
+            },
+        );
 
         // Should handle division by zero gracefully
         profiler.print_summary();
@@ -362,8 +428,8 @@ mod tests {
         let mut profiler = FunctionProfiler::new();
 
         // Record slow I/O operations (>1ms = >1000us)
-        profiler.record("slow_io_func", "read", 2000, None);   // 2ms - SLOW
-        profiler.record("slow_io_func", "write", 5000, None);  // 5ms - SLOW
+        profiler.record("slow_io_func", "read", 2000, None); // 2ms - SLOW
+        profiler.record("slow_io_func", "write", 5000, None); // 5ms - SLOW
         profiler.record("slow_io_func", "fsync", 10000, None); // 10ms - SLOW
 
         let stats = profiler.stats.get("slow_io_func").unwrap();
@@ -377,9 +443,9 @@ mod tests {
         let mut profiler = FunctionProfiler::new();
 
         // Record fast I/O operations (<1ms)
-        profiler.record("fast_io_func", "read", 100, None);   // 0.1ms - fast
-        profiler.record("fast_io_func", "write", 500, None);  // 0.5ms - fast
-        profiler.record("fast_io_func", "close", 50, None);   // 0.05ms - fast
+        profiler.record("fast_io_func", "read", 100, None); // 0.1ms - fast
+        profiler.record("fast_io_func", "write", 500, None); // 0.5ms - fast
+        profiler.record("fast_io_func", "close", 50, None); // 0.05ms - fast
 
         let stats = profiler.stats.get("fast_io_func").unwrap();
         assert_eq!(stats.io_syscalls, 3);
@@ -392,16 +458,16 @@ mod tests {
         let mut profiler = FunctionProfiler::new();
 
         // Mix of I/O and non-I/O syscalls
-        profiler.record("mixed_func", "read", 1500, None);    // I/O, slow
-        profiler.record("mixed_func", "brk", 100, None);      // Non-I/O
-        profiler.record("mixed_func", "write", 500, None);    // I/O, fast
-        profiler.record("mixed_func", "mmap", 200, None);     // Non-I/O
-        profiler.record("mixed_func", "fsync", 3000, None);   // I/O, slow
+        profiler.record("mixed_func", "read", 1500, None); // I/O, slow
+        profiler.record("mixed_func", "brk", 100, None); // Non-I/O
+        profiler.record("mixed_func", "write", 500, None); // I/O, fast
+        profiler.record("mixed_func", "mmap", 200, None); // Non-I/O
+        profiler.record("mixed_func", "fsync", 3000, None); // I/O, slow
 
         let stats = profiler.stats.get("mixed_func").unwrap();
         assert_eq!(stats.syscall_count, 5);
-        assert_eq!(stats.io_syscalls, 3);      // read, write, fsync
-        assert_eq!(stats.slow_io_count, 2);    // read and fsync
+        assert_eq!(stats.io_syscalls, 3); // read, write, fsync
+        assert_eq!(stats.slow_io_count, 2); // read and fsync
         assert_eq!(stats.total_time_us, 5300);
     }
 
@@ -410,9 +476,9 @@ mod tests {
         let mut profiler = FunctionProfiler::new();
 
         // Test exactly at threshold
-        profiler.record("boundary_func", "read", 1000, None);  // Exactly 1ms - NOT slow (>1ms)
-        profiler.record("boundary_func", "write", 999, None);  // Just under - NOT slow
-        profiler.record("boundary_func", "open", 1001, None);  // Just over - SLOW
+        profiler.record("boundary_func", "read", 1000, None); // Exactly 1ms - NOT slow (>1ms)
+        profiler.record("boundary_func", "write", 999, None); // Just under - NOT slow
+        profiler.record("boundary_func", "open", 1001, None); // Just over - SLOW
 
         let stats = profiler.stats.get("boundary_func").unwrap();
         assert_eq!(stats.io_syscalls, 3);
@@ -544,11 +610,11 @@ mod tests {
         let mut profiler = FunctionProfiler::new();
 
         // Create functions with varying execution times
-        profiler.record("func_slow", "write", 5000000, None);      // 5s
-        profiler.record("func_medium", "read", 1000000, None);     // 1s
-        profiler.record("func_fast", "open", 100000, None);        // 0.1s
+        profiler.record("func_slow", "write", 5000000, None); // 5s
+        profiler.record("func_medium", "read", 1000000, None); // 1s
+        profiler.record("func_fast", "open", 100000, None); // 0.1s
         profiler.record("func_very_slow", "fsync", 10000000, None); // 10s
-        profiler.record("func_quick", "close", 50000, None);       // 0.05s
+        profiler.record("func_quick", "close", 50000, None); // 0.05s
 
         // print_summary() should display hot path analysis with top functions
         // sorted by total_time_us (descending)
@@ -601,9 +667,9 @@ mod tests {
         let mut profiler = FunctionProfiler::new();
 
         // Total: 10 seconds
-        profiler.record("func_50", "write", 5000000, None);  // 50% of total
-        profiler.record("func_30", "read", 3000000, None);   // 30% of total
-        profiler.record("func_20", "open", 2000000, None);   // 20% of total
+        profiler.record("func_50", "write", 5000000, None); // 50% of total
+        profiler.record("func_30", "read", 3000000, None); // 30% of total
+        profiler.record("func_20", "open", 2000000, None); // 20% of total
 
         let total: u64 = profiler.stats.values().map(|s| s.total_time_us).sum();
         assert_eq!(total, 10000000);
@@ -622,7 +688,7 @@ mod tests {
 
         // Create 15 functions to test "top 10" limit
         for i in 0..15 {
-            let time = (15 - i) * 100000;  // Descending times
+            let time = (15 - i) * 100000; // Descending times
             profiler.record(&format!("func_{}", i), "write", time, None);
         }
 
@@ -785,11 +851,19 @@ mod tests {
         // Each line should follow "stack count" format
         for line in lines {
             let parts: Vec<&str> = line.split_whitespace().collect();
-            assert!(parts.len() >= 2, "Line should have stack and count: {}", line);
+            assert!(
+                parts.len() >= 2,
+                "Line should have stack and count: {}",
+                line
+            );
 
             // Last part should be a number (count)
             let count_str = parts.last().unwrap();
-            assert!(count_str.parse::<u64>().is_ok(), "Count should be a number: {}", count_str);
+            assert!(
+                count_str.parse::<u64>().is_ok(),
+                "Count should be a number: {}",
+                count_str
+            );
         }
     }
 }

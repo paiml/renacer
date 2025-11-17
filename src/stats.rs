@@ -59,7 +59,11 @@ impl StatsTracker {
         // Extract data into vectors for SIMD processing
         let counts: Vec<f32> = self.stats.values().map(|s| s.count as f32).collect();
         let errors: Vec<f32> = self.stats.values().map(|s| s.errors as f32).collect();
-        let times: Vec<f32> = self.stats.values().map(|s| s.total_time_us as f32).collect();
+        let times: Vec<f32> = self
+            .stats
+            .values()
+            .map(|s| s.total_time_us as f32)
+            .collect();
 
         // Use Trueno for SIMD-accelerated sums
         let total_calls = trueno::Vector::from_slice(&counts).sum().unwrap_or(0.0) as u64;
@@ -267,10 +271,10 @@ mod tests {
     #[test]
     fn test_stats_tracker_mixed_success_failure() {
         let mut tracker = StatsTracker::new();
-        tracker.record("open", 3, 100);    // success
-        tracker.record("open", -2, 50);    // error
-        tracker.record("open", 5, 75);     // success
-        tracker.record("open", -13, 25);   // error
+        tracker.record("open", 3, 100); // success
+        tracker.record("open", -2, 50); // error
+        tracker.record("open", 5, 75); // success
+        tracker.record("open", -13, 25); // error
 
         let stats = tracker.stats.get("open").unwrap();
         assert_eq!(stats.count, 4);

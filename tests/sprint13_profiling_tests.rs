@@ -1,5 +1,5 @@
 //! Integration tests for self-profiling feature (Sprint 13-14)
-#![allow(deprecated)]  // suppress assert_cmd::Command::cargo_bin deprecation in tests
+#![allow(deprecated)] // suppress assert_cmd::Command::cargo_bin deprecation in tests
 //!
 //! Tests for --profile-self flag and ProfilingContext
 
@@ -14,7 +14,11 @@ fn test_profile_self_flag_outputs_summary() {
     let output = cmd.output().expect("Failed to execute command");
 
     // Check that command succeeded
-    assert!(output.status.success(), "Command failed with status: {}", output.status);
+    assert!(
+        output.status.success(),
+        "Command failed with status: {}",
+        output.status
+    );
 
     // Convert stderr to string
     let stderr = String::from_utf8_lossy(&output.stderr);
@@ -62,7 +66,11 @@ fn test_profile_self_without_flag_no_output() {
     let output = cmd.output().expect("Failed to execute command");
 
     // Check that command succeeded
-    assert!(output.status.success(), "Command failed with status: {}", output.status);
+    assert!(
+        output.status.success(),
+        "Command failed with status: {}",
+        output.status
+    );
 
     // Convert stderr to string
     let stderr = String::from_utf8_lossy(&output.stderr);
@@ -84,7 +92,11 @@ fn test_profile_self_with_statistics_mode() {
     let output = cmd.output().expect("Failed to execute command");
 
     // Check that command succeeded
-    assert!(output.status.success(), "Command failed with status: {}", output.status);
+    assert!(
+        output.status.success(),
+        "Command failed with status: {}",
+        output.status
+    );
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
@@ -112,7 +124,11 @@ fn test_profile_self_reports_nonzero_syscalls() {
     let output = cmd.output().expect("Failed to execute command");
 
     // Check that command succeeded
-    assert!(output.status.success(), "Command failed with status: {}", output.status);
+    assert!(
+        output.status.success(),
+        "Command failed with status: {}",
+        output.status
+    );
 
     let stderr = String::from_utf8_lossy(&output.stderr);
 
@@ -125,7 +141,10 @@ fn test_profile_self_reports_nonzero_syscalls() {
 
     // Extract the syscall count (crude parsing, but works for tests)
     // Look for line like "Total syscalls traced:     42"
-    if let Some(line) = stderr.lines().find(|l| l.contains("Total syscalls traced:")) {
+    if let Some(line) = stderr
+        .lines()
+        .find(|l| l.contains("Total syscalls traced:"))
+    {
         // Count should be > 0
         let parts: Vec<&str> = line.split(':').collect();
         if parts.len() >= 2 {
@@ -147,7 +166,11 @@ fn test_profile_self_with_filtering() {
     let output = cmd.output().expect("Failed to execute command");
 
     // Check that command succeeded
-    assert!(output.status.success(), "Command failed with status: {}", output.status);
+    assert!(
+        output.status.success(),
+        "Command failed with status: {}",
+        output.status
+    );
 
     let stderr = String::from_utf8_lossy(&output.stderr);
 

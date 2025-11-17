@@ -1,5 +1,5 @@
 //! Sprint 5-6: DWARF Source Correlation Tests - RED Phase
-#![allow(deprecated)]  // suppress assert_cmd::Command::cargo_bin deprecation in tests
+#![allow(deprecated)] // suppress assert_cmd::Command::cargo_bin deprecation in tests
 //!
 //! Goal: Map instruction pointers to source file:line using DWARF debug info
 //!

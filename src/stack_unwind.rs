@@ -8,8 +8,8 @@
 
 use anyhow::{Context, Result};
 use nix::sys::ptrace;
+use nix::sys::uio::{process_vm_readv, RemoteIoVec};
 use nix::unistd::Pid;
-use nix::sys::uio::{RemoteIoVec, process_vm_readv};
 use std::io::IoSliceMut;
 
 /// Maximum stack depth to unwind (prevent infinite loops)
@@ -44,17 +44,13 @@ pub fn unwind_stack(pid: Pid) -> Result<Vec<StackFrame>> {
     let mut frames = Vec::with_capacity(16);
 
     // Get current registers
-    let regs = ptrace::getregs(pid)
-        .context("Failed to get registers for stack unwinding")?;
+    let regs = ptrace::getregs(pid).context("Failed to get registers for stack unwinding")?;
 
     let rip = regs.rip;
     let mut rbp = regs.rbp;
 
     // Add current frame
-    frames.push(StackFrame {
-        rip,
-        rbp,
-    });
+    frames.push(StackFrame { rip, rbp });
 
     // Walk the stack using frame pointers
     for _ in 0..MAX_STACK_DEPTH {
@@ -144,7 +140,7 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::assertions_on_constants)]  // Testing constant invariants
+    #[allow(clippy::assertions_on_constants)] // Testing constant invariants
     fn test_max_stack_depth_constant() {
         assert_eq!(MAX_STACK_DEPTH, 64);
         assert!(MAX_STACK_DEPTH > 0);
@@ -153,10 +149,7 @@ mod tests {
 
     #[test]
     fn test_stack_frame_zero_addresses() {
-        let frame = StackFrame {
-            rip: 0,
-            rbp: 0,
-        };
+        let frame = StackFrame { rip: 0, rbp: 0 };
         assert_eq!(frame.rip, 0);
         assert_eq!(frame.rbp, 0);
     }

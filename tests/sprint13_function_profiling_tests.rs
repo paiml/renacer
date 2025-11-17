@@ -1,6 +1,6 @@
 // Integration tests for --function-time flag (GitHub Issue #1)
-#![allow(deprecated)]  // suppress assert_cmd::Command::cargo_bin deprecation in tests
-// Sprint 13-14: Function-level profiling with DWARF correlation
+#![allow(deprecated)] // suppress assert_cmd::Command::cargo_bin deprecation in tests
+                      // Sprint 13-14: Function-level profiling with DWARF correlation
 
 use assert_cmd::Command;
 
@@ -8,10 +8,7 @@ use assert_cmd::Command;
 fn test_function_time_flag_accepted() {
     // Test that --function-time flag is accepted by CLI
     let mut cmd = Command::cargo_bin("renacer").unwrap();
-    cmd.arg("--function-time")
-        .arg("--")
-        .arg("echo")
-        .arg("test");
+    cmd.arg("--function-time").arg("--").arg("echo").arg("test");
 
     let output = cmd.output().unwrap();
     assert!(output.status.success());
@@ -38,9 +35,9 @@ fn test_function_time_output_format() {
     // Should show either the profiling table header or "No function profiling data"
     // (depends on whether DWARF info is available for echo)
     assert!(
-        stderr.contains("Function Profiling Summary") ||
-        stderr.contains("No function profiling data collected") ||
-        stderr.contains("═══")
+        stderr.contains("Function Profiling Summary")
+            || stderr.contains("No function profiling data collected")
+            || stderr.contains("═══")
     );
 }
 
@@ -63,7 +60,10 @@ fn test_function_time_with_statistics_mode() {
     // Statistics summary goes to stdout
     assert!(stdout.contains("calls") && stdout.contains("total"));
     // Profiling message goes to stderr
-    assert!(stderr.contains("No function profiling data") || stderr.contains("Function Profiling Summary"));
+    assert!(
+        stderr.contains("No function profiling data")
+            || stderr.contains("Function Profiling Summary")
+    );
 }
 
 #[test]
@@ -85,16 +85,17 @@ fn test_function_time_with_filter() {
 
     // Syscall traces go to stdout, profiling summary to stderr
     assert!(stdout.contains("write("));
-    assert!(stderr.contains("No function profiling data") || stderr.contains("Function Profiling Summary"));
+    assert!(
+        stderr.contains("No function profiling data")
+            || stderr.contains("Function Profiling Summary")
+    );
 }
 
 #[test]
 fn test_function_time_without_flag_no_profiling() {
     // Test that without --function-time, no profiling summary appears
     let mut cmd = Command::cargo_bin("renacer").unwrap();
-    cmd.arg("--")
-        .arg("echo")
-        .arg("test");
+    cmd.arg("--").arg("echo").arg("test");
 
     let output = cmd.output().unwrap();
     assert!(output.status.success());
