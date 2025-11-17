@@ -209,7 +209,8 @@ fn parse_syscall_sets(spec: &str) -> Result<ParseResult> {
 /// Returns Some(Regex) if input is /pattern/, None otherwise
 fn parse_regex_pattern(input: &str) -> Result<Option<Regex>> {
     // Check if input is wrapped in forward slashes
-    if input.starts_with('/') && input.ends_with('/') && input.len() > 2 {
+    // Allow empty regex (//) as valid pattern (len >= 2, not > 2)
+    if input.starts_with('/') && input.ends_with('/') && input.len() >= 2 {
         // Extract pattern between slashes
         let pattern = &input[1..input.len() - 1];
 
