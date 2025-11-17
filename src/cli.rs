@@ -15,6 +15,10 @@ pub struct Cli {
     #[arg(short = 'e', long = "expr", value_name = "EXPR")]
     pub filter: Option<String>,
 
+    /// Show statistics summary (syscall counts and timing) instead of individual calls
+    #[arg(short = 'c', long = "summary")]
+    pub statistics: bool,
+
     /// Command to trace (everything after --)
     #[arg(last = true)]
     pub command: Option<Vec<String>>,
