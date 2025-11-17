@@ -6,10 +6,10 @@ Renacer (Spanish: "to be reborn") is a next-generation binary inspection and tra
 
 ## Project Status
 
-**Current Version:** 0.3.0-dev (Sprint 15 in progress)
-**Status:** Production-Ready (v0.2.0) + Advanced Filtering (Sprint 15)
+**Current Version:** 0.3.0-dev (Sprint 16 in progress)
+**Status:** Production-Ready (v0.2.0) + Advanced Filtering (Sprint 15-16)
 **TDG Score:** 94.5/100 (A grade)
-**Test Coverage:** 178 tests (all passing)
+**Test Coverage:** 201 tests (all passing)
 **Specification:** [docs/specifications/deep-strace-rust-wasm-binary-spec.md](docs/specifications/deep-strace-rust-wasm-binary-spec.md)
 
 ## Features
@@ -21,6 +21,7 @@ Renacer (Spanish: "to be reborn") is a next-generation binary inspection and tra
 - ✅ **JSON output** (--format json) - Machine-readable trace export
 - ✅ **Advanced filtering** (-e trace=SPEC) - File, network, process, memory classes
 - ✅ **Negation operator** (Sprint 15) - Exclude syscalls with ! prefix
+- ✅ **Regex patterns** (Sprint 16) - Pattern matching with /regex/ syntax
 - ✅ **PID attachment** (-p PID) - Attach to running processes
 - ✅ **Timing mode** (-T) - Microsecond-precision syscall durations
 
@@ -61,6 +62,12 @@ renacer -e trace=file -- cat file.txt       # File operations only
 renacer -e trace=open,read,write -- ls      # Specific syscalls
 renacer -e trace=!close -- ls               # All syscalls except close (Sprint 15)
 renacer -e trace=file,!close -- cat file    # File ops except close (Sprint 15)
+
+# Regex patterns (Sprint 16)
+renacer -e 'trace=/^open.*/' -- ls          # All syscalls starting with "open"
+renacer -e 'trace=/.*at$/' -- cat file      # All syscalls ending with "at"
+renacer -e 'trace=/read|write/' -- app      # Syscalls matching read OR write
+renacer -e 'trace=/^open.*/,!/openat/' -- ls  # open* except openat
 
 # Statistics summary
 renacer -c -T -- cargo build
