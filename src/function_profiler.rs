@@ -61,7 +61,8 @@ impl FunctionProfiler {
     /// * `function_name` - Name of the function making the syscall
     /// * `syscall_name` - Name of the syscall being made (for I/O detection)
     /// * `duration_us` - Duration of the syscall in microseconds
-    pub fn record(&mut self, function_name: &str, syscall_name: &str, duration_us: u64) {
+    /// * `caller_name` - Optional name of the function that called this function (for call graph)
+    pub fn record(&mut self, function_name: &str, syscall_name: &str, duration_us: u64, caller_name: Option<&str>) {
         let entry = self.stats.entry(function_name.to_string()).or_default();
         entry.syscall_count += 1;
         entry.total_time_us += duration_us;
@@ -74,6 +75,12 @@ impl FunctionProfiler {
             if duration_us > SLOW_IO_THRESHOLD_US {
                 entry.slow_io_count += 1;
             }
+        }
+
+        // Track call graph (parent -> child relationship)
+        if let Some(caller) = caller_name {
+            let caller_entry = self.stats.entry(caller.to_string()).or_default();
+            *caller_entry.callees.entry(function_name.to_string()).or_insert(0) += 1;
         }
     }
 
@@ -96,7 +103,7 @@ impl FunctionProfiler {
             "Function", "Calls", "Total Time", "Avg Time", "I/O Ops", "Slow I/O");
         eprintln!("{}", "─".repeat(104));
 
-        for (function, stats) in sorted {
+        for (function, stats) in &sorted {
             let total_seconds = stats.total_time_us as f64 / 1_000_000.0;
             let avg_us = if stats.syscall_count > 0 {
                 stats.total_time_us / stats.syscall_count
@@ -116,6 +123,31 @@ impl FunctionProfiler {
         }
 
         eprintln!("{}", "─".repeat(104));
+
+        // Print call graph if available
+        let has_call_graph = sorted.iter().any(|(_, stats)| !stats.callees.is_empty());
+        if has_call_graph {
+            eprintln!();
+            eprintln!("╔════════════════════════════════════════════════════════════════════════════════════════════════════╗");
+            eprintln!("║  Call Graph (parent → child relationships)                                                        ║");
+            eprintln!("╚════════════════════════════════════════════════════════════════════════════════════════════════════╝");
+            eprintln!();
+
+            for (function, stats) in &sorted {
+                if !stats.callees.is_empty() {
+                    eprintln!("{} calls:", function);
+
+                    // Sort callees by call count (descending)
+                    let mut callees: Vec<_> = stats.callees.iter().collect();
+                    callees.sort_by(|a, b| b.1.cmp(a.1));
+
+                    for (callee, count) in callees {
+                        eprintln!("  └─> {} ({} call{})", callee, count, if *count == 1 { "" } else { "s" });
+                    }
+                    eprintln!();
+                }
+            }
+        }
     }
 }
 
@@ -132,9 +164,9 @@ mod tests {
     #[test]
     fn test_function_profiler_record() {
         let mut profiler = FunctionProfiler::new();
-        profiler.record("main", "write", 1000);
-        profiler.record("main", "read", 2000);
-        profiler.record("helper", "open", 500);
+        profiler.record("main", "write", 1000, None);
+        profiler.record("main", "read", 2000, None);
+        profiler.record("helper", "open", 500, None);
 
         assert_eq!(profiler.stats.len(), 2);
         assert_eq!(profiler.stats.get("main").unwrap().syscall_count, 2);
@@ -160,10 +192,10 @@ mod tests {
     #[test]
     fn test_function_profiler_print_summary_with_data() {
         let mut profiler = FunctionProfiler::new();
-        profiler.record("main", "write", 1000000); // 1 second
-        profiler.record("main", "read", 500000);   // 0.5 seconds
-        profiler.record("helper", "open", 250000); // 0.25 seconds
-        profiler.record("foo", "close", 100000);    // 0.1 seconds
+        profiler.record("main", "write", 1000000, None); // 1 second
+        profiler.record("main", "read", 500000, None);   // 0.5 seconds
+        profiler.record("helper", "open", 250000, None); // 0.25 seconds
+        profiler.record("foo", "close", 100000, None);    // 0.1 seconds
 
         // This exercises the print_summary() code path with data
         // including sorting, formatting, and calculations
@@ -177,9 +209,9 @@ mod tests {
     fn test_function_profiler_sorting_by_total_time() {
         let mut profiler = FunctionProfiler::new();
         // Record in non-sorted order
-        profiler.record("slow_func", "write", 5000000);  // 5 seconds total
-        profiler.record("fast_func", "brk", 100000);   // 0.1 seconds total
-        profiler.record("medium_func", "read", 1000000); // 1 second total
+        profiler.record("slow_func", "write", 5000000, None);  // 5 seconds total
+        profiler.record("fast_func", "brk", 100000, None);   // 0.1 seconds total
+        profiler.record("medium_func", "read", 1000000, None); // 1 second total
 
         // print_summary() should sort by total time (descending)
         profiler.print_summary();
@@ -194,9 +226,9 @@ mod tests {
     fn test_function_profiler_average_calculation() {
         let mut profiler = FunctionProfiler::new();
         // Record multiple calls to test average calculation
-        profiler.record("test_func", "write", 1000);
-        profiler.record("test_func", "read", 2000);
-        profiler.record("test_func", "open", 3000);
+        profiler.record("test_func", "write", 1000, None);
+        profiler.record("test_func", "read", 2000, None);
+        profiler.record("test_func", "open", 3000, None);
 
         let stats = profiler.stats.get("test_func").unwrap();
         assert_eq!(stats.syscall_count, 3);
@@ -233,10 +265,10 @@ mod tests {
         let mut profiler = FunctionProfiler::new();
 
         // Record I/O syscalls
-        profiler.record("io_func", "read", 500);
-        profiler.record("io_func", "write", 600);
-        profiler.record("io_func", "open", 700);
-        profiler.record("io_func", "close", 400);
+        profiler.record("io_func", "read", 500, None);
+        profiler.record("io_func", "write", 600, None);
+        profiler.record("io_func", "open", 700, None);
+        profiler.record("io_func", "close", 400, None);
 
         let stats = profiler.stats.get("io_func").unwrap();
         assert_eq!(stats.io_syscalls, 4);
@@ -249,9 +281,9 @@ mod tests {
         let mut profiler = FunctionProfiler::new();
 
         // Record non-I/O syscalls
-        profiler.record("compute_func", "brk", 500);
-        profiler.record("compute_func", "mmap", 600);
-        profiler.record("compute_func", "getpid", 100);
+        profiler.record("compute_func", "brk", 500, None);
+        profiler.record("compute_func", "mmap", 600, None);
+        profiler.record("compute_func", "getpid", 100, None);
 
         let stats = profiler.stats.get("compute_func").unwrap();
         assert_eq!(stats.io_syscalls, 0);
@@ -264,9 +296,9 @@ mod tests {
         let mut profiler = FunctionProfiler::new();
 
         // Record slow I/O operations (>1ms = >1000us)
-        profiler.record("slow_io_func", "read", 2000);   // 2ms - SLOW
-        profiler.record("slow_io_func", "write", 5000);  // 5ms - SLOW
-        profiler.record("slow_io_func", "fsync", 10000); // 10ms - SLOW
+        profiler.record("slow_io_func", "read", 2000, None);   // 2ms - SLOW
+        profiler.record("slow_io_func", "write", 5000, None);  // 5ms - SLOW
+        profiler.record("slow_io_func", "fsync", 10000, None); // 10ms - SLOW
 
         let stats = profiler.stats.get("slow_io_func").unwrap();
         assert_eq!(stats.io_syscalls, 3);
@@ -279,9 +311,9 @@ mod tests {
         let mut profiler = FunctionProfiler::new();
 
         // Record fast I/O operations (<1ms)
-        profiler.record("fast_io_func", "read", 100);   // 0.1ms - fast
-        profiler.record("fast_io_func", "write", 500);  // 0.5ms - fast
-        profiler.record("fast_io_func", "close", 50);   // 0.05ms - fast
+        profiler.record("fast_io_func", "read", 100, None);   // 0.1ms - fast
+        profiler.record("fast_io_func", "write", 500, None);  // 0.5ms - fast
+        profiler.record("fast_io_func", "close", 50, None);   // 0.05ms - fast
 
         let stats = profiler.stats.get("fast_io_func").unwrap();
         assert_eq!(stats.io_syscalls, 3);
@@ -294,11 +326,11 @@ mod tests {
         let mut profiler = FunctionProfiler::new();
 
         // Mix of I/O and non-I/O syscalls
-        profiler.record("mixed_func", "read", 1500);    // I/O, slow
-        profiler.record("mixed_func", "brk", 100);      // Non-I/O
-        profiler.record("mixed_func", "write", 500);    // I/O, fast
-        profiler.record("mixed_func", "mmap", 200);     // Non-I/O
-        profiler.record("mixed_func", "fsync", 3000);   // I/O, slow
+        profiler.record("mixed_func", "read", 1500, None);    // I/O, slow
+        profiler.record("mixed_func", "brk", 100, None);      // Non-I/O
+        profiler.record("mixed_func", "write", 500, None);    // I/O, fast
+        profiler.record("mixed_func", "mmap", 200, None);     // Non-I/O
+        profiler.record("mixed_func", "fsync", 3000, None);   // I/O, slow
 
         let stats = profiler.stats.get("mixed_func").unwrap();
         assert_eq!(stats.syscall_count, 5);
@@ -312,9 +344,9 @@ mod tests {
         let mut profiler = FunctionProfiler::new();
 
         // Test exactly at threshold
-        profiler.record("boundary_func", "read", 1000);  // Exactly 1ms - NOT slow (>1ms)
-        profiler.record("boundary_func", "write", 999);  // Just under - NOT slow
-        profiler.record("boundary_func", "open", 1001);  // Just over - SLOW
+        profiler.record("boundary_func", "read", 1000, None);  // Exactly 1ms - NOT slow (>1ms)
+        profiler.record("boundary_func", "write", 999, None);  // Just under - NOT slow
+        profiler.record("boundary_func", "open", 1001, None);  // Just over - SLOW
 
         let stats = profiler.stats.get("boundary_func").unwrap();
         assert_eq!(stats.io_syscalls, 3);
@@ -326,26 +358,118 @@ mod tests {
         let mut profiler = FunctionProfiler::new();
 
         // Test all I/O syscall types from IO_SYSCALLS constant
-        profiler.record("io_types", "read", 100);
-        profiler.record("io_types", "write", 100);
-        profiler.record("io_types", "readv", 100);
-        profiler.record("io_types", "writev", 100);
-        profiler.record("io_types", "pread64", 100);
-        profiler.record("io_types", "pwrite64", 100);
-        profiler.record("io_types", "openat", 100);
-        profiler.record("io_types", "open", 100);
-        profiler.record("io_types", "close", 100);
-        profiler.record("io_types", "fsync", 100);
-        profiler.record("io_types", "fdatasync", 100);
-        profiler.record("io_types", "sync", 100);
-        profiler.record("io_types", "sendfile", 100);
-        profiler.record("io_types", "splice", 100);
-        profiler.record("io_types", "tee", 100);
-        profiler.record("io_types", "vmsplice", 100);
+        profiler.record("io_types", "read", 100, None);
+        profiler.record("io_types", "write", 100, None);
+        profiler.record("io_types", "readv", 100, None);
+        profiler.record("io_types", "writev", 100, None);
+        profiler.record("io_types", "pread64", 100, None);
+        profiler.record("io_types", "pwrite64", 100, None);
+        profiler.record("io_types", "openat", 100, None);
+        profiler.record("io_types", "open", 100, None);
+        profiler.record("io_types", "close", 100, None);
+        profiler.record("io_types", "fsync", 100, None);
+        profiler.record("io_types", "fdatasync", 100, None);
+        profiler.record("io_types", "sync", 100, None);
+        profiler.record("io_types", "sendfile", 100, None);
+        profiler.record("io_types", "splice", 100, None);
+        profiler.record("io_types", "tee", 100, None);
+        profiler.record("io_types", "vmsplice", 100, None);
 
         let stats = profiler.stats.get("io_types").unwrap();
         assert_eq!(stats.io_syscalls, 16); // All 16 I/O syscall types
         assert_eq!(stats.syscall_count, 16);
         assert_eq!(stats.slow_io_count, 0); // All fast
+    }
+
+    #[test]
+    fn test_call_graph_single_relationship() {
+        let mut profiler = FunctionProfiler::new();
+
+        // main calls helper
+        profiler.record("helper", "write", 1000, Some("main"));
+
+        let main_stats = profiler.stats.get("main").unwrap();
+        assert_eq!(main_stats.callees.len(), 1);
+        assert_eq!(*main_stats.callees.get("helper").unwrap(), 1);
+    }
+
+    #[test]
+    fn test_call_graph_multiple_calls() {
+        let mut profiler = FunctionProfiler::new();
+
+        // main calls helper multiple times
+        profiler.record("helper", "write", 1000, Some("main"));
+        profiler.record("helper", "read", 2000, Some("main"));
+        profiler.record("helper", "open", 500, Some("main"));
+
+        let main_stats = profiler.stats.get("main").unwrap();
+        assert_eq!(main_stats.callees.len(), 1);
+        assert_eq!(*main_stats.callees.get("helper").unwrap(), 3);
+    }
+
+    #[test]
+    fn test_call_graph_multiple_callees() {
+        let mut profiler = FunctionProfiler::new();
+
+        // main calls multiple different functions
+        profiler.record("helper_a", "write", 1000, Some("main"));
+        profiler.record("helper_b", "read", 2000, Some("main"));
+        profiler.record("helper_c", "open", 500, Some("main"));
+
+        let main_stats = profiler.stats.get("main").unwrap();
+        assert_eq!(main_stats.callees.len(), 3);
+        assert_eq!(*main_stats.callees.get("helper_a").unwrap(), 1);
+        assert_eq!(*main_stats.callees.get("helper_b").unwrap(), 1);
+        assert_eq!(*main_stats.callees.get("helper_c").unwrap(), 1);
+    }
+
+    #[test]
+    fn test_call_graph_nested_calls() {
+        let mut profiler = FunctionProfiler::new();
+
+        // main -> helper_a -> helper_b
+        profiler.record("helper_a", "write", 1000, Some("main"));
+        profiler.record("helper_b", "read", 2000, Some("helper_a"));
+
+        let main_stats = profiler.stats.get("main").unwrap();
+        assert_eq!(main_stats.callees.len(), 1);
+        assert_eq!(*main_stats.callees.get("helper_a").unwrap(), 1);
+
+        let helper_a_stats = profiler.stats.get("helper_a").unwrap();
+        assert_eq!(helper_a_stats.callees.len(), 1);
+        assert_eq!(*helper_a_stats.callees.get("helper_b").unwrap(), 1);
+    }
+
+    #[test]
+    fn test_call_graph_with_no_caller() {
+        let mut profiler = FunctionProfiler::new();
+
+        // Function called with no caller (e.g., from main)
+        profiler.record("main", "write", 1000, None);
+
+        let main_stats = profiler.stats.get("main").unwrap();
+        assert_eq!(main_stats.callees.len(), 0);
+        assert_eq!(main_stats.syscall_count, 1);
+    }
+
+    #[test]
+    fn test_call_graph_mixed_with_without_caller() {
+        let mut profiler = FunctionProfiler::new();
+
+        // main is called without caller
+        profiler.record("main", "write", 1000, None);
+        // main calls helper
+        profiler.record("helper", "read", 2000, Some("main"));
+        // helper is also called without caller (e.g., recursion or external call)
+        profiler.record("helper", "open", 500, None);
+
+        let main_stats = profiler.stats.get("main").unwrap();
+        assert_eq!(main_stats.syscall_count, 1);
+        assert_eq!(main_stats.callees.len(), 1);
+        assert_eq!(*main_stats.callees.get("helper").unwrap(), 1);
+
+        let helper_stats = profiler.stats.get("helper").unwrap();
+        assert_eq!(helper_stats.syscall_count, 2);
+        assert_eq!(helper_stats.callees.len(), 0);
     }
 }

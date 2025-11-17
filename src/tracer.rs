@@ -264,6 +264,7 @@ struct SyscallEntry {
     args: Vec<String>,
     source: Option<crate::json_output::JsonSourceLocation>,
     function_name: Option<String>,
+    caller_name: Option<String>,
 }
 
 /// Find the user function that triggered a syscall by unwinding the stack
@@ -273,34 +274,46 @@ struct SyscallEntry {
 /// the first non-libc function.
 ///
 /// Returns the function name if found, None otherwise.
+#[allow(dead_code)]  // Reserved for future use (available as helper function)
 fn find_user_function_via_unwinding(child: Pid, dwarf_ctx: &crate::dwarf::DwarfContext) -> Option<String> {
+    find_user_function_with_caller(child, dwarf_ctx).map(|(func, _)| func)
+}
+
+/// Find user function and its caller from stack unwinding
+/// Returns (current_function, caller_function)
+fn find_user_function_with_caller(child: Pid, dwarf_ctx: &crate::dwarf::DwarfContext) -> Option<(String, Option<String>)> {
     // Unwind the stack to get all frames
     let frames = match crate::stack_unwind::unwind_stack(child) {
         Ok(frames) => frames,
         Err(_) => return None, // Stack unwinding failed
     };
 
-    // Walk through frames and look for the first user function
+    let mut user_functions = Vec::new();
+
+    // Walk through frames and collect user functions
     for frame in frames {
         // Look up this address in DWARF
         if let Some(source_info) = dwarf_ctx.lookup(frame.rip).ok().flatten() {
             if let Some(func_name) = source_info.function {
                 // Filter out libc/system functions
-                // Accept Rust mangled names (start with _Z or _R) and C functions
-                // Reject libc internals (__, @plt, etc.)
                 let is_libc = func_name.starts_with("__") ||
                               func_name.contains("libc") ||
                               func_name.contains("@plt") ||
                               func_name.contains("@@GLIBC");
 
                 if !is_libc {
-                    return Some(func_name.to_string());
+                    user_functions.push(func_name.to_string());
                 }
             }
         }
     }
 
-    None // No user function found in stack
+    // Return the first user function and its caller (if available)
+    match user_functions.len() {
+        0 => None,
+        1 => Some((user_functions[0].clone(), None)),
+        _ => Some((user_functions[0].clone(), Some(user_functions[1].clone()))),
+    }
 }
 
 /// Handle syscall entry - record syscall number and arguments
@@ -379,18 +392,20 @@ fn handle_syscall_entry(child: Pid, dwarf_ctx: Option<&crate::dwarf::DwarfContex
         std::io::Write::flush(&mut std::io::stdout()).ok();
     }
 
-    // Extract function name using stack unwinding if function profiling is enabled
-    let function_name = if function_profiling_enabled {
+    // Extract function name and caller using stack unwinding if function profiling is enabled
+    let (function_name, caller_name) = if function_profiling_enabled {
         if let Some(ctx) = dwarf_ctx {
-            // Use stack unwinding to find the user function that triggered the syscall
-            find_user_function_via_unwinding(child, ctx)
+            // Use stack unwinding to find the user function and its caller
+            find_user_function_with_caller(child, ctx).map_or((None, None), |(func, caller)| (Some(func), caller))
         } else {
             // Fallback to using instruction pointer (may point to libc)
-            source_info.as_ref().and_then(|src| src.function.clone().map(|s| s.to_string()))
+            let func = source_info.as_ref().and_then(|src| src.function.clone().map(|s| s.to_string()));
+            (func, None)
         }
     } else {
         // Fallback to using instruction pointer (may point to libc)
-        source_info.as_ref().and_then(|src| src.function.clone().map(|s| s.to_string()))
+        let func = source_info.as_ref().and_then(|src| src.function.clone().map(|s| s.to_string()));
+        (func, None)
     };
 
     let json_source = source_info.as_ref().map(|src| crate::json_output::JsonSourceLocation {
@@ -405,6 +420,7 @@ fn handle_syscall_entry(child: Pid, dwarf_ctx: Option<&crate::dwarf::DwarfContex
         args,
         source: json_source,
         function_name,
+        caller_name,
     }))
 }
 
@@ -468,7 +484,7 @@ fn handle_syscall_exit(child: Pid, syscall_entry: &Option<SyscallEntry>, stats_t
     // Record function profiling if enabled
     if let (Some(entry), Some(profiler)) = (syscall_entry, function_profiler) {
         if let Some(function_name) = &entry.function_name {
-            profiler.record(function_name, &entry.name, duration_us);
+            profiler.record(function_name, &entry.name, duration_us, entry.caller_name.as_deref());
         }
     }
 
@@ -531,6 +547,7 @@ mod tests {
             args: vec!["arg1".to_string(), "arg2".to_string()],
             source: None,
             function_name: None,
+            caller_name: None,
         };
         assert_eq!(entry.name, "open");
         assert_eq!(entry.args.len(), 2);
@@ -550,6 +567,7 @@ mod tests {
             args: vec![],
             source: Some(source),
             function_name: Some("main".to_string()),
+            caller_name: None,
         };
         assert_eq!(entry.name, "read");
         assert!(entry.source.is_some());
