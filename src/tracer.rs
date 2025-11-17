@@ -240,21 +240,21 @@ fn handle_syscall_entry(child: Pid, dwarf_ctx: Option<&crate::dwarf::DwarfContex
     };
 
     // Sprint 3-4: Decode arguments based on syscall type
-    let (formatted, args) = match name {
-        "openat" => {
-            // openat(dfd, filename, flags, mode)
-            let filename = read_string(child, arg2 as usize).unwrap_or_else(|_| format!("{:#x}", arg2));
-            let args = vec![format!("{:#x}", arg1), format!("\"{}\"", filename), format!("{:#x}", arg3)];
-            (format!("{}({:#x}, \"{}\", {:#x}) = ", name, arg1, filename, arg3), args)
+    // Only format args array if needed for JSON mode
+    let args = if json_mode {
+        match name {
+            "openat" => {
+                // openat(dfd, filename, flags, mode)
+                let filename = read_string(child, arg2 as usize).unwrap_or_else(|_| format!("{:#x}", arg2));
+                vec![format!("{:#x}", arg1), format!("\"{}\"", filename), format!("{:#x}", arg3)]
+            }
+            _ => {
+                vec![format!("{:#x}", arg1), format!("{:#x}", arg2), format!("{:#x}", arg3)]
+            }
         }
-        "unknown" => {
-            let args = vec![format!("{:#x}", arg1), format!("{:#x}", arg2), format!("{:#x}", arg3)];
-            (format!("syscall_{}({:#x}, {:#x}, {:#x}) = ", syscall_num, arg1, arg2, arg3), args)
-        }
-        _ => {
-            let args = vec![format!("{:#x}", arg1), format!("{:#x}", arg2), format!("{:#x}", arg3)];
-            (format!("{}({:#x}, {:#x}, {:#x}) = ", name, arg1, arg2, arg3), args)
-        }
+    } else {
+        // For non-JSON mode, we'll format args lazily during print
+        Vec::new()
     };
 
     // Only print if not in statistics or JSON mode
@@ -266,7 +266,21 @@ fn handle_syscall_entry(child: Pid, dwarf_ctx: Option<&crate::dwarf::DwarfContex
                 print!("{} ", func);
             }
         }
-        print!("{}", formatted);
+
+        // Lazy formatting - only format when actually printing
+        match name {
+            "openat" => {
+                // Read filename for display
+                let filename = read_string(child, arg2 as usize).unwrap_or_else(|_| format!("{:#x}", arg2));
+                print!("{}({:#x}, \"{}\", {:#x}) = ", name, arg1, filename, arg3);
+            }
+            "unknown" => {
+                print!("syscall_{}({:#x}, {:#x}, {:#x}) = ", syscall_num, arg1, arg2, arg3);
+            }
+            _ => {
+                print!("{}({:#x}, {:#x}, {:#x}) = ", name, arg1, arg2, arg3);
+            }
+        }
         std::io::Write::flush(&mut std::io::stdout()).ok();
     }
 
