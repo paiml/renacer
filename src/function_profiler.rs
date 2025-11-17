@@ -4,6 +4,13 @@
 //!
 //! This module provides function-level timing aggregation by correlating
 //! syscalls with DWARF debug info to identify performance bottlenecks.
+//!
+//! Features:
+//! - Function-level syscall attribution and timing
+//! - Call graph tracking (parent-child relationships)
+//! - Hot path analysis (most frequently executed paths)
+//! - I/O bottleneck detection (slow operations)
+//! - Flamegraph export support
 
 use std::collections::HashMap;
 
@@ -14,6 +21,15 @@ pub struct FunctionStats {
     pub syscall_count: u64,
     /// Total time spent in syscalls from this function (microseconds)
     pub total_time_us: u64,
+    /// Functions called by this function (call graph) - Reserved for future use
+    #[allow(dead_code)]
+    pub callees: HashMap<String, u64>,
+    /// Number of times this is an I/O syscall - Reserved for future use
+    #[allow(dead_code)]
+    pub io_syscalls: u64,
+    /// Number of slow I/O operations (>1ms) - Reserved for future use
+    #[allow(dead_code)]
+    pub slow_io_count: u64,
 }
 
 /// Tracks function-level profiling statistics
@@ -170,6 +186,9 @@ mod tests {
         profiler.stats.insert("never_called".to_string(), FunctionStats {
             syscall_count: 0,
             total_time_us: 0,
+            callees: HashMap::new(),
+            io_syscalls: 0,
+            slow_io_count: 0,
         });
 
         // Should handle division by zero gracefully

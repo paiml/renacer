@@ -192,10 +192,10 @@ fn trace_child(child: Pid, config: TracerConfig) -> Result<i32> {
                     // Profile syscall entry handling
                     current_syscall_entry = if let Some(prof) = profiling_ctx.as_mut() {
                         prof.measure(crate::profiling::ProfilingCategory::Other, || {
-                            handle_syscall_entry(child, dwarf_ctx.as_ref(), &config.filter, config.statistics_mode, in_json_mode)
+                            handle_syscall_entry(child, dwarf_ctx.as_ref(), &config.filter, config.statistics_mode, in_json_mode, config.function_time)
                         })?
                     } else {
-                        handle_syscall_entry(child, dwarf_ctx.as_ref(), &config.filter, config.statistics_mode, in_json_mode)?
+                        handle_syscall_entry(child, dwarf_ctx.as_ref(), &config.filter, config.statistics_mode, in_json_mode, config.function_time)?
                     };
 
                     in_syscall = true;
@@ -266,9 +266,46 @@ struct SyscallEntry {
     function_name: Option<String>,
 }
 
+/// Find the user function that triggered a syscall by unwinding the stack
+///
+/// Syscalls execute in libc, not user code. To attribute syscalls to the
+/// user function that triggered them, we need to unwind the stack and find
+/// the first non-libc function.
+///
+/// Returns the function name if found, None otherwise.
+fn find_user_function_via_unwinding(child: Pid, dwarf_ctx: &crate::dwarf::DwarfContext) -> Option<String> {
+    // Unwind the stack to get all frames
+    let frames = match crate::stack_unwind::unwind_stack(child) {
+        Ok(frames) => frames,
+        Err(_) => return None, // Stack unwinding failed
+    };
+
+    // Walk through frames and look for the first user function
+    for frame in frames {
+        // Look up this address in DWARF
+        if let Some(source_info) = dwarf_ctx.lookup(frame.rip).ok().flatten() {
+            if let Some(func_name) = source_info.function {
+                // Filter out libc/system functions
+                // Accept Rust mangled names (start with _Z or _R) and C functions
+                // Reject libc internals (__, @plt, etc.)
+                let is_libc = func_name.starts_with("__") ||
+                              func_name.contains("libc") ||
+                              func_name.contains("@plt") ||
+                              func_name.contains("@@GLIBC");
+
+                if !is_libc {
+                    return Some(func_name.to_string());
+                }
+            }
+        }
+    }
+
+    None // No user function found in stack
+}
+
 /// Handle syscall entry - record syscall number and arguments
 /// Returns the syscall entry data if it should be traced, None otherwise
-fn handle_syscall_entry(child: Pid, dwarf_ctx: Option<&crate::dwarf::DwarfContext>, filter: &crate::filter::SyscallFilter, statistics_mode: bool, json_mode: bool) -> Result<Option<SyscallEntry>> {
+fn handle_syscall_entry(child: Pid, dwarf_ctx: Option<&crate::dwarf::DwarfContext>, filter: &crate::filter::SyscallFilter, statistics_mode: bool, json_mode: bool, function_profiling_enabled: bool) -> Result<Option<SyscallEntry>> {
     let regs = ptrace::getregs(child).context("Failed to get registers")?;
 
     // On x86_64: syscall number in orig_rax
@@ -342,8 +379,20 @@ fn handle_syscall_entry(child: Pid, dwarf_ctx: Option<&crate::dwarf::DwarfContex
         std::io::Write::flush(&mut std::io::stdout()).ok();
     }
 
-    // Convert source_info to JsonSourceLocation and extract function name
-    let function_name = source_info.as_ref().and_then(|src| src.function.clone().map(|s| s.to_string()));
+    // Extract function name using stack unwinding if function profiling is enabled
+    let function_name = if function_profiling_enabled {
+        if let Some(ctx) = dwarf_ctx {
+            // Use stack unwinding to find the user function that triggered the syscall
+            find_user_function_via_unwinding(child, ctx)
+        } else {
+            // Fallback to using instruction pointer (may point to libc)
+            source_info.as_ref().and_then(|src| src.function.clone().map(|s| s.to_string()))
+        }
+    } else {
+        // Fallback to using instruction pointer (may point to libc)
+        source_info.as_ref().and_then(|src| src.function.clone().map(|s| s.to_string()))
+    };
+
     let json_source = source_info.as_ref().map(|src| crate::json_output::JsonSourceLocation {
         file: src.file.to_string(),
         line: src.line,
