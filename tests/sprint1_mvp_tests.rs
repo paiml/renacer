@@ -7,11 +7,11 @@ use predicates::prelude::*;
 
 #[test]
 fn test_cli_requires_command() {
-    // Test that running without -- COMMAND fails with helpful error
+    // Test that running without -- COMMAND or -p PID fails with helpful error
     let mut cmd = Command::cargo_bin("renacer").unwrap();
     cmd.assert()
         .failure()
-        .stderr(predicate::str::contains("No command specified"));
+        .stderr(predicate::str::contains("Must specify either -p PID or command"));
 }
 
 #[test]

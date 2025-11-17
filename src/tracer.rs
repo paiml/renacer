@@ -11,6 +11,28 @@ use std::process::Command;
 
 use crate::syscalls;
 
+/// Attach to a running process by PID and trace syscalls
+///
+/// # Sprint 9-10 Scope
+/// - `-p PID` flag to attach to running processes
+/// - Uses PTRACE_ATTACH instead of fork() + PTRACE_TRACEME
+pub fn attach_to_pid(pid: i32, enable_source: bool, filter: crate::filter::SyscallFilter, statistics_mode: bool, timing_mode: bool, output_format: crate::cli::OutputFormat) -> Result<()> {
+    let pid = Pid::from_raw(pid);
+
+    // Attach to the running process
+    ptrace::attach(pid).context(format!("Failed to attach to PID {}", pid))?;
+
+    // Wait for SIGSTOP from PTRACE_ATTACH
+    waitpid(pid, None).context("Failed to wait for attach signal")?;
+
+    eprintln!("[renacer: Attached to process {}]", pid);
+
+    // Use the same tracing logic as trace_command
+    trace_child(pid, enable_source, filter, statistics_mode, timing_mode, output_format)?;
+
+    Ok(())
+}
+
 /// Trace a command and print syscalls to stdout
 ///
 /// # Sprint 3-4 Scope
