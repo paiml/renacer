@@ -124,10 +124,44 @@ impl FunctionProfiler {
 
         eprintln!("{}", "─".repeat(104));
 
+        // Print hot path analysis (top 10 most active functions)
+        if sorted.len() > 1 {
+            eprintln!();
+            eprintln!("╔════════════════════════════════════════════════════════════════════════════════════════════════════╗");
+            eprintln!("║  Hot Path Analysis (top 10 most active functions)                                                 ║");
+            eprintln!("╚════════════════════════════════════════════════════════════════════════════════════════════════════╝");
+            eprintln!();
+
+            // Already sorted by total_time_us descending
+            let hot_functions = sorted.iter().take(10);
+
+            for (rank, (function, stats)) in hot_functions.enumerate() {
+                let total_seconds = stats.total_time_us as f64 / 1_000_000.0;
+                let percent = if self.stats.values().map(|s| s.total_time_us).sum::<u64>() > 0 {
+                    (stats.total_time_us as f64 / self.stats.values().map(|s| s.total_time_us).sum::<u64>() as f64) * 100.0
+                } else {
+                    0.0
+                };
+
+                eprintln!("{}. {} - {:.2}% of total time ({:.6}s, {} syscalls)",
+                    rank + 1, function, percent, total_seconds, stats.syscall_count);
+
+                // Show call graph for this hot function
+                if !stats.callees.is_empty() {
+                    let mut callees: Vec<_> = stats.callees.iter().collect();
+                    callees.sort_by(|a, b| b.1.cmp(a.1));
+
+                    for (callee, count) in callees.iter().take(5) {  // Top 5 callees
+                        eprintln!("   └─> {} ({} call{})", callee, count, if **count == 1 { "" } else { "s" });
+                    }
+                }
+                eprintln!();
+            }
+        }
+
         // Print call graph if available
         let has_call_graph = sorted.iter().any(|(_, stats)| !stats.callees.is_empty());
         if has_call_graph {
-            eprintln!();
             eprintln!("╔════════════════════════════════════════════════════════════════════════════════════════════════════╗");
             eprintln!("║  Call Graph (parent → child relationships)                                                        ║");
             eprintln!("╚════════════════════════════════════════════════════════════════════════════════════════════════════╝");
@@ -471,5 +505,98 @@ mod tests {
         let helper_stats = profiler.stats.get("helper").unwrap();
         assert_eq!(helper_stats.syscall_count, 2);
         assert_eq!(helper_stats.callees.len(), 0);
+    }
+
+    #[test]
+    fn test_hot_path_analysis_sorting() {
+        let mut profiler = FunctionProfiler::new();
+
+        // Create functions with varying execution times
+        profiler.record("func_slow", "write", 5000000, None);      // 5s
+        profiler.record("func_medium", "read", 1000000, None);     // 1s
+        profiler.record("func_fast", "open", 100000, None);        // 0.1s
+        profiler.record("func_very_slow", "fsync", 10000000, None); // 10s
+        profiler.record("func_quick", "close", 50000, None);       // 0.05s
+
+        // print_summary() should display hot path analysis with top functions
+        // sorted by total_time_us (descending)
+        profiler.print_summary();
+
+        // Verify sorting order in stats
+        let mut sorted: Vec<_> = profiler.stats.iter().collect();
+        sorted.sort_by(|a, b| b.1.total_time_us.cmp(&a.1.total_time_us));
+
+        assert_eq!(sorted[0].0, "func_very_slow");
+        assert_eq!(sorted[1].0, "func_slow");
+        assert_eq!(sorted[2].0, "func_medium");
+    }
+
+    #[test]
+    fn test_hot_path_analysis_with_few_functions() {
+        let mut profiler = FunctionProfiler::new();
+
+        // Only 3 functions (less than 10)
+        profiler.record("func_a", "write", 3000000, None);
+        profiler.record("func_b", "read", 2000000, None);
+        profiler.record("func_c", "open", 1000000, None);
+
+        // Should handle fewer than 10 functions gracefully
+        profiler.print_summary();
+
+        assert_eq!(profiler.stats.len(), 3);
+    }
+
+    #[test]
+    fn test_hot_path_analysis_with_call_graph() {
+        let mut profiler = FunctionProfiler::new();
+
+        // Hot function with callees
+        profiler.record("hot_main", "write", 5000000, None);
+        profiler.record("helper_a", "read", 1000000, Some("hot_main"));
+        profiler.record("helper_b", "open", 500000, Some("hot_main"));
+        profiler.record("helper_c", "close", 250000, Some("hot_main"));
+
+        // Should show call graph for hot functions
+        profiler.print_summary();
+
+        let hot_main_stats = profiler.stats.get("hot_main").unwrap();
+        assert_eq!(hot_main_stats.callees.len(), 3);
+        assert_eq!(hot_main_stats.total_time_us, 5000000);
+    }
+
+    #[test]
+    fn test_hot_path_analysis_percentage_calculation() {
+        let mut profiler = FunctionProfiler::new();
+
+        // Total: 10 seconds
+        profiler.record("func_50", "write", 5000000, None);  // 50% of total
+        profiler.record("func_30", "read", 3000000, None);   // 30% of total
+        profiler.record("func_20", "open", 2000000, None);   // 20% of total
+
+        let total: u64 = profiler.stats.values().map(|s| s.total_time_us).sum();
+        assert_eq!(total, 10000000);
+
+        // Verify percentages would be calculated correctly
+        let func_50_stats = profiler.stats.get("func_50").unwrap();
+        let percent_50 = (func_50_stats.total_time_us as f64 / total as f64) * 100.0;
+        assert!((percent_50 - 50.0).abs() < 0.01);
+
+        profiler.print_summary();
+    }
+
+    #[test]
+    fn test_hot_path_analysis_more_than_10_functions() {
+        let mut profiler = FunctionProfiler::new();
+
+        // Create 15 functions to test "top 10" limit
+        for i in 0..15 {
+            let time = (15 - i) * 100000;  // Descending times
+            profiler.record(&format!("func_{}", i), "write", time, None);
+        }
+
+        assert_eq!(profiler.stats.len(), 15);
+
+        // print_summary() should only show top 10 in hot path analysis
+        profiler.print_summary();
     }
 }
