@@ -13,6 +13,8 @@ pub struct SyscallStats {
     pub errors: u64,
     /// Total time spent in this syscall (microseconds)
     pub total_time_us: u64,
+    /// Individual syscall durations (for percentile calculations)
+    pub durations: Vec<u64>,
 }
 
 /// Summary totals for all syscalls
@@ -21,6 +23,20 @@ pub struct StatTotals {
     pub total_calls: u64,
     pub total_errors: u64,
     pub total_time_us: u64,
+}
+
+/// Extended statistics for a syscall (Sprint 19: Trueno integration)
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExtendedStats {
+    pub mean: f32,
+    pub stddev: f32,
+    pub min: f32,
+    pub max: f32,
+    pub median: f32, // P50
+    pub p75: f32,
+    pub p90: f32,
+    pub p95: f32,
+    pub p99: f32,
 }
 
 /// Tracks statistics for all syscalls
@@ -41,6 +57,7 @@ impl StatsTracker {
         let entry = self.stats.entry(syscall_name.to_string()).or_default();
         entry.count += 1;
         entry.total_time_us += duration_us;
+        entry.durations.push(duration_us); // Sprint 19: Track individual durations
         if result < 0 {
             entry.errors += 1;
         }
@@ -79,6 +96,120 @@ impl StatsTracker {
             total_calls,
             total_errors,
             total_time_us,
+        }
+    }
+
+    /// Calculate percentile from sorted data
+    fn calculate_percentile(sorted_data: &[f32], percentile: f32) -> f32 {
+        if sorted_data.is_empty() {
+            return 0.0;
+        }
+        if sorted_data.len() == 1 {
+            return sorted_data[0];
+        }
+
+        let index = (percentile / 100.0) * (sorted_data.len() - 1) as f32;
+        let lower = index.floor() as usize;
+        let upper = index.ceil() as usize;
+
+        if lower == upper {
+            sorted_data[lower]
+        } else {
+            let weight = index - lower as f32;
+            sorted_data[lower] * (1.0 - weight) + sorted_data[upper] * weight
+        }
+    }
+
+    /// Calculate extended statistics for a syscall using Trueno
+    pub fn calculate_extended_statistics(&self, syscall_name: &str) -> Option<ExtendedStats> {
+        let stats = self.stats.get(syscall_name)?;
+
+        if stats.durations.is_empty() {
+            return None;
+        }
+
+        // Convert durations to f32 for Trueno
+        let durations: Vec<f32> = stats.durations.iter().map(|&d| d as f32).collect();
+        let v = trueno::Vector::from_slice(&durations);
+
+        // Use Trueno for basic statistics
+        let mean = v.mean().unwrap_or(0.0);
+        let stddev = v.stddev().unwrap_or(0.0);
+        let min = v.min().unwrap_or(0.0);
+        let max = v.max().unwrap_or(0.0);
+
+        // Calculate percentiles (Trueno doesn't have built-in percentile function)
+        let mut sorted = durations.clone();
+        sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+
+        let median = Self::calculate_percentile(&sorted, 50.0);
+        let p75 = Self::calculate_percentile(&sorted, 75.0);
+        let p90 = Self::calculate_percentile(&sorted, 90.0);
+        let p95 = Self::calculate_percentile(&sorted, 95.0);
+        let p99 = Self::calculate_percentile(&sorted, 99.0);
+
+        Some(ExtendedStats {
+            mean,
+            stddev,
+            min,
+            max,
+            median,
+            p75,
+            p90,
+            p95,
+            p99,
+        })
+    }
+
+    /// Check if a duration is an anomaly (>threshold σ from mean)
+    pub fn is_anomaly(&self, syscall_name: &str, duration_us: u64, threshold: f32) -> bool {
+        if let Some(extended) = self.calculate_extended_statistics(syscall_name) {
+            if extended.stddev > 0.0 {
+                let z_score = ((duration_us as f32 - extended.mean) / extended.stddev).abs();
+                return z_score > threshold;
+            }
+        }
+        false
+    }
+
+    /// Print extended statistics summary to stderr
+    pub fn print_extended_summary(&self, threshold: f32) {
+        if self.stats.is_empty() {
+            eprintln!("No syscalls traced.");
+            return;
+        }
+
+        eprintln!("\n=== Extended Statistics (SIMD-accelerated via Trueno) ===\n");
+
+        // Sort by call count
+        let mut sorted: Vec<_> = self.stats.iter().collect();
+        sorted.sort_by(|a, b| b.1.count.cmp(&a.1.count));
+
+        for (name, stats) in sorted {
+            if let Some(extended) = self.calculate_extended_statistics(name) {
+                eprintln!("{} ({} calls):", name, stats.count);
+                eprintln!("  Mean:         {:.2} μs", extended.mean);
+                eprintln!("  Std Dev:      {:.2} μs", extended.stddev);
+                eprintln!("  Min:          {:.2} μs", extended.min);
+                eprintln!("  Max:          {:.2} μs", extended.max);
+                eprintln!("  Median (P50): {:.2} μs", extended.median);
+                eprintln!("  P75:          {:.2} μs", extended.p75);
+                eprintln!("  P90:          {:.2} μs", extended.p90);
+                eprintln!("  P95:          {:.2} μs", extended.p95);
+                eprintln!("  P99:          {:.2} μs", extended.p99);
+
+                // Check for anomalies in the data
+                if extended.stddev > 0.0 {
+                    let max_z = (extended.max - extended.mean) / extended.stddev;
+                    if max_z > threshold {
+                        eprintln!(
+                            "  ⚠️  ANOMALY DETECTED: Max duration is {:.1}σ above mean",
+                            max_z
+                        );
+                    }
+                }
+                eprintln!();
+            }
         }
     }
 
@@ -205,6 +336,7 @@ mod tests {
             count: 42,
             errors: 3,
             total_time_us: 1234,
+            durations: vec![100, 200, 934], // Sprint 19
         };
         let stats2 = stats1.clone();
         assert_eq!(stats2.count, 42);
@@ -218,6 +350,7 @@ mod tests {
             count: 10,
             errors: 2,
             total_time_us: 5000,
+            durations: vec![500, 500, 1000, 1000, 2000], // Sprint 19
         };
         let debug_str = format!("{:?}", stats);
         assert!(debug_str.contains("count"));

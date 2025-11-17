@@ -21,6 +21,8 @@ pub struct TracerConfig {
     pub follow_forks: bool,
     pub profile_self: bool,
     pub function_time: bool,
+    pub stats_extended: bool,   // Sprint 19: Extended statistics with Trueno
+    pub anomaly_threshold: f32, // Sprint 19: Anomaly detection threshold (σ)
 }
 
 /// Attach to a running process by PID and trace syscalls
@@ -358,7 +360,13 @@ fn process_syscall_exit(
 }
 
 /// Print all summaries at end of tracing
-fn print_summaries(tracers: Tracers, timing_mode: bool, exit_code: i32) {
+fn print_summaries(
+    tracers: Tracers,
+    timing_mode: bool,
+    exit_code: i32,
+    stats_extended: bool,
+    anomaly_threshold: f32,
+) {
     let Tracers {
         stats_tracker,
         json_output,
@@ -371,6 +379,10 @@ fn print_summaries(tracers: Tracers, timing_mode: bool, exit_code: i32) {
     if stats_tracker.is_some() && csv_stats_output.is_none() {
         if let Some(ref tracker) = stats_tracker {
             tracker.print_summary();
+            // Sprint 19: Print extended statistics if requested
+            if stats_extended {
+                tracker.print_extended_summary(anomaly_threshold);
+            }
         }
     }
 
@@ -554,7 +566,13 @@ fn trace_child(child: Pid, config: TracerConfig) -> Result<i32> {
         process_syscall_for_pid(pid, &mut processes, &config, &mut tracers)?;
     }
 
-    print_summaries(tracers, config.timing_mode, main_exit_code);
+    print_summaries(
+        tracers,
+        config.timing_mode,
+        main_exit_code,
+        config.stats_extended,
+        config.anomaly_threshold,
+    );
     std::process::exit(main_exit_code);
 }
 
@@ -990,6 +1008,8 @@ mod tests {
             follow_forks: false,
             profile_self: false,
             function_time: false,
+            stats_extended: false,  // Sprint 19
+            anomaly_threshold: 3.0, // Sprint 19
         };
         let result = trace_command(&empty, config);
         assert!(result.is_err());
@@ -1009,6 +1029,8 @@ mod tests {
             follow_forks: false,
             profile_self: false,
             function_time: false,
+            stats_extended: false,  // Sprint 19
+            anomaly_threshold: 3.0, // Sprint 19
         };
         let result = trace_command(&cmd, config);
         assert!(result.is_err());
@@ -1064,6 +1086,8 @@ mod tests {
             follow_forks: false,
             profile_self: false,
             function_time: false,
+            stats_extended: false,  // Sprint 19
+            anomaly_threshold: 3.0, // Sprint 19
         };
         let result = attach_to_pid(999999, config);
         assert!(result.is_err());
