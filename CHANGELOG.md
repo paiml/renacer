@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Property-Based Testing Infrastructure (Commit ae62097)
+- **Comprehensive test suite**: 18 property-based tests covering all core features
+- **670+ test cases** executed via proptest in <6 seconds
+- **Library interface** (src/lib.rs) exposing all modules for testing
+- **Pre-commit hook** with 5 quality gates:
+  1. Format check (cargo fmt)
+  2. Clippy check (zero warnings)
+  3. Bash/Makefile quality (bashrs lint)
+  4. Property-based comprehensive tests (30s timeout)
+  5. Security audit (cargo audit)
+- **Test Coverage:**
+  - Syscall name resolution (100 cases)
+  - Filter/trace spec parsing (100 cases)
+  - Stats tracker, function profiler, JSON serialization (50+ cases each)
+  - Call graph tracking, I/O detection, hot path analysis
+  - End-to-end integration tests
+  - DWARF source location invariants
+  - Trueno Vector integration
+- Total: 142 tests (124 unit + 18 property-based)
+
+#### Quality Infrastructure (Commit 10157f3)
+- **cargo fmt** applied to all 20 source files
+- **deny.toml** configuration for dependency policy:
+  - Security: Denies vulnerabilities, warns on unmaintained deps
+  - Licensing: MIT, Apache-2.0, BSD licenses allowed
+  - Sources: Restricts to crates.io and paiml GitHub org
+- **Zero defects** enforced via pre-commit hooks
+
 #### Function-Level Profiling (GitHub Issue #1 - Complete!)
 
 **Complete implementation of function-level profiling with 4 major features:**

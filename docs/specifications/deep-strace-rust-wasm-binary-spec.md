@@ -505,7 +505,8 @@ Task[#42] tokio::spawn @ src/server.rs:67
 
 ### 5.5 Ruchy Ruby VM Support
 
-**Integration with [ruchy](https://github.com/oxidize-rb/ruchy):**
+**Integration with ruchy (Planned):**
+<!-- Future: https://github.com/oxidize-rb/ruchy -->
 - Trace Ruby method calls alongside syscalls
 - Correlate Ruby source with system-level operations
 - Profile Ruby C extension behavior
@@ -984,7 +985,7 @@ trueno analyze trace.json --flamegraph output.svg
 ```
 
 ### Ruchy Integration
-**Repository:** https://github.com/oxidize-rb/ruchy
+**Repository:** (Planned - not yet available)
 
 **Ruchy** is a Ruby interpreter written in Rust. Renacer will:
 - Hook into Ruchy's VM to trace Ruby method calls
@@ -1287,10 +1288,10 @@ renacer wasm disasm MODULE.wasm > MODULE.wat
 ## Appendix D: References and Links
 
 ### Project Links
-- **Renacer Repository:** (To be created)
+- **Renacer Repository:** https://github.com/paiml/renacer
 - **paiml-mcp-agent-toolkit:** https://github.com/paiml/paiml-mcp-agent-toolkit
-- **Ruchy:** https://github.com/oxidize-rb/ruchy
-- **Trueno:** (Assumed ../trueno relative path)
+- **Ruchy:** (Planned - not yet available)
+- **Trueno:** https://github.com/paiml/trueno
 
 ### Rust strace Alternatives
 - **rstrace:** Rust strace with CUDA support
