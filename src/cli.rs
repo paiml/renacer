@@ -1,6 +1,15 @@
 //! CLI argument parsing for Renacer
 
-use clap::Parser;
+use clap::{Parser, ValueEnum};
+
+/// Output format for syscall traces
+#[derive(Debug, Clone, Copy, ValueEnum)]
+pub enum OutputFormat {
+    /// Human-readable text format (default)
+    Text,
+    /// JSON format for machine parsing
+    Json,
+}
 
 #[derive(Parser, Debug)]
 #[command(name = "renacer")]
@@ -22,6 +31,10 @@ pub struct Cli {
     /// Show time spent in each syscall
     #[arg(short = 'T', long = "timing")]
     pub timing: bool,
+
+    /// Output format (text or json)
+    #[arg(long = "format", value_enum, default_value = "text")]
+    pub format: OutputFormat,
 
     /// Command to trace (everything after --)
     #[arg(last = true)]

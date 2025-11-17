@@ -4,6 +4,7 @@ use clap::Parser;
 mod cli;
 mod dwarf;
 mod filter;
+mod json_output;
 mod stats;
 mod syscalls;
 mod tracer;
@@ -21,7 +22,7 @@ fn main() -> Result<()> {
             filter::SyscallFilter::all()
         };
 
-        tracer::trace_command(&command, args.source, filter, args.statistics, args.timing)?;
+        tracer::trace_command(&command, args.source, filter, args.statistics, args.timing, args.format)?;
     } else {
         anyhow::bail!("No command specified. Usage: renacer -- COMMAND [ARGS...]");
     }

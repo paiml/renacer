@@ -25,7 +25,8 @@ use crate::syscalls;
 /// - Syscall filtering via -e trace= expressions
 /// - Statistics mode via -c flag
 /// - Timing per syscall via -T flag
-pub fn trace_command(command: &[String], enable_source: bool, filter: crate::filter::SyscallFilter, statistics_mode: bool, timing_mode: bool) -> Result<()> {
+/// - JSON output via --format json
+pub fn trace_command(command: &[String], enable_source: bool, filter: crate::filter::SyscallFilter, statistics_mode: bool, timing_mode: bool, output_format: crate::cli::OutputFormat) -> Result<()> {
     if command.is_empty() {
         anyhow::bail!("Command array is empty");
     }
@@ -36,7 +37,7 @@ pub fn trace_command(command: &[String], enable_source: bool, filter: crate::fil
     // Fork: parent will trace, child will exec
     match unsafe { fork() }.context("Failed to fork")? {
         ForkResult::Parent { child } => {
-            trace_child(child, enable_source, filter, statistics_mode, timing_mode)?;
+            trace_child(child, enable_source, filter, statistics_mode, timing_mode, output_format)?;
             Ok(())
         }
         ForkResult::Child => {
@@ -56,7 +57,8 @@ pub fn trace_command(command: &[String], enable_source: bool, filter: crate::fil
 }
 
 /// Trace a child process, filtering syscalls based on filter
-fn trace_child(child: Pid, enable_source: bool, filter: crate::filter::SyscallFilter, statistics_mode: bool, timing_mode: bool) -> Result<i32> {
+fn trace_child(child: Pid, enable_source: bool, filter: crate::filter::SyscallFilter, statistics_mode: bool, timing_mode: bool, output_format: crate::cli::OutputFormat) -> Result<i32> {
+    use crate::cli::OutputFormat;
     // Wait for initial SIGSTOP from PTRACE_TRACEME
     waitpid(child, None).context("Failed to wait for child")?;
 
@@ -69,12 +71,17 @@ fn trace_child(child: Pid, enable_source: bool, filter: crate::filter::SyscallFi
     .context("Failed to set ptrace options")?;
 
     let mut in_syscall = false;
-    let mut current_syscall_name: Option<String> = None;
+    let mut current_syscall_entry: Option<SyscallEntry> = None;
     let mut syscall_entry_time: Option<std::time::Instant> = None;
     let mut dwarf_ctx: Option<crate::dwarf::DwarfContext> = None;
     let mut dwarf_loaded = false;
     let mut stats_tracker = if statistics_mode {
         Some(crate::stats::StatsTracker::new())
+    } else {
+        None
+    };
+    let mut json_output = if matches!(output_format, OutputFormat::Json) {
+        Some(crate::json_output::JsonOutput::new())
     } else {
         None
     };
@@ -119,12 +126,13 @@ fn trace_child(child: Pid, enable_source: bool, filter: crate::filter::SyscallFi
             }
             WaitStatus::PtraceSyscall(_) => {
                 // Syscall entry or exit
+                let in_json_mode = json_output.is_some();
                 if !in_syscall {
                     // Syscall entry - record start time if timing enabled
-                    if timing_mode || statistics_mode {
+                    if timing_mode || statistics_mode || in_json_mode {
                         syscall_entry_time = Some(std::time::Instant::now());
                     }
-                    current_syscall_name = handle_syscall_entry(child, dwarf_ctx.as_ref(), &filter, statistics_mode)?;
+                    current_syscall_entry = handle_syscall_entry(child, dwarf_ctx.as_ref(), &filter, statistics_mode, in_json_mode)?;
                     in_syscall = true;
                 } else {
                     // Syscall exit - calculate duration
@@ -133,8 +141,8 @@ fn trace_child(child: Pid, enable_source: bool, filter: crate::filter::SyscallFi
                     } else {
                         0
                     };
-                    handle_syscall_exit(child, &current_syscall_name, stats_tracker.as_mut(), timing_mode, duration_us)?;
-                    current_syscall_name = None;
+                    handle_syscall_exit(child, &current_syscall_entry, stats_tracker.as_mut(), json_output.as_mut(), timing_mode, duration_us)?;
+                    current_syscall_entry = None;
                     syscall_entry_time = None;
                     in_syscall = false;
                 }
@@ -151,13 +159,29 @@ fn trace_child(child: Pid, enable_source: bool, filter: crate::filter::SyscallFi
         tracker.print_summary();
     }
 
+    // Print JSON output if in JSON mode
+    if let Some(mut output) = json_output {
+        output.set_exit_code(exit_code);
+        match output.to_json() {
+            Ok(json) => println!("{}", json),
+            Err(e) => eprintln!("Failed to serialize JSON: {}", e),
+        }
+    }
+
     // Exit with traced program's exit code
     std::process::exit(exit_code);
 }
 
+/// Syscall entry data for JSON output
+struct SyscallEntry {
+    name: String,
+    args: Vec<String>,
+    source: Option<crate::json_output::JsonSourceLocation>,
+}
+
 /// Handle syscall entry - record syscall number and arguments
-/// Returns the syscall name if it should be traced, None otherwise
-fn handle_syscall_entry(child: Pid, dwarf_ctx: Option<&crate::dwarf::DwarfContext>, filter: &crate::filter::SyscallFilter, statistics_mode: bool) -> Result<Option<String>> {
+/// Returns the syscall entry data if it should be traced, None otherwise
+fn handle_syscall_entry(child: Pid, dwarf_ctx: Option<&crate::dwarf::DwarfContext>, filter: &crate::filter::SyscallFilter, statistics_mode: bool, json_mode: bool) -> Result<Option<SyscallEntry>> {
     let regs = ptrace::getregs(child).context("Failed to get registers")?;
 
     // On x86_64: syscall number in orig_rax
@@ -187,26 +211,29 @@ fn handle_syscall_entry(child: Pid, dwarf_ctx: Option<&crate::dwarf::DwarfContex
     };
 
     // Sprint 3-4: Decode arguments based on syscall type
-    let formatted = match name {
+    let (formatted, args) = match name {
         "openat" => {
             // openat(dfd, filename, flags, mode)
             let filename = read_string(child, arg2 as usize).unwrap_or_else(|_| format!("{:#x}", arg2));
-            format!("{}({:#x}, \"{}\", {:#x}) = ", name, arg1, filename, arg3)
+            let args = vec![format!("{:#x}", arg1), format!("\"{}\"", filename), format!("{:#x}", arg3)];
+            (format!("{}({:#x}, \"{}\", {:#x}) = ", name, arg1, filename, arg3), args)
         }
         "unknown" => {
-            format!("syscall_{}({:#x}, {:#x}, {:#x}) = ", syscall_num, arg1, arg2, arg3)
+            let args = vec![format!("{:#x}", arg1), format!("{:#x}", arg2), format!("{:#x}", arg3)];
+            (format!("syscall_{}({:#x}, {:#x}, {:#x}) = ", syscall_num, arg1, arg2, arg3), args)
         }
         _ => {
-            format!("{}({:#x}, {:#x}, {:#x}) = ", name, arg1, arg2, arg3)
+            let args = vec![format!("{:#x}", arg1), format!("{:#x}", arg2), format!("{:#x}", arg3)];
+            (format!("{}({:#x}, {:#x}, {:#x}) = ", name, arg1, arg2, arg3), args)
         }
     };
 
-    // Only print if not in statistics mode
-    if !statistics_mode {
+    // Only print if not in statistics or JSON mode
+    if !statistics_mode && !json_mode {
         // Print syscall with optional source location
-        if let Some(src) = source_info {
+        if let Some(src) = &source_info {
             print!("{}:{} ", src.file, src.line);
-            if let Some(func) = src.function {
+            if let Some(func) = &src.function {
                 print!("{} ", func);
             }
         }
@@ -214,8 +241,19 @@ fn handle_syscall_entry(child: Pid, dwarf_ctx: Option<&crate::dwarf::DwarfContex
         std::io::Write::flush(&mut std::io::stdout()).ok();
     }
 
-    // Return syscall name for tracking
-    Ok(Some(name.to_string()))
+    // Convert source_info to JsonSourceLocation if needed
+    let json_source = source_info.map(|src| crate::json_output::JsonSourceLocation {
+        file: src.file.to_string(),
+        line: src.line,
+        function: src.function.map(|s| s.to_string()),
+    });
+
+    // Return syscall entry data
+    Ok(Some(SyscallEntry {
+        name: name.to_string(),
+        args,
+        source: json_source,
+    }))
 }
 
 /// Read a null-terminated string from the tracee's memory
@@ -243,20 +281,40 @@ fn read_string(child: Pid, addr: usize) -> Result<String> {
 }
 
 /// Handle syscall exit - print return value and record statistics
-fn handle_syscall_exit(child: Pid, syscall_name: &Option<String>, stats_tracker: Option<&mut crate::stats::StatsTracker>, timing_mode: bool, duration_us: u64) -> Result<()> {
+fn handle_syscall_exit(child: Pid, syscall_entry: &Option<SyscallEntry>, stats_tracker: Option<&mut crate::stats::StatsTracker>, json_output: Option<&mut crate::json_output::JsonOutput>, timing_mode: bool, duration_us: u64) -> Result<()> {
     let regs = ptrace::getregs(child).context("Failed to get registers")?;
 
     // Return value in rax (may be negative for errors)
     let result = regs.rax as i64;
 
-    // Record statistics if in statistics mode
+    // Check modes before borrowing
     let in_stats_mode = stats_tracker.is_some();
-    if let (Some(name), Some(tracker)) = (syscall_name, stats_tracker) {
-        tracker.record(name, result, duration_us);
+    let in_json_mode = json_output.is_some();
+
+    // Record statistics if in statistics mode
+    if let (Some(entry), Some(tracker)) = (syscall_entry, stats_tracker) {
+        tracker.record(&entry.name, result, duration_us);
     }
 
-    // Print result only if not in statistics mode
-    if syscall_name.is_some() && !in_stats_mode {
+    // Record JSON if in JSON mode
+    if let (Some(entry), Some(output)) = (syscall_entry, json_output) {
+        let duration = if timing_mode && duration_us > 0 {
+            Some(duration_us)
+        } else {
+            None
+        };
+
+        output.add_syscall(crate::json_output::JsonSyscall {
+            name: entry.name.clone(),
+            args: entry.args.clone(),
+            result,
+            duration_us: duration,
+            source: entry.source.clone(),
+        });
+    }
+
+    // Print result only if not in statistics or JSON mode
+    if syscall_entry.is_some() && !in_stats_mode && !in_json_mode {
         if timing_mode && duration_us > 0 {
             println!("{} <{:.6}>", result, duration_us as f64 / 1_000_000.0);
         } else {
@@ -275,7 +333,7 @@ mod tests {
     fn test_trace_command_requires_nonempty_array() {
         let empty: Vec<String> = vec![];
         let filter = crate::filter::SyscallFilter::all();
-        let result = trace_command(&empty, false, filter, false, false);
+        let result = trace_command(&empty, false, filter, false, false, crate::cli::OutputFormat::Text);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("empty"));
     }
@@ -285,7 +343,7 @@ mod tests {
         // RED phase: this should fail until we implement
         let cmd = vec!["echo".to_string(), "test".to_string()];
         let filter = crate::filter::SyscallFilter::all();
-        let result = trace_command(&cmd, false, filter, false, false);
+        let result = trace_command(&cmd, false, filter, false, false, crate::cli::OutputFormat::Text);
         assert!(result.is_err());
     }
 }
