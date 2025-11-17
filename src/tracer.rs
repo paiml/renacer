@@ -458,6 +458,95 @@ fn find_user_function_with_caller(
     }
 }
 
+/// Format syscall arguments for JSON output
+fn format_syscall_args_for_json(
+    child: Pid,
+    name: &str,
+    arg1: u64,
+    arg2: u64,
+    arg3: u64,
+) -> Vec<String> {
+    match name {
+        "openat" => {
+            let filename =
+                read_string(child, arg2 as usize).unwrap_or_else(|_| format!("{:#x}", arg2));
+            vec![
+                format!("{:#x}", arg1),
+                format!("\"{}\"", filename),
+                format!("{:#x}", arg3),
+            ]
+        }
+        _ => vec![
+            format!("{:#x}", arg1),
+            format!("{:#x}", arg2),
+            format!("{:#x}", arg3),
+        ],
+    }
+}
+
+/// Print syscall entry with optional source location
+fn print_syscall_entry(
+    child: Pid,
+    name: &str,
+    syscall_num: i64,
+    arg1: u64,
+    arg2: u64,
+    arg3: u64,
+    source_info: &Option<crate::dwarf::SourceLocation>,
+) {
+    // Print source location if available
+    if let Some(src) = source_info {
+        print!("{}:{} ", src.file, src.line);
+        if let Some(func) = &src.function {
+            print!("{} ", func);
+        }
+    }
+
+    // Print syscall with arguments
+    match name {
+        "openat" => {
+            let filename =
+                read_string(child, arg2 as usize).unwrap_or_else(|_| format!("{:#x}", arg2));
+            print!("{}({:#x}, \"{}\", {:#x}) = ", name, arg1, filename, arg3);
+        }
+        "unknown" => {
+            print!(
+                "syscall_{}({:#x}, {:#x}, {:#x}) = ",
+                syscall_num, arg1, arg2, arg3
+            );
+        }
+        _ => {
+            print!("{}({:#x}, {:#x}, {:#x}) = ", name, arg1, arg2, arg3);
+        }
+    }
+    std::io::Write::flush(&mut std::io::stdout()).ok();
+}
+
+/// Extract function name and caller from DWARF context
+fn extract_function_names(
+    child: Pid,
+    dwarf_ctx: Option<&crate::dwarf::DwarfContext>,
+    source_info: &Option<crate::dwarf::SourceLocation>,
+    function_profiling_enabled: bool,
+) -> (Option<String>, Option<String>) {
+    if function_profiling_enabled {
+        if let Some(ctx) = dwarf_ctx {
+            find_user_function_with_caller(child, ctx)
+                .map_or((None, None), |(func, caller)| (Some(func), caller))
+        } else {
+            let func = source_info
+                .as_ref()
+                .and_then(|src| src.function.clone().map(|s| s.to_string()));
+            (func, None)
+        }
+    } else {
+        let func = source_info
+            .as_ref()
+            .and_then(|src| src.function.clone().map(|s| s.to_string()));
+        (func, None)
+    }
+}
+
 /// Handle syscall entry - record syscall number and arguments
 /// Returns the syscall entry data if it should be traced, None otherwise
 fn handle_syscall_entry(
@@ -489,91 +578,27 @@ fn handle_syscall_entry(
 
     // Sprint 5-6: Look up source location using instruction pointer if DWARF is available
     let source_info = if let Some(ctx) = dwarf_ctx {
-        // Instruction pointer in rip register
         let ip = regs.rip;
         ctx.lookup(ip).ok().flatten()
     } else {
         None
     };
 
-    // Sprint 3-4: Decode arguments based on syscall type
-    // Only format args array if needed for JSON mode
+    // Format arguments for JSON mode if needed
     let args = if json_mode {
-        match name {
-            "openat" => {
-                // openat(dfd, filename, flags, mode)
-                let filename =
-                    read_string(child, arg2 as usize).unwrap_or_else(|_| format!("{:#x}", arg2));
-                vec![
-                    format!("{:#x}", arg1),
-                    format!("\"{}\"", filename),
-                    format!("{:#x}", arg3),
-                ]
-            }
-            _ => {
-                vec![
-                    format!("{:#x}", arg1),
-                    format!("{:#x}", arg2),
-                    format!("{:#x}", arg3),
-                ]
-            }
-        }
+        format_syscall_args_for_json(child, name, arg1, arg2, arg3)
     } else {
-        // For non-JSON mode, we'll format args lazily during print
         Vec::new()
     };
 
-    // Only print if not in statistics or JSON mode
+    // Print syscall entry if not in statistics or JSON mode
     if !statistics_mode && !json_mode {
-        // Print syscall with optional source location
-        if let Some(src) = &source_info {
-            print!("{}:{} ", src.file, src.line);
-            if let Some(func) = &src.function {
-                print!("{} ", func);
-            }
-        }
-
-        // Lazy formatting - only format when actually printing
-        match name {
-            "openat" => {
-                // Read filename for display
-                let filename =
-                    read_string(child, arg2 as usize).unwrap_or_else(|_| format!("{:#x}", arg2));
-                print!("{}({:#x}, \"{}\", {:#x}) = ", name, arg1, filename, arg3);
-            }
-            "unknown" => {
-                print!(
-                    "syscall_{}({:#x}, {:#x}, {:#x}) = ",
-                    syscall_num, arg1, arg2, arg3
-                );
-            }
-            _ => {
-                print!("{}({:#x}, {:#x}, {:#x}) = ", name, arg1, arg2, arg3);
-            }
-        }
-        std::io::Write::flush(&mut std::io::stdout()).ok();
+        print_syscall_entry(child, name, syscall_num, arg1, arg2, arg3, &source_info);
     }
 
-    // Extract function name and caller using stack unwinding if function profiling is enabled
-    let (function_name, caller_name) = if function_profiling_enabled {
-        if let Some(ctx) = dwarf_ctx {
-            // Use stack unwinding to find the user function and its caller
-            find_user_function_with_caller(child, ctx)
-                .map_or((None, None), |(func, caller)| (Some(func), caller))
-        } else {
-            // Fallback to using instruction pointer (may point to libc)
-            let func = source_info
-                .as_ref()
-                .and_then(|src| src.function.clone().map(|s| s.to_string()));
-            (func, None)
-        }
-    } else {
-        // Fallback to using instruction pointer (may point to libc)
-        let func = source_info
-            .as_ref()
-            .and_then(|src| src.function.clone().map(|s| s.to_string()));
-        (func, None)
-    };
+    // Extract function names for profiling
+    let (function_name, caller_name) =
+        extract_function_names(child, dwarf_ctx, &source_info, function_profiling_enabled);
 
     let json_source = source_info
         .as_ref()
@@ -620,31 +645,26 @@ fn read_string(child: Pid, addr: usize) -> Result<String> {
     Ok(String::from_utf8_lossy(&buf[..null_pos]).to_string())
 }
 
-/// Handle syscall exit - print return value and record statistics
-fn handle_syscall_exit(
-    child: Pid,
+/// Record statistics for a syscall
+fn record_stats_for_syscall(
     syscall_entry: &Option<SyscallEntry>,
     stats_tracker: Option<&mut crate::stats::StatsTracker>,
-    json_output: Option<&mut crate::json_output::JsonOutput>,
-    function_profiler: Option<&mut crate::function_profiler::FunctionProfiler>,
-    timing_mode: bool,
+    result: i64,
     duration_us: u64,
-) -> Result<()> {
-    let regs = ptrace::getregs(child).context("Failed to get registers")?;
-
-    // Return value in rax (may be negative for errors)
-    let result = regs.rax as i64;
-
-    // Check modes before borrowing
-    let in_stats_mode = stats_tracker.is_some();
-    let in_json_mode = json_output.is_some();
-
-    // Record statistics if in statistics mode
+) {
     if let (Some(entry), Some(tracker)) = (syscall_entry, stats_tracker) {
         tracker.record(&entry.name, result, duration_us);
     }
+}
 
-    // Record JSON if in JSON mode
+/// Record JSON output for a syscall
+fn record_json_for_syscall(
+    syscall_entry: &Option<SyscallEntry>,
+    json_output: Option<&mut crate::json_output::JsonOutput>,
+    result: i64,
+    timing_mode: bool,
+    duration_us: u64,
+) {
     if let (Some(entry), Some(output)) = (syscall_entry, json_output) {
         let duration = if timing_mode && duration_us > 0 {
             Some(duration_us)
@@ -660,8 +680,14 @@ fn handle_syscall_exit(
             source: entry.source.clone(),
         });
     }
+}
 
-    // Record function profiling if enabled
+/// Record function profiling data
+fn record_function_profiling(
+    syscall_entry: &Option<SyscallEntry>,
+    function_profiler: Option<&mut crate::function_profiler::FunctionProfiler>,
+    duration_us: u64,
+) {
     if let (Some(entry), Some(profiler)) = (syscall_entry, function_profiler) {
         if let Some(function_name) = &entry.function_name {
             profiler.record(
@@ -672,14 +698,46 @@ fn handle_syscall_exit(
             );
         }
     }
+}
 
-    // Print result only if not in statistics or JSON mode
+/// Print syscall result
+fn print_syscall_result(result: i64, timing_mode: bool, duration_us: u64) {
+    if timing_mode && duration_us > 0 {
+        println!("{} <{:.6}>", result, duration_us as f64 / 1_000_000.0);
+    } else {
+        println!("{}", result);
+    }
+}
+
+/// Handle syscall exit - print return value and record statistics
+fn handle_syscall_exit(
+    child: Pid,
+    syscall_entry: &Option<SyscallEntry>,
+    stats_tracker: Option<&mut crate::stats::StatsTracker>,
+    json_output: Option<&mut crate::json_output::JsonOutput>,
+    function_profiler: Option<&mut crate::function_profiler::FunctionProfiler>,
+    timing_mode: bool,
+    duration_us: u64,
+) -> Result<()> {
+    let regs = ptrace::getregs(child).context("Failed to get registers")?;
+    let result = regs.rax as i64;
+
+    // Check modes before borrowing
+    let in_stats_mode = stats_tracker.is_some();
+    let in_json_mode = json_output.is_some();
+
+    // Record statistics
+    record_stats_for_syscall(syscall_entry, stats_tracker, result, duration_us);
+
+    // Record JSON output
+    record_json_for_syscall(syscall_entry, json_output, result, timing_mode, duration_us);
+
+    // Record function profiling
+    record_function_profiling(syscall_entry, function_profiler, duration_us);
+
+    // Print result if not in statistics or JSON mode
     if syscall_entry.is_some() && !in_stats_mode && !in_json_mode {
-        if timing_mode && duration_us > 0 {
-            println!("{} <{:.6}>", result, duration_us as f64 / 1_000_000.0);
-        } else {
-            println!("{}", result);
-        }
+        print_syscall_result(result, timing_mode, duration_us);
     }
 
     Ok(())
