@@ -1,0 +1,26 @@
+# Tarpaulin configuration for Renacer
+# Sprint 11-12: Test coverage measurement
+
+[default]
+# Include both unit and integration tests
+run-types = ["Tests"]
+
+# Output formats
+out = ["Html", "Lcov", "Stdout"]
+
+# Timeout for tests (seconds)
+timeout = 120
+
+# Exclude files from coverage
+exclude-files = [
+    "tests/*",
+]
+
+# Follow symbolic links
+follow-exec = true
+
+# Don't fail on error (some tests may require root)
+fail-immediately = false
+
+# Skip clean to speed up reruns
+skip-clean = false
