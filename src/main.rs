@@ -26,6 +26,8 @@ fn main() -> Result<()> {
         anomaly_threshold: args.anomaly_threshold, // Sprint 19
         anomaly_realtime: args.anomaly_realtime,   // Sprint 20
         anomaly_window_size: args.anomaly_window_size, // Sprint 20
+        hpu_analysis: args.hpu_analysis,           // Sprint 21
+        hpu_cpu_only: args.hpu_cpu_only,           // Sprint 21
     };
 
     // Either attach to PID or trace command (mutually exclusive)
