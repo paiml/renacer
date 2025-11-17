@@ -45,7 +45,7 @@ impl SyscallFilter {
 
     /// Parse a filter expression like "trace=open,read,write" or "trace=file"
     pub fn from_expr(expr: &str) -> Result<Self> {
-        // Parse trace=XXX format
+        // Parse trace=SPEC format (e.g., trace=file, trace=open,read)
         if let Some(trace_spec) = expr.strip_prefix("trace=") {
             Self::from_trace_spec(trace_spec)
         } else {
