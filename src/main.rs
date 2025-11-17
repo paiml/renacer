@@ -1,18 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
-
-mod cli;
-mod dwarf;
-mod filter;
-mod function_profiler;
-mod json_output;
-mod profiling;
-mod stack_unwind;
-mod stats;
-mod syscalls;
-mod tracer;
-
-use cli::Cli;
+use renacer::{cli::Cli, filter, tracer};
 
 fn main() -> Result<()> {
     let args = Cli::parse();
