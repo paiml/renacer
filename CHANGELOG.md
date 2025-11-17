@@ -19,9 +19,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CLI Interface**: Clean command-line interface with `renacer -- COMMAND` syntax
 
 #### Performance
-- **8x Faster Than strace**: Benchmarked at 20ms vs strace's 163ms for `ls -laR /usr/bin`
+- **1.1-1.3x Faster Than strace**: Formal benchmarks show consistent performance advantage
+  - ls workload: 1.12x faster (137ms vs 154ms)
+  - find workload: 1.09x faster (680ms vs 739ms)
+  - echo workload: 1.28x faster (4.1ms vs 5.3ms)
 - **Efficient Memory Operations**: Uses `process_vm_readv` for direct memory reads
 - **Native Compilation**: Rust with LTO optimizations for maximum performance
+- **Room for Optimization**: Target is 2-5x faster (roadmap Sprint 11-12)
 
 #### Infrastructure
 - **DWARF Support (Planned)**: `--source` flag infrastructure for future source correlation
@@ -31,7 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - 100% pass rate on core functionality
 - **Quality Tooling**: Integrated with paiml-mcp-agent-toolkit for TDG scoring
 
-### Performance Benchmarks
+### Performance Benchmarks (v0.1.0 - Informal)
 
 ```
 Command: ls -laR /usr/bin | head -1000 (average of 5 runs)
@@ -40,6 +44,7 @@ Command: ls -laR /usr/bin | head -1000 (average of 5 runs)
 - renacer:                20ms  (153% overhead)
 
 Result: renacer is 8.15x FASTER than strace
+NOTE: This was an early informal benchmark. See v0.2.0 for formal benchmarks.
 ```
 
 ### Quality Metrics
@@ -141,6 +146,43 @@ See `roadmap.yaml` for detailed implementation plan:
   - 4 tests for timing mode (tests/sprint9_timing_tests.rs)
   - 5 tests for JSON output (tests/sprint9_json_output_tests.rs)
   - 5 tests for PID attach (tests/sprint9_pid_attach_tests.rs)
+
+###Sprint 11-12: Hardening & Performance Baseline (Started)
+- ✅ Benchmark suite vs strace (4 comprehensive benchmarks)
+- ⏳ 90%+ test coverage enforcement (pending)
+- ⏳ 24hr fuzz runs (pending)
+- ⏳ Complete documentation (in progress)
+
+#### Performance Benchmarks (v0.2.0 - Formal)
+
+Benchmark suite in `tests/benchmark_vs_strace.rs`:
+
+```
+ls -la /usr/bin (5 runs):
+- Baseline: 14.4ms
+- strace:   154ms (965% overhead)
+- renacer:  137ms (851% overhead)
+Result: 1.12x faster
+
+find /usr/share/doc (3 runs):
+- Baseline: 371ms
+- strace:   739ms (99% overhead)
+- renacer:  680ms (83% overhead)
+Result: 1.09x faster
+
+echo "hello" (10 runs):
+- Baseline: 0.59ms
+- strace:   5.31ms
+- renacer:  4.14ms
+Result: 1.28x faster
+
+Filtering overhead: ~8% improvement with -e trace=open
+```
+
+**Honest Assessment** (Genchi Genbutsu):
+- Current: 1.1-1.3x faster than strace
+- Target: 2-5x faster (roadmap Sprint 11-12)
+- Room for optimization exists
 
 ### Sprint 9-10 Status (5/6 Complete - 83%)
 - ✅ Syscall filtering with `-e trace=` expressions
