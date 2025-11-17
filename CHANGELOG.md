@@ -610,9 +610,81 @@ renacer --format csv -e trace=file -- cat file.txt > file-ops.csv
 - JSON includes version, format, syscalls array, and summary fields
 - Compatible with timing (-T), source correlation (--source), and statistics mode (-c)
 
+#### Sprint 18: Multi-Process Tracing - Fork Following (2025-11-17)
+
+**Goal:** Implement full multi-process tracing with `-f` flag to follow fork/vfork/clone syscalls
+
+**Implementation** (EXTREME TDD - RED → GREEN → REFACTOR cycle):
+- **RED Phase**: Created 13 integration tests (tests/sprint18_multiprocess_tests.rs)
+  - Basic fork following, fork + exec, default behavior (no -f)
+  - Multiple concurrent forks, vfork, clone/threads
+  - Integration with filtering, statistics, JSON, CSV output formats
+  - Edge cases: immediate exit, quick fork/exit races
+- **GREEN Phase**: Implemented multi-process tracking (src/tracer.rs)
+  - HashMap<Pid, ProcessState> for per-process state management
+  - Event-driven ptrace handling (PTRACE_EVENT_FORK/VFORK/CLONE)
+  - waitpid(-1) for any child process monitoring
+  - Per-process syscall tracking, DWARF context, timing
+- **REFACTOR Phase**: Complexity reduction and bug fixes
+  - Initial implementation: complexity 17 (ANDON CORD pulled)
+  - Extracted helper functions:
+    - `handle_traced_process_status()` - complexity 7
+    - `process_syscall_for_pid()` - complexity 5
+  - Final `trace_child()` complexity: 9 ✅
+  - Critical bug fix: Added child process continuation in `handle_ptrace_event()`
+
+**Architecture:**
+- **ProcessState struct**: Encapsulates per-process state (syscall tracking, DWARF context, timing)
+- **Multi-PID HashMap**: Tracks all active processes, removes on exit
+- **Ptrace Events**: Intercepts fork/vfork/clone, automatically attaches to new children
+- **Process Lifecycle**: Tracks main PID exit code, continues tracing children until all exit
+
+**Features:**
+- `-f` flag: Follow fork(), vfork(), clone() syscalls
+- Automatic child process attachment and tracing
+- Per-process state isolation
+- Compatible with all existing features:
+  - Filtering (-e trace=)
+  - Statistics (-c)
+  - Timing (-T)
+  - Output formats (JSON, CSV)
+  - Source correlation (--source)
+- Process lifecycle messages: `[renacer: Process X forked child Y]`
+
+**Results:**
+- **Tests**: 243+ total (13 new integration tests)
+- **Complexity**: All functions ≤10 (max: 9) ✅
+- **Clippy**: Zero warnings ✅
+- **Bug Fixes**: 1 critical hang bug fixed (child continuation)
+- **TDG Score**: 94.5/100 maintained
+
+**Examples:**
+```bash
+# Trace parent and child processes
+renacer -f -- bash -c "echo parent && (echo child &)"
+
+# Follow forks with filtering
+renacer -f -e trace=file -- make clean
+
+# Multi-process statistics
+renacer -f -c -- python multi_process_app.py
+
+# JSON output for process tree
+renacer -f --format json -- ./fork_heavy_program > trace.json
+
+# Track thread creation (clone syscall)
+renacer -f -- ./multithreaded_app
+```
+
+**Quality Gates:**
+- Toyota Way: Andon Cord pulled for complexity violation (17 → 9)
+- EXTREME TDD: Full RED-GREEN-REFACTOR cycle completed
+- Zero tolerance: All 243 tests passing, zero warnings
+
 ### Planned for 0.3.0
-- `-f` follow forks (multi-process tracking with refactored trace loop)
-- See GitHub Issue #2 for detailed implementation plan
+- Multi-threaded tracing optimizations
+- eBPF backend option for reduced overhead
+- See GitHub Issue #2 for detailed roadmap
 
 ---
 

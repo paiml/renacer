@@ -156,8 +156,15 @@ fn initialize_tracers(config: &TracerConfig) -> Tracers {
 
 /// Initialize ptrace options for the child process
 fn setup_ptrace_options(child: Pid, follow_forks: bool) -> Result<()> {
-    // Wait for initial SIGSTOP from PTRACE_TRACEME
-    waitpid(child, None).context("Failed to wait for child")?;
+    setup_ptrace_options_internal(child, follow_forks, true)
+}
+
+/// Initialize ptrace options with optional initial wait
+fn setup_ptrace_options_internal(child: Pid, follow_forks: bool, wait_first: bool) -> Result<()> {
+    // Wait for initial SIGSTOP (from PTRACE_TRACEME or fork event)
+    if wait_first {
+        waitpid(child, None).context("Failed to wait for child")?;
+    }
 
     // Set ptrace options to trace syscalls
     let mut options = ptrace::Options::PTRACE_O_TRACESYSGOOD | ptrace::Options::PTRACE_O_EXITKILL;
@@ -195,16 +202,43 @@ fn load_dwarf_context(child: Pid) -> Option<crate::dwarf::DwarfContext> {
     }
 }
 
-/// Handle process exit or signal termination
-fn handle_wait_status(status: WaitStatus) -> Option<i32> {
-    match status {
-        WaitStatus::Exited(_, code) => Some(code),
-        WaitStatus::Signaled(_, sig, _) => {
-            eprintln!("Child killed by signal: {:?}", sig);
-            Some(128 + sig as i32)
+/// Handle ptrace fork/vfork/clone events (Sprint 18: Multi-process tracing)
+fn handle_ptrace_event(
+    pid: Pid,
+    event: i32,
+    processes: &mut std::collections::HashMap<Pid, ProcessState>,
+    config: &TracerConfig,
+) -> Result<()> {
+    use nix::libc;
+
+    // Check if this is a fork/vfork/clone event
+    match event {
+        libc::PTRACE_EVENT_FORK | libc::PTRACE_EVENT_VFORK | libc::PTRACE_EVENT_CLONE => {
+            // Extract the new child PID
+            let new_pid_raw = ptrace::getevent(pid)
+                .context("Failed to get event message for fork/vfork/clone")?;
+            let new_pid = Pid::from_raw(new_pid_raw as i32);
+
+            // Wait for the new child to stop
+            waitpid(new_pid, None).context("Failed to wait for new child")?;
+
+            // Setup ptrace options for the new child (already waited)
+            setup_ptrace_options_internal(new_pid, config.follow_forks, false)?;
+
+            // Add to tracking
+            processes.insert(new_pid, ProcessState::new());
+
+            // Continue the new child process
+            ptrace::syscall(new_pid, None).context("Failed to continue new child")?;
+
+            eprintln!("[renacer: Process {} forked child {}]", pid, new_pid);
         }
-        _ => None,
+        _ => {
+            // Unknown ptrace event, ignore
+        }
     }
+
+    Ok(())
 }
 
 /// Handle syscall event (entry or exit)
@@ -385,62 +419,147 @@ fn print_summaries(tracers: Tracers, timing_mode: bool, exit_code: i32) {
     }
 }
 
-/// Trace a child process, filtering syscalls based on filter
-fn trace_child(child: Pid, config: TracerConfig) -> Result<i32> {
-    // Initialize all tracers and profilers
-    let mut tracers = initialize_tracers(&config);
+/// Per-process state for multi-process tracing
+#[derive(Debug)]
+struct ProcessState {
+    in_syscall: bool,
+    current_syscall_entry: Option<SyscallEntry>,
+    syscall_entry_time: Option<std::time::Instant>,
+    dwarf_ctx: Option<crate::dwarf::DwarfContext>,
+    dwarf_loaded: bool,
+}
 
-    // Setup ptrace options
-    setup_ptrace_options(child, config.follow_forks)?;
-
-    let mut in_syscall = false;
-    let mut current_syscall_entry: Option<SyscallEntry> = None;
-    let mut syscall_entry_time: Option<std::time::Instant> = None;
-    let mut dwarf_ctx: Option<crate::dwarf::DwarfContext> = None;
-    let mut dwarf_loaded = false;
-    let exit_code;
-
-    loop {
-        // Sprint 5-6: Load DWARF context on first syscall if --source is enabled
-        // We wait until after exec() has happened to get the right binary
-        if config.enable_source && !dwarf_loaded {
-            dwarf_loaded = true; // Only try once
-            dwarf_ctx = load_dwarf_context(child);
-        }
-
-        // Continue and wait for next syscall or exit
-        ptrace::syscall(child, None).context("Failed to PTRACE_SYSCALL")?;
-
-        let status = waitpid(child, None).context("Failed to waitpid")?;
-
-        // Check if process exited or was signaled
-        if let Some(code) = handle_wait_status(status) {
-            exit_code = code;
-            break;
-        }
-
-        // Handle syscall events
-        if matches!(status, WaitStatus::PtraceSyscall(_)) {
-            handle_syscall_event(
-                child,
-                &mut in_syscall,
-                &mut current_syscall_entry,
-                &mut syscall_entry_time,
-                dwarf_ctx.as_ref(),
-                &config,
-                &mut tracers,
-            )?;
+impl ProcessState {
+    fn new() -> Self {
+        Self {
+            in_syscall: false,
+            current_syscall_entry: None,
+            syscall_entry_time: None,
+            dwarf_ctx: None,
+            dwarf_loaded: false,
         }
     }
+}
 
-    // Print all summaries
-    print_summaries(tracers, config.timing_mode, exit_code);
+/// Handle wait status and update process tracking
+fn handle_traced_process_status(
+    status: WaitStatus,
+    processes: &mut std::collections::HashMap<Pid, ProcessState>,
+    main_pid: Pid,
+    main_exit_code: &mut i32,
+    config: &TracerConfig,
+) -> Result<Option<Pid>> {
+    match status {
+        WaitStatus::Exited(p, code) => {
+            processes.remove(&p);
+            if p == main_pid {
+                *main_exit_code = code;
+            }
+            Ok(None)
+        }
+        WaitStatus::Signaled(p, sig, _) => {
+            eprintln!("Process {} killed by signal: {:?}", p, sig);
+            processes.remove(&p);
+            if p == main_pid {
+                *main_exit_code = 128 + sig as i32;
+            }
+            Ok(None)
+        }
+        WaitStatus::PtraceSyscall(p) => Ok(Some(p)),
+        WaitStatus::PtraceEvent(p, _sig, event) => {
+            handle_ptrace_event(p, event, processes, config)?;
+            ptrace::syscall(p, None).context("Failed to PTRACE_SYSCALL after event")?;
+            Ok(None)
+        }
+        _ => {
+            if let Some(p) = status.pid() {
+                ptrace::syscall(p, None).ok();
+            }
+            Ok(None)
+        }
+    }
+}
 
-    // Exit with traced program's exit code
-    std::process::exit(exit_code);
+/// Process a single syscall event for a traced PID
+fn process_syscall_for_pid(
+    pid: Pid,
+    processes: &mut std::collections::HashMap<Pid, ProcessState>,
+    config: &TracerConfig,
+    tracers: &mut Tracers,
+) -> Result<()> {
+    let state = match processes.get_mut(&pid) {
+        Some(s) => s,
+        None => {
+            ptrace::syscall(pid, None).ok();
+            return Ok(());
+        }
+    };
+
+    // Load DWARF context on first syscall if needed
+    if config.enable_source && !state.dwarf_loaded {
+        state.dwarf_loaded = true;
+        state.dwarf_ctx = load_dwarf_context(pid);
+    }
+
+    // Handle syscall entry/exit
+    handle_syscall_event(
+        pid,
+        &mut state.in_syscall,
+        &mut state.current_syscall_entry,
+        &mut state.syscall_entry_time,
+        state.dwarf_ctx.as_ref(),
+        config,
+        tracers,
+    )?;
+
+    ptrace::syscall(pid, None).context("Failed to PTRACE_SYSCALL")
+}
+
+/// Trace a child process, filtering syscalls based on filter
+fn trace_child(child: Pid, config: TracerConfig) -> Result<i32> {
+    let mut tracers = initialize_tracers(&config);
+    setup_ptrace_options(child, config.follow_forks)?;
+
+    use std::collections::HashMap;
+    let mut processes: HashMap<Pid, ProcessState> = HashMap::new();
+    processes.insert(child, ProcessState::new());
+
+    let main_pid = child;
+    let mut main_exit_code = 0;
+
+    while !processes.is_empty() {
+        let wait_result = if config.follow_forks {
+            waitpid(Pid::from_raw(-1), None)
+        } else {
+            waitpid(child, None)
+        };
+
+        let status = match wait_result {
+            Ok(s) => s,
+            Err(_) if processes.is_empty() => break,
+            Err(e) => return Err(e).context("Failed to waitpid"),
+        };
+
+        let pid = match handle_traced_process_status(
+            status,
+            &mut processes,
+            main_pid,
+            &mut main_exit_code,
+            &config,
+        )? {
+            Some(p) => p,
+            None => continue,
+        };
+
+        process_syscall_for_pid(pid, &mut processes, &config, &mut tracers)?;
+    }
+
+    print_summaries(tracers, config.timing_mode, main_exit_code);
+    std::process::exit(main_exit_code);
 }
 
 /// Syscall entry data for JSON output
+#[derive(Debug)]
 struct SyscallEntry {
     name: String,
     args: Vec<String>,
