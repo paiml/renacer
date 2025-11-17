@@ -36,6 +36,10 @@ pub struct Cli {
     #[arg(long = "format", value_enum, default_value = "text")]
     pub format: OutputFormat,
 
+    /// Attach to running process by PID (mutually exclusive with command)
+    #[arg(short = 'p', long = "pid", value_name = "PID")]
+    pub pid: Option<i32>,
+
     /// Command to trace (everything after --)
     #[arg(last = true)]
     pub command: Option<Vec<String>>,
