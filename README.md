@@ -6,10 +6,10 @@ Renacer (Spanish: "to be reborn") is a next-generation binary inspection and tra
 
 ## Project Status
 
-**Current Version:** 0.3.0-dev (Sprint 18 complete)
-**Status:** Production-Ready (v0.2.0) + Advanced Filtering (Sprint 15-18)
+**Current Version:** 0.3.0 (Sprint 19-20 complete - Trueno Integration Milestone)
+**Status:** Production-Ready + SIMD-Accelerated Statistics + Real-Time Anomaly Detection
 **TDG Score:** 94.5/100 (A grade)
-**Test Coverage:** 243+ tests (all passing)
+**Test Coverage:** 267 tests (all passing)
 **Specification:** [docs/specifications/deep-strace-rust-wasm-binary-spec.md](docs/specifications/deep-strace-rust-wasm-binary-spec.md)
 
 ## Features
@@ -32,12 +32,22 @@ Renacer (Spanish: "to be reborn") is a next-generation binary inspection and tra
 - ✅ **Hot Path Analysis** - Top 10 most expensive functions with percentage breakdown
 - ✅ **Flamegraph Export** - Compatible with flamegraph.pl, inferno, speedscope
 
-### Quality Infrastructure (v0.2.0)
+### Statistical Analysis & Anomaly Detection (Sprint 19-20) 🆕
+- ✅ **SIMD-Accelerated Statistics** (Sprint 19) - Trueno Vector operations for 3-10x faster computations
+- ✅ **Percentile Analysis** (Sprint 19) - P50, P75, P90, P95, P99 latency percentiles via `--stats-extended`
+- ✅ **Post-Hoc Anomaly Detection** (Sprint 19) - Z-score based outlier identification with configurable threshold
+- ✅ **Real-Time Anomaly Detection** (Sprint 20) - Live monitoring with sliding window baselines
+- ✅ **Per-Syscall Baselines** (Sprint 20) - Independent sliding windows for each syscall type
+- ✅ **Severity Classification** (Sprint 20) - Low (3-4σ), Medium (4-5σ), High (>5σ) anomaly levels
+- ✅ **Anomaly Summary Reports** (Sprint 20) - Detailed reports with severity distribution and top anomalies
+
+### Quality Infrastructure (v0.2.0-0.3.0)
 - ✅ **Property-based testing** - 670+ test cases via proptest
 - ✅ **Pre-commit hooks** - 5 quality gates (format, clippy, tests, audit, bash)
 - ✅ **Dependency policy** - cargo-deny configuration for security
 - ✅ **Zero warnings** - Clippy strict mode enforced
 - ✅ **Trueno integration** - SIMD-accelerated statistics via trueno v0.1.0
+- ✅ **100% coverage** - All new modules (anomaly.rs) have 100% test coverage
 
 ## Quick Start
 
@@ -84,6 +94,16 @@ renacer -f -c -- python app.py              # Multi-process statistics
 # Statistics summary
 renacer -c -T -- cargo build
 
+# Enhanced statistics with percentiles (Sprint 19)
+renacer -c --stats-extended -- cargo test   # P50/P75/P90/P95/P99 latencies
+renacer -c --stats-extended --anomaly-threshold 2.5 -- ./app  # Custom anomaly threshold
+
+# Real-time anomaly detection (Sprint 20)
+renacer --anomaly-realtime -- ./app         # Live anomaly monitoring
+renacer --anomaly-realtime --anomaly-window-size 200 -- ./app  # Custom window size
+renacer -c --anomaly-realtime -- cargo test # Combine with statistics
+renacer --anomaly-realtime -e trace=file -- find /usr  # Monitor only file operations
+
 # Attach to running process
 renacer -p 1234
 ```
@@ -124,6 +144,62 @@ Call Graph:
   cargo::build_script
     └─ rustc::compile (67 calls)
        └─ std::fs::read_dir (12 calls)
+```
+
+### Enhanced Statistics with Percentiles (Sprint 19)
+```bash
+$ renacer -c --stats-extended -- cargo build
+
+% time     seconds  usecs/call     calls    errors syscall
+------ ----------- ----------- --------- --------- ----------------
+ 65.43    0.142301        4234        42         0 read
+ 18.92    0.041234        2062        20         0 write
+ 10.23    0.022301         892        25         0 openat
+  3.21    0.007001         700        10         0 close
+  2.21    0.004812         481        10         0 mmap
+------ ----------- ----------- --------- --------- ----------------
+100.00    0.217649                   107         0 total
+
+Latency Percentiles (microseconds):
+  Syscall     P50     P75     P90     P95     P99
+  --------  -----   -----   -----   -----   -----
+  read       2834    4123    5234    6123    9234
+  write      1823    2234    3123    4234    7123
+  openat      823    1034    1234    1534    2234
+  close       623     734     823     923    1123
+  mmap        423     534     623     723     923
+
+Post-Hoc Anomaly Detection (threshold: 3.0σ):
+  2 anomalies detected:
+  - read: 9234 μs (4.2σ above mean)
+  - write: 7123 μs (3.8σ above mean)
+```
+
+### Real-Time Anomaly Detection (Sprint 20)
+```bash
+$ renacer --anomaly-realtime -- ./slow-app
+
+openat(AT_FDCWD, "/etc/ld.so.cache", O_RDONLY) = 3
+read(3, buf, 832) = 832
+⚠️  ANOMALY: write took 5234 μs (4.2σ from baseline 102.3 μs) - 🟡 Medium
+write(1, "processing...", 14) = 14
+⚠️  ANOMALY: fsync took 8234 μs (6.3σ from baseline 123.4 μs) - 🔴 High
+fsync(3) = 0
+close(3) = 0
+
+=== Real-Time Anomaly Detection Report ===
+Total anomalies detected: 12
+
+Severity Distribution:
+  🔴 High (>5.0σ):   2 anomalies
+  🟡 Medium (4-5σ): 5 anomalies
+  🟢 Low (3-4σ):    5 anomalies
+
+Top Anomalies (by Z-score):
+  1. 🔴 fsync - 6.3σ (8234 μs, baseline: 123.4 ± 1287.2 μs)
+  2. 🔴 write - 5.7σ (5234 μs, baseline: 102.3 ± 902.1 μs)
+  3. 🟡 read - 4.8σ (2341 μs, baseline: 87.6 ± 468.9 μs)
+  ... and 9 more
 ```
 
 ## Performance
@@ -199,9 +275,11 @@ cargo deny check
 - `tracer` - Core ptrace syscall tracing
 - `syscalls` - Syscall name resolution (335 syscalls)
 - `dwarf` - DWARF debug info parsing (addr2line, gimli)
-- `filter` - Syscall filtering (classes + individual syscalls)
-- `stats` - Statistics tracking (Trueno SIMD)
+- `filter` - Syscall filtering (classes + individual syscalls + regex)
+- `stats` - Statistics tracking (Trueno SIMD, percentiles)
+- `anomaly` - Real-time anomaly detection (Sprint 20)
 - `json_output` - JSON export format
+- `csv_output` - CSV export format (Sprint 17)
 - `function_profiler` - Function-level profiling with I/O detection
 - `stack_unwind` - Stack unwinding for call graphs
 - `profiling` - Self-profiling infrastructure
@@ -218,17 +296,19 @@ cargo deny check
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
-### v0.2.0 ✅ (Current - 2025-11-17)
-- Function-level profiling complete
-- Property-based test suite
-- Pre-commit quality gates
-- Trueno SIMD integration
+### v0.3.0 ✅ (Current - 2025-11-17)
+- Advanced filtering (negation, regex patterns)
+- CSV export format
+- Multi-process tracing (-f flag)
+- Enhanced statistics (percentiles, SIMD-accelerated)
+- Real-time anomaly detection
+- Trueno Integration Milestone complete
 
-### v0.3.0 (Planned)
-- Multi-threaded tracing
-- eBPF backend option
-- Advanced filtering expressions
+### v0.4.0 (Planned)
+- Multi-threaded tracing optimizations
+- eBPF backend option for reduced overhead
 - Performance dashboard
+- Additional output formats (HTML, Markdown)
 
 ### v1.0.0 (Planned)
 - Production hardening
