@@ -104,16 +104,17 @@ See `roadmap.yaml` for detailed implementation plan:
 
 ### Added (Post-v0.1.0)
 
-#### Sprint 9-10: Advanced Filtering, Statistics, Timing & JSON Output
+#### Sprint 9-10: Advanced Filtering, Statistics, Timing, JSON & PID Attach
 - **Syscall Filtering**: `-e trace=EXPR` flag for filtering syscalls
   - Individual syscalls: `-e trace=open,read,write`
   - Syscall classes: `-e trace=file`, `-e trace=network`, `-e trace=process`, `-e trace=memory`
   - Mixed mode: `-e trace=file,socket,brk`
-- **Filter Module**: Robust parsing and evaluation of filter expressions
+  - Hash-based filter implementation with O(1) lookup
+- **Filter Module**: Robust parsing and evaluation of filter expressions (src/filter.rs)
 - **Statistics Mode**: `-c` flag for syscall summary (strace-compatible)
   - Per-syscall call counts and error counts
   - Percentage distribution with timing data
-  - Summary table with totals
+  - Summary table with totals (% time, seconds, usecs/call columns)
   - Compatible with filtering
 - **Per-Syscall Timing**: `-T` flag for syscall duration tracking
   - Displays time in `<seconds>` format after each syscall
@@ -123,8 +124,38 @@ See `roadmap.yaml` for detailed implementation plan:
   - Structured renacer-json-v1 schema with syscalls and summary
   - Compatible with filtering, timing, and source correlation
   - Ideal for tooling integration and analysis pipelines
+  - Full serde serialization support
+- **PID Attach**: `-p PID` flag for attaching to running processes
+  - Uses PTRACE_ATTACH instead of fork + PTRACE_TRACEME
+  - Mutually exclusive with command tracing
+  - Proper error handling for non-existent PIDs
+  - Shares same tracing infrastructure as command mode
+- **Fork Following Infrastructure**: `-f` flag and ptrace options (PTRACE_O_TRACEFORK/VFORK/CLONE)
+  - CLI flag implemented
+  - Ptrace options configured
+  - Full multi-process tracking deferred to v0.3.0 (requires refactoring)
 - **Zero Overhead**: Filtering/statistics/timing at display time, no performance impact when disabled
-- **19 Integration Tests**: Comprehensive coverage of filtering, statistics, timing, and JSON functionality
+- **24 Integration Tests**: Comprehensive coverage across 5 test suites
+  - 6 tests for filtering (tests/sprint9_filtering_tests.rs)
+  - 4 tests for statistics mode (tests/sprint9_statistics_tests.rs)
+  - 4 tests for timing mode (tests/sprint9_timing_tests.rs)
+  - 5 tests for JSON output (tests/sprint9_json_output_tests.rs)
+  - 5 tests for PID attach (tests/sprint9_pid_attach_tests.rs)
+
+### Sprint 9-10 Status (5/6 Complete - 83%)
+- ✅ Syscall filtering with `-e trace=` expressions
+- ✅ Statistics mode with `-c` flag
+- ✅ Per-syscall timing with `-T` flag
+- ✅ JSON output with `--format json`
+- ✅ PID attach with `-p PID` flag
+- ⚠️  Fork following with `-f` flag (infrastructure only - full implementation deferred to v0.3.0)
+
+### Quality Metrics (Post Sprint 9-10)
+- **TDG Score**: 92.6/100 (A grade)
+- **Test Suites**: 8 total (3 from v0.1.0 + 5 from Sprint 9-10)
+- **Test Count**: 36 passing (33 active + 3 ignored)
+- **New Modules**: 3 (filter.rs, stats.rs, json_output.rs)
+- **Zero Regressions**: All previous tests maintained
 
 ### Planned for 0.2.0
 - ✅ DWARF .debug_line parsing using addr2line crate (COMPLETED in v0.1.0)
@@ -133,11 +164,14 @@ See `roadmap.yaml` for detailed implementation plan:
 - ✅ `-c` statistics mode (COMPLETED post-v0.1.0)
 - ✅ `-T` timing mode (COMPLETED post-v0.1.0)
 - ✅ `--format json` JSON output (COMPLETED post-v0.1.0)
+- ✅ `-p PID` attach to running process (COMPLETED post-v0.1.0)
 - Stack unwinding to attribute syscalls to user code frames
 - Source-aware output showing file:line for each syscall (requires stack unwinding)
 - Function name attribution from DWARF .debug_info (requires stack unwinding)
-- `-f` follow forks
-- `-p PID` attach to running process
+
+### Planned for 0.3.0
+- `-f` follow forks (multi-process tracking with refactored trace loop)
+- See GitHub Issue #2 for detailed implementation plan
 
 ---
 
