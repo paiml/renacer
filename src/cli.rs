@@ -19,6 +19,10 @@ pub struct Cli {
     #[arg(short = 'c', long = "summary")]
     pub statistics: bool,
 
+    /// Show time spent in each syscall
+    #[arg(short = 'T', long = "timing")]
+    pub timing: bool,
+
     /// Command to trace (everything after --)
     #[arg(last = true)]
     pub command: Option<Vec<String>>,
