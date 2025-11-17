@@ -5,6 +5,7 @@
 //! and comprehensive filtering.
 
 pub mod cli;
+pub mod csv_output;
 pub mod dwarf;
 pub mod filter;
 pub mod function_profiler;

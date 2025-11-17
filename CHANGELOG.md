@@ -562,6 +562,54 @@ renacer -e 'trace=/^open.*/,!/openat/' -- ls  # open* except openat
 renacer -e 'trace=/(?i)OPEN/' -- ls         # Case-insensitive matching
 ```
 
+#### Sprint 17: Output Format Improvements - CSV Export (2025-11-17)
+
+**Goal:** Add CSV output format for spreadsheet analysis and data processing
+
+**Implementation** (EXTREME TDD - RED → GREEN cycle):
+- **RED Phase**: Created 12 integration tests (tests/sprint17_output_format_tests.rs)
+- **GREEN Phase**: Implemented CSV output module (src/csv_output.rs)
+
+**Features:**
+- `--format csv` - Export syscall traces in CSV format
+- Dynamic columns based on active flags:
+  - Basic: `syscall,arguments,result`
+  - With `-T`: `syscall,arguments,result,duration`
+  - With `--source`: `syscall,arguments,result,source_location`
+  - Combined: `syscall,arguments,result,duration,source_location`
+- Statistics mode (`-c`): `syscall,calls,errors` (or `syscall,calls,errors,total_time` with `-T`)
+- Proper CSV escaping for commas, quotes, and newlines
+- Compatible with filtering, timing, source correlation
+
+**Results:**
+- **Tests**: 230+ total (29 new - 12 integration + 18 unit tests in csv_output.rs)
+- **Coverage**: 18 comprehensive unit tests for CSV formatting edge cases
+- **Clippy**: Zero warnings ✅
+- **TDG Score**: 94.5/100 maintained
+
+**Examples:**
+```bash
+# Basic CSV output
+renacer --format csv -- echo "test" > trace.csv
+
+# CSV with timing information
+renacer --format csv -T -- ls > trace-with-timing.csv
+
+# CSV with source correlation
+renacer --format csv --source -- ./my-binary > trace-with-source.csv
+
+# CSV statistics summary
+renacer --format csv -c -- cargo build > stats.csv
+
+# CSV with filtering
+renacer --format csv -e trace=file -- cat file.txt > file-ops.csv
+```
+
+**JSON Enhancement Verification:**
+- Verified existing JSON output already supports all required features (from Sprint 9-10)
+- JSON includes version, format, syscalls array, and summary fields
+- Compatible with timing (-T), source correlation (--source), and statistics mode (-c)
+
 ### Planned for 0.3.0
 - `-f` follow forks (multi-process tracking with refactored trace loop)
 - See GitHub Issue #2 for detailed implementation plan

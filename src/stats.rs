@@ -46,6 +46,11 @@ impl StatsTracker {
         }
     }
 
+    /// Get access to the stats map for CSV export
+    pub fn stats_map(&self) -> &HashMap<String, SyscallStats> {
+        &self.stats
+    }
+
     /// Calculate totals using Trueno for high-performance SIMD operations
     pub fn calculate_totals_with_trueno(&self) -> StatTotals {
         if self.stats.is_empty() {

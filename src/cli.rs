@@ -9,6 +9,8 @@ pub enum OutputFormat {
     Text,
     /// JSON format for machine parsing
     Json,
+    /// CSV format for spreadsheet analysis
+    Csv,
 }
 
 #[derive(Parser, Debug)]

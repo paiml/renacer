@@ -95,6 +95,8 @@ struct Tracers {
     function_profiler: Option<crate::function_profiler::FunctionProfiler>,
     stats_tracker: Option<crate::stats::StatsTracker>,
     json_output: Option<crate::json_output::JsonOutput>,
+    csv_output: Option<crate::csv_output::CsvOutput>,
+    csv_stats_output: Option<crate::csv_output::CsvStatsOutput>,
 }
 
 /// Initialize all tracers and profilers based on config
@@ -125,11 +127,30 @@ fn initialize_tracers(config: &TracerConfig) -> Tracers {
         None
     };
 
+    let csv_output = if matches!(config.output_format, OutputFormat::Csv) && !config.statistics_mode
+    {
+        Some(crate::csv_output::CsvOutput::new(
+            config.timing_mode,
+            config.enable_source,
+        ))
+    } else {
+        None
+    };
+
+    let csv_stats_output =
+        if matches!(config.output_format, OutputFormat::Csv) && config.statistics_mode {
+            Some(crate::csv_output::CsvStatsOutput::new())
+        } else {
+            None
+        };
+
     Tracers {
         profiling_ctx,
         function_profiler,
         stats_tracker,
         json_output,
+        csv_output,
+        csv_stats_output,
     }
 }
 
@@ -272,28 +293,30 @@ fn process_syscall_exit(
     timing_mode: bool,
     duration_us: u64,
 ) -> Result<()> {
-    if let Some(prof) = tracers.profiling_ctx.as_mut() {
+    // Check if profiling is enabled and handle accordingly
+    let has_profiling = tracers.profiling_ctx.is_some();
+
+    if has_profiling {
+        // Temporarily take profiling_ctx out to avoid borrow conflict
+        let mut prof = tracers.profiling_ctx.take().unwrap();
         let result = prof.measure(crate::profiling::ProfilingCategory::Other, || {
             handle_syscall_exit(
                 child,
                 current_syscall_entry,
-                tracers.stats_tracker.as_mut(),
-                tracers.json_output.as_mut(),
-                tracers.function_profiler.as_mut(),
+                tracers,
                 timing_mode,
                 duration_us,
             )
         });
-        result?;
         prof.record_syscall();
-        Ok(())
+        // Put profiling_ctx back
+        tracers.profiling_ctx = Some(prof);
+        result
     } else {
         handle_syscall_exit(
             child,
             current_syscall_entry,
-            tracers.stats_tracker.as_mut(),
-            tracers.json_output.as_mut(),
-            tracers.function_profiler.as_mut(),
+            tracers,
             timing_mode,
             duration_us,
         )
@@ -301,16 +324,20 @@ fn process_syscall_exit(
 }
 
 /// Print all summaries at end of tracing
-fn print_summaries(
-    stats_tracker: Option<crate::stats::StatsTracker>,
-    json_output: Option<crate::json_output::JsonOutput>,
-    profiling_ctx: Option<crate::profiling::ProfilingContext>,
-    function_profiler: Option<crate::function_profiler::FunctionProfiler>,
-    exit_code: i32,
-) {
-    // Print statistics summary if in statistics mode
-    if let Some(tracker) = stats_tracker {
-        tracker.print_summary();
+fn print_summaries(tracers: Tracers, timing_mode: bool, exit_code: i32) {
+    let Tracers {
+        stats_tracker,
+        json_output,
+        csv_output,
+        csv_stats_output,
+        profiling_ctx,
+        function_profiler,
+    } = tracers;
+    // Print statistics summary if in statistics mode (text format)
+    if stats_tracker.is_some() && csv_stats_output.is_none() {
+        if let Some(ref tracker) = stats_tracker {
+            tracker.print_summary();
+        }
     }
 
     // Print JSON output if in JSON mode
@@ -320,6 +347,31 @@ fn print_summaries(
             Ok(json) => println!("{}", json),
             Err(e) => eprintln!("Failed to serialize JSON: {}", e),
         }
+    }
+
+    // Print CSV output if in CSV mode (normal mode)
+    if let Some(output) = csv_output {
+        print!("{}", output.to_csv());
+    }
+
+    // Print CSV statistics output if in CSV + statistics mode
+    if let Some(mut csv_stats) = csv_stats_output {
+        if let Some(tracker) = stats_tracker {
+            // Convert stats_tracker data to CSV format
+            for (syscall_name, stats) in tracker.stats_map() {
+                csv_stats.add_stat(crate::csv_output::CsvStat {
+                    syscall: syscall_name.clone(),
+                    calls: stats.count,
+                    errors: stats.errors,
+                    total_time_us: if timing_mode {
+                        Some(stats.total_time_us)
+                    } else {
+                        None
+                    },
+                });
+            }
+        }
+        print!("{}", csv_stats.to_csv(timing_mode));
     }
 
     // Print profiling summary if enabled
@@ -382,13 +434,7 @@ fn trace_child(child: Pid, config: TracerConfig) -> Result<i32> {
     }
 
     // Print all summaries
-    print_summaries(
-        tracers.stats_tracker,
-        tracers.json_output,
-        tracers.profiling_ctx,
-        tracers.function_profiler,
-        exit_code,
-    );
+    print_summaries(tracers, config.timing_mode, exit_code);
 
     // Exit with traced program's exit code
     std::process::exit(exit_code);
@@ -682,6 +728,43 @@ fn record_json_for_syscall(
     }
 }
 
+/// Record CSV output for a syscall
+fn record_csv_for_syscall(
+    syscall_entry: &Option<SyscallEntry>,
+    csv_output: Option<&mut crate::csv_output::CsvOutput>,
+    result: i64,
+    timing_mode: bool,
+    duration_us: u64,
+) {
+    if let (Some(entry), Some(output)) = (syscall_entry, csv_output) {
+        let duration = if timing_mode && duration_us > 0 {
+            Some(duration_us)
+        } else {
+            None
+        };
+
+        // Format source location as "file:line" string
+        let source_location = entry.source.as_ref().map(|src| {
+            if let Some(func) = &src.function {
+                format!("{}:{} in {}", src.file, src.line, func)
+            } else {
+                format!("{}:{}", src.file, src.line)
+            }
+        });
+
+        // Format arguments as comma-separated string
+        let arguments = entry.args.join(", ");
+
+        output.add_syscall(crate::csv_output::CsvSyscall {
+            name: entry.name.clone(),
+            arguments,
+            result,
+            duration_us: duration,
+            source_location,
+        });
+    }
+}
+
 /// Record function profiling data
 fn record_function_profiling(
     syscall_entry: &Option<SyscallEntry>,
@@ -713,9 +796,7 @@ fn print_syscall_result(result: i64, timing_mode: bool, duration_us: u64) {
 fn handle_syscall_exit(
     child: Pid,
     syscall_entry: &Option<SyscallEntry>,
-    stats_tracker: Option<&mut crate::stats::StatsTracker>,
-    json_output: Option<&mut crate::json_output::JsonOutput>,
-    function_profiler: Option<&mut crate::function_profiler::FunctionProfiler>,
+    tracers: &mut Tracers,
     timing_mode: bool,
     duration_us: u64,
 ) -> Result<()> {
@@ -723,20 +804,51 @@ fn handle_syscall_exit(
     let result = regs.rax as i64;
 
     // Check modes before borrowing
-    let in_stats_mode = stats_tracker.is_some();
-    let in_json_mode = json_output.is_some();
+    let in_stats_mode = tracers.stats_tracker.is_some();
+    let in_json_mode = tracers.json_output.is_some();
+    let in_csv_mode = tracers.csv_output.is_some() || tracers.csv_stats_output.is_some();
 
     // Record statistics
-    record_stats_for_syscall(syscall_entry, stats_tracker, result, duration_us);
+    record_stats_for_syscall(
+        syscall_entry,
+        tracers.stats_tracker.as_mut(),
+        result,
+        duration_us,
+    );
 
     // Record JSON output
-    record_json_for_syscall(syscall_entry, json_output, result, timing_mode, duration_us);
+    record_json_for_syscall(
+        syscall_entry,
+        tracers.json_output.as_mut(),
+        result,
+        timing_mode,
+        duration_us,
+    );
+
+    // Record CSV output
+    record_csv_for_syscall(
+        syscall_entry,
+        tracers.csv_output.as_mut(),
+        result,
+        timing_mode,
+        duration_us,
+    );
+
+    // Record CSV stats (we'll handle this in print_summaries)
+    if let (Some(entry), Some(stats)) = (syscall_entry, tracers.csv_stats_output.as_mut()) {
+        // CSV stats are accumulated in stats_tracker and printed at the end
+        let _ = (entry, stats); // Suppress unused warning for now
+    }
 
     // Record function profiling
-    record_function_profiling(syscall_entry, function_profiler, duration_us);
+    record_function_profiling(
+        syscall_entry,
+        tracers.function_profiler.as_mut(),
+        duration_us,
+    );
 
-    // Print result if not in statistics or JSON mode
-    if syscall_entry.is_some() && !in_stats_mode && !in_json_mode {
+    // Print result if not in statistics, JSON, or CSV mode
+    if syscall_entry.is_some() && !in_stats_mode && !in_json_mode && !in_csv_mode {
         print_syscall_result(result, timing_mode, duration_us);
     }
 
