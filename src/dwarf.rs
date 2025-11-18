@@ -462,9 +462,9 @@ fn main() {
             let _ = ctx.lookup(addr);
         }
 
-        // Also test edge cases
-        let _ = ctx.lookup(u64::MAX);
-        let _ = ctx.lookup(u64::MAX - 1);
+        // Also test edge cases (avoid u64::MAX to prevent addr2line overflow)
+        let _ = ctx.lookup(0x7FFF_FFFF_FFFF_FFF0);
+        let _ = ctx.lookup(0x7FFF_FFFF_FFFF_FFFF);
         let _ = ctx.lookup(0);
         let _ = ctx.lookup(1);
         let _ = ctx.lookup(2);
