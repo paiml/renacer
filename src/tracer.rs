@@ -1268,6 +1268,43 @@ fn print_syscall_result(result: i64, timing_mode: bool, duration_us: u64) {
 }
 
 /// Handle syscall exit - print return value and record statistics
+/// Handle real-time anomaly detection and alerts
+fn handle_anomaly_detection(
+    syscall_entry: &Option<SyscallEntry>,
+    anomaly_detector: Option<&mut crate::anomaly::AnomalyDetector>,
+    duration_us: u64,
+) {
+    if let (Some(entry), Some(detector)) = (syscall_entry, anomaly_detector) {
+        if let Some(anomaly) = detector.record_and_check(&entry.name, duration_us) {
+            // Print real-time anomaly alert to stderr
+            let severity_label = match anomaly.severity {
+                crate::anomaly::AnomalySeverity::Low => "🟢 Low",
+                crate::anomaly::AnomalySeverity::Medium => "🟡 Medium",
+                crate::anomaly::AnomalySeverity::High => "🔴 High",
+            };
+            eprintln!(
+                "⚠️  ANOMALY: {} took {} μs ({:.1}σ from baseline {:.1} μs) - {}",
+                anomaly.syscall_name,
+                anomaly.duration_us,
+                anomaly.z_score.abs(),
+                anomaly.baseline_mean,
+                severity_label
+            );
+        }
+    }
+}
+
+/// Check if syscall result should be printed to stdout
+fn should_print_result(
+    syscall_entry: &Option<SyscallEntry>,
+    in_stats_mode: bool,
+    in_json_mode: bool,
+    in_csv_mode: bool,
+    in_html_mode: bool,
+) -> bool {
+    syscall_entry.is_some() && !in_stats_mode && !in_json_mode && !in_csv_mode && !in_html_mode
+}
+
 fn handle_syscall_exit(
     child: Pid,
     syscall_entry: &Option<SyscallEntry>,
@@ -1333,26 +1370,20 @@ fn handle_syscall_exit(
     );
 
     // Sprint 20: Real-time anomaly detection
-    if let (Some(entry), Some(detector)) = (syscall_entry, tracers.anomaly_detector.as_mut()) {
-        if let Some(anomaly) = detector.record_and_check(&entry.name, duration_us) {
-            // Print real-time anomaly alert to stderr
-            eprintln!(
-                "⚠️  ANOMALY: {} took {} μs ({:.1}σ from baseline {:.1} μs) - {}",
-                anomaly.syscall_name,
-                anomaly.duration_us,
-                anomaly.z_score.abs(),
-                anomaly.baseline_mean,
-                match anomaly.severity {
-                    crate::anomaly::AnomalySeverity::Low => "🟢 Low",
-                    crate::anomaly::AnomalySeverity::Medium => "🟡 Medium",
-                    crate::anomaly::AnomalySeverity::High => "🔴 High",
-                }
-            );
-        }
-    }
+    handle_anomaly_detection(
+        syscall_entry,
+        tracers.anomaly_detector.as_mut(),
+        duration_us,
+    );
 
     // Print result if not in statistics, JSON, CSV, or HTML mode
-    if syscall_entry.is_some() && !in_stats_mode && !in_json_mode && !in_csv_mode && !in_html_mode {
+    if should_print_result(
+        syscall_entry,
+        in_stats_mode,
+        in_json_mode,
+        in_csv_mode,
+        in_html_mode,
+    ) {
         print_syscall_result(result, timing_mode, duration_us);
     }
 
