@@ -360,7 +360,7 @@ MIT - See [LICENSE](LICENSE) file.
 
 ## Documentation
 
-**📖 [The Renacer Book](https://paiml.github.io/renacer/)** - Comprehensive TDD-verified guide
+**📖 The Renacer Book** - Comprehensive TDD-verified guide (see [book/](./book/) directory)
 
 The book includes:
 - [Getting Started](book/src/getting-started/) - Installation and quick start

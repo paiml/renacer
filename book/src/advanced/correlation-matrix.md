@@ -620,5 +620,5 @@ Correlation matrix analysis provides:
 - [HPU Acceleration](./hpu-acceleration.md) - Full HPU system overview
 - [K-means Clustering](./kmeans-clustering.md) - Complementary analysis technique
 - [Statistical Analysis](./statistical-analysis.md) - SIMD-accelerated percentiles
-- [Function Profiling](../core-concepts/profiling.md) - Per-function syscall attribution
+- [Function Profiling](./function-profiling.md) - Per-function syscall attribution
 - [Statistics Mode](../core-concepts/statistics.md) - Call counts and timing
