@@ -48,11 +48,20 @@ Renacer (Spanish: "to be reborn") is a next-generation binary inspection and tra
 - ✅ **CPU Fallback** - Force CPU-only processing with `--hpu-cpu-only`
 - ✅ **Zero Overhead** - No performance impact when disabled (opt-in via `--hpu-analysis`)
 
-### HTML Output Format (Sprint 22) 🆕
+### HTML Output Format (Sprint 22)
 - ✅ **Interactive HTML Reports** - Rich visual syscall trace reports
 - ✅ **Statistics Integration** - Combined with -c mode for visual statistics
 - ✅ **Source Correlation** - Display source locations in HTML tables
 - ✅ **Export Format** - Generate shareable HTML files (`--format html`)
+
+### ML Anomaly Detection (Sprint 23) 🆕
+- ✅ **KMeans Clustering** - Group syscalls by latency patterns using Aprender ML library
+- ✅ **Silhouette Score** - Measure clustering quality (-1 to 1, higher = better separation)
+- ✅ **Cluster Analysis** - Identify high-latency outlier clusters automatically
+- ✅ **ML vs Z-Score Comparison** - Compare ML-based detection with statistical methods
+- ✅ **Configurable Clusters** - Adjust cluster count via `--ml-clusters N` (default: 3, min: 2)
+- ✅ **JSON Integration** - ML analysis results included in JSON output
+- ✅ **Zero Overhead** - No impact when disabled (opt-in via `--ml-anomaly`)
 
 ### Quality Infrastructure (v0.2.0-0.3.0)
 - ✅ **Property-based testing** - 670+ test cases via proptest
@@ -120,6 +129,12 @@ renacer -c --stats-extended --anomaly-threshold 2.5 -- ./app  # Custom anomaly t
 renacer -c --hpu-analysis -- ./heavy-io-app         # Correlation matrix + K-means clustering
 renacer -c --hpu-analysis --hpu-cpu-only -- app     # Force CPU backend
 renacer -c --hpu-analysis -e trace=file -- ls       # HPU with filtering
+
+# ML anomaly detection (Sprint 23)
+renacer -c --ml-anomaly -- cargo build              # KMeans clustering of syscall latencies
+renacer -c --ml-anomaly --ml-clusters 5 -- ./app    # Custom cluster count
+renacer -c --ml-anomaly --ml-compare -- ./app       # Compare ML with z-score detection
+renacer --ml-anomaly --format json -- ./app > ml.json  # ML results in JSON
 
 # Real-time anomaly detection (Sprint 20)
 renacer --anomaly-realtime -- ./app         # Live anomaly monitoring
