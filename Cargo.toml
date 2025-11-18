@@ -39,6 +39,8 @@ backtrace = "0.3"
 trueno = "0.1.0"
 
 # Machine learning for anomaly detection (Sprint 23)
+# Local dev uses path (0.2.0), crates.io will use 0.1.0
+# Remove path = "..." when publishing to crates.io
 aprender = { path = "../aprender" }
 
 # Regex filtering (Sprint 16)
