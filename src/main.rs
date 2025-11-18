@@ -15,6 +15,121 @@ fn init_tracing(debug: bool) {
     }
 }
 
+/// Print function mappings from transpiler source map (Sprint 25)
+fn print_function_mappings(map: &transpiler_map::TranspilerMap, show_context: bool) {
+    if show_context {
+        println!("=== Transpiler Source Map ===");
+        println!("Source Language: {} -> Rust", map.source_language());
+        println!("Source File: {}", map.source_file().display());
+        println!();
+    }
+
+    if !map.function_map.is_empty() {
+        if show_context {
+            println!("Function Mappings (Rust -> {}):", map.source_language());
+            println!("─────────────────────────────────────────");
+        }
+        for (rust_fn, python_fn) in &map.function_map {
+            println!("{} -> {}", rust_fn, python_fn);
+        }
+        if show_context {
+            println!("─────────────────────────────────────────");
+            println!();
+        }
+    }
+}
+
+/// Print stack trace mappings from transpiler source map (Sprint 26)
+fn print_stack_trace_mappings(map: &transpiler_map::TranspilerMap, show_context: bool) {
+    if show_context {
+        println!("=== Stack Trace Mapping ===");
+        println!(
+            "Source: {} -> {}",
+            map.source_file().display(),
+            map.generated_file().display()
+        );
+        println!();
+    }
+
+    if !map.mappings.is_empty() {
+        if show_context {
+            println!("Line Mappings (Rust -> {}):", map.source_language());
+            println!("─────────────────────────────────────────");
+        }
+        for mapping in &map.mappings {
+            println!(
+                "{} ({}:{}) -> {}:{}",
+                mapping.rust_function,
+                map.generated_file().display(),
+                mapping.rust_line,
+                map.source_file().display(),
+                mapping.python_line
+            );
+        }
+        if show_context {
+            println!("─────────────────────────────────────────");
+            println!();
+        }
+    }
+}
+
+/// Print error correlation mappings from transpiler source map (Sprint 27)
+fn print_error_correlation_mappings(map: &transpiler_map::TranspilerMap, show_context: bool) {
+    if show_context {
+        println!("=== Error Correlation Mapping ===");
+        println!(
+            "Errors in {} will map to {}",
+            map.generated_file().display(),
+            map.source_file().display()
+        );
+        println!();
+    }
+
+    if !map.mappings.is_empty() {
+        if show_context {
+            println!("Available Line Mappings ({} entries):", map.mappings.len());
+            println!("─────────────────────────────────────────");
+        }
+        for mapping in &map.mappings {
+            println!(
+                "  {}:{} -> {}:{} ({})",
+                map.generated_file().display(),
+                mapping.rust_line,
+                map.source_file().display(),
+                mapping.python_line,
+                mapping.python_function
+            );
+        }
+        if show_context {
+            println!("─────────────────────────────────────────");
+            println!();
+        }
+    }
+}
+
+/// Execute the tracer based on PID or command arguments
+fn run_tracer(
+    pid: Option<i32>,
+    command: Option<Vec<String>>,
+    config: tracer::TracerConfig,
+) -> Result<()> {
+    match (pid, command) {
+        (Some(pid), None) => {
+            tracer::attach_to_pid(pid, config)?;
+        }
+        (None, Some(command)) => {
+            tracer::trace_command(&command, config)?;
+        }
+        (Some(_), Some(_)) => {
+            anyhow::bail!("Cannot specify both -p PID and command. Choose one.");
+        }
+        (None, None) => {
+            anyhow::bail!("Must specify either -p PID or command. Usage: renacer -p PID or renacer -- COMMAND [ARGS...]");
+        }
+    }
+    Ok(())
+}
+
 fn main() -> Result<()> {
     let args = Cli::parse();
 
@@ -38,100 +153,17 @@ fn main() -> Result<()> {
 
     // Sprint 25: Print function name correlations when using --function-time with source map
     if let (true, Some(ref map)) = (args.function_time, &source_map) {
-        // Print header for function correlation
-        if args.show_transpiler_context {
-            println!("=== Transpiler Source Map ===");
-            println!("Source Language: {} -> Rust", map.source_language());
-            println!("Source File: {}", map.source_file().display());
-            println!();
-        }
-
-        // Print function mappings
-        if !map.function_map.is_empty() {
-            if args.show_transpiler_context {
-                println!("Function Mappings (Rust -> {}):", map.source_language());
-                println!("─────────────────────────────────────────");
-            }
-            for (rust_fn, python_fn) in &map.function_map {
-                println!("{} -> {}", rust_fn, python_fn);
-            }
-            if args.show_transpiler_context {
-                println!("─────────────────────────────────────────");
-                println!();
-            }
-        }
+        print_function_mappings(map, args.show_transpiler_context);
     }
 
     // Sprint 26: Print stack trace mapping info when using --rewrite-stacktrace with source map
     if let (true, Some(ref map)) = (args.rewrite_stacktrace, &source_map) {
-        // Print source file info for stack trace correlation
-        if args.show_transpiler_context {
-            println!("=== Stack Trace Mapping ===");
-            println!(
-                "Source: {} -> {}",
-                map.source_file().display(),
-                map.generated_file().display()
-            );
-            println!();
-        }
-
-        // Print line mappings for stack trace rewriting
-        if !map.mappings.is_empty() {
-            if args.show_transpiler_context {
-                println!("Line Mappings (Rust -> {}):", map.source_language());
-                println!("─────────────────────────────────────────");
-            }
-            for mapping in &map.mappings {
-                println!(
-                    "{} ({}:{}) -> {}:{}",
-                    mapping.rust_function,
-                    map.generated_file().display(),
-                    mapping.rust_line,
-                    map.source_file().display(),
-                    mapping.python_line
-                );
-            }
-            if args.show_transpiler_context {
-                println!("─────────────────────────────────────────");
-                println!();
-            }
-        }
+        print_stack_trace_mappings(map, args.show_transpiler_context);
     }
 
     // Sprint 27: Print error correlation info when using --rewrite-errors with source map
     if let (true, Some(ref map)) = (args.rewrite_errors, &source_map) {
-        // Print error mapping header
-        if args.show_transpiler_context {
-            println!("=== Error Correlation Mapping ===");
-            println!(
-                "Errors in {} will map to {}",
-                map.generated_file().display(),
-                map.source_file().display()
-            );
-            println!();
-        }
-
-        // Print line mappings available for error correlation
-        if !map.mappings.is_empty() {
-            if args.show_transpiler_context {
-                println!("Available Line Mappings ({} entries):", map.mappings.len());
-                println!("─────────────────────────────────────────");
-            }
-            for mapping in &map.mappings {
-                println!(
-                    "  {}:{} -> {}:{} ({})",
-                    map.generated_file().display(),
-                    mapping.rust_line,
-                    map.source_file().display(),
-                    mapping.python_line,
-                    mapping.python_function
-                );
-            }
-            if args.show_transpiler_context {
-                println!("─────────────────────────────────────────");
-                println!();
-            }
-        }
+        print_error_correlation_mappings(map, args.show_transpiler_context);
     }
 
     // Parse filter expression if provided
@@ -163,22 +195,7 @@ fn main() -> Result<()> {
     };
 
     // Either attach to PID or trace command (mutually exclusive)
-    match (args.pid, args.command) {
-        (Some(pid), None) => {
-            // Attach to running process
-            tracer::attach_to_pid(pid, config)?;
-        }
-        (None, Some(command)) => {
-            // Trace command
-            tracer::trace_command(&command, config)?;
-        }
-        (Some(_), Some(_)) => {
-            anyhow::bail!("Cannot specify both -p PID and command. Choose one.");
-        }
-        (None, None) => {
-            anyhow::bail!("Must specify either -p PID or command. Usage: renacer -p PID or renacer -- COMMAND [ARGS...]");
-        }
-    }
+    run_tracer(args.pid, args.command, config)?;
 
     Ok(())
 }
