@@ -542,4 +542,4 @@ HPU acceleration provides:
 
 - [Statistical Analysis](./statistical-analysis.md) - SIMD-accelerated percentile analysis
 - [Machine Learning](./machine-learning.md) - ML-based anomaly detection
-- [Function Profiling](../core-concepts/profiling.md) - Per-function syscall analysis
+- [Function Profiling](./function-profiling.md) - Per-function syscall analysis
