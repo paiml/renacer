@@ -174,14 +174,21 @@ fn test_html_output_escape_special_chars() {
 
     let stdout = String::from_utf8_lossy(&output.stdout);
 
-    // Should escape < and > characters
+    // Extract only the HTML portion (after <!DOCTYPE html>) to exclude child process output
+    let html_part = if let Some(idx) = stdout.find("<!DOCTYPE html>") {
+        &stdout[idx..]
+    } else {
+        &stdout[..]
+    };
+
+    // Should escape < and > characters in the HTML report
     assert!(
-        !stdout.contains("<script>alert"),
+        !html_part.contains("<script>alert"),
         "HTML should escape script tags"
     );
     // Should contain escaped version
     assert!(
-        stdout.contains("&lt;") || stdout.contains("&gt;") || !stdout.contains("<script>"),
+        html_part.contains("&lt;") || html_part.contains("&gt;") || !html_part.contains("<script>"),
         "HTML should escape special characters"
     );
 }

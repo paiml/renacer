@@ -8,6 +8,7 @@ use nix::sys::wait::{waitpid, WaitStatus};
 use nix::unistd::{fork, ForkResult, Pid};
 use std::os::unix::process::CommandExt;
 use std::process::Command;
+use tracing::{info, trace, warn};
 
 use crate::syscalls;
 
@@ -191,7 +192,9 @@ fn setup_ptrace_options(child: Pid, follow_forks: bool) -> Result<()> {
 fn setup_ptrace_options_internal(child: Pid, follow_forks: bool, wait_first: bool) -> Result<()> {
     // Wait for initial SIGSTOP (from PTRACE_TRACEME or fork event)
     if wait_first {
-        waitpid(child, None).context("Failed to wait for child")?;
+        trace!(pid = %child, "waiting for initial SIGSTOP");
+        let status = waitpid(child, None).context("Failed to wait for child")?;
+        trace!(pid = %child, status = ?status, "initial wait completed");
     }
 
     // Set ptrace options to trace syscalls
@@ -204,7 +207,15 @@ fn setup_ptrace_options_internal(child: Pid, follow_forks: bool, wait_first: boo
             | ptrace::Options::PTRACE_O_TRACECLONE;
     }
 
+    trace!(pid = %child, "setting ptrace options");
     ptrace::setoptions(child, options).context("Failed to set ptrace options")?;
+    trace!(pid = %child, "ptrace options set");
+
+    // Continue the child to start syscall tracing
+    trace!(pid = %child, "sending initial PTRACE_SYSCALL");
+    ptrace::syscall(child, None).context("Failed to continue child with PTRACE_SYSCALL")?;
+    trace!(pid = %child, "initial PTRACE_SYSCALL sent");
+
     Ok(())
 }
 
@@ -279,11 +290,15 @@ fn handle_syscall_event(
     config: &TracerConfig,
     tracers: &mut Tracers,
 ) -> Result<()> {
+    // Check if we're in a structured output mode (JSON, CSV, HTML) to suppress text output
     let in_json_mode = tracers.json_output.is_some();
+    let in_csv_mode = tracers.csv_output.is_some() || tracers.csv_stats_output.is_some();
+    let in_html_mode = tracers.html_output.is_some();
+    let structured_output = in_json_mode || in_csv_mode || in_html_mode;
 
     if !*in_syscall {
         // Syscall entry - record start time if timing enabled
-        if config.timing_mode || config.statistics_mode || in_json_mode {
+        if config.timing_mode || config.statistics_mode || structured_output {
             *syscall_entry_time = Some(std::time::Instant::now());
         }
 
@@ -292,7 +307,7 @@ fn handle_syscall_event(
             dwarf_ctx,
             config,
             tracers.profiling_ctx.as_mut(),
-            in_json_mode,
+            structured_output,
         )?;
         *in_syscall = true;
     } else {
@@ -322,7 +337,7 @@ fn process_syscall_entry(
     dwarf_ctx: Option<&crate::dwarf::DwarfContext>,
     config: &TracerConfig,
     profiling_ctx: Option<&mut crate::profiling::ProfilingContext>,
-    in_json_mode: bool,
+    structured_output: bool,
 ) -> Result<Option<SyscallEntry>> {
     if let Some(prof) = profiling_ctx {
         prof.measure(crate::profiling::ProfilingCategory::Other, || {
@@ -331,7 +346,7 @@ fn process_syscall_entry(
                 dwarf_ctx,
                 &config.filter,
                 config.statistics_mode,
-                in_json_mode,
+                structured_output,
                 config.function_time,
             )
         })
@@ -341,7 +356,7 @@ fn process_syscall_entry(
             dwarf_ctx,
             &config.filter,
             config.statistics_mode,
-            in_json_mode,
+            structured_output,
             config.function_time,
         )
     }
@@ -587,8 +602,14 @@ fn process_syscall_for_pid(
 
 /// Trace a child process, filtering syscalls based on filter
 fn trace_child(child: Pid, config: TracerConfig) -> Result<i32> {
+    info!(pid = %child, "starting trace_child");
+
     let mut tracers = initialize_tracers(&config);
+    trace!("tracers initialized");
+
+    trace!("calling setup_ptrace_options");
     setup_ptrace_options(child, config.follow_forks)?;
+    trace!("ptrace options set successfully");
 
     use std::collections::HashMap;
     let mut processes: HashMap<Pid, ProcessState> = HashMap::new();
@@ -597,7 +618,9 @@ fn trace_child(child: Pid, config: TracerConfig) -> Result<i32> {
     let main_pid = child;
     let mut main_exit_code = 0;
 
+    info!("entering main wait loop");
     while !processes.is_empty() {
+        trace!(num_processes = processes.len(), "calling waitpid");
         let wait_result = if config.follow_forks {
             waitpid(Pid::from_raw(-1), None)
         } else {
@@ -605,9 +628,18 @@ fn trace_child(child: Pid, config: TracerConfig) -> Result<i32> {
         };
 
         let status = match wait_result {
-            Ok(s) => s,
-            Err(_) if processes.is_empty() => break,
-            Err(e) => return Err(e).context("Failed to waitpid"),
+            Ok(s) => {
+                trace!(status = ?s, "waitpid returned");
+                s
+            }
+            Err(_) if processes.is_empty() => {
+                trace!("waitpid error but processes empty, breaking");
+                break;
+            }
+            Err(e) => {
+                warn!(error = %e, "waitpid failed");
+                return Err(e).context("Failed to waitpid");
+            }
         };
 
         let pid = match handle_traced_process_status(
@@ -617,12 +649,22 @@ fn trace_child(child: Pid, config: TracerConfig) -> Result<i32> {
             &mut main_exit_code,
             &config,
         )? {
-            Some(p) => p,
-            None => continue,
+            Some(p) => {
+                trace!(pid = %p, "handle_traced_process_status returned pid");
+                p
+            }
+            None => {
+                trace!("handle_traced_process_status returned None, continuing");
+                continue;
+            }
         };
 
+        trace!(pid = %pid, "calling process_syscall_for_pid");
         process_syscall_for_pid(pid, &mut processes, &config, &mut tracers)?;
+        trace!(pid = %pid, "process_syscall_for_pid completed");
     }
+
+    info!("exited main wait loop");
 
     print_summaries(
         tracers,
@@ -797,7 +839,7 @@ fn handle_syscall_entry(
     dwarf_ctx: Option<&crate::dwarf::DwarfContext>,
     filter: &crate::filter::SyscallFilter,
     statistics_mode: bool,
-    json_mode: bool,
+    structured_output: bool,
     function_profiling_enabled: bool,
 ) -> Result<Option<SyscallEntry>> {
     let regs = ptrace::getregs(child).context("Failed to get registers")?;
@@ -827,15 +869,15 @@ fn handle_syscall_entry(
         None
     };
 
-    // Format arguments for JSON mode if needed
-    let args = if json_mode {
+    // Format arguments for structured output modes (JSON, CSV, HTML) if needed
+    let args = if structured_output {
         format_syscall_args_for_json(child, name, arg1, arg2, arg3)
     } else {
         Vec::new()
     };
 
-    // Print syscall entry if not in statistics or JSON mode
-    if !statistics_mode && !json_mode {
+    // Print syscall entry if not in statistics or structured output mode
+    if !statistics_mode && !structured_output {
         print_syscall_entry(child, name, syscall_num, arg1, arg2, arg3, &source_info);
     }
 

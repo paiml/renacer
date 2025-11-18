@@ -88,6 +88,10 @@ pub struct Cli {
     #[arg(long = "hpu-cpu-only")]
     pub hpu_cpu_only: bool,
 
+    /// Enable debug tracing output to stderr
+    #[arg(long = "debug")]
+    pub debug: bool,
+
     /// Command to trace (everything after --)
     #[arg(last = true)]
     pub command: Option<Vec<String>>,
