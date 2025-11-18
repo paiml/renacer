@@ -11,6 +11,8 @@ pub enum OutputFormat {
     Json,
     /// CSV format for spreadsheet analysis
     Csv,
+    /// HTML format for visual reports (Sprint 22)
+    Html,
 }
 
 #[derive(Parser, Debug)]

@@ -103,6 +103,7 @@ struct Tracers {
     json_output: Option<crate::json_output::JsonOutput>,
     csv_output: Option<crate::csv_output::CsvOutput>,
     csv_stats_output: Option<crate::csv_output::CsvStatsOutput>,
+    html_output: Option<crate::html_output::HtmlOutput>, // Sprint 22
     anomaly_detector: Option<crate::anomaly::AnomalyDetector>, // Sprint 20
 }
 
@@ -151,6 +152,15 @@ fn initialize_tracers(config: &TracerConfig) -> Tracers {
             None
         };
 
+    let html_output = if matches!(config.output_format, OutputFormat::Html) {
+        Some(crate::html_output::HtmlOutput::new(
+            config.timing_mode,
+            config.enable_source,
+        ))
+    } else {
+        None
+    };
+
     let anomaly_detector = if config.anomaly_realtime {
         Some(crate::anomaly::AnomalyDetector::new(
             config.anomaly_window_size,
@@ -167,6 +177,7 @@ fn initialize_tracers(config: &TracerConfig) -> Tracers {
         json_output,
         csv_output,
         csv_stats_output,
+        html_output,
         anomaly_detector,
     }
 }
@@ -389,6 +400,7 @@ fn print_summaries(
         json_output,
         csv_output,
         csv_stats_output,
+        html_output,
         profiling_ctx,
         function_profiler,
         anomaly_detector,
@@ -436,6 +448,11 @@ fn print_summaries(
             }
         }
         print!("{}", csv_stats.to_csv(timing_mode));
+    }
+
+    // Print HTML output if in HTML mode
+    if let Some(output) = html_output {
+        print!("{}", output.to_html(stats_tracker.as_ref()));
     }
 
     // Print profiling summary if enabled
@@ -945,6 +962,43 @@ fn record_csv_for_syscall(
     }
 }
 
+/// Record HTML output for a syscall
+fn record_html_for_syscall(
+    syscall_entry: &Option<SyscallEntry>,
+    html_output: Option<&mut crate::html_output::HtmlOutput>,
+    result: i64,
+    timing_mode: bool,
+    duration_us: u64,
+) {
+    if let (Some(entry), Some(output)) = (syscall_entry, html_output) {
+        let duration = if timing_mode && duration_us > 0 {
+            Some(duration_us)
+        } else {
+            None
+        };
+
+        // Format source location as "file:line" string
+        let source_location = entry.source.as_ref().map(|src| {
+            if let Some(func) = &src.function {
+                format!("{}:{} in {}", src.file, src.line, func)
+            } else {
+                format!("{}:{}", src.file, src.line)
+            }
+        });
+
+        // Format arguments as comma-separated string
+        let arguments = entry.args.join(", ");
+
+        output.add_syscall(crate::html_output::HtmlSyscall {
+            name: entry.name.clone(),
+            arguments,
+            result,
+            duration_us: duration,
+            source_location,
+        });
+    }
+}
+
 /// Record function profiling data
 fn record_function_profiling(
     syscall_entry: &Option<SyscallEntry>,
@@ -987,6 +1041,7 @@ fn handle_syscall_exit(
     let in_stats_mode = tracers.stats_tracker.is_some();
     let in_json_mode = tracers.json_output.is_some();
     let in_csv_mode = tracers.csv_output.is_some() || tracers.csv_stats_output.is_some();
+    let in_html_mode = tracers.html_output.is_some();
 
     // Record statistics
     record_stats_for_syscall(
@@ -1009,6 +1064,15 @@ fn handle_syscall_exit(
     record_csv_for_syscall(
         syscall_entry,
         tracers.csv_output.as_mut(),
+        result,
+        timing_mode,
+        duration_us,
+    );
+
+    // Record HTML output
+    record_html_for_syscall(
+        syscall_entry,
+        tracers.html_output.as_mut(),
         result,
         timing_mode,
         duration_us,
@@ -1046,8 +1110,8 @@ fn handle_syscall_exit(
         }
     }
 
-    // Print result if not in statistics, JSON, or CSV mode
-    if syscall_entry.is_some() && !in_stats_mode && !in_json_mode && !in_csv_mode {
+    // Print result if not in statistics, JSON, CSV, or HTML mode
+    if syscall_entry.is_some() && !in_stats_mode && !in_json_mode && !in_csv_mode && !in_html_mode {
         print_syscall_result(result, timing_mode, duration_us);
     }
 
