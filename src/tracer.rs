@@ -111,10 +111,14 @@ struct Tracers {
     anomaly_detector: Option<crate::anomaly::AnomalyDetector>, // Sprint 20
 }
 
-/// Initialize all tracers and profilers based on config
-fn initialize_tracers(config: &TracerConfig) -> Tracers {
-    use crate::cli::OutputFormat;
-
+/// Initialize profiling-related tracers
+fn initialize_profiling_tracers(
+    config: &TracerConfig,
+) -> (
+    Option<crate::profiling::ProfilingContext>,
+    Option<crate::function_profiler::FunctionProfiler>,
+    Option<crate::anomaly::AnomalyDetector>,
+) {
     let profiling_ctx = if config.profile_self {
         Some(crate::profiling::ProfilingContext::new())
     } else {
@@ -127,12 +131,28 @@ fn initialize_tracers(config: &TracerConfig) -> Tracers {
         None
     };
 
-    // Create stats_tracker if statistics mode is enabled OR if ML anomaly analysis is enabled
-    let stats_tracker = if config.statistics_mode || config.ml_anomaly {
-        Some(crate::stats::StatsTracker::new())
+    let anomaly_detector = if config.anomaly_realtime {
+        Some(crate::anomaly::AnomalyDetector::new(
+            config.anomaly_window_size,
+            config.anomaly_threshold,
+        ))
     } else {
         None
     };
+
+    (profiling_ctx, function_profiler, anomaly_detector)
+}
+
+/// Initialize output format tracers (JSON, CSV, HTML)
+fn initialize_output_tracers(
+    config: &TracerConfig,
+) -> (
+    Option<crate::json_output::JsonOutput>,
+    Option<crate::csv_output::CsvOutput>,
+    Option<crate::csv_output::CsvStatsOutput>,
+    Option<crate::html_output::HtmlOutput>,
+) {
+    use crate::cli::OutputFormat;
 
     let json_output = if matches!(config.output_format, OutputFormat::Json) {
         Some(crate::json_output::JsonOutput::new())
@@ -166,11 +186,21 @@ fn initialize_tracers(config: &TracerConfig) -> Tracers {
         None
     };
 
-    let anomaly_detector = if config.anomaly_realtime {
-        Some(crate::anomaly::AnomalyDetector::new(
-            config.anomaly_window_size,
-            config.anomaly_threshold,
-        ))
+    (json_output, csv_output, csv_stats_output, html_output)
+}
+
+/// Initialize all tracers and profilers based on config
+fn initialize_tracers(config: &TracerConfig) -> Tracers {
+    // Initialize profiling tracers
+    let (profiling_ctx, function_profiler, anomaly_detector) = initialize_profiling_tracers(config);
+
+    // Initialize output format tracers
+    let (json_output, csv_output, csv_stats_output, html_output) =
+        initialize_output_tracers(config);
+
+    // Create stats_tracker if statistics mode is enabled OR if ML anomaly analysis is enabled
+    let stats_tracker = if config.statistics_mode || config.ml_anomaly {
+        Some(crate::stats::StatsTracker::new())
     } else {
         None
     };
