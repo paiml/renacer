@@ -435,6 +435,72 @@ fn process_syscall_exit(
     }
 }
 
+/// Print text statistics summary
+fn print_text_stats(
+    stats_tracker: &Option<crate::stats::StatsTracker>,
+    stats_extended: bool,
+    anomaly_threshold: f32,
+) {
+    if let Some(ref tracker) = stats_tracker {
+        tracker.print_summary();
+        if stats_extended {
+            tracker.print_extended_summary(anomaly_threshold);
+        }
+    }
+}
+
+/// Print JSON output
+fn print_json_output(mut output: crate::json_output::JsonOutput, exit_code: i32) {
+    output.set_exit_code(exit_code);
+    match output.to_json() {
+        Ok(json) => println!("{}", json),
+        Err(e) => eprintln!("Failed to serialize JSON: {}", e),
+    }
+}
+
+/// Print CSV statistics output
+fn print_csv_stats(
+    mut csv_stats: crate::csv_output::CsvStatsOutput,
+    stats_tracker: &Option<crate::stats::StatsTracker>,
+    timing_mode: bool,
+    stats_extended: bool,
+    anomaly_threshold: f32,
+) {
+    if let Some(ref tracker) = stats_tracker {
+        for (syscall_name, stats) in tracker.stats_map() {
+            let total_time_us = if timing_mode {
+                Some(stats.total_time_us)
+            } else {
+                None
+            };
+            csv_stats.add_stat(crate::csv_output::CsvStat {
+                syscall: syscall_name.clone(),
+                calls: stats.count,
+                errors: stats.errors,
+                total_time_us,
+            });
+        }
+        if stats_extended {
+            tracker.print_extended_summary(anomaly_threshold);
+        }
+    }
+    print!("{}", csv_stats.to_csv(timing_mode));
+}
+
+/// Print HPU analysis report
+fn print_hpu_analysis(stats_tracker: &Option<crate::stats::StatsTracker>, hpu_cpu_only: bool) {
+    if let Some(ref tracker) = stats_tracker {
+        let mut hpu_data = std::collections::HashMap::new();
+        for (syscall_name, stats) in tracker.stats_map() {
+            let total_time_ns = stats.total_time_us * 1000;
+            hpu_data.insert(syscall_name.clone(), (stats.count, total_time_ns));
+        }
+        let profiler = crate::hpu::HPUProfiler::new(hpu_cpu_only);
+        let report = profiler.analyze(&hpu_data);
+        print!("{}", report.format());
+    }
+}
+
 /// Print all summaries at end of tracing
 fn print_summaries(
     tracers: Tracers,
@@ -455,24 +521,15 @@ fn print_summaries(
         function_profiler,
         anomaly_detector,
     } = tracers;
+
     // Print statistics summary if in statistics mode (text format)
     if stats_tracker.is_some() && csv_stats_output.is_none() {
-        if let Some(ref tracker) = stats_tracker {
-            tracker.print_summary();
-            // Sprint 19: Print extended statistics if requested
-            if stats_extended {
-                tracker.print_extended_summary(anomaly_threshold);
-            }
-        }
+        print_text_stats(&stats_tracker, stats_extended, anomaly_threshold);
     }
 
     // Print JSON output if in JSON mode
-    if let Some(mut output) = json_output {
-        output.set_exit_code(exit_code);
-        match output.to_json() {
-            Ok(json) => println!("{}", json),
-            Err(e) => eprintln!("Failed to serialize JSON: {}", e),
-        }
+    if let Some(output) = json_output {
+        print_json_output(output, exit_code);
     }
 
     // Print CSV output if in CSV mode (normal mode)
@@ -481,27 +538,14 @@ fn print_summaries(
     }
 
     // Print CSV statistics output if in CSV + statistics mode
-    if let Some(mut csv_stats) = csv_stats_output {
-        if let Some(ref tracker) = stats_tracker {
-            // Convert stats_tracker data to CSV format
-            for (syscall_name, stats) in tracker.stats_map() {
-                csv_stats.add_stat(crate::csv_output::CsvStat {
-                    syscall: syscall_name.clone(),
-                    calls: stats.count,
-                    errors: stats.errors,
-                    total_time_us: if timing_mode {
-                        Some(stats.total_time_us)
-                    } else {
-                        None
-                    },
-                });
-            }
-            // Sprint 19: Print extended statistics if requested
-            if stats_extended {
-                tracker.print_extended_summary(anomaly_threshold);
-            }
-        }
-        print!("{}", csv_stats.to_csv(timing_mode));
+    if let Some(csv_stats) = csv_stats_output {
+        print_csv_stats(
+            csv_stats,
+            &stats_tracker,
+            timing_mode,
+            stats_extended,
+            anomaly_threshold,
+        );
     }
 
     // Print HTML output if in HTML mode
@@ -526,20 +570,7 @@ fn print_summaries(
 
     // Sprint 21: HPU-accelerated analysis if enabled
     if hpu_analysis {
-        if let Some(ref tracker) = stats_tracker {
-            // Convert stats to HPU format: HashMap<String, (count, total_time_ns)>
-            let mut hpu_data = std::collections::HashMap::new();
-            for (syscall_name, stats) in tracker.stats_map() {
-                // Convert microseconds to nanoseconds for HPU
-                let total_time_ns = stats.total_time_us * 1000;
-                hpu_data.insert(syscall_name.clone(), (stats.count, total_time_ns));
-            }
-
-            // Run HPU analysis
-            let profiler = crate::hpu::HPUProfiler::new(hpu_cpu_only);
-            let report = profiler.analyze(&hpu_data);
-            print!("{}", report.format());
-        }
+        print_hpu_analysis(&stats_tracker, hpu_cpu_only);
     }
 }
 
