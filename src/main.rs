@@ -18,6 +18,14 @@ fn init_tracing(debug: bool) {
 fn main() -> Result<()> {
     let args = Cli::parse();
 
+    // Validate ml_clusters range (must be >= 2)
+    if args.ml_clusters < 2 {
+        anyhow::bail!(
+            "Invalid value for --ml-clusters: {} (must be >= 2)",
+            args.ml_clusters
+        );
+    }
+
     // Initialize tracing if --debug flag is set
     init_tracing(args.debug);
 
@@ -44,6 +52,9 @@ fn main() -> Result<()> {
         anomaly_window_size: args.anomaly_window_size, // Sprint 20
         hpu_analysis: args.hpu_analysis,           // Sprint 21
         hpu_cpu_only: args.hpu_cpu_only,           // Sprint 21
+        ml_anomaly: args.ml_anomaly,               // Sprint 23
+        ml_clusters: args.ml_clusters,             // Sprint 23
+        ml_compare: args.ml_compare,               // Sprint 23
     };
 
     // Either attach to PID or trace command (mutually exclusive)

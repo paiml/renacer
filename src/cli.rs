@@ -88,6 +88,18 @@ pub struct Cli {
     #[arg(long = "hpu-cpu-only")]
     pub hpu_cpu_only: bool,
 
+    /// Enable ML-based anomaly detection using Aprender (Sprint 23)
+    #[arg(long = "ml-anomaly")]
+    pub ml_anomaly: bool,
+
+    /// Number of clusters for ML anomaly detection (default: 3, min: 2)
+    #[arg(long = "ml-clusters", value_name = "N", default_value = "3")]
+    pub ml_clusters: usize,
+
+    /// Compare ML results with z-score anomaly detection
+    #[arg(long = "ml-compare")]
+    pub ml_compare: bool,
+
     /// Enable debug tracing output to stderr
     #[arg(long = "debug")]
     pub debug: bool,
@@ -226,5 +238,49 @@ mod tests {
         ]);
         assert!(cli.hpu_analysis);
         assert!(cli.hpu_cpu_only);
+    }
+
+    #[test]
+    fn test_cli_ml_anomaly_flag() {
+        let cli = Cli::parse_from(["renacer", "--ml-anomaly", "--", "echo", "test"]);
+        assert!(cli.ml_anomaly);
+        assert!(cli.command.is_some());
+    }
+
+    #[test]
+    fn test_cli_ml_anomaly_default_false() {
+        let cli = Cli::parse_from(["renacer", "--", "echo", "test"]);
+        assert!(!cli.ml_anomaly);
+    }
+
+    #[test]
+    fn test_cli_ml_clusters_default() {
+        let cli = Cli::parse_from(["renacer", "--", "echo", "test"]);
+        assert_eq!(cli.ml_clusters, 3);
+    }
+
+    #[test]
+    fn test_cli_ml_clusters_custom() {
+        let cli = Cli::parse_from(["renacer", "--ml-clusters", "5", "--", "echo", "test"]);
+        assert_eq!(cli.ml_clusters, 5);
+    }
+
+    #[test]
+    fn test_cli_ml_compare_flag() {
+        let cli = Cli::parse_from(["renacer", "--ml-compare", "--", "echo", "test"]);
+        assert!(cli.ml_compare);
+    }
+
+    #[test]
+    fn test_cli_ml_compare_default_false() {
+        let cli = Cli::parse_from(["renacer", "--", "echo", "test"]);
+        assert!(!cli.ml_compare);
+    }
+
+    #[test]
+    fn test_cli_ml_anomaly_with_statistics() {
+        let cli = Cli::parse_from(["renacer", "-c", "--ml-anomaly", "--", "echo", "test"]);
+        assert!(cli.statistics);
+        assert!(cli.ml_anomaly);
     }
 }

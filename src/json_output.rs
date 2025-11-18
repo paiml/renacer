@@ -30,6 +30,28 @@ pub struct JsonSyscall {
     pub source: Option<JsonSourceLocation>,
 }
 
+/// ML Anomaly Analysis result (Sprint 23)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct JsonMlAnalysis {
+    /// Number of clusters used
+    pub clusters: usize,
+    /// Silhouette score for clustering quality (-1 to 1)
+    pub silhouette_score: f64,
+    /// List of detected anomalies
+    pub anomalies: Vec<JsonMlAnomaly>,
+}
+
+/// A detected ML anomaly
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct JsonMlAnomaly {
+    /// Syscall name
+    pub syscall: String,
+    /// Average time in microseconds
+    pub avg_time_us: f64,
+    /// Cluster assignment
+    pub cluster: usize,
+}
+
 /// Summary statistics for the trace
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JsonSummary {
@@ -53,6 +75,9 @@ pub struct JsonOutput {
     pub syscalls: Vec<JsonSyscall>,
     /// Summary statistics
     pub summary: JsonSummary,
+    /// ML anomaly analysis results (if --ml-anomaly enabled)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ml_analysis: Option<JsonMlAnalysis>,
 }
 
 impl JsonOutput {
@@ -67,6 +92,7 @@ impl JsonOutput {
                 total_time_us: None,
                 exit_code: 0,
             },
+            ml_analysis: None,
         }
     }
 
@@ -82,6 +108,25 @@ impl JsonOutput {
     /// Set the exit code
     pub fn set_exit_code(&mut self, code: i32) {
         self.summary.exit_code = code;
+    }
+
+    /// Set ML analysis results (Sprint 23)
+    pub fn set_ml_analysis(&mut self, report: crate::ml_anomaly::MlAnomalyReport) {
+        let anomalies = report
+            .anomalies
+            .iter()
+            .map(|a| JsonMlAnomaly {
+                syscall: a.syscall.clone(),
+                avg_time_us: a.avg_time_us,
+                cluster: a.cluster,
+            })
+            .collect();
+
+        self.ml_analysis = Some(JsonMlAnalysis {
+            clusters: report.num_clusters,
+            silhouette_score: report.silhouette_score,
+            anomalies,
+        });
     }
 
     /// Serialize to JSON string
