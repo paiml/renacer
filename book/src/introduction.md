@@ -1,0 +1,85 @@
+# Introduction
+
+Welcome to **Renacer** (Spanish: "to be reborn"), a next-generation pure Rust system call tracer with source-aware correlation for Rust binaries.
+
+## What is Renacer?
+
+Renacer is a binary inspection and tracing framework that allows you to observe and analyze system calls made by programs. Unlike traditional tools like `strace`, Renacer provides:
+
+- **Pure Rust implementation** - Type-safe, memory-safe tracing
+- **DWARF debug info correlation** - See which source file and line triggered each syscall
+- **Function-level profiling** - Understand I/O bottlenecks and hot paths
+- **Advanced filtering** - Powerful syscall selection with regex patterns and negation
+- **Statistical analysis** - SIMD-accelerated percentile analysis and anomaly detection
+- **Multiple output formats** - JSON, CSV, HTML for integration with other tools
+
+## Why Renacer?
+
+**For Developers:**
+- Debug performance issues by seeing exactly which functions cause slow I/O
+- Understand your program's system-level behavior
+- Correlate syscalls with source code locations
+
+**For DevOps:**
+- Monitor production processes with minimal overhead (5-9% vs strace's 8-12%)
+- Detect anomalies in real-time with configurable thresholds
+- Export traces to JSON/CSV for integration with monitoring systems
+
+**For Security Researchers:**
+- Observe program behavior at the syscall level
+- Trace multi-process applications with fork/clone tracking
+- Analyze syscall patterns with HPU-accelerated correlation matrices
+
+## Current Status
+
+**Version:** 0.3.2
+**Status:** Production-Ready
+**Test Coverage:** 290+ tests (all passing)
+**TDG Score:** 99.9/100 (A+ grade)
+
+Renacer is built following Toyota Way principles and EXTREME TDD methodology, ensuring every feature is thoroughly tested and production-ready.
+
+## Quick Example
+
+```bash
+# Basic syscall tracing
+$ renacer -- ls -la
+openat(AT_FDCWD, "/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 3
+openat(AT_FDCWD, ".", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 3
+getdents64(3, [...], 32768) = 1024
+write(1, "total 128\n", 10) = 10
+...
+
+# With source correlation (requires debug symbols)
+$ renacer --source -- ./my-program
+read(3, buf, 1024) = 42          [src/main.rs:15 in my_function]
+write(1, "result", 6) = 6        [src/main.rs:20 in my_function]
+...
+
+# Function profiling with I/O bottleneck detection
+$ renacer --function-time --source -- cargo test
+Function Profiling Summary:
+========================
+Top 10 Hot Paths (by total time):
+  1. cargo::build_script  - 45.2% (1.2s, 67 syscalls) ⚠️ SLOW I/O
+  2. rustc::compile       - 32.1% (850ms, 45 syscalls)
+  ...
+```
+
+## Who Built Renacer?
+
+Renacer is developed by [Pragmatic AI Labs](https://paiml.com) using:
+- **Toyota Way** quality principles
+- **EXTREME TDD** methodology (every feature test-driven)
+- **Zero tolerance** for defects (all 290+ tests pass, zero warnings)
+- **Property-based testing** (670+ test cases via proptest)
+- **Mutation testing** (80%+ mutation score via cargo-mutants)
+
+## Next Steps
+
+- **New to Renacer?** Start with [Quick Start](./getting-started/quick-start.md)
+- **Want to understand concepts?** Read [Core Concepts](./core-concepts/syscall-tracing.md)
+- **Ready for advanced features?** Explore [Function Profiling](./advanced/function-profiling.md) or [Anomaly Detection](./advanced/anomaly-detection.md)
+- **Contributing?** See [EXTREME TDD](./contributing/extreme-tdd.md) methodology
+
+Let's get started!

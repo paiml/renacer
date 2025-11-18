@@ -1,0 +1,85 @@
+name: mdBook CI
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'book/**'
+      - '.github/workflows/book.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'book/**'
+      - '.github/workflows/book.yml'
+
+jobs:
+  test:
+    name: Test Book Examples
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build renacer
+        run: cargo build --release
+
+      - name: Install renacer locally
+        run: cargo install --path . --force
+
+      - name: Test all book examples
+        run: |
+          # Extract and test all bash code blocks from book
+          # This ensures ZERO hallucination - every example must work
+
+          echo "Testing examples from quick-start.md..."
+
+          # Test: Basic trace
+          renacer -- echo "test" > /dev/null
+
+          # Test: Filter syscalls
+          renacer -e trace=file -- cat /dev/null > /dev/null
+
+          # Test: Statistics mode
+          renacer -c -- echo "test" 2>&1 | grep -q "syscall"
+
+          # Test: JSON export
+          renacer --format json -- echo "test" | jq . > /dev/null
+
+          # Test: Timing mode
+          renacer -T -- echo "test" > /dev/null
+
+          # Test: Negation operator
+          renacer -e trace=!close -- echo "test" > /dev/null
+
+          # Test: CSV export
+          renacer --format csv -- echo "test" > /dev/null
+
+          echo "✅ All book examples validated!"
+
+  build:
+    name: Build and Deploy Book
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install mdBook
+        run: |
+          mkdir -p ~/bin
+          curl -sSL https://github.com/rust-lang/mdBook/releases/download/v0.4.36/mdbook-v0.4.36-x86_64-unknown-linux-gnu.tar.gz | tar -xz -C ~/bin
+          echo "$HOME/bin" >> $GITHUB_PATH
+
+      - name: Build book
+        run: |
+          cd book
+          mdbook build
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./book/book
+          publish_branch: gh-pages

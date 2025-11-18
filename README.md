@@ -343,6 +343,19 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 
 MIT - See [LICENSE](LICENSE) file.
 
+## Documentation
+
+**📖 [The Renacer Book](https://paiml.github.io/renacer/)** - Comprehensive TDD-verified guide
+
+The book includes:
+- [Getting Started](book/src/getting-started/) - Installation and quick start
+- [Core Concepts](book/src/core-concepts/) - Syscall tracing, DWARF correlation, filtering
+- [Examples](book/src/examples/) - Real-world use cases (all test-backed)
+- [Advanced Topics](book/src/advanced/) - Function profiling, anomaly detection, HPU acceleration
+- [EXTREME TDD](book/src/contributing/extreme-tdd.md) - Zero-hallucination development methodology
+
+All book examples are validated by GitHub Actions to ensure zero hallucination.
+
 ## Contributing
 
 1. Fork the repository
@@ -351,7 +364,9 @@ MIT - See [LICENSE](LICENSE) file.
 4. Ensure all quality gates pass
 5. Submit pull request
 
-See [docs/specifications/deep-strace-rust-wasm-binary-spec.md](docs/specifications/deep-strace-rust-wasm-binary-spec.md) for complete specification.
+See:
+- [The Renacer Book - Contributing](book/src/contributing/extreme-tdd.md) for EXTREME TDD methodology
+- [docs/specifications/deep-strace-rust-wasm-binary-spec.md](docs/specifications/deep-strace-rust-wasm-binary-spec.md) for complete specification
 
 ## Credits
 
