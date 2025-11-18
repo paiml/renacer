@@ -26,7 +26,7 @@ int main() {
     }
 
     // Simulate slow I/O (anomaly)
-    struct timespec ts = {0, 10000000};  // 10ms sleep
+    struct timespec ts = {0, 50000000};  // 50ms sleep (increased for test stability)
     nanosleep(&ts, NULL);
     write(1, "slow", 4);
 
