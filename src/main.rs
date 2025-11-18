@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
-use renacer::{cli::Cli, filter, tracer};
+use renacer::{cli::Cli, filter, tracer, transpiler_map};
 use tracing_subscriber::EnvFilter;
 
 /// Initialize tracing subscriber for debug output
@@ -28,6 +28,13 @@ fn main() -> Result<()> {
 
     // Initialize tracing if --debug flag is set
     init_tracing(args.debug);
+
+    // Load transpiler source map if provided (Sprint 24)
+    let _source_map = if let Some(map_path) = &args.transpiler_map {
+        Some(transpiler_map::TranspilerMap::from_file(map_path)?)
+    } else {
+        None
+    };
 
     // Parse filter expression if provided
     let filter = if let Some(expr) = args.filter {

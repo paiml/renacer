@@ -19,3 +19,4 @@ pub mod stack_unwind;
 pub mod stats;
 pub mod syscalls;
 pub mod tracer;
+pub mod transpiler_map;
