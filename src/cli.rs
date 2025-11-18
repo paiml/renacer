@@ -100,6 +100,10 @@ pub struct Cli {
     #[arg(long = "ml-compare")]
     pub ml_compare: bool,
 
+    /// Path to transpiler source map JSON file (Sprint 24)
+    #[arg(long = "transpiler-map", value_name = "FILE")]
+    pub transpiler_map: Option<String>,
+
     /// Enable debug tracing output to stderr
     #[arg(long = "debug")]
     pub debug: bool,
