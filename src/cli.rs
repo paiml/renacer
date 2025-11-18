@@ -104,6 +104,10 @@ pub struct Cli {
     #[arg(long = "transpiler-map", value_name = "FILE")]
     pub transpiler_map: Option<String>,
 
+    /// Show verbose transpiler context (Python/Rust correlation) (Sprint 25)
+    #[arg(long = "show-transpiler-context")]
+    pub show_transpiler_context: bool,
+
     /// Enable debug tracing output to stderr
     #[arg(long = "debug")]
     pub debug: bool,
@@ -286,5 +290,53 @@ mod tests {
         let cli = Cli::parse_from(["renacer", "-c", "--ml-anomaly", "--", "echo", "test"]);
         assert!(cli.statistics);
         assert!(cli.ml_anomaly);
+    }
+
+    #[test]
+    fn test_cli_transpiler_map_flag() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "--transpiler-map",
+            "test.sourcemap.json",
+            "--",
+            "echo",
+            "test",
+        ]);
+        assert_eq!(cli.transpiler_map.as_deref(), Some("test.sourcemap.json"));
+    }
+
+    #[test]
+    fn test_cli_transpiler_map_default_none() {
+        let cli = Cli::parse_from(["renacer", "--", "echo", "test"]);
+        assert!(cli.transpiler_map.is_none());
+    }
+
+    #[test]
+    fn test_cli_show_transpiler_context_flag() {
+        let cli = Cli::parse_from(["renacer", "--show-transpiler-context", "--", "echo", "test"]);
+        assert!(cli.show_transpiler_context);
+    }
+
+    #[test]
+    fn test_cli_show_transpiler_context_default_false() {
+        let cli = Cli::parse_from(["renacer", "--", "echo", "test"]);
+        assert!(!cli.show_transpiler_context);
+    }
+
+    #[test]
+    fn test_cli_transpiler_map_with_function_time() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "--transpiler-map",
+            "map.json",
+            "--function-time",
+            "--show-transpiler-context",
+            "--",
+            "echo",
+            "test",
+        ]);
+        assert!(cli.transpiler_map.is_some());
+        assert!(cli.function_time);
+        assert!(cli.show_transpiler_context);
     }
 }
