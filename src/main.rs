@@ -98,6 +98,42 @@ fn main() -> Result<()> {
         }
     }
 
+    // Sprint 27: Print error correlation info when using --rewrite-errors with source map
+    if let (true, Some(ref map)) = (args.rewrite_errors, &source_map) {
+        // Print error mapping header
+        if args.show_transpiler_context {
+            println!("=== Error Correlation Mapping ===");
+            println!(
+                "Errors in {} will map to {}",
+                map.generated_file().display(),
+                map.source_file().display()
+            );
+            println!();
+        }
+
+        // Print line mappings available for error correlation
+        if !map.mappings.is_empty() {
+            if args.show_transpiler_context {
+                println!("Available Line Mappings ({} entries):", map.mappings.len());
+                println!("─────────────────────────────────────────");
+            }
+            for mapping in &map.mappings {
+                println!(
+                    "  {}:{} -> {}:{} ({})",
+                    map.generated_file().display(),
+                    mapping.rust_line,
+                    map.source_file().display(),
+                    mapping.python_line,
+                    mapping.python_function
+                );
+            }
+            if args.show_transpiler_context {
+                println!("─────────────────────────────────────────");
+                println!();
+            }
+        }
+    }
+
     // Parse filter expression if provided
     let filter = if let Some(expr) = args.filter {
         filter::SyscallFilter::from_expr(&expr)?
