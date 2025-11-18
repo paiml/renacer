@@ -1,6 +1,11 @@
-// Transpiler Source Map Support (Sprint 24)
+// Transpiler Source Map Support (Sprint 24, extended Sprint 28)
 //
-// Parse and manage source maps for transpiled code (Python→Rust, TypeScript→Rust, etc.)
+// Parse and manage source maps for transpiled code:
+// - Python→Rust (Depyler)
+// - C→Rust (Decy)
+// - TypeScript→Rust
+// - Any other source language
+//
 // Enables mapping Rust line numbers/functions back to original source language
 
 use anyhow::{bail, Context, Result};
@@ -319,5 +324,49 @@ mod tests {
         assert_eq!(map.generated_file(), Path::new("app.rs"));
         assert_eq!(map.mapping_count(), 1);
         assert_eq!(map.function_mapping_count(), 1);
+    }
+
+    #[test]
+    fn test_c_source_language_decy() {
+        // Test Decy (C→Rust) transpiler source maps
+        let map_json = r#"{
+            "version": 1,
+            "source_language": "c",
+            "source_file": "algorithm.c",
+            "generated_file": "algorithm.rs",
+            "mappings": [
+                {
+                    "rust_line": 45,
+                    "rust_function": "sort_array",
+                    "python_line": 23,
+                    "python_function": "sort_array",
+                    "python_context": "for (int i = 0; i < n; i++)"
+                }
+            ],
+            "function_map": {
+                "sort_array": "sort_array",
+                "_decy_temp_0": "temporary: sizeof(struct data)"
+            }
+        }"#;
+
+        let temp_file = create_temp_source_map(map_json);
+        let map = TranspilerMap::from_file(temp_file.path()).unwrap();
+
+        assert_eq!(map.source_language(), "c");
+        assert_eq!(map.source_file(), Path::new("algorithm.c"));
+        assert_eq!(map.generated_file(), Path::new("algorithm.rs"));
+        assert_eq!(map.mapping_count(), 1);
+        assert_eq!(map.function_mapping_count(), 2);
+
+        // Verify mapping lookup works for C source
+        let mapping = map.lookup_line(45).unwrap();
+        assert_eq!(mapping.python_line, 23);
+        assert_eq!(mapping.python_function, "sort_array");
+
+        // Verify function lookup for Decy temp variables
+        assert_eq!(
+            map.lookup_function("_decy_temp_0").unwrap(),
+            "temporary: sizeof(struct data)"
+        );
     }
 }
