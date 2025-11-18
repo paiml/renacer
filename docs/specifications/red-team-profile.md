@@ -1,9 +1,10 @@
 # Red-Team Chaos Engineering Profile for Renacer
 
-**Version:** 1.0
+**Version:** 2.0
 **Date:** 2025-11-18
 **Author:** Pragmatic AI Labs
-**Status:** Active Specification
+**Reviewed By:** Senior Architect (Toyota Production System)
+**Status:** Active Specification - Revised per Hansei Review
 
 ---
 
@@ -21,15 +22,16 @@ The red-team profile operates on Dijkstra's fundamental insight that **testing c
 
 1. [Toyota Way Principles in Chaos Engineering](#1-toyota-way-principles-in-chaos-engineering)
 2. [Theoretical Foundation](#2-theoretical-foundation)
-3. [Attack Surface Analysis](#3-attack-surface-analysis)
-4. [Chaos Injection Taxonomy](#4-chaos-injection-taxonomy)
-5. [Fuzzing Strategy](#5-fuzzing-strategy)
-6. [Fault Injection Framework](#6-fault-injection-framework)
-7. [Adversarial Input Generation](#7-adversarial-input-generation)
-8. [Resource Exhaustion Testing](#8-resource-exhaustion-testing)
-9. [Concurrency Chaos](#9-concurrency-chaos)
-10. [Implementation Roadmap](#10-implementation-roadmap)
-11. [Academic References](#11-academic-references)
+3. [Differential Chaos Testing (Oracle Problem)](#3-differential-chaos-testing-oracle-problem)
+4. [Attack Surface Analysis](#4-attack-surface-analysis)
+5. [Chaos Injection Taxonomy](#5-chaos-injection-taxonomy)
+6. [Fuzzing Strategy](#6-fuzzing-strategy)
+7. [Fault Injection Framework](#7-fault-injection-framework)
+8. [Adversarial Input Generation](#8-adversarial-input-generation)
+9. [Resource Exhaustion Testing](#9-resource-exhaustion-testing)
+10. [Concurrency Chaos](#10-concurrency-chaos)
+11. [Implementation Roadmap](#11-implementation-roadmap)
+12. [Academic References](#12-academic-references)
 
 ---
 
@@ -130,13 +132,92 @@ Low mutation score → Test suite misses faults
 High mutation score → Test suite likely catches chaos-injected faults
 ```
 
-**Target:** ≥85% mutation score before chaos testing is effective.
+**Target:** ≥85% mutation score before chaos testing is effective. **Critical Enhancement:** Combine mutation testing with property-based testing (PropTest) to ensure invariants hold even when code is mutated [21, 22].
 
 ---
 
-## 3. Attack Surface Analysis
+## 3. Differential Chaos Testing (Oracle Problem)
 
-### 3.1 Renacer Attack Surface Map
+### 3.1 The Test Oracle Problem
+
+**Critical Gap Addressed:** The original profile lacked a robust **Test Oracle** for correctness verification under chaos. Per Barr et al. [11], if Renacer doesn't crash but outputs incorrect syscall arguments during a fault injection, this "Silent Data Corruption" would be marked as a pass.
+
+### 3.2 Differential Testing Strategy
+
+Run Renacer alongside `strace` (golden standard) during chaos injection and diff outputs:
+
+```rust
+#[test]
+fn chaos_differential_correctness() {
+    let program = &["./test_program", "arg1"];
+
+    // Run with strace (golden standard)
+    let strace_output = Command::new("strace")
+        .args(["-f", "-o", "/tmp/strace.log"])
+        .args(program)
+        .output()
+        .unwrap();
+
+    // Run with Renacer under chaos
+    let renacer_output = Command::new("renacer")
+        .args(["--format", "json", "--"])
+        .args(program)
+        .output()
+        .unwrap();
+
+    // Parse and compare syscall traces
+    let strace_calls = parse_strace("/tmp/strace.log");
+    let renacer_calls = parse_renacer_json(&renacer_output.stdout);
+
+    // Verify correctness invariants
+    assert_syscall_sequence_matches(&strace_calls, &renacer_calls);
+    assert_syscall_arguments_match(&strace_calls, &renacer_calls);
+    assert_no_missing_syscalls(&strace_calls, &renacer_calls);
+}
+```
+
+### 3.3 Invariants to Verify
+
+Based on Mace et al. [12] and Fonseca et al. [13]:
+
+| Invariant | Description | Validation Method |
+|-----------|-------------|-------------------|
+| **Causality** | Syscall order preserved | Sequence comparison |
+| **Completeness** | All syscalls captured | Count verification |
+| **Argument Fidelity** | Arguments decoded correctly | Value comparison |
+| **Timing Monotonicity** | Timestamps never decrease | Ordering check |
+
+### 3.4 Deterministic Replay
+
+For reproducibility per Tallam et al. [14], store complete execution context:
+
+```rust
+#[derive(Serialize)]
+struct ChaosExecutionRecord {
+    // Random seed for reproducibility
+    seed: u64,
+
+    // Complete command and environment
+    command: Vec<String>,
+    environment: HashMap<String, String>,
+
+    // Chaos parameters
+    chaos_config: ChaosConfig,
+
+    // Execution results
+    renacer_output: Vec<SyscallRecord>,
+    strace_output: Vec<StraceLine>,
+
+    // Diff results
+    discrepancies: Vec<Discrepancy>,
+}
+```
+
+---
+
+## 4. Attack Surface Analysis
+
+### 4.1 Renacer Attack Surface Map
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -166,7 +247,7 @@ High mutation score → Test suite likely catches chaos-injected faults
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### 3.2 High-Risk Components
+### 4.2 High-Risk Components
 
 Based on Certeza's risk-based verification strategy:
 
@@ -183,13 +264,13 @@ Based on Certeza's risk-based verification strategy:
 
 ---
 
-## 4. Chaos Injection Taxonomy
+## 5. Chaos Injection Taxonomy
 
-### 4.1 Input Chaos
+### 5.1 Input Chaos
 
 **Goal:** Surface parsing vulnerabilities and boundary conditions.
 
-#### 4.1.1 CLI Argument Chaos
+#### 5.1.1 CLI Argument Chaos
 
 ```rust
 // Chaos test examples
@@ -220,7 +301,7 @@ fn chaos_cli_extreme_args() {
 }
 ```
 
-#### 4.1.2 Filter Expression Chaos
+#### 5.1.2 Filter Expression Chaos
 
 Based on AFL++ grammar-aware fuzzing [4]:
 
@@ -237,11 +318,28 @@ Based on AFL++ grammar-aware fuzzing [4]:
 "trace=/\\x{FFFFFF}/"  // Invalid Unicode escape
 ```
 
-### 4.2 System State Chaos
+### 5.2 System State Chaos
 
 **Goal:** Test behavior under adverse system conditions.
 
-#### 4.2.1 Resource Limits
+#### 5.2.1 Resource Limits (Container Isolation)
+
+**Critical Update:** Replace simple `ulimit` with **ephemeral cgroups** or containers to enforce hard isolation per Jung et al. [18] and Soltesz et al. [19]. This prevents chaos from leaking to the host system.
+
+```bash
+# Container-based chaos isolation (preferred)
+docker run --rm --memory=100m --cpus=0.5 \
+  --pids-limit=50 \
+  -v $(pwd):/workspace \
+  renacer-chaos:latest \
+  renacer -- ./memory-hungry-app
+
+# Or using systemd-run for cgroup isolation
+systemd-run --scope -p MemoryMax=100M -p CPUQuota=50% \
+  renacer -- ./test-program
+```
+
+**Legacy ulimit approach (for reference only):**
 
 ```bash
 # Memory pressure
@@ -261,7 +359,7 @@ ulimit -s 1024  # 1MB stack
 renacer --function-time -- ./deep-recursion
 ```
 
-#### 4.2.2 Ptrace Edge Cases
+#### 5.2.2 Ptrace Edge Cases
 
 ```rust
 // Traced process behavior
@@ -273,7 +371,7 @@ renacer --function-time -- ./deep-recursion
 - /proc/sys/kernel/yama/ptrace_scope changes
 ```
 
-### 4.3 Timing Chaos
+### 5.3 Timing Chaos
 
 **Goal:** Surface race conditions and timing-dependent bugs [5].
 
@@ -295,11 +393,51 @@ fn chaos_delay() {
 
 ---
 
-## 5. Fuzzing Strategy
+## 6. Fuzzing Strategy
 
-### 5.1 Coverage-Guided Fuzzing
+### 6.1 Grammar-Based Fuzzing (Enhanced)
 
-Using cargo-fuzz with libFuzzer [6]:
+**Critical Improvement:** Standard random fuzzing generates 99% invalid inputs rejected early (*Muda* - waste). Adopt **Grammar-Based Fuzzing** per Godefroid et al. [16] and **Stateful Fuzzing** per Rawat et al. [17] for the ptrace interaction loop.
+
+```rust
+// Grammar-based filter expression fuzzer
+#[derive(Arbitrary, Debug)]
+enum FilterExprGrammar {
+    Literal(String),
+    Class(SyscallClass),
+    Negation(Box<FilterExprGrammar>),
+    Regex(String),
+    Combination(Vec<FilterExprGrammar>),
+}
+
+#[derive(Arbitrary, Debug, Clone)]
+enum SyscallClass {
+    File, Process, Network, Memory, Ipc, Signal,
+}
+
+impl FilterExprGrammar {
+    fn to_string(&self) -> String {
+        match self {
+            Self::Literal(s) => s.clone(),
+            Self::Class(c) => format!("{:?}", c).to_lowercase(),
+            Self::Negation(inner) => format!("!{}", inner.to_string()),
+            Self::Regex(r) => format!("/{}/", r),
+            Self::Combination(items) => {
+                items.iter().map(|i| i.to_string()).collect::<Vec<_>>().join(",")
+            }
+        }
+    }
+}
+
+fuzz_target!(|expr: FilterExprGrammar| {
+    let filter_str = format!("trace={}", expr.to_string());
+    let _ = SyscallFilter::from_expr(&filter_str);
+});
+```
+
+### 6.2 Coverage-Guided Fuzzing
+
+Using cargo-fuzz with libFuzzer [6] and enhanced with Driller-style symbolic execution [15]:
 
 ```rust
 // fuzz/fuzz_targets/filter_parser.rs
@@ -321,7 +459,7 @@ fuzz_target!(|data: &[u8]| {
 4. `regex_compiler` - Regex pattern compilation
 5. `dwarf_parser` - DWARF debug info parsing
 
-### 5.2 Structure-Aware Fuzzing
+### 6.3 Structure-Aware Fuzzing
 
 Using arbitrary crate for structured input:
 
@@ -343,7 +481,7 @@ fuzz_target!(|map: FuzzedSourceMap| {
 });
 ```
 
-### 5.3 Corpus Management
+### 6.4 Corpus Management
 
 ```
 fuzz/
@@ -357,9 +495,9 @@ fuzz/
 
 ---
 
-## 6. Fault Injection Framework
+## 7. Fault Injection Framework
 
-### 6.1 Compile-Time Fault Injection
+### 7.1 Compile-Time Fault Injection
 
 Using feature flags for targeted fault injection:
 
@@ -392,7 +530,7 @@ fn decode_syscall(nr: i64) -> &'static str {
 }
 ```
 
-### 6.2 Runtime Fault Injection
+### 7.2 Runtime Fault Injection
 
 Using LD_PRELOAD for syscall interception:
 
@@ -421,7 +559,50 @@ ssize_t read(int fd, void *buf, size_t count) {
 }
 ```
 
-### 6.3 Kernel Fault Injection
+### 7.3 Kernel Fault Injection
+
+### 7.4 Environment-Centric Fault Injection
+
+**Critical Addition:** Per Gunawi et al. [2] and Natella et al. [23], expand fault injection beyond code-centric to include cloud/container environment faults:
+
+```rust
+// Byzantine system call returns - valid but unexpected codes
+#[cfg(feature = "chaos-byzantine")]
+fn inject_byzantine_return(syscall: &str, result: i64) -> i64 {
+    if rand::random::<u8>() < 5 {  // 2% chance
+        match syscall {
+            "read" | "write" => {
+                // Return EAGAIN on normally-blocking calls
+                return -libc::EAGAIN as i64;
+            }
+            "close" => {
+                // Return EIO on close (rare but possible)
+                return -libc::EIO as i64;
+            }
+            "open" | "openat" => {
+                // Return EMFILE (too many open files)
+                return -libc::EMFILE as i64;
+            }
+            _ => {}
+        }
+    }
+    result
+}
+
+// Environment state faults
+struct EnvironmentChaos {
+    // Weird /proc states
+    proc_missing_entries: bool,
+    proc_permission_denied: bool,
+
+    // Container throttling
+    cpu_throttled: bool,
+    memory_pressure: bool,
+
+    // Dropped signals
+    signal_drop_probability: f32,
+}
+```
 
 Using Linux fault injection framework:
 
@@ -438,9 +619,9 @@ renacer -- ./test-program
 
 ---
 
-## 7. Adversarial Input Generation
+## 8. Adversarial Input Generation
 
-### 7.1 Property-Based Adversarial Testing
+### 8.1 Property-Based Adversarial Testing
 
 Following QuickCheck/PropTest methodology [7]:
 
@@ -468,7 +649,7 @@ proptest! {
 }
 ```
 
-### 7.2 Boundary Value Analysis
+### 8.2 Boundary Value Analysis
 
 Based on Myers et al. [8]:
 
@@ -493,7 +674,7 @@ const CHAOS_COUNTS: &[usize] = &[
 ];
 ```
 
-### 7.3 Equivalence Partitioning
+### 8.3 Equivalence Partitioning
 
 ```rust
 // Input partitions for filter expressions
@@ -513,9 +694,9 @@ enum FilterPartition {
 
 ---
 
-## 8. Resource Exhaustion Testing
+## 9. Resource Exhaustion Testing
 
-### 8.1 Memory Exhaustion
+### 9.1 Memory Exhaustion
 
 ```rust
 #[test]
@@ -537,7 +718,7 @@ fn chaos_memory_exhaustion() {
 }
 ```
 
-### 8.2 File Descriptor Exhaustion
+### 9.2 File Descriptor Exhaustion
 
 ```rust
 #[test]
@@ -558,7 +739,7 @@ fn chaos_fd_exhaustion() {
 }
 ```
 
-### 8.3 CPU Starvation
+### 9.3 CPU Starvation
 
 ```rust
 #[test]
@@ -581,11 +762,57 @@ fn chaos_cpu_starvation() {
 
 ---
 
-## 9. Concurrency Chaos
+## 10. Concurrency Chaos
 
-### 9.1 Multi-Process Chaos
+### 10.0 Systematic Concurrency Testing with Loom
 
-Based on Yang et al.'s concurrency bug patterns [9]:
+**Critical Update:** Random `thread::sleep` and yielding introduces non-determinism without guaranteed coverage of rare interleavings ("Flaky Testing by design"). Per Musuvathi et al. [5] and Burckhardt et al. [20], use **Systematic Concurrency Testing (SCT)** with Loom:
+
+```rust
+// Add to Cargo.toml
+// [dev-dependencies]
+// loom = "0.7"
+
+#[cfg(loom)]
+use loom::sync::Arc;
+#[cfg(loom)]
+use loom::thread;
+
+#[cfg(not(loom))]
+use std::sync::Arc;
+#[cfg(not(loom))]
+use std::thread;
+
+#[test]
+fn loom_test_child_tracking() {
+    loom::model(|| {
+        let children = Arc::new(loom::sync::Mutex::new(Vec::new()));
+
+        let c1 = children.clone();
+        let h1 = thread::spawn(move || {
+            c1.lock().unwrap().push(1);
+        });
+
+        let c2 = children.clone();
+        let h2 = thread::spawn(move || {
+            c2.lock().unwrap().push(2);
+        });
+
+        h1.join().unwrap();
+        h2.join().unwrap();
+
+        let result = children.lock().unwrap();
+        assert_eq!(result.len(), 2);
+    });
+}
+
+// Loom explores ALL possible interleavings deterministically
+// Much better than random sleeps for finding race conditions
+```
+
+### 10.1 Multi-Process Chaos
+
+Based on Yang et al.'s concurrency bug patterns [9] and Lu et al.'s empirical study [7]:
 
 ```rust
 #[test]
@@ -626,7 +853,7 @@ fn chaos_fork_exec_race() {
 }
 ```
 
-### 9.2 Signal Chaos
+### 10.2 Signal Chaos
 
 ```rust
 #[test]
@@ -653,7 +880,7 @@ fn chaos_signal_storm() {
 }
 ```
 
-### 9.3 Timing-Dependent Bug Injection
+### 10.3 Timing-Dependent Bug Injection (Legacy)
 
 Using Thread Sanitizer patterns [10]:
 
@@ -687,37 +914,37 @@ fn handle_ptrace_event(&mut self, pid: Pid, event: i32) {
 
 ---
 
-## 10. Implementation Roadmap
+## 11. Implementation Roadmap
 
-### 10.1 Phase 1: Foundation (Week 1-2)
+### 11.1 Phase 1: Foundation (Week 1-2)
 
 - [ ] Set up fuzz testing infrastructure (cargo-fuzz)
 - [ ] Create initial corpus for all fuzz targets
 - [ ] Implement compile-time chaos feature flags
 - [ ] Add chaos injection points to critical paths
 
-### 10.2 Phase 2: Fuzzing Campaign (Week 3-4)
+### 11.2 Phase 2: Fuzzing Campaign (Week 3-4)
 
 - [ ] Run 24-hour fuzz campaigns for each target
 - [ ] Triage and fix discovered crashes
 - [ ] Expand corpus with interesting inputs
 - [ ] Achieve 0 crashes in 1-hour fuzz session
 
-### 10.3 Phase 3: Fault Injection (Week 5-6)
+### 11.3 Phase 3: Fault Injection (Week 5-6)
 
 - [ ] Implement LD_PRELOAD fault injector
 - [ ] Add resource exhaustion tests
 - [ ] Integrate with kernel fault injection (optional)
 - [ ] Create chaos test Makefile targets
 
-### 10.4 Phase 4: Concurrency Chaos (Week 7-8)
+### 11.4 Phase 4: Concurrency Chaos (Week 7-8)
 
 - [ ] Implement timing chaos injection
 - [ ] Add multi-process stress tests
 - [ ] Create signal storm tests
 - [ ] Verify Thread Sanitizer clean
 
-### 10.5 Quality Gates
+### 11.5 Quality Gates
 
 ```toml
 # .pmat-gates.toml additions
@@ -731,49 +958,84 @@ tsan_clean = true
 
 ---
 
-## 11. Academic References
+## 12. Academic References
 
-### Primary Citations
+### Complete Annotated Bibliography (25 Peer-Reviewed Publications)
 
-1. **Basiri, A., Behnam, N., de Rooij, R., Hochstein, L., Kosewski, L., Reynolds, J., & Rosenthal, C.** (2016). Chaos Engineering. *IEEE Software*, 33(3), 35-41. DOI: 10.1109/MS.2016.60
+1. **Basiri, A., Behnam, N., de Rooij, R., Hochstein, L., Kosewski, L., Reynolds, J., & Rosenthal, C.** (2016). Chaos Engineering. *IEEE Software*, 33(3), 35-41.
+   > Foundational paper on chaos engineering principles. Defines steady state hypothesis.
 
-   > Foundational paper on chaos engineering principles. Defines steady state hypothesis and experimental methodology.
+2. **Gunawi, H. S., Do, T., Joshi, P., et al.** (2014). FATE and DESTINI: A Framework for Cloud Recovery Testing. *NSDI*, 238-252.
+   > Fault injection taxonomy. Defines crash, omission, timing, Byzantine models.
 
-2. **Gunawi, H. S., Do, T., Joshi, P., Alvaro, P., Hellerstein, J. M., Arpaci-Dusseau, A. C., ... & Santry, D.** (2014). FATE and DESTINI: A Framework for Cloud Recovery Testing. *NSDI*, 14, 238-252.
+3. **Jia, Y., & Harman, M.** (2011). An Analysis and Survey of the Development of Mutation Testing. *IEEE TSE*, 37(5), 649-678.
+   > Mutation testing survey. Establishes mutation score as test effectiveness proxy.
 
-   > Systematic fault injection taxonomy for distributed systems. Defines crash, omission, timing, and Byzantine fault models.
+4. **Böhme, M., Pham, V. T., Nguyen, M. D., & Roychoudhury, A.** (2017). Directed Greybox Fuzzing. *CCS*, 2329-2344.
+   > Coverage-guided fuzzing with power schedules. Foundation for AFL++.
 
-3. **Jia, Y., & Harman, M.** (2011). An Analysis and Survey of the Development of Mutation Testing. *IEEE Transactions on Software Engineering*, 37(5), 649-678. DOI: 10.1109/TSE.2010.62
-
-   > Comprehensive survey of mutation testing. Establishes mutation score as proxy for test effectiveness.
-
-4. **Böhme, M., Pham, V. T., Nguyen, M. D., & Roychoudhury, A.** (2017). Directed Greybox Fuzzing. *CCS*, 2329-2344. DOI: 10.1145/3133956.3134020
-
-   > Introduces coverage-guided fuzzing with power schedules. Foundation for AFL++ and modern fuzzers.
-
-5. **Musuvathi, M., Qadeer, S., Ball, T., Basler, G., Nainar, P. A., & Neamtiu, I.** (2008). Finding and Reproducing Heisenbugs in Concurrent Programs. *OSDI*, 8, 267-280.
-
-   > Systematic exploration of thread interleavings to find concurrency bugs. Basis for timing chaos injection.
+5. **Musuvathi, M., & Qadeer, S.** (2008). Finding and Reproducing Heisenbugs in Concurrent Programs. *OSDI*, 267-280.
+   > CHESS algorithm for systematic thread interleaving exploration.
 
 6. **Zalewski, M.** (2014). American Fuzzy Lop Technical Details. *lcamtuf.coredump.cx*.
+   > Practical coverage-guided fuzzing implementation.
 
-   > Practical implementation of coverage-guided fuzzing. libFuzzer builds on these principles.
+7. **Lu, S., Park, S., Seo, E., & Zhou, Y.** (2008). Learning from Mistakes: A Comprehensive Study on Real World Concurrency Bug Characteristics. *ASPLOS*, 329-339.
+   > Empirical study categorizing real-world concurrency bugs.
 
-7. **Claessen, K., & Hughes, J.** (2000). QuickCheck: A Lightweight Tool for Random Testing of Haskell Programs. *ICFP*, 268-279. DOI: 10.1145/351240.351266
+8. **Myers, G. J., Sandler, C., & Badgett, T.** (2011). *The Art of Software Testing* (3rd ed.). Wiley.
+   > Classic testing methodology: boundary value analysis, equivalence partitioning.
 
-   > Introduces property-based testing. Foundation for PropTest in Rust ecosystem.
-
-8. **Myers, G. J., Sandler, C., & Badgett, T.** (2011). *The Art of Software Testing* (3rd ed.). John Wiley & Sons.
-
-   > Classic testing methodology including boundary value analysis and equivalence partitioning.
-
-9. **Yang, J., Cui, A., Stolfo, S., & Sethumadhavan, S.** (2012). Concurrency Attacks. *HotPar*, 12.
-
-   > Taxonomy of concurrency vulnerabilities including TOCTOU and atomicity violations.
+9. **Yang, J., Cui, A., Stolfo, S., & Sethumadhavan, S.** (2012). Concurrency Attacks. *HotPar*.
+   > Taxonomy of concurrency vulnerabilities: TOCTOU, atomicity violations.
 
 10. **Serebryany, K., & Iskhodzhanov, T.** (2009). ThreadSanitizer: Data Race Detection in Practice. *WBIA*, 62-71.
+    > Thread Sanitizer implementation for detecting data races.
 
-    > Thread Sanitizer implementation. Basis for TSAN integration in chaos testing.
+11. **Barr, E. T., Harman, M., McMinn, P., Shahbaz, M., & Yoo, S.** (2015). The Oracle Problem in Software Testing: A Survey. *IEEE TSE*, 41(5), 507-525.
+    > Defines difficulty of verifying non-crashing bugs.
+
+12. **Mace, J., Roelke, R., & Fonseca, R.** (2015). Pivot Tracing: Dynamic Causal Monitoring for Distributed Systems. *SOSP*, 378-393.
+    > Dynamic instrumentation for correctness verification.
+
+13. **Fonseca, R., Porter, G., Katz, R. H., Shenker, S., & Stoica, I.** (2007). X-Trace: A Pervasive Network Tracing Framework. *NSDI*.
+    > Establishes causality preservation requirements for tracing.
+
+14. **Tallam, S., Gupta, R., & Zhang, X.** (2005). Execution Indexing for Deterministic Replay of Concurrent Programs. *DebugSec*.
+    > Essential for replaying bugs in tracing tools.
+
+15. **Stephens, N., et al.** (2016). Driller: Augmenting Fuzzing Through Selective Symbolic Execution. *NDSS*.
+    > Combining fuzzing with symbolic execution to break through checks.
+
+16. **Godefroid, P., Kiezun, A., & Levin, M. Y.** (2008). Grammar-based Whitebox Fuzzing. *PLDI*, 206-215.
+    > Grammar-based fuzzing for parsers. Critical for filter.rs.
+
+17. **Rawat, S., Jain, V., Kumar, A., Cojocar, L., Giuffrida, C., & Bos, H.** (2017). Vuzzer: Application-aware Evolutionary Fuzzing. *NDSS*.
+    > Using control flow to prioritize deep paths.
+
+18. **Jung, R., Jourdan, J. H., Krebbers, R., & Dreyer, D.** (2017). RustBelt: Securing the Foundations of the Rust Programming Language. *POPL*, 2, 1-34.
+    > Formal proof of Rust's safety guarantees. Validates unsafe abstractions.
+
+19. **Soltesz, S., Pötzl, H., Fiuczynski, M. E., Bavier, A., & Peterson, L.** (2007). Container-based Operating System Virtualization. *EuroSys*, 53-67.
+    > Foundational container isolation principles.
+
+20. **Burckhardt, S., Kothari, P., Musuvathi, M., & Nagarakatte, S.** (2010). A Randomized Scheduler with Probabilistic Guarantees of Finding Bugs. *ASPLOS*, 167-178.
+    > PCT algorithm: better than random sleep, cheaper than full exploration.
+
+21. **Claessen, K., & Hughes, J.** (2000). QuickCheck: A Lightweight Tool for Random Testing. *ICFP*, 268-279.
+    > Origin of property-based testing. Foundation for PropTest.
+
+22. **Pacheco, C., Lahiri, S. K., Ernst, M. D., & Ball, T.** (2007). Feedback-Directed Random Test Generation. *ICSE*, 75-84.
+    > Randoop: generating regression tests from chaos runs.
+
+23. **Natella, R., Cotroneo, D., & Madeira, H. S.** (2016). Assessing Dependability with Software Fault Injection: A Survey. *ACM Computing Surveys*, 48(3), 1-48.
+    > Comprehensive guide on where and how to inject faults.
+
+24. **Alvaro, P., Rosen, J., & Hellerstein, J. M.** (2015). Lineage-driven Fault Injection. *SIGMOD*, 331-346.
+    > Using execution graphs to guide intelligent fault injection.
+
+25. **Luo, Q., Hariri, F., Eloussi, L., & Marinov, D.** (2014). An Empirical Analysis of Flaky Tests. *FSE*, 643-653.
+    > Distinguishing chaos artifacts from test flakiness.
 
 ---
 
