@@ -6,10 +6,10 @@ Renacer (Spanish: "to be reborn") is a next-generation binary inspection and tra
 
 ## Project Status
 
-**Current Version:** 0.4.0 (Sprint 28 complete - Decy C→Rust Transpiler Integration)
-**Status:** Production-Ready + SIMD-Accelerated Statistics + Real-Time Anomaly Detection + HPU Analysis + HTML Reports + Multi-Transpiler Debugging
-**TDG Score:** 99.9/100 (A+ grade)
-**Test Coverage:** 200+ tests (all passing)
+**Current Version:** 0.4.1 (Sprint 29 complete - Chaos Engineering + Fuzz Testing Infrastructure)
+**Status:** Production-Ready + SIMD-Accelerated Statistics + Real-Time Anomaly Detection + HPU Analysis + HTML Reports + Multi-Transpiler Debugging + Chaos Engineering
+**TDG Score:** 95.1/100 (A+ grade)
+**Test Coverage:** 240+ tests (all passing)
 **Specification:** [docs/specifications/deep-strace-rust-wasm-binary-spec.md](docs/specifications/deep-strace-rust-wasm-binary-spec.md)
 
 ## Features
@@ -76,7 +76,28 @@ Renacer (Spanish: "to be reborn") is a next-generation binary inspection and tra
 - ✅ **Error Handling** - Graceful handling of invalid JSON, missing files, unsupported versions
 - ✅ **Full Feature Integration** - Works with --function-time, --rewrite-stacktrace, --rewrite-errors
 
-### Quality Infrastructure (v0.2.0-0.3.0)
+### Chaos Engineering + Fuzz Testing (Sprint 29) 🆕
+- ✅ **ChaosConfig Builder** - Aprender-style builder pattern for chaos configuration
+  - Chainable API: `ChaosConfig::new().with_memory_limit().with_cpu_limit().build()`
+  - Presets: `ChaosConfig::gentle()` and `ChaosConfig::aggressive()`
+  - Configurable: memory limits, CPU limits, timeouts, signal injection
+- ✅ **Tiered TDD Workflow** - Trueno-style Makefile targets for rapid development
+  - `make test-tier1` - Fast tests (<5s): unit + property tests
+  - `make test-tier2` - Medium tests (<30s): integration tests
+  - `make test-tier3` - Slow tests (<5m): fuzz + mutation tests
+- ✅ **Fuzz Testing Infrastructure** - cargo-fuzz integration
+  - Filter parser fuzzing: `fuzz/fuzz_targets/filter_parser.rs`
+  - Discovers edge cases in syscall filter expression parsing
+  - Integrated into tier3 testing workflow
+- ✅ **Cargo Features** - Progressive chaos capabilities
+  - `chaos-basic` - Resource limits, signal injection
+  - `chaos-network` - Network/IO chaos (latency, packet loss)
+  - `chaos-byzantine` - Syscall return modification
+  - `chaos-full` - Complete chaos suite with loom + arbitrary
+  - `fuzz` - Fuzz testing support
+- ✅ **Property-Based Tests** - 7 comprehensive proptest tests for chaos module
+
+### Quality Infrastructure (v0.2.0-0.4.1)
 - ✅ **Property-based testing** - 670+ test cases via proptest
 - ✅ **Pre-commit hooks** - 5 quality gates (format, clippy, tests, audit, bash)
 - ✅ **Dependency policy** - cargo-deny configuration for security

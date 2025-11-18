@@ -5,6 +5,115 @@ All notable changes to Renacer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2025-11-18
+
+### Added
+
+#### Sprint 29: Chaos Engineering + Fuzz Testing Infrastructure
+
+**Goal:** Add chaos engineering configuration and fuzz testing infrastructure following patterns from aprender and trueno projects
+
+**Implementation** (EXTREME TDD - Sprint complete):
+- **ChaosConfig Builder**: Pattern from aprender with gentle/aggressive presets
+  - `ChaosConfig::new()` chainable builder API
+  - Configurable: memory limits, CPU limits, timeouts, signal injection
+  - `gentle()` and `aggressive()` preset methods for quick configuration
+  - Network chaos (latency, packet loss) support prepared for Tier 2
+  - Byzantine fault injection support prepared for Tier 3
+- **Tiered TDD**: Makefile targets following trueno pattern
+  - `make test-tier1` - Fast tests (<5s): unit + property tests
+  - `make test-tier2` - Medium tests (<30s): integration tests
+  - `make test-tier3` - Slow tests (<5m): fuzz + mutation tests
+  - Enables rapid TDD cycles with appropriate test granularity
+- **Property Tests**: 7 comprehensive tests for chaos module validation
+  - Builder pattern correctness (chaining, immutability)
+  - Preset validation (gentle/aggressive configurations)
+  - Configuration constraints (valid ranges for limits)
+  - All tests use proptest for property-based validation
+- **Fuzz Infrastructure**: cargo-fuzz with filter_parser target
+  - `fuzz/fuzz_targets/filter_parser.rs` - Tests SyscallFilter::from_expr()
+  - Discovers edge cases in filter expression parsing
+  - Integrated into Makefile tier3 target
+  - Runs with libfuzzer-sys for coverage-guided fuzzing
+- **Cargo Features**: Tiered chaos engineering capabilities
+  - `chaos-basic` - Fast chaos (resource limits, signal injection)
+  - `chaos-network` - Network/IO chaos (latency, packet loss simulation)
+  - `chaos-byzantine` - Byzantine fault injection (syscall return modification)
+  - `chaos-full` - Complete chaos suite with loom + arbitrary dependencies
+  - `fuzz` - Fuzz testing support with arbitrary crate
+
+**Architecture:**
+- `src/chaos.rs` - ChaosConfig builder with extensive documentation
+- `fuzz/fuzz_targets/filter_parser.rs` - Filter expression fuzzing
+- `Cargo.toml` - Feature gates for progressive chaos capabilities
+- `Makefile` - Tiered test targets for TDD workflow
+
+**Results:**
+- **Tests**: 240+ tests passing
+  - 7 new property tests for chaos module
+  - All existing tests passing with new infrastructure
+- **Complexity**: All functions ≤10 (max: 5 in main.rs) ✅
+- **Clippy**: Zero warnings ✅
+- **TDG Score**: 95.1/100 (A+ grade)
+
+**Examples:**
+```bash
+# Use gentle chaos preset for testing error handling
+let config = ChaosConfig::gentle();
+
+# Use aggressive chaos for stress testing
+let config = ChaosConfig::aggressive();
+
+# Custom chaos configuration
+let config = ChaosConfig::new()
+    .with_memory_limit(100 * 1024 * 1024)  // 100MB
+    .with_cpu_limit(0.5)  // 50% CPU
+    .with_timeout(Duration::from_secs(30))
+    .with_signal_injection(true)
+    .build();
+
+# Run tiered tests
+make test-tier1  # Fast unit tests (<5s)
+make test-tier2  # Integration tests (<30s)
+make test-tier3  # Fuzz + mutation tests (<5m)
+
+# Run fuzz testing
+make fuzz
+```
+
+**CLI Integration (Future):**
+```bash
+# Planned for future sprints
+renacer --chaos gentle -- ./app
+renacer --chaos aggressive -- ./flaky-test
+renacer --chaos custom:chaos.json -- ./stress-test
+```
+
+### Fixed
+- **Flaky Test**: test_realtime_anomaly_detects_slow_syscall timing increased from 10ms to 50ms for deterministic behavior under CPU contention (tests/sprint20_realtime_anomaly_tests.rs:29)
+- **Complexity Violation**: Reduced main.rs complexity from 27 to 5 by extracting helper functions (STOP THE LINE fix per EXTREME TDD)
+  - Extracted: `print_function_mappings()`, `print_stack_trace_mappings()`, `print_error_correlation_mappings()`, `run_tracer()`
+- **Doctest**: Added missing `use std::time::Duration;` import to chaos.rs doctest example
+
+### Quality Metrics (v0.4.1)
+
+- **TDG Score**: 95.1/100 (A+ grade)
+- **Tests**: 240+ total tests
+  - 7 new property tests for chaos module
+  - All integration and unit tests passing
+- **Test Coverage**: 91.21% overall line coverage maintained
+- **Code Quality**: 0 clippy errors, 0 warnings
+- **Complexity**: All functions ≤10 (EXTREME TDD target achieved)
+- **New Modules**: 1 (src/chaos.rs with 7 property tests)
+
+### Sprint Accomplishments
+
+#### Sprint 29: Chaos Engineering Foundation ✅
+- **Pattern Integration**: Successfully integrated aprender (builder pattern) and trueno (tiered TDD) patterns
+- **Fuzz Infrastructure**: Complete cargo-fuzz setup with filter_parser target
+- **Quality Gates**: Zero defects, all tests passing, complexity targets met
+- **Installation**: Locally installed with `cargo install --path . --force`
+
 ## [0.4.0] - 2025-11-18
 
 ### Added
