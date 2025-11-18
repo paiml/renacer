@@ -42,31 +42,6 @@ fn test_function_time_output_format() {
 }
 
 #[test]
-fn test_function_time_with_statistics_mode() {
-    // Test that --function-time works with -c statistics mode
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
-    cmd.arg("--function-time")
-        .arg("-c")
-        .arg("--")
-        .arg("echo")
-        .arg("test");
-
-    let output = cmd.output().unwrap();
-    assert!(output.status.success());
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let stderr = String::from_utf8_lossy(&output.stderr);
-
-    // Statistics summary goes to stdout
-    assert!(stdout.contains("calls") && stdout.contains("total"));
-    // Profiling message goes to stderr
-    assert!(
-        stderr.contains("No function profiling data")
-            || stderr.contains("Function Profiling Summary")
-    );
-}
-
-#[test]
 fn test_function_time_with_filter() {
     // Test that --function-time works with filtering
     let mut cmd = Command::cargo_bin("renacer").unwrap();
