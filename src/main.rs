@@ -30,11 +30,37 @@ fn main() -> Result<()> {
     init_tracing(args.debug);
 
     // Load transpiler source map if provided (Sprint 24)
-    let _source_map = if let Some(map_path) = &args.transpiler_map {
+    let source_map = if let Some(map_path) = &args.transpiler_map {
         Some(transpiler_map::TranspilerMap::from_file(map_path)?)
     } else {
         None
     };
+
+    // Sprint 25: Print function name correlations when using --function-time with source map
+    if let (true, Some(ref map)) = (args.function_time, &source_map) {
+        // Print header for function correlation
+        if args.show_transpiler_context {
+            println!("=== Transpiler Source Map ===");
+            println!("Source Language: {} -> Rust", map.source_language());
+            println!("Source File: {}", map.source_file().display());
+            println!();
+        }
+
+        // Print function mappings
+        if !map.function_map.is_empty() {
+            if args.show_transpiler_context {
+                println!("Function Mappings (Rust -> {}):", map.source_language());
+                println!("─────────────────────────────────────────");
+            }
+            for (rust_fn, python_fn) in &map.function_map {
+                println!("{} -> {}", rust_fn, python_fn);
+            }
+            if args.show_transpiler_context {
+                println!("─────────────────────────────────────────");
+                println!();
+            }
+        }
+    }
 
     // Parse filter expression if provided
     let filter = if let Some(expr) = args.filter {
