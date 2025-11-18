@@ -259,18 +259,53 @@ fn handle_ptrace_event(
             let new_pid = Pid::from_raw(new_pid_raw as i32);
 
             // Wait for the new child to stop
-            waitpid(new_pid, None).context("Failed to wait for new child")?;
+            let wait_status = waitpid(new_pid, None).context("Failed to wait for new child")?;
 
-            // Setup ptrace options for the new child (already waited)
-            setup_ptrace_options_internal(new_pid, config.follow_forks, false)?;
+            // Check if child is still alive and can be continued
+            match wait_status {
+                WaitStatus::Exited(_, _) | WaitStatus::Signaled(_, _, _) => {
+                    // Child already exited, nothing to continue
+                    eprintln!(
+                        "[renacer: Process {} forked child {} (already exited)]",
+                        pid, new_pid
+                    );
+                }
+                _ => {
+                    // Setup ptrace options for the new child (already waited)
+                    if let Err(e) =
+                        setup_ptrace_options_internal(new_pid, config.follow_forks, false)
+                    {
+                        // Child may have exited between waitpid and setoptions
+                        warn!(
+                            "Failed to setup ptrace options for child {}: {}",
+                            new_pid, e
+                        );
+                        return Ok(());
+                    }
 
-            // Add to tracking
-            processes.insert(new_pid, ProcessState::new());
+                    // Add to tracking
+                    processes.insert(new_pid, ProcessState::new());
 
-            // Continue the new child process
-            ptrace::syscall(new_pid, None).context("Failed to continue new child")?;
-
-            eprintln!("[renacer: Process {} forked child {}]", pid, new_pid);
+                    // Continue the new child process
+                    // Handle ESRCH gracefully - child may have exited between waitpid and syscall
+                    match ptrace::syscall(new_pid, None) {
+                        Ok(_) => {
+                            eprintln!("[renacer: Process {} forked child {}]", pid, new_pid);
+                        }
+                        Err(nix::errno::Errno::ESRCH) => {
+                            // Child already exited, remove from tracking
+                            processes.remove(&new_pid);
+                            eprintln!(
+                                "[renacer: Process {} forked child {} (exited immediately)]",
+                                pid, new_pid
+                            );
+                        }
+                        Err(e) => {
+                            return Err(anyhow::anyhow!("Failed to continue new child: {}", e));
+                        }
+                    }
+                }
+            }
         }
         _ => {
             // Unknown ptrace event, ignore

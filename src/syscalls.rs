@@ -123,6 +123,7 @@ pub fn syscall_name(num: i64) -> &'static str {
         273 => "set_robust_list",
         318 => "getrandom",
         332 => "statx",
+        435 => "clone3",
         _ => "unknown",
     }
 }
