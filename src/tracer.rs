@@ -28,6 +28,9 @@ pub struct TracerConfig {
     pub anomaly_window_size: usize, // Sprint 20: Sliding window size
     pub hpu_analysis: bool,     // Sprint 21: HPU-accelerated analysis (GPU if available)
     pub hpu_cpu_only: bool,     // Sprint 21: Force CPU backend (disable GPU)
+    pub ml_anomaly: bool,       // Sprint 23: ML-based anomaly detection using Aprender
+    pub ml_clusters: usize,     // Sprint 23: Number of clusters for KMeans
+    pub ml_compare: bool,       // Sprint 23: Compare ML results with z-score
 }
 
 /// Attach to a running process by PID and trace syscalls
@@ -124,7 +127,8 @@ fn initialize_tracers(config: &TracerConfig) -> Tracers {
         None
     };
 
-    let stats_tracker = if config.statistics_mode {
+    // Create stats_tracker if statistics mode is enabled OR if ML anomaly analysis is enabled
+    let stats_tracker = if config.statistics_mode || config.ml_anomaly {
         Some(crate::stats::StatsTracker::new())
     } else {
         None
@@ -458,6 +462,24 @@ fn print_json_output(mut output: crate::json_output::JsonOutput, exit_code: i32)
     }
 }
 
+/// Generate and populate ML analysis for JSON output
+fn generate_ml_analysis_for_json(
+    stats_tracker: &Option<crate::stats::StatsTracker>,
+    ml_clusters: usize,
+) -> Option<crate::ml_anomaly::MlAnomalyReport> {
+    if let Some(ref tracker) = stats_tracker {
+        let mut ml_data = std::collections::HashMap::new();
+        for (syscall_name, stats) in tracker.stats_map() {
+            let total_time_ns = stats.total_time_us * 1000;
+            ml_data.insert(syscall_name.clone(), (stats.count, total_time_ns));
+        }
+        let analyzer = crate::ml_anomaly::MlAnomalyAnalyzer::new(ml_clusters);
+        Some(analyzer.analyze(&ml_data))
+    } else {
+        None
+    }
+}
+
 /// Print CSV statistics output
 fn print_csv_stats(
     mut csv_stats: crate::csv_output::CsvStatsOutput,
@@ -501,16 +523,55 @@ fn print_hpu_analysis(stats_tracker: &Option<crate::stats::StatsTracker>, hpu_cp
     }
 }
 
-/// Print all summaries at end of tracing
-fn print_summaries(
-    tracers: Tracers,
-    timing_mode: bool,
-    exit_code: i32,
+/// Print ML anomaly analysis report (Sprint 23)
+fn print_ml_analysis(
+    stats_tracker: &Option<crate::stats::StatsTracker>,
+    ml_clusters: usize,
+    ml_compare: bool,
+    anomaly_threshold: f32,
+) {
+    if let Some(ref tracker) = stats_tracker {
+        let mut ml_data = std::collections::HashMap::new();
+        for (syscall_name, stats) in tracker.stats_map() {
+            let total_time_ns = stats.total_time_us * 1000;
+            ml_data.insert(syscall_name.clone(), (stats.count, total_time_ns));
+        }
+        let analyzer = crate::ml_anomaly::MlAnomalyAnalyzer::new(ml_clusters);
+        let report = analyzer.analyze(&ml_data);
+
+        if ml_compare {
+            // Compare with z-score anomaly detection
+            let mut zscore_anomalies = Vec::new();
+            for syscall_name in tracker.stats_map().keys() {
+                if let Some(extended) = tracker.calculate_extended_statistics(syscall_name) {
+                    if extended.stddev > 0.0 {
+                        let z_score = (extended.max - extended.mean) / extended.stddev;
+                        if z_score > anomaly_threshold {
+                            zscore_anomalies.push((syscall_name.clone(), z_score as f64));
+                        }
+                    }
+                }
+            }
+            eprint!("{}", report.format_comparison(&zscore_anomalies));
+        } else {
+            eprint!("{}", report.format());
+        }
+    }
+}
+
+/// Analysis configuration for print_summaries
+struct AnalysisConfig {
     stats_extended: bool,
     anomaly_threshold: f32,
     hpu_analysis: bool,
     hpu_cpu_only: bool,
-) {
+    ml_anomaly: bool,
+    ml_clusters: usize,
+    ml_compare: bool,
+}
+
+/// Print all summaries at end of tracing
+fn print_summaries(tracers: Tracers, timing_mode: bool, exit_code: i32, analysis: &AnalysisConfig) {
     let Tracers {
         stats_tracker,
         json_output,
@@ -524,11 +585,23 @@ fn print_summaries(
 
     // Print statistics summary if in statistics mode (text format)
     if stats_tracker.is_some() && csv_stats_output.is_none() {
-        print_text_stats(&stats_tracker, stats_extended, anomaly_threshold);
+        print_text_stats(
+            &stats_tracker,
+            analysis.stats_extended,
+            analysis.anomaly_threshold,
+        );
     }
 
     // Print JSON output if in JSON mode
-    if let Some(output) = json_output {
+    if let Some(mut output) = json_output {
+        // Add ML analysis to JSON if enabled
+        if analysis.ml_anomaly {
+            if let Some(report) =
+                generate_ml_analysis_for_json(&stats_tracker, analysis.ml_clusters)
+            {
+                output.set_ml_analysis(report);
+            }
+        }
         print_json_output(output, exit_code);
     }
 
@@ -543,8 +616,8 @@ fn print_summaries(
             csv_stats,
             &stats_tracker,
             timing_mode,
-            stats_extended,
-            anomaly_threshold,
+            analysis.stats_extended,
+            analysis.anomaly_threshold,
         );
     }
 
@@ -569,8 +642,18 @@ fn print_summaries(
     }
 
     // Sprint 21: HPU-accelerated analysis if enabled
-    if hpu_analysis {
-        print_hpu_analysis(&stats_tracker, hpu_cpu_only);
+    if analysis.hpu_analysis {
+        print_hpu_analysis(&stats_tracker, analysis.hpu_cpu_only);
+    }
+
+    // Sprint 23: ML-based anomaly detection if enabled
+    if analysis.ml_anomaly {
+        print_ml_analysis(
+            &stats_tracker,
+            analysis.ml_clusters,
+            analysis.ml_compare,
+            analysis.anomaly_threshold,
+        );
     }
 }
 
@@ -740,10 +823,15 @@ fn trace_child(child: Pid, config: TracerConfig) -> Result<i32> {
         tracers,
         config.timing_mode,
         main_exit_code,
-        config.stats_extended,
-        config.anomaly_threshold,
-        config.hpu_analysis,
-        config.hpu_cpu_only,
+        &AnalysisConfig {
+            stats_extended: config.stats_extended,
+            anomaly_threshold: config.anomaly_threshold,
+            hpu_analysis: config.hpu_analysis,
+            hpu_cpu_only: config.hpu_cpu_only,
+            ml_anomaly: config.ml_anomaly,
+            ml_clusters: config.ml_clusters,
+            ml_compare: config.ml_compare,
+        },
     );
     std::process::exit(main_exit_code);
 }
@@ -1252,6 +1340,9 @@ mod tests {
             anomaly_window_size: 100, // Sprint 20
             hpu_analysis: false,      // Sprint 21
             hpu_cpu_only: false,      // Sprint 21
+            ml_anomaly: false,        // Sprint 23
+            ml_clusters: 3,           // Sprint 23
+            ml_compare: false,        // Sprint 23
         };
         let result = trace_command(&empty, config);
         assert!(result.is_err());
@@ -1277,6 +1368,9 @@ mod tests {
             anomaly_window_size: 100, // Sprint 20
             hpu_analysis: false,      // Sprint 21
             hpu_cpu_only: false,      // Sprint 21
+            ml_anomaly: false,        // Sprint 23
+            ml_clusters: 3,           // Sprint 23
+            ml_compare: false,        // Sprint 23
         };
         let result = trace_command(&cmd, config);
         assert!(result.is_err());
@@ -1338,6 +1432,9 @@ mod tests {
             anomaly_window_size: 100, // Sprint 20
             hpu_analysis: false,      // Sprint 21
             hpu_cpu_only: false,      // Sprint 21
+            ml_anomaly: false,        // Sprint 23
+            ml_clusters: 3,           // Sprint 23
+            ml_compare: false,        // Sprint 23
         };
         let result = attach_to_pid(999999, config);
         assert!(result.is_err());

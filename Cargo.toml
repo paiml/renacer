@@ -38,6 +38,9 @@ backtrace = "0.3"
 # High-performance SIMD/GPU compute (sister project - published on crates.io)
 trueno = "0.1.0"
 
+# Machine learning for anomaly detection (Sprint 23)
+aprender = { path = "../aprender" }
+
 # Regex filtering (Sprint 16)
 regex = "1.10"
 
