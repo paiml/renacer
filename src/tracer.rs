@@ -570,6 +570,41 @@ struct AnalysisConfig {
     ml_compare: bool,
 }
 
+/// Print optional profiling and tracing summaries
+fn print_optional_summaries(
+    profiling_ctx: Option<crate::profiling::ProfilingContext>,
+    function_profiler: Option<crate::function_profiler::FunctionProfiler>,
+    anomaly_detector: Option<crate::anomaly::AnomalyDetector>,
+) {
+    if let Some(ctx) = profiling_ctx {
+        ctx.print_summary();
+    }
+    if let Some(profiler) = function_profiler {
+        profiler.print_summary();
+    }
+    if let Some(detector) = anomaly_detector {
+        detector.print_summary();
+    }
+}
+
+/// Print analysis summaries (HPU, ML)
+fn print_analysis_summaries(
+    stats_tracker: &Option<crate::stats::StatsTracker>,
+    analysis: &AnalysisConfig,
+) {
+    if analysis.hpu_analysis {
+        print_hpu_analysis(stats_tracker, analysis.hpu_cpu_only);
+    }
+    if analysis.ml_anomaly {
+        print_ml_analysis(
+            stats_tracker,
+            analysis.ml_clusters,
+            analysis.ml_compare,
+            analysis.anomaly_threshold,
+        );
+    }
+}
+
 /// Print all summaries at end of tracing
 fn print_summaries(tracers: Tracers, timing_mode: bool, exit_code: i32, analysis: &AnalysisConfig) {
     let Tracers {
@@ -626,35 +661,11 @@ fn print_summaries(tracers: Tracers, timing_mode: bool, exit_code: i32, analysis
         print!("{}", output.to_html(stats_tracker.as_ref()));
     }
 
-    // Print profiling summary if enabled
-    if let Some(ctx) = profiling_ctx {
-        ctx.print_summary();
-    }
+    // Print profiling and tracing summaries
+    print_optional_summaries(profiling_ctx, function_profiler, anomaly_detector);
 
-    // Print function profiling summary if enabled
-    if let Some(profiler) = function_profiler {
-        profiler.print_summary();
-    }
-
-    // Sprint 20: Print anomaly detection summary if enabled
-    if let Some(detector) = anomaly_detector {
-        detector.print_summary();
-    }
-
-    // Sprint 21: HPU-accelerated analysis if enabled
-    if analysis.hpu_analysis {
-        print_hpu_analysis(&stats_tracker, analysis.hpu_cpu_only);
-    }
-
-    // Sprint 23: ML-based anomaly detection if enabled
-    if analysis.ml_anomaly {
-        print_ml_analysis(
-            &stats_tracker,
-            analysis.ml_clusters,
-            analysis.ml_compare,
-            analysis.anomaly_threshold,
-        );
-    }
+    // Print analysis reports (HPU, ML)
+    print_analysis_summaries(&stats_tracker, analysis);
 }
 
 /// Per-process state for multi-process tracing
