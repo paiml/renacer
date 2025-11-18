@@ -108,6 +108,10 @@ pub struct Cli {
     #[arg(long = "show-transpiler-context")]
     pub show_transpiler_context: bool,
 
+    /// Rewrite stack traces to show original source locations (Sprint 26)
+    #[arg(long = "rewrite-stacktrace")]
+    pub rewrite_stacktrace: bool,
+
     /// Enable debug tracing output to stderr
     #[arg(long = "debug")]
     pub debug: bool,
@@ -337,6 +341,36 @@ mod tests {
         ]);
         assert!(cli.transpiler_map.is_some());
         assert!(cli.function_time);
+        assert!(cli.show_transpiler_context);
+    }
+
+    #[test]
+    fn test_cli_rewrite_stacktrace_flag() {
+        let cli = Cli::parse_from(["renacer", "--rewrite-stacktrace", "--", "echo", "test"]);
+        assert!(cli.rewrite_stacktrace);
+        assert!(cli.command.is_some());
+    }
+
+    #[test]
+    fn test_cli_rewrite_stacktrace_default_false() {
+        let cli = Cli::parse_from(["renacer", "--", "echo", "test"]);
+        assert!(!cli.rewrite_stacktrace);
+    }
+
+    #[test]
+    fn test_cli_rewrite_stacktrace_with_transpiler_map() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "--transpiler-map",
+            "map.json",
+            "--rewrite-stacktrace",
+            "--show-transpiler-context",
+            "--",
+            "echo",
+            "test",
+        ]);
+        assert!(cli.transpiler_map.is_some());
+        assert!(cli.rewrite_stacktrace);
         assert!(cli.show_transpiler_context);
     }
 }

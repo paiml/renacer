@@ -62,6 +62,42 @@ fn main() -> Result<()> {
         }
     }
 
+    // Sprint 26: Print stack trace mapping info when using --rewrite-stacktrace with source map
+    if let (true, Some(ref map)) = (args.rewrite_stacktrace, &source_map) {
+        // Print source file info for stack trace correlation
+        if args.show_transpiler_context {
+            println!("=== Stack Trace Mapping ===");
+            println!(
+                "Source: {} -> {}",
+                map.source_file().display(),
+                map.generated_file().display()
+            );
+            println!();
+        }
+
+        // Print line mappings for stack trace rewriting
+        if !map.mappings.is_empty() {
+            if args.show_transpiler_context {
+                println!("Line Mappings (Rust -> {}):", map.source_language());
+                println!("─────────────────────────────────────────");
+            }
+            for mapping in &map.mappings {
+                println!(
+                    "{} ({}:{}) -> {}:{}",
+                    mapping.rust_function,
+                    map.generated_file().display(),
+                    mapping.rust_line,
+                    map.source_file().display(),
+                    mapping.python_line
+                );
+            }
+            if args.show_transpiler_context {
+                println!("─────────────────────────────────────────");
+                println!();
+            }
+        }
+    }
+
     // Parse filter expression if provided
     let filter = if let Some(expr) = args.filter {
         filter::SyscallFilter::from_expr(&expr)?
