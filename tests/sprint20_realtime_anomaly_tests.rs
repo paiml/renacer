@@ -1,7 +1,6 @@
 // Sprint 20: Real-Time Anomaly Detection with Sliding Window
 // EXTREME TDD: RED phase - Integration tests for real-time anomaly detection
 
-use assert_cmd::Command;
 use predicates::prelude::*;
 use std::fs;
 use tempfile::TempDir;
@@ -44,7 +43,7 @@ int main() {
         .output()
         .expect("Failed to compile test program");
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--anomaly-realtime")
         .arg("-T")
         .arg("--")
@@ -81,7 +80,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--anomaly-realtime")
         .arg("--anomaly-window-size")
         .arg("20")
@@ -118,7 +117,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--anomaly-realtime")
         .arg("-T")
         .arg("-e")
@@ -166,7 +165,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--anomaly-realtime")
         .arg("-T")
         .arg("--")
@@ -206,7 +205,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-c")
         .arg("--anomaly-realtime")
         .arg("-T")
@@ -253,7 +252,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--anomaly-realtime")
         .arg("-e")
         .arg("trace=write")
@@ -302,7 +301,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-f")
         .arg("--anomaly-realtime")
         .arg("-T")
@@ -342,7 +341,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--anomaly-realtime")
         .arg("-T")
         .arg("--format")
@@ -386,7 +385,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--anomaly-realtime")
         .arg("-T")
         .arg("--")
@@ -422,7 +421,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--anomaly-realtime")
         .arg("--anomaly-window-size")
         .arg("50")
@@ -459,7 +458,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-T").arg("--").arg(&test_program);
 
     // Should NOT show any anomaly detection output
@@ -493,7 +492,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-c")
         .arg("--stats-extended")
         .arg("--anomaly-threshold")

@@ -2,13 +2,11 @@
 #![allow(deprecated)] // suppress assert_cmd::Command::cargo_bin deprecation in tests
                       // Sprint 13-14: Stack unwinding for function profiling
 
-use assert_cmd::Command;
-
 #[test]
 fn test_stack_frame_struct() {
     // Test that we can create stack frames (unit-level functionality)
     // This is tested in the module itself, but we verify integration
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--function-time")
         .arg("--source")
         .arg("--")
@@ -22,7 +20,7 @@ fn test_stack_frame_struct() {
 #[test]
 fn test_stack_unwinding_with_simple_program() {
     // Test stack unwinding with a simple program
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--function-time")
         .arg("--source")
         .arg("--")
@@ -40,7 +38,7 @@ fn test_stack_unwinding_with_simple_program() {
 fn test_stack_unwinding_does_not_crash() {
     // Verify that stack unwinding doesn't crash the tracer
     // even with complex programs
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--function-time")
         .arg("--source")
         .arg("--")
@@ -54,7 +52,7 @@ fn test_stack_unwinding_does_not_crash() {
 #[test]
 fn test_stack_unwinding_with_function_time_disabled() {
     // Verify that without --function-time, stack unwinding is not attempted
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--source") // Source enabled but not function-time
         .arg("--")
         .arg("echo")
@@ -72,7 +70,7 @@ fn test_stack_unwinding_with_function_time_disabled() {
 fn test_stack_unwinding_max_depth_protection() {
     // Test that max depth protection prevents infinite loops
     // Run a program and verify it completes (doesn't hang)
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--function-time")
         .arg("--source")
         .arg("--")

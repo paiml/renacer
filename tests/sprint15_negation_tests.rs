@@ -1,14 +1,11 @@
 // Sprint 15: Advanced Filtering - Negation Operator Tests
 // RED Phase: These tests should fail until we implement negation support
 
-use assert_cmd::Command;
-use predicates::prelude::*;
-
 /// Test basic negation of a single syscall
 #[test]
 fn test_negation_single_syscall() {
     // Test that trace=!close excludes only the close syscall
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-e")
         .arg("trace=!close")
         .arg("--")
@@ -37,7 +34,7 @@ fn test_negation_single_syscall() {
 #[test]
 fn test_negation_multiple_syscalls() {
     // Test that trace=!open,!close excludes both syscalls
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-e")
         .arg("trace=!open,!close")
         .arg("--")
@@ -61,7 +58,7 @@ fn test_negation_multiple_syscalls() {
 #[test]
 fn test_negation_syscall_class() {
     // Test that trace=!file excludes all file operations
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-e")
         .arg("trace=!file")
         .arg("--")
@@ -87,7 +84,7 @@ fn test_negation_syscall_class() {
 #[test]
 fn test_mixed_positive_negative() {
     // Test that trace=file,!close shows file operations except close
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-e")
         .arg("trace=file,!close")
         .arg("--")
@@ -116,7 +113,7 @@ fn test_mixed_positive_negative() {
 #[test]
 fn test_negation_with_statistics() {
     // Verify negation works with -c flag
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-e")
         .arg("trace=!close")
         .arg("-c")
@@ -140,7 +137,7 @@ fn test_negation_with_statistics() {
 #[test]
 fn test_invalid_negation_syntax() {
     // Test that trace=! (empty negation) returns an error
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-e")
         .arg("trace=!")
         .arg("--")
@@ -156,7 +153,7 @@ fn test_invalid_negation_syntax() {
 #[test]
 fn test_negation_nonexistent_syscall() {
     // Test that trace=!nonexistent doesn't cause errors
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-e")
         .arg("trace=!nonexistent_syscall")
         .arg("--")

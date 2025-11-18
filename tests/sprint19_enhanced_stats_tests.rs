@@ -1,7 +1,6 @@
 // Sprint 19: Enhanced Statistics with Trueno
 // EXTREME TDD: RED phase - Integration tests for advanced statistical analysis
 
-use assert_cmd::Command;
 use predicates::prelude::*;
 use std::fs;
 use tempfile::TempDir;
@@ -36,7 +35,7 @@ int main() {
         .output()
         .expect("Failed to compile test program");
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-c")
         .arg("--stats-extended")
         .arg("--")
@@ -81,7 +80,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-c")
         .arg("--stats-extended")
         .arg("-T")
@@ -120,7 +119,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-c")
         .arg("-T")
         .arg("--stats-extended")
@@ -170,7 +169,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-c")
         .arg("--stats-extended")
         .arg("-T")
@@ -208,7 +207,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-c")
         .arg("--stats-extended")
         .arg("--anomaly-threshold")
@@ -255,7 +254,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-c")
         .arg("--stats-extended")
         .arg("-e")
@@ -308,7 +307,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-f")
         .arg("-c")
         .arg("--stats-extended")
@@ -347,7 +346,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-c")
         .arg("--stats-extended")
         .arg("-T")
@@ -391,7 +390,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-c")
         .arg("--stats-extended")
         .arg("-T")
@@ -437,7 +436,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-c")
         .arg("--stats-extended")
         .arg("-T")
@@ -475,7 +474,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-c")
         .arg("--stats-extended")
         .arg("--")
@@ -512,7 +511,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-c")
         .arg("--stats-extended")
         .arg("-T")
@@ -551,7 +550,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-c").arg("--").arg(&test_program);
 
     // Should NOT show extended statistics without flag

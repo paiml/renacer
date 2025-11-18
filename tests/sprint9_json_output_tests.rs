@@ -1,13 +1,12 @@
 //! Integration tests for --format json output (Sprint 9-10)
 #![allow(deprecated)] // suppress assert_cmd::Command::cargo_bin deprecation in tests
 
-use assert_cmd::Command;
 use predicates::prelude::*;
 
 #[test]
 fn test_json_output_valid_format() {
     // Test that --format json produces valid JSON
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--format")
         .arg("json")
         .arg("--")
@@ -25,7 +24,7 @@ fn test_json_output_valid_format() {
 #[test]
 fn test_json_output_parses() {
     // Test that JSON output is actually valid JSON
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--format")
         .arg("json")
         .arg("--")
@@ -49,7 +48,7 @@ fn test_json_output_parses() {
 #[test]
 fn test_json_with_timing() {
     // Test that -T works with JSON output
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--format")
         .arg("json")
         .arg("-T")
@@ -79,7 +78,7 @@ fn test_json_with_timing() {
 #[test]
 fn test_json_with_filtering() {
     // Test that filtering works with JSON output
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--format")
         .arg("json")
         .arg("-e")
@@ -105,7 +104,7 @@ fn test_json_with_filtering() {
 #[test]
 fn test_json_summary_fields() {
     // Test that summary contains expected fields
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--format").arg("json").arg("--").arg("true"); // Simple command
 
     let output = cmd.output().unwrap();

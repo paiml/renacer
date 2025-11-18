@@ -3,7 +3,6 @@
 
 #![allow(deprecated)] // Command::cargo_bin is deprecated but still functional
 
-use assert_cmd::Command;
 use predicates::prelude::*;
 use std::fs;
 use tempfile::TempDir;
@@ -49,7 +48,7 @@ int main() {
         .output()
         .expect("Failed to compile test program");
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--hpu-analysis")
         .arg("-c") // Statistics mode to see HPU summary
         .arg("--")
@@ -90,7 +89,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--hpu-analysis")
         .arg("-c")
         .arg("--")
@@ -141,7 +140,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--hpu-analysis")
         .arg("-c")
         .arg("--")
@@ -181,7 +180,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--hpu-analysis")
         .arg("-c")
         .arg("--")
@@ -218,7 +217,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--hpu-analysis")
         .arg("--hpu-cpu-only") // Force CPU backend
         .arg("-c")
@@ -260,7 +259,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-c")
         .arg("--hpu-analysis")
         .arg("--")
@@ -305,7 +304,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--hpu-analysis")
         .arg("-c")
         .arg("-e")
@@ -348,7 +347,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--hpu-analysis")
         .arg("-c") // Statistics mode needed for HPU report
         .arg("--function-time")
@@ -396,7 +395,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--hpu-analysis")
         .arg("--format")
         .arg("json")
@@ -449,7 +448,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--hpu-analysis")
         .arg("-c")
         .arg("--")
@@ -486,7 +485,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--hpu-analysis")
         .arg("-c")
         .arg("--")
@@ -522,7 +521,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-c") // Statistics without HPU
         .arg("--")
         .arg(&test_program);
@@ -573,7 +572,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--hpu-analysis")
         .arg("-c")
         .arg("-T") // Timing for hotspot detection
