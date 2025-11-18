@@ -12,6 +12,8 @@ Renacer is a binary inspection and tracing framework that allows you to observe 
 - **Advanced filtering** - Powerful syscall selection with regex patterns and negation
 - **Statistical analysis** - SIMD-accelerated percentile analysis and anomaly detection
 - **Multiple output formats** - JSON, CSV, HTML for integration with other tools
+- **Chaos engineering** - Test system resilience with controlled fault injection
+- **Fuzz testing** - Coverage-guided fuzzing for robustness
 
 ## Why Renacer?
 
@@ -32,10 +34,10 @@ Renacer is a binary inspection and tracing framework that allows you to observe 
 
 ## Current Status
 
-**Version:** 0.3.2
-**Status:** Production-Ready
-**Test Coverage:** 290+ tests (all passing)
-**TDG Score:** 99.9/100 (A+ grade)
+**Version:** 0.4.1
+**Status:** Production-Ready + Chaos Engineering
+**Test Coverage:** 240+ tests (all passing)
+**TDG Score:** 95.1/100 (A+ grade)
 
 Renacer is built following Toyota Way principles and EXTREME TDD methodology, ensuring every feature is thoroughly tested and production-ready.
 
@@ -71,15 +73,18 @@ Top 10 Hot Paths (by total time):
 Renacer is developed by [Pragmatic AI Labs](https://paiml.com) using:
 - **Toyota Way** quality principles
 - **EXTREME TDD** methodology (every feature test-driven)
-- **Zero tolerance** for defects (all 290+ tests pass, zero warnings)
+- **Zero tolerance** for defects (all 240+ tests pass, zero warnings)
 - **Property-based testing** (670+ test cases via proptest)
 - **Mutation testing** (80%+ mutation score via cargo-mutants)
+- **Fuzz testing** (coverage-guided fuzzing via cargo-fuzz)
+- **Tiered TDD** (fast/medium/slow test tiers for rapid development)
 
 ## Next Steps
 
 - **New to Renacer?** Start with [Quick Start](./getting-started/quick-start.md)
 - **Want to understand concepts?** Read [Core Concepts](./core-concepts/syscall-tracing.md)
 - **Ready for advanced features?** Explore [Function Profiling](./advanced/function-profiling.md) or [Anomaly Detection](./advanced/anomaly-detection.md)
-- **Contributing?** See [EXTREME TDD](./contributing/extreme-tdd.md) methodology
+- **Contributing?** See [EXTREME TDD](./contributing/extreme-tdd.md), [Fuzz Testing](./contributing/fuzz-testing.md), and [Chaos Engineering](./contributing/chaos-engineering.md)
+- **Want faster development?** Check out [Tiered TDD Workflow](./contributing/tiered-tdd.md)
 
 Let's get started!
