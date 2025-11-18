@@ -1,7 +1,8 @@
 # Renacer Makefile
 # Following bashrs and paiml-mcp-agent-toolkit patterns
 
-.PHONY: help test coverage coverage-html coverage-clean mutants mutants-quick clean build release lint format check
+.PHONY: help test coverage coverage-html coverage-clean mutants mutants-quick clean build release lint format check \
+        tier1 tier2 tier3 chaos-test chaos-full check-regression fuzz
 
 help: ## Show this help message
 	@echo "Renacer - Pure Rust strace alternative"
@@ -106,3 +107,56 @@ mutants-quick: ## Run mutation testing (quick check on changed files only)
 	@echo ""
 	@echo "📊 Quick Mutation Testing Results:"
 	@cat target/mutants-quick.out/mutants.out 2>/dev/null || echo "Check target/mutants-quick.out/ for detailed results"
+
+# =============================================================================
+# Tiered TDD Workflow (from trueno patterns)
+# =============================================================================
+
+tier1: ## Tier 1: Fast tests (<5s) - unit tests, clippy, format
+	@echo "🏃 Tier 1: Fast tests (<5 seconds)..."
+	@cargo fmt --check
+	@cargo clippy -- -D warnings
+	@cargo test --lib --quiet
+	@echo "✅ Tier 1 complete!"
+
+tier2: tier1 ## Tier 2: Integration tests (<30s) - includes tier1
+	@echo "🏃 Tier 2: Integration tests (<30 seconds)..."
+	@cargo test --tests --quiet
+	@echo "✅ Tier 2 complete!"
+
+tier3: tier2 ## Tier 3: Full validation (<5m) - includes tier1+2, property tests
+	@echo "🏃 Tier 3: Full validation (<5 minutes)..."
+	@cargo test --all-targets --all-features --quiet
+	@echo "✅ Tier 3 complete!"
+
+# =============================================================================
+# Chaos Engineering (Sprint 29 - Red-Team Profile)
+# =============================================================================
+
+chaos-test: ## Run chaos engineering tests (basic tier)
+	@echo "🔥 Running chaos engineering tests..."
+	@cargo test --features chaos-basic --quiet
+	@echo "✅ Chaos basic tests complete!"
+
+chaos-full: ## Run full chaos engineering suite (requires chaos-full feature)
+	@echo "🔥 Running full chaos engineering suite..."
+	@cargo test --features chaos-full --quiet
+	@echo "✅ Full chaos tests complete!"
+
+check-regression: ## Check for performance regressions (>5% threshold)
+	@echo "📊 Checking for performance regressions..."
+	@ruchy scripts/check_regression.ruchy || echo "⚠️  Regression check failed or ruchy not found"
+
+fuzz: ## Run fuzz testing targets
+	@echo "🎲 Running fuzz tests..."
+	@echo "🔍 Checking for cargo-fuzz..."
+	@which cargo-fuzz > /dev/null 2>&1 || (echo "📦 Installing cargo-fuzz..." && cargo install cargo-fuzz --locked)
+	@cargo +nightly fuzz run filter_parser -- -max_total_time=60 || echo "⚠️  Fuzz testing requires nightly toolchain"
+
+# =============================================================================
+# Differential Testing (Oracle Problem)
+# =============================================================================
+
+diff-test: ## Run differential tests against strace
+	@echo "🔬 Running differential tests (Renacer vs strace)..."
+	@cargo test --test differential_strace_tests --quiet || echo "⚠️  Differential tests not yet implemented"

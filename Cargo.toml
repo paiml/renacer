@@ -66,3 +66,32 @@ strip = true
 [profile.dev]
 opt-level = 0
 debug = true
+
+# Chaos engineering features (Sprint 29 - Red-Team Profile)
+# Following aprender/trueno patterns for feature organization
+[features]
+default = []
+
+# Tier 1: Fast chaos (resource limits, signal injection)
+chaos-basic = []
+
+# Tier 2: Network/IO chaos (latency, packet loss simulation)
+chaos-network = ["chaos-basic"]
+
+# Tier 3: Byzantine fault injection (syscall return modification)
+chaos-byzantine = ["chaos-network"]
+
+# Full chaos engineering suite
+chaos-full = ["chaos-byzantine", "dep:loom", "dep:arbitrary"]
+
+# Fuzz testing support
+fuzz = ["dep:arbitrary"]
+
+[dependencies.loom]
+version = "0.7"
+optional = true
+
+[dependencies.arbitrary]
+version = "1.3"
+optional = true
+features = ["derive"]
