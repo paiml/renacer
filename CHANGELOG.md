@@ -5,6 +5,77 @@ All notable changes to Renacer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0-dev] - 2025-11-18
+
+### Added
+
+#### Sprint 21: HPU Acceleration Foundation
+
+**Goal:** Extend Trueno integration to support accelerated analysis for large-scale correlation analysis and clustering
+
+**Implementation** (EXTREME TDD - RED → GREEN → REFACTOR cycle):
+- **RED Phase**: Created 13 integration tests (tests/sprint21_hpu_acceleration_tests.rs)
+- **GREEN Phase**: Implemented HPU module with correlation and clustering
+- **REFACTOR Phase**: Unit tests, documentation updates
+
+**Features:**
+- **HPU Analysis Mode**: `--hpu-analysis` flag for opt-in acceleration
+  - Correlation matrix computation for syscall patterns
+  - K-means clustering for hotspot identification
+  - Adaptive backend selection (GPU when available, CPU fallback)
+- **CPU Fallback**: `--hpu-cpu-only` flag to force CPU backend
+  - Useful for systems without GPU support
+  - Zero overhead when HPU features disabled
+- **Analysis Report**:
+  - Correlation matrix showing syscall pattern relationships
+  - K-means clusters grouping related syscalls
+  - Backend information and computation timing
+
+**Architecture:**
+- `HPUProfiler`: Main profiler struct with adaptive backend
+- `HPUBackend`: GPU/CPU backend enum
+- `CorrelationResult`: Matrix of syscall correlations
+- `ClusteringResult`: K-means clustering output
+- `HPUAnalysisReport`: Complete analysis report
+
+**Results:**
+- **Tests**: 20 new tests (13 integration + 7 unit)
+  - test_hpu_analysis_basic
+  - test_hpu_correlation_matrix
+  - test_hpu_kmeans_clustering
+  - test_hpu_performance_threshold
+  - test_hpu_fallback_to_cpu
+  - test_hpu_with_statistics
+  - test_hpu_with_filtering
+  - test_hpu_with_function_time
+  - test_hpu_json_export
+  - test_hpu_large_trace
+  - test_hpu_empty_trace
+  - test_hpu_hotspot_identification
+  - test_backward_compatibility_without_hpu
+  - 7 unit tests in src/hpu.rs
+- **Complexity**: All functions ≤10 ✅
+- **Clippy**: Zero warnings ✅
+
+**Examples:**
+```bash
+# Enable HPU analysis with statistics
+renacer -c --hpu-analysis -- ./app
+
+# Force CPU backend
+renacer -c --hpu-analysis --hpu-cpu-only -- ./app
+
+# HPU with filtering
+renacer -c --hpu-analysis -e trace=file -- ls
+```
+
+**CLI Flags:**
+- `--hpu-analysis`: Enable HPU-accelerated correlation and clustering analysis
+- `--hpu-cpu-only`: Force CPU backend (disable GPU detection)
+
+### Fixed
+- Fixed DWARF test overflow issue with addr2line library (use bounded address values)
+
 ## [0.3.0] - 2025-11-17
 
 ### Added

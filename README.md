@@ -6,10 +6,10 @@ Renacer (Spanish: "to be reborn") is a next-generation binary inspection and tra
 
 ## Project Status
 
-**Current Version:** 0.3.0 (Sprint 19-20 complete - Trueno Integration Milestone)
-**Status:** Production-Ready + SIMD-Accelerated Statistics + Real-Time Anomaly Detection
-**TDG Score:** 94.5/100 (A grade)
-**Test Coverage:** 267 tests (all passing)
+**Current Version:** 0.4.0-dev (Sprint 21 in progress - HPU Acceleration Foundation)
+**Status:** Production-Ready + SIMD-Accelerated Statistics + Real-Time Anomaly Detection + HPU Analysis
+**TDG Score:** 95.1/100 (A+ grade)
+**Test Coverage:** 280+ tests (all passing)
 **Specification:** [docs/specifications/deep-strace-rust-wasm-binary-spec.md](docs/specifications/deep-strace-rust-wasm-binary-spec.md)
 
 ## Features
@@ -40,6 +40,13 @@ Renacer (Spanish: "to be reborn") is a next-generation binary inspection and tra
 - ✅ **Per-Syscall Baselines** (Sprint 20) - Independent sliding windows for each syscall type
 - ✅ **Severity Classification** (Sprint 20) - Low (3-4σ), Medium (4-5σ), High (>5σ) anomaly levels
 - ✅ **Anomaly Summary Reports** (Sprint 20) - Detailed reports with severity distribution and top anomalies
+
+### HPU Acceleration (Sprint 21) 🆕
+- ✅ **Correlation Matrix Analysis** - Compute syscall pattern correlations
+- ✅ **K-means Clustering** - Group syscalls into clusters for hotspot identification
+- ✅ **Adaptive Backend** - Automatic GPU/CPU backend selection
+- ✅ **CPU Fallback** - Force CPU-only processing with `--hpu-cpu-only`
+- ✅ **Zero Overhead** - No performance impact when disabled (opt-in via `--hpu-analysis`)
 
 ### Quality Infrastructure (v0.2.0-0.3.0)
 - ✅ **Property-based testing** - 670+ test cases via proptest
@@ -97,6 +104,11 @@ renacer -c -T -- cargo build
 # Enhanced statistics with percentiles (Sprint 19)
 renacer -c --stats-extended -- cargo test   # P50/P75/P90/P95/P99 latencies
 renacer -c --stats-extended --anomaly-threshold 2.5 -- ./app  # Custom anomaly threshold
+
+# HPU-accelerated analysis (Sprint 21)
+renacer -c --hpu-analysis -- ./heavy-io-app         # Correlation matrix + K-means clustering
+renacer -c --hpu-analysis --hpu-cpu-only -- app     # Force CPU backend
+renacer -c --hpu-analysis -e trace=file -- ls       # HPU with filtering
 
 # Real-time anomaly detection (Sprint 20)
 renacer --anomaly-realtime -- ./app         # Live anomaly monitoring
