@@ -15,6 +15,7 @@ use std::time::Duration;
 /// # Example
 /// ```
 /// use renacer::chaos::ChaosConfig;
+/// use std::time::Duration;
 ///
 /// let config = ChaosConfig::new()
 ///     .with_memory_limit(100 * 1024 * 1024)  // 100MB
