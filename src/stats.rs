@@ -213,10 +213,10 @@ impl StatsTracker {
         }
     }
 
-    /// Print statistics summary to stdout
+    /// Print statistics summary to stderr (matching strace behavior)
     pub fn print_summary(&self) {
         if self.stats.is_empty() {
-            println!("No syscalls traced.");
+            eprintln!("No syscalls traced.");
             return;
         }
 
@@ -231,8 +231,8 @@ impl StatsTracker {
         sorted.sort_by(|a, b| b.1.count.cmp(&a.1.count));
 
         // Print header
-        println!("% time     seconds  usecs/call     calls    errors syscall");
-        println!("------ ----------- ----------- --------- --------- ----------------");
+        eprintln!("% time     seconds  usecs/call     calls    errors syscall");
+        eprintln!("------ ----------- ----------- --------- --------- ----------------");
 
         // Print each syscall
         for (name, stats) in sorted {
@@ -248,7 +248,7 @@ impl StatsTracker {
                 0
             };
 
-            println!(
+            eprintln!(
                 "{:6.2} {:>11.6} {:>11} {:>9} {:>9} {}",
                 time_percent,
                 seconds,
@@ -264,14 +264,14 @@ impl StatsTracker {
         }
 
         // Print summary line
-        println!("------ ----------- ----------- --------- --------- ----------------");
+        eprintln!("------ ----------- ----------- --------- --------- ----------------");
         let total_seconds = total_time_us as f64 / 1_000_000.0;
         let avg_usecs = if total_calls > 0 {
             total_time_us / total_calls
         } else {
             0
         };
-        println!(
+        eprintln!(
             "100.00 {:>11.6} {:>11} {:>9} {:>9} total",
             total_seconds,
             avg_usecs,

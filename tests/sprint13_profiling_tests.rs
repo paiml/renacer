@@ -101,18 +101,20 @@ fn test_profile_self_with_statistics_mode() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
 
-    // Statistics summary goes to stdout (check for "syscall" column header)
+    // Statistics summary goes to stderr (matching strace behavior)
     assert!(
-        stdout.contains("syscall") && stdout.contains("total"),
-        "Missing statistics summary. stdout:\n{}",
-        stdout
+        stderr.contains("syscall") && stderr.contains("total"),
+        "Missing statistics summary. stderr:\n{}",
+        stderr
     );
-    // Profiling summary goes to stderr
+    // Profiling summary also goes to stderr
     assert!(
         stderr.contains("Renacer Self-Profiling Results"),
         "Missing profiling summary. stderr:\n{}",
         stderr
     );
+    // stdout should contain the command output
+    let _ = stdout; // suppress unused variable warning
 }
 
 #[test]

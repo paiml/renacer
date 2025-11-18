@@ -496,6 +496,10 @@ fn print_summaries(
                     },
                 });
             }
+            // Sprint 19: Print extended statistics if requested
+            if stats_extended {
+                tracker.print_extended_summary(anomaly_threshold);
+            }
         }
         print!("{}", csv_stats.to_csv(timing_mode));
     }

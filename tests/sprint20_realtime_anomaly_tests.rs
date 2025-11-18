@@ -121,10 +121,13 @@ int main() {
     let mut cmd = Command::cargo_bin("renacer").unwrap();
     cmd.arg("--anomaly-realtime")
         .arg("-T")
+        .arg("-e")
+        .arg("trace=write") // Filter to only trace write syscalls (5 calls)
         .arg("--")
         .arg(&test_program);
 
-    // Should NOT report anomalies (insufficient samples)
+    // Should NOT report anomalies (insufficient samples for write syscalls)
+    // With only 5 write syscalls, anomaly detection should not trigger
     cmd.assert()
         .success()
         .stderr(predicate::str::contains("ANOMALY").not());

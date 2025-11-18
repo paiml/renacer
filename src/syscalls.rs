@@ -257,8 +257,9 @@ mod tests {
         }
 
         #[test]
-        fn prop_unknown_syscalls_return_unknown(num in 400..10000i64) {
+        fn prop_unknown_syscalls_return_unknown(num in 500..10000i64) {
             // Property: high syscall numbers return "unknown"
+            // Note: clone3 is at 435, so we start from 500
             let name = syscall_name(num);
             prop_assert_eq!(name, "unknown");
         }

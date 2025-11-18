@@ -284,11 +284,11 @@ int main() {
     let mut cmd = Command::cargo_bin("renacer").unwrap();
     cmd.arg("-f").arg("-c").arg("--").arg(&test_program);
 
-    // Should show statistics aggregated across all processes
+    // Should show statistics aggregated across all processes (goes to stderr)
     cmd.assert()
         .success()
-        .stdout(predicate::str::contains("% time"))
-        .stdout(predicate::str::contains("syscall"));
+        .stderr(predicate::str::contains("% time"))
+        .stderr(predicate::str::contains("syscall"));
 }
 
 #[test]
