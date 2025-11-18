@@ -6,10 +6,10 @@ Renacer (Spanish: "to be reborn") is a next-generation binary inspection and tra
 
 ## Project Status
 
-**Current Version:** 0.4.0-dev (Sprint 21 in progress - HPU Acceleration Foundation)
-**Status:** Production-Ready + SIMD-Accelerated Statistics + Real-Time Anomaly Detection + HPU Analysis
-**TDG Score:** 95.1/100 (A+ grade)
-**Test Coverage:** 280+ tests (all passing)
+**Current Version:** 0.4.0-dev (Sprint 22 complete - HTML Output Format)
+**Status:** Production-Ready + SIMD-Accelerated Statistics + Real-Time Anomaly Detection + HPU Analysis + HTML Reports
+**TDG Score:** 99.9/100 (A+ grade)
+**Test Coverage:** 290+ tests (all passing)
 **Specification:** [docs/specifications/deep-strace-rust-wasm-binary-spec.md](docs/specifications/deep-strace-rust-wasm-binary-spec.md)
 
 ## Features
@@ -41,12 +41,18 @@ Renacer (Spanish: "to be reborn") is a next-generation binary inspection and tra
 - ✅ **Severity Classification** (Sprint 20) - Low (3-4σ), Medium (4-5σ), High (>5σ) anomaly levels
 - ✅ **Anomaly Summary Reports** (Sprint 20) - Detailed reports with severity distribution and top anomalies
 
-### HPU Acceleration (Sprint 21) 🆕
+### HPU Acceleration (Sprint 21)
 - ✅ **Correlation Matrix Analysis** - Compute syscall pattern correlations
 - ✅ **K-means Clustering** - Group syscalls into clusters for hotspot identification
 - ✅ **Adaptive Backend** - Automatic GPU/CPU backend selection
 - ✅ **CPU Fallback** - Force CPU-only processing with `--hpu-cpu-only`
 - ✅ **Zero Overhead** - No performance impact when disabled (opt-in via `--hpu-analysis`)
+
+### HTML Output Format (Sprint 22) 🆕
+- ✅ **Interactive HTML Reports** - Rich visual syscall trace reports
+- ✅ **Statistics Integration** - Combined with -c mode for visual statistics
+- ✅ **Source Correlation** - Display source locations in HTML tables
+- ✅ **Export Format** - Generate shareable HTML files (`--format html`)
 
 ### Quality Infrastructure (v0.2.0-0.3.0)
 - ✅ **Property-based testing** - 670+ test cases via proptest
@@ -80,6 +86,11 @@ renacer --format csv -- echo "test" > trace.csv
 renacer --format csv -T -- ls > trace-with-timing.csv
 renacer --format csv --source -- ./my-binary > trace-with-source.csv
 renacer --format csv -c -- cargo build > stats.csv
+
+# HTML output for visual reports (Sprint 22)
+renacer --format html -- ls -la > report.html       # Visual trace report
+renacer --format html -c -- cargo build > stats.html # Statistics as HTML
+renacer --format html --source -- ./app > trace.html # With source locations
 
 # Filter syscalls
 renacer -e trace=file -- cat file.txt       # File operations only
