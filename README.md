@@ -6,10 +6,10 @@ Renacer (Spanish: "to be reborn") is a next-generation binary inspection and tra
 
 ## Project Status
 
-**Current Version:** 0.4.0-dev (Sprint 24 complete - Transpiler Source Mapping Phase 1)
-**Status:** Production-Ready + SIMD-Accelerated Statistics + Real-Time Anomaly Detection + HPU Analysis + HTML Reports + Transpiler Debugging
+**Current Version:** 0.4.0 (Sprint 28 complete - Decy C→Rust Transpiler Integration)
+**Status:** Production-Ready + SIMD-Accelerated Statistics + Real-Time Anomaly Detection + HPU Analysis + HTML Reports + Multi-Transpiler Debugging
 **TDG Score:** 99.9/100 (A+ grade)
-**Test Coverage:** 189 tests (all passing)
+**Test Coverage:** 200+ tests (all passing)
 **Specification:** [docs/specifications/deep-strace-rust-wasm-binary-spec.md](docs/specifications/deep-strace-rust-wasm-binary-spec.md)
 
 ## Features
@@ -63,13 +63,18 @@ Renacer (Spanish: "to be reborn") is a next-generation binary inspection and tra
 - ✅ **JSON Integration** - ML analysis results included in JSON output
 - ✅ **Zero Overhead** - No impact when disabled (opt-in via `--ml-anomaly`)
 
-### Transpiler Source Mapping (Sprint 24 - Phase 1) 🆕
-- ✅ **JSON Source Map Parsing** - Parse transpiler source maps (Python→Rust, TypeScript→Rust)
+### Transpiler Source Mapping (Sprint 24-28)
+- ✅ **Multi-Language Support** - Parse source maps from multiple transpilers:
+  - Python→Rust (Depyler)
+  - C→Rust (Decy)
+  - TypeScript→Rust
+  - Any other source language
+- ✅ **JSON Source Map Parsing** - Parse transpiler source maps with version validation
 - ✅ **Line Number Mapping** - Map Rust line numbers back to original source language
 - ✅ **Function Name Mapping** - Translate Rust function names to original function/descriptions
 - ✅ **CLI Integration** - Load source maps via `--transpiler-map FILE.json`
 - ✅ **Error Handling** - Graceful handling of invalid JSON, missing files, unsupported versions
-- ✅ **Infrastructure Foundation** - Prepared for Phase 2+ (flamegraphs, stack traces, error correlation)
+- ✅ **Full Feature Integration** - Works with --function-time, --rewrite-stacktrace, --rewrite-errors
 
 ### Quality Infrastructure (v0.2.0-0.3.0)
 - ✅ **Property-based testing** - 670+ test cases via proptest
@@ -150,9 +155,11 @@ renacer --anomaly-realtime --anomaly-window-size 200 -- ./app  # Custom window s
 renacer -c --anomaly-realtime -- cargo test # Combine with statistics
 renacer --anomaly-realtime -e trace=file -- find /usr  # Monitor only file operations
 
-# Transpiler source mapping (Sprint 24 - Phase 1)
+# Transpiler source mapping (Sprint 24-28)
 renacer --transpiler-map simulation.rs.sourcemap.json -- ./simulation  # Load Python→Rust source map
+renacer --transpiler-map algorithm.sourcemap.json -- ./algorithm_rs    # Load C→Rust source map (Decy)
 renacer --transpiler-map app.sourcemap.json --source -- ./transpiled-app  # Combine with DWARF
+renacer --transpiler-map map.json --function-time -- ./binary  # Function profiling with source maps
 renacer --transpiler-map map.json -c -- ./binary       # Source mapping with statistics
 
 # Attach to running process
