@@ -5,9 +5,70 @@ All notable changes to Renacer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.4.0-dev] - 2025-11-18
+## [0.4.0] - 2025-11-18
 
 ### Added
+
+#### Sprint 28: Decy (C→Rust) Transpiler Integration
+
+**Goal:** Add support for Decy C-to-Rust transpiler source maps (Phase 5 of transpiler source mapping)
+
+**Implementation** (EXTREME TDD - All tests pass immediately):
+- **Tests Created**: 11 new tests (10 integration + 1 unit)
+- **Result**: All tests pass - existing generic implementation already supports C source language
+
+**Features:**
+- **C Source Language Support**: `source_language: "c"` fully supported in transpiler maps
+- **Decy Temp Variables**: Support for `_decy_temp_N` temporary variable mappings
+- **Header File Support**: `.h` files can be used as source files
+- **Full Feature Integration**: Works with all existing transpiler features:
+  - `--function-time` for function profiling with C source correlation
+  - `--rewrite-stacktrace` for C line number mapping
+  - `--rewrite-errors` for C error correlation
+  - `--show-transpiler-context` for verbose C context display
+
+**Results:**
+- **Tests**: 11 new tests (10 integration + 1 unit)
+  - test_c_source_language_accepted
+  - test_c_source_with_function_time
+  - test_c_source_with_line_mappings
+  - test_c_source_with_context
+  - test_c_source_with_rewrite_errors
+  - test_c_source_with_statistics
+  - test_c_decy_temp_variables
+  - test_c_source_all_flags
+  - test_c_source_empty_mappings
+  - test_c_header_file_source
+  - test_c_source_language_decy (unit test)
+- **Complexity**: All functions ≤10 ✅
+- **Clippy**: Zero warnings ✅
+
+**Examples:**
+```bash
+# Load C→Rust source map from Decy
+renacer --transpiler-map algorithm.sourcemap.json -- ./algorithm_rs
+
+# C source with function profiling
+renacer --transpiler-map calc.sourcemap.json --function-time -- ./calc_rs
+
+# C source with all transpiler features
+renacer --transpiler-map app.sourcemap.json --function-time --rewrite-stacktrace --rewrite-errors -- ./app_rs
+```
+
+**Source Map Format (C→Rust):**
+```json
+{
+  "version": 1,
+  "source_language": "c",
+  "source_file": "algorithm.c",
+  "generated_file": "algorithm.rs",
+  "mappings": [...],
+  "function_map": {
+    "_decy_temp_0": "temporary: sizeof(struct data)",
+    "sort_array": "sort_array"
+  }
+}
+```
 
 #### Sprint 21: HPU Acceleration Foundation
 
