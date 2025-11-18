@@ -1,14 +1,11 @@
 // Sprint 16: Advanced Filtering - Regex Pattern Tests
 // RED Phase: These tests should fail until we implement regex support
 
-use assert_cmd::Command;
-use predicates::prelude::*;
-
 /// Test basic regex pattern matching syscalls starting with "open"
 #[test]
 fn test_regex_prefix_pattern() {
     // Test that trace=/^open.*/ matches openat but not close or write
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-e")
         .arg("trace=/^open.*/")
         .arg("--")
@@ -41,7 +38,7 @@ fn test_regex_prefix_pattern() {
 #[test]
 fn test_regex_suffix_pattern() {
     // Test that trace=/.*at$/ matches openat, newfstatat but not open, close
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-e")
         .arg("trace=/.*at$/")
         .arg("--")
@@ -70,7 +67,7 @@ fn test_regex_suffix_pattern() {
 #[test]
 fn test_regex_or_pattern() {
     // Test that trace=/read|write/ matches both read and write
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-e")
         .arg("trace=/read|write/")
         .arg("--")
@@ -99,7 +96,7 @@ fn test_regex_or_pattern() {
 #[test]
 fn test_invalid_regex_error() {
     // Test that trace=/[invalid/ returns an error
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-e")
         .arg("trace=/[invalid/")
         .arg("--")
@@ -121,7 +118,7 @@ fn test_invalid_regex_error() {
 #[test]
 fn test_mixed_regex_and_literal() {
     // Test that trace=/^open.*/,close works (regex + literal)
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-e")
         .arg("trace=/^open.*/,close")
         .arg("--")
@@ -156,7 +153,7 @@ fn test_mixed_regex_and_literal() {
 #[test]
 fn test_regex_with_negation() {
     // Test that trace=/^open.*/,!/openat/ shows open* except openat
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-e")
         .arg("trace=/^open.*/,!/openat/")
         .arg("--")
@@ -182,7 +179,7 @@ fn test_regex_with_negation() {
 #[test]
 fn test_regex_with_statistics() {
     // Verify regex works with -c flag
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-e")
         .arg("trace=/^open.*/")
         .arg("-c")
@@ -206,7 +203,7 @@ fn test_regex_with_statistics() {
 #[test]
 fn test_regex_case_insensitive() {
     // Test that trace=/(?i)OPEN.*/ matches openat (case-insensitive)
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-e")
         .arg("trace=/(?i)OPEN.*/")
         .arg("--")
@@ -229,7 +226,7 @@ fn test_regex_case_insensitive() {
 #[test]
 fn test_empty_regex_pattern() {
     // Test that trace=/()/ is handled gracefully
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-e")
         .arg("trace=/()/")
         .arg("--")
@@ -239,12 +236,11 @@ fn test_empty_regex_pattern() {
     let output = cmd.output().unwrap();
     // Should either succeed with no matches or provide clear error
     // We'll validate behavior based on implementation decision
-    let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
 
     // Valid to either show nothing or error - test ensures no panic
     assert!(
-        output.status.success() || stderr.len() > 0,
+        output.status.success() || !stderr.is_empty(),
         "Should handle empty regex gracefully"
     );
 }

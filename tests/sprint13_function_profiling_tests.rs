@@ -2,12 +2,10 @@
 #![allow(deprecated)] // suppress assert_cmd::Command::cargo_bin deprecation in tests
                       // Sprint 13-14: Function-level profiling with DWARF correlation
 
-use assert_cmd::Command;
-
 #[test]
 fn test_function_time_flag_accepted() {
     // Test that --function-time flag is accepted by CLI
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--function-time").arg("--").arg("echo").arg("test");
 
     let output = cmd.output().unwrap();
@@ -21,7 +19,7 @@ fn test_function_time_flag_accepted() {
 #[test]
 fn test_function_time_output_format() {
     // Test that function profiling output appears when --function-time is used
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--function-time")
         .arg("--")
         .arg("echo")
@@ -44,7 +42,7 @@ fn test_function_time_output_format() {
 #[test]
 fn test_function_time_with_filter() {
     // Test that --function-time works with filtering
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--function-time")
         .arg("-e")
         .arg("trace=write")
@@ -69,7 +67,7 @@ fn test_function_time_with_filter() {
 #[test]
 fn test_function_time_without_flag_no_profiling() {
     // Test that without --function-time, no profiling summary appears
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--").arg("echo").arg("test");
 
     let output = cmd.output().unwrap();

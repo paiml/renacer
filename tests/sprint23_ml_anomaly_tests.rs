@@ -1,7 +1,6 @@
 // Sprint 23: ML-Enhanced Anomaly Detection via Aprender
 // EXTREME TDD: RED phase - Integration tests for ML-based anomaly detection
 
-use assert_cmd::Command;
 use predicates::prelude::*;
 use std::fs;
 use tempfile::TempDir;
@@ -35,7 +34,7 @@ int main() {
         .output()
         .expect("Failed to compile test program");
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--ml-anomaly")
         .arg("-T")
         .arg("--")
@@ -76,7 +75,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--ml-anomaly")
         .arg("-c")
         .arg("-T")
@@ -114,7 +113,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--ml-anomaly")
         .arg("--ml-clusters")
         .arg("5")
@@ -158,7 +157,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--ml-anomaly")
         .arg("-c")
         .arg("-T")
@@ -204,7 +203,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--ml-anomaly")
         .arg("--ml-compare")
         .arg("-c")
@@ -247,7 +246,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-c")
         .arg("--ml-anomaly")
         .arg("-T")
@@ -290,7 +289,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--ml-anomaly")
         .arg("-e")
         .arg("trace=write")
@@ -337,7 +336,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-f")
         .arg("--ml-anomaly")
         .arg("-T")
@@ -373,7 +372,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--ml-anomaly")
         .arg("-T")
         .arg("--format")
@@ -417,7 +416,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--ml-anomaly")
         .arg("-e")
         .arg("trace=write")
@@ -432,7 +431,7 @@ int main() {
 #[test]
 fn test_ml_clusters_invalid_value() {
     // Test invalid cluster count is rejected
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--ml-anomaly")
         .arg("--ml-clusters")
         .arg("1") // Invalid: must be >= 2
@@ -468,7 +467,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--ml-anomaly")
         .arg("--ml-clusters")
         .arg("2")
@@ -505,7 +504,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-c").arg("-T").arg("--").arg(&test_program);
 
     // Should NOT show any ML analysis output
@@ -554,7 +553,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--ml-anomaly")
         .arg("-c")
         .arg("-T")
@@ -599,7 +598,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--ml-anomaly")
         .arg("-c")
         .arg("-T")
@@ -639,7 +638,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--ml-anomaly")
         .arg("--anomaly-realtime")
         .arg("-T")

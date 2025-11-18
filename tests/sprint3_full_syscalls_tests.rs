@@ -5,7 +5,6 @@
 //!
 //! These tests will FAIL initially, then we implement to make them PASS
 
-use assert_cmd::Command;
 use predicates::prelude::*;
 use std::fs;
 use tempfile::TempDir;
@@ -13,7 +12,7 @@ use tempfile::TempDir;
 #[test]
 fn test_trace_shows_multiple_syscalls() {
     // Test that multiple syscalls are traced (not just write)
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--")
         .arg("ls")
         .arg("-la")
@@ -31,7 +30,7 @@ fn test_trace_file_operations() {
     let test_file = temp_dir.path().join("test.txt");
     fs::write(&test_file, "test content").unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--")
         .arg("cat")
         .arg(&test_file)
@@ -45,7 +44,7 @@ fn test_trace_file_operations() {
 #[test]
 fn test_syscall_names_not_numbers() {
     // Test that syscalls show as names (e.g., "openat"), not numbers (e.g., "257")
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--")
         .arg("echo")
         .arg("test")
@@ -62,7 +61,7 @@ fn test_trace_shows_syscall_arguments() {
     let test_file = temp_dir.path().join("myfile.txt");
     fs::write(&test_file, "content").unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--")
         .arg("cat")
         .arg(&test_file)
@@ -75,7 +74,7 @@ fn test_trace_shows_syscall_arguments() {
 fn test_unknown_syscalls_show_number() {
     // Test that unknown/unhandled syscalls show their number
     // (This is for future-proofing when new syscalls are added)
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--")
         .arg("true") // Simple program with minimal syscalls
         .assert()

@@ -2,12 +2,10 @@
 #![allow(deprecated)] // suppress assert_cmd::Command::cargo_bin deprecation in tests
                       // Sprint 22: HTML output format for visual trace reports
 
-use assert_cmd::Command;
-
 #[test]
 fn test_html_format_flag_accepted() {
     // Test that --format html flag is accepted by CLI
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--format")
         .arg("html")
         .arg("--")
@@ -21,7 +19,7 @@ fn test_html_format_flag_accepted() {
 #[test]
 fn test_html_output_basic() {
     // Test that HTML output generates valid HTML document
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--format")
         .arg("html")
         .arg("--")
@@ -44,7 +42,7 @@ fn test_html_output_basic() {
 #[test]
 fn test_html_output_contains_syscalls() {
     // Test that HTML output includes syscall traces
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--format")
         .arg("html")
         .arg("--")
@@ -66,7 +64,7 @@ fn test_html_output_contains_syscalls() {
 #[test]
 fn test_html_output_with_statistics() {
     // Test that HTML output includes statistics when -c flag used
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--format")
         .arg("html")
         .arg("-c")
@@ -89,7 +87,7 @@ fn test_html_output_with_statistics() {
 #[test]
 fn test_html_output_with_timing() {
     // Test that HTML output includes timing when -T flag used
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--format")
         .arg("html")
         .arg("-T")
@@ -112,7 +110,7 @@ fn test_html_output_with_timing() {
 #[test]
 fn test_html_output_with_filtering() {
     // Test that HTML output works with syscall filtering
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--format")
         .arg("html")
         .arg("-e")
@@ -138,7 +136,7 @@ fn test_html_output_with_filtering() {
 #[test]
 fn test_html_output_standalone() {
     // Test that HTML output is standalone (no external dependencies)
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--format")
         .arg("html")
         .arg("--")
@@ -162,7 +160,7 @@ fn test_html_output_standalone() {
 #[test]
 fn test_html_output_escape_special_chars() {
     // Test that HTML output escapes special characters (XSS prevention)
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--format")
         .arg("html")
         .arg("--")
@@ -196,7 +194,7 @@ fn test_html_output_escape_special_chars() {
 #[test]
 fn test_html_output_has_table_structure() {
     // Test that HTML output uses table structure for traces
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--format")
         .arg("html")
         .arg("--")
@@ -222,7 +220,7 @@ fn test_html_output_has_table_structure() {
 #[test]
 fn test_html_output_backward_compatibility() {
     // Test that existing formats still work
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--format")
         .arg("json")
         .arg("--")

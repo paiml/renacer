@@ -3,7 +3,6 @@
 
 #![allow(deprecated)] // Command::cargo_bin is deprecated but still functional
 
-use assert_cmd::Command;
 use predicates::prelude::*;
 use std::fs;
 use tempfile::TempDir;
@@ -51,7 +50,7 @@ int main() {
         .expect("Failed to compile test program");
 
     // Run with -f flag
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-f").arg("--").arg(&test_program);
 
     // Should trace syscalls from both parent and child
@@ -97,7 +96,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-f").arg("--").arg(&test_program);
 
     // Should trace fork and potentially execve in child
@@ -145,7 +144,7 @@ int main() {
         .unwrap();
 
     // Run WITHOUT -f flag
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--").arg(&test_program);
 
     // Should only see parent's syscalls, not child's
@@ -198,7 +197,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-f").arg("--").arg(&test_program);
 
     // Should trace all 4 processes (parent + 3 children)
@@ -243,7 +242,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-f")
         .arg("-e")
         .arg("trace=write")
@@ -281,7 +280,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-f").arg("-c").arg("--").arg(&test_program);
 
     // Should show statistics aggregated across all processes (goes to stderr)
@@ -317,7 +316,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-f")
         .arg("--format")
         .arg("json")
@@ -357,7 +356,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-f")
         .arg("--format")
         .arg("csv")
@@ -406,7 +405,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-f").arg("--").arg(&test_program);
 
     // Should handle child that exits quickly without crashing
@@ -447,7 +446,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-f").arg("--").arg(&test_program);
 
     // Should handle vfork() as well as fork()
@@ -486,7 +485,7 @@ int main() {
         .output()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-f").arg("--").arg(&test_program);
 
     // Should handle clone() syscall (threads)

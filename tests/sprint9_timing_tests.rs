@@ -1,13 +1,12 @@
 //! Integration tests for -T timing functionality (Sprint 9-10)
 #![allow(deprecated)] // suppress assert_cmd::Command::cargo_bin deprecation in tests
 
-use assert_cmd::Command;
 use predicates::prelude::*;
 
 #[test]
 fn test_timing_flag_shows_duration() {
     // Test that -T flag adds timing info to each syscall
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-T").arg("--").arg("echo").arg("test");
 
     cmd.assert()
@@ -20,7 +19,7 @@ fn test_timing_flag_shows_duration() {
 fn test_timing_with_statistics_mode() {
     // Test that -T works with -c statistics mode
     // Statistics output goes to stderr (matching strace behavior)
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-c").arg("-T").arg("--").arg("echo").arg("test");
 
     cmd.assert()
@@ -33,7 +32,7 @@ fn test_timing_with_statistics_mode() {
 #[test]
 fn test_timing_with_filter() {
     // Test that -T works with filtering
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-T")
         .arg("-e")
         .arg("trace=write")
@@ -50,7 +49,7 @@ fn test_timing_with_filter() {
 #[test]
 fn test_timing_format_is_seconds() {
     // Test that timing is displayed in seconds (not microseconds)
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-T").arg("--").arg("echo").arg("test");
 
     let output = cmd.output().unwrap();

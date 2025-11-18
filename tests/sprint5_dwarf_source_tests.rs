@@ -5,7 +5,6 @@
 //!
 //! These tests will FAIL initially, then we implement to make them PASS
 
-use assert_cmd::Command;
 use predicates::prelude::*;
 use std::fs;
 use std::path::PathBuf;
@@ -47,7 +46,7 @@ fn main() {
 
     let (_temp_dir, bin_file) = compile_test_program(code, 0);
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--source") // New flag to enable source correlation
         .arg("--")
         .arg(&bin_file)
@@ -69,7 +68,7 @@ fn main() {
 
     let (_temp_dir, bin_file) = compile_test_program(code, 1);
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--source")
         .arg("--")
         .arg(&bin_file)
@@ -94,7 +93,7 @@ fn main() {
 
     let (_temp_dir, bin_file) = compile_test_program(code, 0);
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--source")
         .arg("--")
         .arg(&bin_file)
@@ -115,7 +114,7 @@ fn main() {
 
     let (_temp_dir, bin_file) = compile_test_program(code, 0);
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--")
         .arg(&bin_file)
         .assert()
@@ -142,7 +141,7 @@ fn test_dwarf_no_debug_info_graceful_fallback() {
         .status()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--source")
         .arg("--")
         .arg(&bin_file)
