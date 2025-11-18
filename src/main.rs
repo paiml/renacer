@@ -1,9 +1,25 @@
 use anyhow::Result;
 use clap::Parser;
 use renacer::{cli::Cli, filter, tracer};
+use tracing_subscriber::EnvFilter;
+
+/// Initialize tracing subscriber for debug output
+fn init_tracing(debug: bool) {
+    if debug {
+        tracing_subscriber::fmt()
+            .with_env_filter(
+                EnvFilter::from_default_env().add_directive(tracing::Level::TRACE.into()),
+            )
+            .with_writer(std::io::stderr)
+            .init();
+    }
+}
 
 fn main() -> Result<()> {
     let args = Cli::parse();
+
+    // Initialize tracing if --debug flag is set
+    init_tracing(args.debug);
 
     // Parse filter expression if provided
     let filter = if let Some(expr) = args.filter {

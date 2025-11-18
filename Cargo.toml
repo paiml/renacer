@@ -41,6 +41,10 @@ trueno = "0.1.0"
 # Regex filtering (Sprint 16)
 regex = "1.10"
 
+# Development tracing/debugging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+
 [dev-dependencies]
 # Testing
 assert_cmd = "2.0"
