@@ -9,6 +9,7 @@ use predicates::prelude::*;
 #[test]
 fn test_statistics_mode_shows_summary() {
     // Test that -c shows statistics table
+    // Statistics output goes to stderr (matching strace behavior)
     let mut cmd = Command::cargo_bin("renacer").unwrap();
     cmd.arg("-c")
         .arg("--")
@@ -16,9 +17,9 @@ fn test_statistics_mode_shows_summary() {
         .arg("test")
         .assert()
         .success()
-        .stdout(predicate::str::contains("% time"))
-        .stdout(predicate::str::contains("syscall"))
-        .stdout(predicate::str::contains("total"));
+        .stderr(predicate::str::contains("% time"))
+        .stderr(predicate::str::contains("syscall"))
+        .stderr(predicate::str::contains("total"));
 }
 
 #[test]
@@ -37,6 +38,7 @@ fn test_statistics_mode_suppresses_individual_calls() {
 #[test]
 fn test_statistics_with_filter() {
     // Test that -c works with -e trace= filtering
+    // Statistics output goes to stderr (matching strace behavior)
     let mut cmd = Command::cargo_bin("renacer").unwrap();
     cmd.arg("-c")
         .arg("-e")
@@ -46,13 +48,14 @@ fn test_statistics_with_filter() {
         .arg("test")
         .assert()
         .success()
-        .stdout(predicate::str::contains("write"))
-        .stdout(predicate::str::contains("brk"));
+        .stderr(predicate::str::contains("write"))
+        .stderr(predicate::str::contains("brk"));
 }
 
 #[test]
 fn test_statistics_shows_call_counts() {
     // Test that statistics show call counts
+    // Statistics output goes to stderr (matching strace behavior)
     let mut cmd = Command::cargo_bin("renacer").unwrap();
     cmd.arg("-c")
         .arg("--")
@@ -60,5 +63,5 @@ fn test_statistics_shows_call_counts() {
         .arg("test")
         .assert()
         .success()
-        .stdout(predicate::str::is_match(r"\d+\s+write").unwrap()); // Number before "write"
+        .stderr(predicate::str::is_match(r"\d+\s+write").unwrap()); // Number before "write"
 }

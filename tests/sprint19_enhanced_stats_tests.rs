@@ -324,7 +324,7 @@ int main() {
 
 #[test]
 fn test_stats_extended_json_output() {
-    // Test --stats-extended data is included in JSON output
+    // Test --stats-extended with JSON output shows extended stats in stderr
     let tmp_dir = TempDir::new().unwrap();
     let test_program = tmp_dir.path().join("json_stats_test");
 
@@ -350,24 +350,25 @@ int main() {
     let mut cmd = Command::cargo_bin("renacer").unwrap();
     cmd.arg("-c")
         .arg("--stats-extended")
+        .arg("-T")
         .arg("--format")
         .arg("json")
         .arg("--")
         .arg(&test_program);
 
-    // JSON should include extended statistics fields
+    // JSON output goes to stdout, extended stats summary goes to stderr
     cmd.assert()
         .success()
-        .stdout(predicate::str::contains("\"mean\""))
-        .stdout(predicate::str::contains("\"stddev\""))
-        .stdout(predicate::str::contains("\"median\""))
-        .stdout(predicate::str::contains("\"p95\""))
-        .stdout(predicate::str::contains("\"p99\""));
+        .stdout(predicate::str::contains("\"syscalls\""))
+        .stderr(predicate::str::contains("Mean:"))
+        .stderr(predicate::str::contains("Std Dev:"))
+        .stderr(predicate::str::contains("P95:"))
+        .stderr(predicate::str::contains("P99:"));
 }
 
 #[test]
 fn test_stats_extended_csv_output() {
-    // Test --stats-extended data is included in CSV output
+    // Test --stats-extended with CSV output shows extended stats in stderr
     let tmp_dir = TempDir::new().unwrap();
     let test_program = tmp_dir.path().join("csv_stats_test");
 
@@ -393,19 +394,20 @@ int main() {
     let mut cmd = Command::cargo_bin("renacer").unwrap();
     cmd.arg("-c")
         .arg("--stats-extended")
+        .arg("-T")
         .arg("--format")
         .arg("csv")
         .arg("--")
         .arg(&test_program);
 
-    // CSV should include extended statistics columns
+    // CSV output goes to stdout, extended stats summary goes to stderr
     cmd.assert()
         .success()
-        .stdout(predicate::str::contains("mean"))
-        .stdout(predicate::str::contains("stddev"))
-        .stdout(predicate::str::contains("median"))
-        .stdout(predicate::str::contains("p95"))
-        .stdout(predicate::str::contains("p99"));
+        .stdout(predicate::str::contains("syscall,calls,errors"))
+        .stderr(predicate::str::contains("Mean:"))
+        .stderr(predicate::str::contains("Std Dev:"))
+        .stderr(predicate::str::contains("P95:"))
+        .stderr(predicate::str::contains("P99:"));
 }
 
 // ============================================================================

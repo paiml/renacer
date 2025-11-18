@@ -193,11 +193,11 @@ fn test_regex_with_statistics() {
     let output = cmd.output().unwrap();
     assert!(output.status.success());
 
-    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
 
-    // Statistics output should include openat but not unmatched syscalls
+    // Statistics output goes to stderr (matching strace behavior)
     assert!(
-        stdout.contains("openat") || stdout.contains("% time"),
+        stderr.contains("openat") || stderr.contains("% time"),
         "Statistics should show matched syscalls"
     );
 }

@@ -19,14 +19,15 @@ fn test_timing_flag_shows_duration() {
 #[test]
 fn test_timing_with_statistics_mode() {
     // Test that -T works with -c statistics mode
+    // Statistics output goes to stderr (matching strace behavior)
     let mut cmd = Command::cargo_bin("renacer").unwrap();
     cmd.arg("-c").arg("-T").arg("--").arg("echo").arg("test");
 
     cmd.assert()
         .success()
-        .stdout(predicate::str::contains("% time")) // Statistics header
-        .stdout(predicate::str::contains("seconds")) // Time column
-        .stdout(predicate::str::contains("usecs/call")); // Per-call timing
+        .stderr(predicate::str::contains("% time")) // Statistics header
+        .stderr(predicate::str::contains("seconds")) // Time column
+        .stderr(predicate::str::contains("usecs/call")); // Per-call timing
 }
 
 #[test]
