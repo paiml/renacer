@@ -5,6 +5,7 @@
 //! and comprehensive filtering.
 
 pub mod anomaly;
+pub mod autoencoder;
 pub mod chaos;
 pub mod cli;
 pub mod csv_output;

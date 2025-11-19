@@ -90,6 +90,39 @@ pub struct JsonFeatureImportance {
     pub importance: f64,
 }
 
+/// Autoencoder anomaly detection analysis (Sprint 23)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct JsonAutoencoderAnalysis {
+    /// Hidden layer size
+    pub hidden_size: usize,
+    /// Training epochs
+    pub epochs: usize,
+    /// Threshold multiplier (σ)
+    pub threshold: f32,
+    /// Adaptive reconstruction error threshold
+    pub adaptive_threshold: f64,
+    /// Total samples analyzed
+    pub total_samples: usize,
+    /// List of detected anomalies
+    pub anomalies: Vec<JsonAutoencoderAnomaly>,
+}
+
+/// A detected anomaly from Autoencoder
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct JsonAutoencoderAnomaly {
+    /// Syscall name
+    pub syscall: String,
+    /// Reconstruction error
+    pub reconstruction_error: f64,
+    /// Average duration in microseconds
+    pub avg_duration_us: f64,
+    /// Call count
+    pub call_count: u64,
+    /// Feature contributions to error (if explainability enabled)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub feature_contributions: Option<Vec<JsonFeatureImportance>>,
+}
+
 /// Summary statistics for the trace
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JsonSummary {
@@ -119,6 +152,9 @@ pub struct JsonOutput {
     /// Isolation Forest outlier analysis (if --ml-outliers enabled) (Sprint 22)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub isolation_forest_analysis: Option<JsonIsolationForestAnalysis>,
+    /// Autoencoder anomaly detection (if --dl-anomaly enabled) (Sprint 23)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub autoencoder_analysis: Option<JsonAutoencoderAnalysis>,
 }
 
 impl JsonOutput {
@@ -135,6 +171,7 @@ impl JsonOutput {
             },
             ml_analysis: None,
             isolation_forest_analysis: None,
+            autoencoder_analysis: None,
         }
     }
 
@@ -210,6 +247,51 @@ impl JsonOutput {
             contamination: report.contamination,
             total_samples: report.total_samples,
             outliers,
+        });
+    }
+
+    /// Set Autoencoder analysis results (Sprint 23)
+    pub fn set_autoencoder_analysis(
+        &mut self,
+        report: crate::autoencoder::AutoencoderReport,
+        threshold: f32,
+        explain: bool,
+    ) {
+        let anomalies = report
+            .anomalies
+            .iter()
+            .map(|a| {
+                let feature_contributions = if explain && !a.feature_contributions.is_empty() {
+                    Some(
+                        a.feature_contributions
+                            .iter()
+                            .map(|(feature, contribution)| JsonFeatureImportance {
+                                feature: feature.clone(),
+                                importance: *contribution,
+                            })
+                            .collect(),
+                    )
+                } else {
+                    None
+                };
+
+                JsonAutoencoderAnomaly {
+                    syscall: a.syscall.clone(),
+                    reconstruction_error: a.reconstruction_error,
+                    avg_duration_us: a.avg_duration_us,
+                    call_count: a.call_count,
+                    feature_contributions,
+                }
+            })
+            .collect();
+
+        self.autoencoder_analysis = Some(JsonAutoencoderAnalysis {
+            hidden_size: report.hidden_size,
+            epochs: report.epochs,
+            threshold,
+            adaptive_threshold: report.threshold,
+            total_samples: report.total_samples,
+            anomalies,
         });
     }
 
