@@ -24,6 +24,7 @@
 
 - [Trace File Operations](./examples/trace-file-ops.md)
 - [Debug Performance Issues](./examples/debug-performance.md)
+- [Debug Compilation & Transpilation](./examples/debug-compilation.md)
 - [Monitor Network Calls](./examples/monitor-network.md)
 - [Attach to Running Process](./examples/attach-process.md)
 - [Multi-Process Tracing](./examples/multi-process.md)
