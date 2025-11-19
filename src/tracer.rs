@@ -204,7 +204,7 @@ fn initialize_tracers(config: &TracerConfig) -> Tracers {
         initialize_output_tracers(config);
 
     // Create stats_tracker if statistics mode is enabled OR if ML anomaly analysis is enabled
-    let stats_tracker = if config.statistics_mode || config.ml_anomaly {
+    let stats_tracker = if config.statistics_mode || config.ml_anomaly || config.ml_outliers {
         Some(crate::stats::StatsTracker::new())
     } else {
         None
@@ -517,6 +517,30 @@ fn generate_ml_analysis_for_json(
     }
 }
 
+/// Generate Isolation Forest analysis for JSON output (Sprint 22)
+fn generate_isolation_forest_analysis_for_json(
+    stats_tracker: &Option<crate::stats::StatsTracker>,
+    num_trees: usize,
+    contamination: f32,
+    explain: bool,
+) -> Option<crate::isolation_forest::OutlierReport> {
+    if let Some(ref tracker) = stats_tracker {
+        let mut data = std::collections::HashMap::new();
+        for (syscall_name, stats) in tracker.stats_map() {
+            let total_time_ns = stats.total_time_us * 1000;
+            data.insert(syscall_name.clone(), (stats.count, total_time_ns));
+        }
+        Some(crate::isolation_forest::analyze_outliers(
+            &data,
+            num_trees,
+            contamination,
+            explain,
+        ))
+    } else {
+        None
+    }
+}
+
 /// Print CSV statistics output
 fn print_csv_stats(
     mut csv_stats: crate::csv_output::CsvStatsOutput,
@@ -727,6 +751,17 @@ fn print_summaries(tracers: Tracers, timing_mode: bool, exit_code: i32, analysis
                 generate_ml_analysis_for_json(&stats_tracker, analysis.ml_clusters)
             {
                 output.set_ml_analysis(report);
+            }
+        }
+        // Add Isolation Forest analysis to JSON if enabled (Sprint 22)
+        if analysis.ml_outliers {
+            if let Some(report) = generate_isolation_forest_analysis_for_json(
+                &stats_tracker,
+                analysis.ml_outlier_trees,
+                analysis.ml_outlier_threshold,
+                analysis.explain,
+            ) {
+                output.set_isolation_forest_analysis(report, analysis.explain);
             }
         }
         print_json_output(output, exit_code);
