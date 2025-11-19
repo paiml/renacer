@@ -8,6 +8,7 @@ pub mod anomaly;
 pub mod chaos;
 pub mod cli;
 pub mod csv_output;
+pub mod decision_trace;
 pub mod dwarf;
 pub mod filter;
 pub mod function_profiler;
