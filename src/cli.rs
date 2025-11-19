@@ -100,6 +100,22 @@ pub struct Cli {
     #[arg(long = "ml-compare")]
     pub ml_compare: bool,
 
+    /// Enable Isolation Forest-based outlier detection (Sprint 22)
+    #[arg(long = "ml-outliers")]
+    pub ml_outliers: bool,
+
+    /// Contamination threshold for Isolation Forest (default: 0.1, range: 0.0-0.5)
+    #[arg(long = "ml-outlier-threshold", value_name = "THRESHOLD", default_value = "0.1")]
+    pub ml_outlier_threshold: f32,
+
+    /// Number of trees in Isolation Forest (default: 100, min: 10)
+    #[arg(long = "ml-outlier-trees", value_name = "N", default_value = "100")]
+    pub ml_outlier_trees: usize,
+
+    /// Enable explainability for ML outlier detection (Sprint 22)
+    #[arg(long = "explain")]
+    pub explain: bool,
+
     /// Path to transpiler source map JSON file (Sprint 24)
     #[arg(long = "transpiler-map", value_name = "FILE")]
     pub transpiler_map: Option<String>,
@@ -406,5 +422,107 @@ mod tests {
         assert!(cli.transpiler_map.is_some());
         assert!(cli.rewrite_errors);
         assert!(cli.show_transpiler_context);
+    }
+
+    // Sprint 22: Isolation Forest / ML Outliers tests
+    #[test]
+    fn test_cli_ml_outliers_flag() {
+        let cli = Cli::parse_from(["renacer", "--ml-outliers", "--", "echo", "test"]);
+        assert!(cli.ml_outliers);
+        assert!(cli.command.is_some());
+    }
+
+    #[test]
+    fn test_cli_ml_outliers_default_false() {
+        let cli = Cli::parse_from(["renacer", "--", "echo", "test"]);
+        assert!(!cli.ml_outliers);
+    }
+
+    #[test]
+    fn test_cli_ml_outlier_threshold_default() {
+        let cli = Cli::parse_from(["renacer", "--ml-outliers", "--", "echo", "test"]);
+        assert_eq!(cli.ml_outlier_threshold, 0.1);
+    }
+
+    #[test]
+    fn test_cli_ml_outlier_threshold_custom() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "--ml-outliers",
+            "--ml-outlier-threshold",
+            "0.15",
+            "--",
+            "echo",
+            "test",
+        ]);
+        assert_eq!(cli.ml_outlier_threshold, 0.15);
+    }
+
+    #[test]
+    fn test_cli_ml_outlier_trees_default() {
+        let cli = Cli::parse_from(["renacer", "--ml-outliers", "--", "echo", "test"]);
+        assert_eq!(cli.ml_outlier_trees, 100);
+    }
+
+    #[test]
+    fn test_cli_ml_outlier_trees_custom() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "--ml-outliers",
+            "--ml-outlier-trees",
+            "150",
+            "--",
+            "echo",
+            "test",
+        ]);
+        assert_eq!(cli.ml_outlier_trees, 150);
+    }
+
+    #[test]
+    fn test_cli_explain_flag() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "--ml-outliers",
+            "--explain",
+            "--",
+            "echo",
+            "test",
+        ]);
+        assert!(cli.ml_outliers);
+        assert!(cli.explain);
+    }
+
+    #[test]
+    fn test_cli_explain_default_false() {
+        let cli = Cli::parse_from(["renacer", "--", "echo", "test"]);
+        assert!(!cli.explain);
+    }
+
+    #[test]
+    fn test_cli_ml_outliers_with_statistics() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "-c",
+            "--ml-outliers",
+            "--",
+            "echo",
+            "test",
+        ]);
+        assert!(cli.statistics);
+        assert!(cli.ml_outliers);
+    }
+
+    #[test]
+    fn test_cli_ml_outliers_with_kmeans() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "--ml-outliers",
+            "--ml-anomaly",
+            "--",
+            "echo",
+            "test",
+        ]);
+        assert!(cli.ml_outliers);
+        assert!(cli.ml_anomaly);
     }
 }
