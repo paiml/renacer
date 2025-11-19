@@ -159,6 +159,73 @@ pub fn generate_decision_id(category: &str, name: &str, file: &str, line: u32) -
     hasher.finish()
 }
 
+/// Sprint 27 (v2.0): DecisionManifest implementation
+impl DecisionManifest {
+    /// Load decision manifest from JSON file
+    ///
+    /// # Arguments
+    /// * `path` - Path to `.ruchy/decision_manifest.json`
+    ///
+    /// # Returns
+    /// * `Ok(DecisionManifest)` - Successfully loaded manifest
+    /// * `Err(String)` - Error reading or parsing file
+    ///
+    /// # Example
+    /// ```no_run
+    /// use renacer::decision_trace::DecisionManifest;
+    /// use std::path::Path;
+    ///
+    /// let manifest = DecisionManifest::load_from_file(
+    ///     Path::new(".ruchy/decision_manifest.json")
+    /// ).unwrap();
+    /// ```
+    pub fn load_from_file(path: &std::path::Path) -> Result<Self, String> {
+        let contents = std::fs::read_to_string(path)
+            .map_err(|e| format!("Failed to read manifest file: {}", e))?;
+
+        let manifest: DecisionManifest = serde_json::from_str(&contents)
+            .map_err(|e| format!("Failed to parse manifest JSON: {}", e))?;
+
+        Ok(manifest)
+    }
+}
+
+/// Sprint 27 (v2.0): Read decision traces from MessagePack file
+///
+/// Reads binary decision trace file (`.ruchy/decisions.msgpack`) produced
+/// by the Ruchy transpiler during compilation.
+///
+/// # Arguments
+/// * `path` - Path to `.ruchy/decisions.msgpack`
+///
+/// # Returns
+/// * `Ok(Vec<DecisionTrace>)` - Successfully loaded traces
+/// * `Err(String)` - Error reading or deserializing file
+///
+/// # Example
+/// ```no_run
+/// use renacer::decision_trace::read_decisions_from_msgpack;
+/// use std::path::Path;
+///
+/// let traces = read_decisions_from_msgpack(
+///     Path::new(".ruchy/decisions.msgpack")
+/// ).unwrap();
+/// println!("Loaded {} decision traces", traces.len());
+/// ```
+pub fn read_decisions_from_msgpack(path: &std::path::Path) -> Result<Vec<DecisionTrace>, String> {
+    let contents =
+        std::fs::read(path).map_err(|e| format!("Failed to read msgpack file: {}", e))?;
+
+    if contents.is_empty() {
+        return Err("MessagePack file is empty".to_string());
+    }
+
+    let traces: Vec<DecisionTrace> = rmp_serde::from_slice(&contents)
+        .map_err(|e| format!("Failed to deserialize msgpack: {}", e))?;
+
+    Ok(traces)
+}
+
 /// Decision trace collector
 #[derive(Debug)]
 pub struct DecisionTracer {
@@ -272,6 +339,147 @@ impl DecisionTracer {
     /// Get trace count
     pub fn count(&self) -> usize {
         self.traces.len()
+    }
+
+    /// Sprint 27 (v2.0): Add decision with full metadata including decision_id
+    ///
+    /// This is the v2.0 API for adding decisions with hash-based IDs.
+    ///
+    /// # Arguments
+    /// * `category` - Decision category (e.g., "optimization", "type_inference")
+    /// * `name` - Decision name (e.g., "inline_candidate", "infer_function")
+    /// * `input` - Decision input parameters
+    /// * `result` - Decision result/output (optional)
+    /// * `source_location` - Source location string (e.g., "foo.rb:42")
+    /// * `decision_id` - Pre-computed FNV-1a hash ID
+    pub fn add_decision_with_id(
+        &mut self,
+        category: &str,
+        name: &str,
+        input: serde_json::Value,
+        result: Option<serde_json::Value>,
+        source_location: Option<&str>,
+        decision_id: Option<u64>,
+    ) {
+        let timestamp_us = self.start_time.elapsed().as_micros() as u64;
+
+        self.traces.push(DecisionTrace {
+            timestamp_us,
+            category: category.to_string(),
+            name: name.to_string(),
+            input,
+            result,
+            source_location: source_location.map(|s| s.to_string()),
+            decision_id,
+        });
+    }
+
+    /// Sprint 27 (v2.0): Write traces to MessagePack file
+    ///
+    /// Writes all collected decision traces to a binary MessagePack file.
+    /// This is the v2.0 output format (`.ruchy/decisions.msgpack`).
+    ///
+    /// # Arguments
+    /// * `path` - Path to output file (e.g., `.ruchy/decisions.msgpack`)
+    ///
+    /// # Returns
+    /// * `Ok(())` - Successfully wrote file
+    /// * `Err(String)` - Error writing or serializing
+    pub fn write_to_msgpack(&self, path: &std::path::Path) -> Result<(), String> {
+        let packed = rmp_serde::to_vec(&self.traces)
+            .map_err(|e| format!("Failed to serialize traces to MessagePack: {}", e))?;
+
+        std::fs::write(path, packed)
+            .map_err(|e| format!("Failed to write MessagePack file: {}", e))?;
+
+        Ok(())
+    }
+
+    /// Sprint 27 (v2.0): Generate and write decision manifest
+    ///
+    /// Creates the JSON sidecar file (`.ruchy/decision_manifest.json`) that
+    /// maps u64 decision IDs to human-readable descriptions.
+    ///
+    /// # Arguments
+    /// * `path` - Path to output file (e.g., `.ruchy/decision_manifest.json`)
+    /// * `version` - Manifest version (e.g., "2.0.0")
+    /// * `git_commit` - Optional git commit hash
+    /// * `transpiler_version` - Optional transpiler version
+    ///
+    /// # Returns
+    /// * `Ok(())` - Successfully wrote manifest
+    /// * `Err(String)` - Error generating or writing manifest
+    pub fn write_manifest(
+        &self,
+        path: &std::path::Path,
+        version: &str,
+        git_commit: Option<&str>,
+        transpiler_version: Option<&str>,
+    ) -> Result<(), String> {
+        let mut entries = HashMap::new();
+
+        // Build manifest entries from traces
+        for trace in &self.traces {
+            if let Some(decision_id) = trace.decision_id {
+                // Parse source location into SourceLocation struct
+                let source = if let Some(ref loc) = trace.source_location {
+                    // Parse "file.rb:line" or "file.rb:line:column"
+                    let parts: Vec<&str> = loc.split(':').collect();
+                    if parts.len() >= 2 {
+                        let file = parts[0].to_string();
+                        let line = parts[1].parse::<u32>().unwrap_or(0);
+                        let column = if parts.len() >= 3 {
+                            parts[2].parse::<u32>().ok()
+                        } else {
+                            None
+                        };
+                        SourceLocation { file, line, column }
+                    } else {
+                        // Fallback if parsing fails
+                        SourceLocation {
+                            file: loc.clone(),
+                            line: 0,
+                            column: None,
+                        }
+                    }
+                } else {
+                    // No source location available
+                    SourceLocation {
+                        file: "unknown".to_string(),
+                        line: 0,
+                        column: None,
+                    }
+                };
+
+                let entry = DecisionManifestEntry {
+                    decision_id,
+                    category: trace.category.clone(),
+                    name: trace.name.clone(),
+                    source,
+                    input: trace.input.clone(),
+                    result: trace.result.clone().unwrap_or(serde_json::Value::Null),
+                };
+
+                // Use hex string as key (e.g., "0xDEADBEEF")
+                let key = format!("0x{:X}", decision_id);
+                entries.insert(key, entry);
+            }
+        }
+
+        let manifest = DecisionManifest {
+            version: version.to_string(),
+            git_commit: git_commit.map(|s| s.to_string()),
+            transpiler_version: transpiler_version.map(|s| s.to_string()),
+            entries,
+        };
+
+        // Serialize to pretty JSON
+        let json = serde_json::to_string_pretty(&manifest)
+            .map_err(|e| format!("Failed to serialize manifest to JSON: {}", e))?;
+
+        std::fs::write(path, json).map_err(|e| format!("Failed to write manifest file: {}", e))?;
+
+        Ok(())
     }
 }
 
@@ -582,6 +790,431 @@ mod tests {
             assert!(json2.contains("bar.rb"));
             assert!(json2.contains("100"));
             assert!(!json2.contains("column")); // Should be skipped
+        }
+
+        #[test]
+        fn test_load_decision_manifest_from_json() {
+            // RED: Test loading manifest from JSON file
+            use std::io::Write;
+            use tempfile::NamedTempFile;
+
+            let manifest_json = r#"{
+                "version": "2.0.0",
+                "git_commit": "abc123",
+                "transpiler_version": "3.213.0",
+                "0xDEADBEEF": {
+                    "decision_id": 3735928559,
+                    "category": "optimization",
+                    "name": "test_decision",
+                    "source": {
+                        "file": "test.rb",
+                        "line": 1
+                    },
+                    "input": {"param": "value"},
+                    "result": {"outcome": "success"}
+                }
+            }"#;
+
+            let mut temp_file = NamedTempFile::new().unwrap();
+            temp_file.write_all(manifest_json.as_bytes()).unwrap();
+            temp_file.flush().unwrap();
+
+            let manifest = DecisionManifest::load_from_file(temp_file.path()).unwrap();
+            assert_eq!(manifest.version, "2.0.0");
+            assert_eq!(manifest.git_commit, Some("abc123".to_string()));
+            assert_eq!(manifest.entries.len(), 1);
+        }
+
+        #[test]
+        fn test_load_decision_manifest_missing_file() {
+            // Should return error for missing file
+            let result =
+                DecisionManifest::load_from_file(std::path::Path::new("/nonexistent/path"));
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn test_load_decision_manifest_invalid_json() {
+            // Should return error for invalid JSON
+            use std::io::Write;
+            use tempfile::NamedTempFile;
+
+            let mut temp_file = NamedTempFile::new().unwrap();
+            temp_file.write_all(b"not valid json {{{").unwrap();
+            temp_file.flush().unwrap();
+
+            let result = DecisionManifest::load_from_file(temp_file.path());
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn test_messagepack_decision_trace_roundtrip() {
+            // RED: Test MessagePack serialization/deserialization of DecisionTrace
+            let trace = DecisionTrace {
+                timestamp_us: 12345,
+                category: "optimization".to_string(),
+                name: "inline_candidate".to_string(),
+                input: serde_json::json!({"size": 10}),
+                result: Some(serde_json::json!({"decision": "inline"})),
+                source_location: Some("foo.rb:42".to_string()),
+                decision_id: Some(0xDEADBEEF),
+            };
+
+            // Serialize to MessagePack
+            let packed = rmp_serde::to_vec(&trace).unwrap();
+
+            // Deserialize back
+            let unpacked: DecisionTrace = rmp_serde::from_slice(&packed).unwrap();
+
+            assert_eq!(unpacked.timestamp_us, 12345);
+            assert_eq!(unpacked.category, "optimization");
+            assert_eq!(unpacked.decision_id, Some(0xDEADBEEF));
+        }
+
+        #[test]
+        fn test_read_decisions_from_msgpack_file() {
+            // RED: Test reading multiple decisions from .msgpack file
+            use std::io::Write;
+            use tempfile::NamedTempFile;
+
+            let traces = vec![
+                DecisionTrace {
+                    timestamp_us: 100,
+                    category: "type_inference".to_string(),
+                    name: "infer_type".to_string(),
+                    input: serde_json::json!({"var": "x"}),
+                    result: Some(serde_json::json!({"type": "i32"})),
+                    source_location: Some("foo.rb:1".to_string()),
+                    decision_id: Some(generate_decision_id(
+                        "type_inference",
+                        "infer_type",
+                        "foo.rb",
+                        1,
+                    )),
+                },
+                DecisionTrace {
+                    timestamp_us: 200,
+                    category: "optimization".to_string(),
+                    name: "inline".to_string(),
+                    input: serde_json::json!({"size": 5}),
+                    result: Some(serde_json::json!({"decision": "yes"})),
+                    source_location: Some("foo.rb:10".to_string()),
+                    decision_id: Some(generate_decision_id("optimization", "inline", "foo.rb", 10)),
+                },
+            ];
+
+            // Write to MessagePack file
+            let mut temp_file = NamedTempFile::new().unwrap();
+            let packed = rmp_serde::to_vec(&traces).unwrap();
+            temp_file.write_all(&packed).unwrap();
+            temp_file.flush().unwrap();
+
+            // Read back
+            let loaded = read_decisions_from_msgpack(temp_file.path()).unwrap();
+            assert_eq!(loaded.len(), 2);
+            assert_eq!(loaded[0].category, "type_inference");
+            assert_eq!(loaded[1].category, "optimization");
+        }
+
+        #[test]
+        fn test_read_decisions_from_msgpack_empty_file() {
+            // Should handle empty file gracefully
+            use tempfile::NamedTempFile;
+
+            let temp_file = NamedTempFile::new().unwrap();
+            // Empty file
+
+            let result = read_decisions_from_msgpack(temp_file.path());
+            assert!(result.is_err() || result.unwrap().is_empty());
+        }
+
+        // Sprint 27 Phase 2: DecisionTracer integration tests
+        #[test]
+        fn test_decision_tracer_write_to_msgpack() {
+            // RED: Test DecisionTracer can write traces to MessagePack file
+            use tempfile::TempDir;
+
+            let temp_dir = TempDir::new().unwrap();
+            let msgpack_path = temp_dir.path().join("decisions.msgpack");
+
+            let mut tracer = DecisionTracer::new();
+
+            // Add some traces with decision IDs
+            tracer.add_decision_with_id(
+                "optimization",
+                "inline",
+                serde_json::json!({"size": 10}),
+                Some(serde_json::json!({"decision": "yes"})),
+                Some("foo.rb:42"),
+                Some(generate_decision_id("optimization", "inline", "foo.rb", 42)),
+            );
+
+            // Write to MessagePack file
+            tracer.write_to_msgpack(&msgpack_path).unwrap();
+
+            // Verify file exists and can be read back
+            let loaded = read_decisions_from_msgpack(&msgpack_path).unwrap();
+            assert_eq!(loaded.len(), 1);
+            assert_eq!(loaded[0].category, "optimization");
+            assert_eq!(
+                loaded[0].decision_id,
+                Some(generate_decision_id("optimization", "inline", "foo.rb", 42))
+            );
+        }
+
+        #[test]
+        fn test_decision_tracer_generate_manifest() {
+            // RED: Test DecisionTracer can generate decision manifest
+            use tempfile::TempDir;
+
+            let temp_dir = TempDir::new().unwrap();
+            let manifest_path = temp_dir.path().join("decision_manifest.json");
+
+            let mut tracer = DecisionTracer::new();
+
+            // Add trace with complete metadata
+            tracer.add_decision_with_id(
+                "type_inference",
+                "infer_var",
+                serde_json::json!({"var": "x"}),
+                Some(serde_json::json!({"type": "i32"})),
+                Some("test.rb:10"),
+                Some(generate_decision_id(
+                    "type_inference",
+                    "infer_var",
+                    "test.rb",
+                    10,
+                )),
+            );
+
+            // Generate manifest
+            tracer
+                .write_manifest(&manifest_path, "2.0.0", Some("abc123"), Some("3.213.0"))
+                .unwrap();
+
+            // Verify manifest can be loaded
+            let manifest = DecisionManifest::load_from_file(&manifest_path).unwrap();
+            assert_eq!(manifest.version, "2.0.0");
+            assert_eq!(manifest.git_commit, Some("abc123".to_string()));
+            assert!(manifest.entries.len() > 0);
+        }
+
+        // Sprint 27 Phase 2: Property-based tests for hash collision resistance
+        use proptest::prelude::*;
+
+        proptest! {
+            #[test]
+            fn prop_decision_id_deterministic(
+                category in "[a-z_]{1,20}",
+                name in "[a-z_]{1,20}",
+                file in "[a-z_./]{1,30}",
+                line in 1u32..10000u32
+            ) {
+                // Same inputs should always produce same hash
+                let id1 = generate_decision_id(&category, &name, &file, line);
+                let id2 = generate_decision_id(&category, &name, &file, line);
+                assert_eq!(id1, id2, "Hash must be deterministic");
+            }
+
+            #[test]
+            fn prop_decision_id_different_categories_different_hashes(
+                name in "[a-z_]{1,20}",
+                file in "[a-z_./]{1,30}",
+                line in 1u32..1000u32
+            ) {
+                // Different categories should produce different hashes
+                let id_opt = generate_decision_id("optimization", &name, &file, line);
+                let id_type = generate_decision_id("type_inference", &name, &file, line);
+                assert_ne!(id_opt, id_type, "Different categories must produce different hashes");
+            }
+
+            #[test]
+            fn prop_decision_id_different_lines_different_hashes(
+                category in "[a-z_]{1,20}",
+                name in "[a-z_]{1,20}",
+                file in "[a-z_./]{1,30}",
+                line1 in 1u32..1000u32,
+                line2 in 1000u32..2000u32
+            ) {
+                // Different line numbers should produce different hashes
+                let id1 = generate_decision_id(&category, &name, &file, line1);
+                let id2 = generate_decision_id(&category, &name, &file, line2);
+                assert_ne!(id1, id2, "Different lines must produce different hashes");
+            }
+
+            #[test]
+            fn prop_decision_id_nonzero(
+                category in "[a-z_]{1,20}",
+                name in "[a-z_]{1,20}",
+                file in "[a-z_./]{1,30}",
+                line in 1u32..10000u32
+            ) {
+                // Hash should never be zero (FNV-1a offset basis ensures this)
+                let id = generate_decision_id(&category, &name, &file, line);
+                assert_ne!(id, 0, "Hash should never be zero");
+            }
+
+            #[test]
+            fn prop_decision_id_uniform_distribution(
+                inputs in prop::collection::vec(
+                    (
+                        prop::string::string_regex("[a-z_]{1,20}").unwrap(),
+                        prop::string::string_regex("[a-z_]{1,20}").unwrap(),
+                        prop::string::string_regex("[a-z_./]{1,30}").unwrap(),
+                        1u32..10000u32
+                    ),
+                    100..200
+                )
+            ) {
+                // Generate many hashes and check for uniqueness
+                let mut hashes = std::collections::HashSet::new();
+                let mut collisions = 0;
+
+                for (category, name, file, line) in &inputs {
+                    let id = generate_decision_id(category, name, file, *line);
+                    if !hashes.insert(id) {
+                        collisions += 1;
+                    }
+                }
+
+                // With 100+ diverse inputs, we expect < 1% collision rate
+                // (FNV-1a is designed for low collision rates with diverse inputs)
+                let collision_rate = (collisions as f64) / (inputs.len() as f64);
+                assert!(
+                    collision_rate < 0.01,
+                    "Collision rate too high: {:.2}% ({}  collisions out of {} inputs)",
+                    collision_rate * 100.0,
+                    collisions,
+                    inputs.len()
+                );
+            }
+        }
+
+        // Sprint 27 Phase 2: Performance tests
+        #[test]
+        fn test_hash_generation_performance() {
+            // Verify hash generation is fast enough for production use
+            // Target: < 100ns per hash (to keep overhead < 5%)
+            use std::time::Instant;
+
+            let iterations = 10000;
+            let start = Instant::now();
+
+            for i in 0..iterations {
+                let _ =
+                    generate_decision_id("optimization", "inline_candidate", "foo.rb", i % 1000);
+            }
+
+            let elapsed = start.elapsed();
+            let avg_time_ns = elapsed.as_nanos() / (iterations as u128);
+
+            println!(
+                "Hash generation: {} iterations in {:?} (avg {} ns/hash)",
+                iterations, elapsed, avg_time_ns
+            );
+
+            // FNV-1a should be very fast - target < 200ns per hash in debug mode
+            // (in release mode with opt-level=3, this is typically < 50ns)
+            // Even at 200ns, this is < 1% overhead for typical transpiler decisions (10-50us)
+            assert!(
+                avg_time_ns < 200,
+                "Hash generation too slow: {} ns (target < 200 ns debug, < 50 ns release)",
+                avg_time_ns
+            );
+        }
+
+        #[test]
+        fn test_msgpack_serialization_performance() {
+            // Verify MessagePack serialization is fast
+            // Target: serialize 1000 decisions in < 10ms
+            use std::time::Instant;
+
+            // Create 1000 decision traces
+            let mut traces = Vec::new();
+            for i in 0..1000 {
+                traces.push(DecisionTrace {
+                    timestamp_us: i * 1000,
+                    category: "optimization".to_string(),
+                    name: "inline".to_string(),
+                    input: serde_json::json!({"size": i % 100}),
+                    result: Some(serde_json::json!({"decision": "yes"})),
+                    source_location: Some(format!("foo.rb:{}", i % 500)),
+                    decision_id: Some(generate_decision_id(
+                        "optimization",
+                        "inline",
+                        "foo.rb",
+                        (i % 500) as u32,
+                    )),
+                });
+            }
+
+            let start = Instant::now();
+            let packed = rmp_serde::to_vec(&traces).unwrap();
+            let elapsed = start.elapsed();
+
+            println!(
+                "MessagePack serialization: 1000 traces in {:?} ({} bytes)",
+                elapsed,
+                packed.len()
+            );
+
+            // Should be < 10ms for 1000 traces
+            assert!(
+                elapsed.as_millis() < 10,
+                "MessagePack serialization too slow: {:?} (target < 10ms)",
+                elapsed
+            );
+        }
+
+        #[test]
+        fn test_decision_tracer_full_v2_roundtrip() {
+            // RED: Test full write + read cycle with v2.0 format
+            use tempfile::TempDir;
+
+            let temp_dir = TempDir::new().unwrap();
+            let msgpack_path = temp_dir.path().join("decisions.msgpack");
+            let manifest_path = temp_dir.path().join("decision_manifest.json");
+
+            // Create tracer with multiple decisions
+            let mut tracer = DecisionTracer::new();
+
+            let decision_id_1 = generate_decision_id("optimization", "inline", "foo.rb", 10);
+            let decision_id_2 = generate_decision_id("type_inference", "infer_type", "bar.rb", 20);
+
+            tracer.add_decision_with_id(
+                "optimization",
+                "inline",
+                serde_json::json!({"size": 5}),
+                Some(serde_json::json!({"decision": "yes"})),
+                Some("foo.rb:10"),
+                Some(decision_id_1),
+            );
+
+            tracer.add_decision_with_id(
+                "type_inference",
+                "infer_type",
+                serde_json::json!({"var": "x"}),
+                Some(serde_json::json!({"type": "String"})),
+                Some("bar.rb:20"),
+                Some(decision_id_2),
+            );
+
+            // Write both files
+            tracer.write_to_msgpack(&msgpack_path).unwrap();
+            tracer
+                .write_manifest(&manifest_path, "2.0.0", None, None)
+                .unwrap();
+
+            // Read back and verify
+            let loaded_traces = read_decisions_from_msgpack(&msgpack_path).unwrap();
+            let loaded_manifest = DecisionManifest::load_from_file(&manifest_path).unwrap();
+
+            assert_eq!(loaded_traces.len(), 2);
+            assert_eq!(loaded_manifest.version, "2.0.0");
+
+            // Verify decision IDs match between traces and manifest
+            assert_eq!(loaded_traces[0].decision_id, Some(decision_id_1));
+            assert_eq!(loaded_traces[1].decision_id, Some(decision_id_2));
         }
     }
 }
