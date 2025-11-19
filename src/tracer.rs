@@ -1418,15 +1418,16 @@ mod tests {
             follow_forks: false,
             profile_self: false,
             function_time: false,
-            stats_extended: false,    // Sprint 19
-            anomaly_threshold: 3.0,   // Sprint 19
-            anomaly_realtime: false,  // Sprint 20
-            anomaly_window_size: 100, // Sprint 20
-            hpu_analysis: false,      // Sprint 21
-            hpu_cpu_only: false,      // Sprint 21
-            ml_anomaly: false,        // Sprint 23
-            ml_clusters: 3,           // Sprint 23
-            ml_compare: false,        // Sprint 23
+            stats_extended: false,             // Sprint 19
+            anomaly_threshold: 3.0,            // Sprint 19
+            anomaly_realtime: false,           // Sprint 20
+            anomaly_window_size: 100,          // Sprint 20
+            hpu_analysis: false,               // Sprint 21
+            hpu_cpu_only: false,               // Sprint 21
+            ml_anomaly: false,                 // Sprint 23
+            ml_clusters: 3,                    // Sprint 23
+            ml_compare: false,                 // Sprint 23
+            trace_transpiler_decisions: false, // Sprint 26
         };
         let result = trace_command(&empty, config);
         assert!(result.is_err());
@@ -1446,15 +1447,16 @@ mod tests {
             follow_forks: false,
             profile_self: false,
             function_time: false,
-            stats_extended: false,    // Sprint 19
-            anomaly_threshold: 3.0,   // Sprint 19
-            anomaly_realtime: false,  // Sprint 20
-            anomaly_window_size: 100, // Sprint 20
-            hpu_analysis: false,      // Sprint 21
-            hpu_cpu_only: false,      // Sprint 21
-            ml_anomaly: false,        // Sprint 23
-            ml_clusters: 3,           // Sprint 23
-            ml_compare: false,        // Sprint 23
+            stats_extended: false,             // Sprint 19
+            anomaly_threshold: 3.0,            // Sprint 19
+            anomaly_realtime: false,           // Sprint 20
+            anomaly_window_size: 100,          // Sprint 20
+            hpu_analysis: false,               // Sprint 21
+            hpu_cpu_only: false,               // Sprint 21
+            ml_anomaly: false,                 // Sprint 23
+            ml_clusters: 3,                    // Sprint 23
+            ml_compare: false,                 // Sprint 23
+            trace_transpiler_decisions: false, // Sprint 26
         };
         let result = trace_command(&cmd, config);
         assert!(result.is_err());
@@ -1510,15 +1512,16 @@ mod tests {
             follow_forks: false,
             profile_self: false,
             function_time: false,
-            stats_extended: false,    // Sprint 19
-            anomaly_threshold: 3.0,   // Sprint 19
-            anomaly_realtime: false,  // Sprint 20
-            anomaly_window_size: 100, // Sprint 20
-            hpu_analysis: false,      // Sprint 21
-            hpu_cpu_only: false,      // Sprint 21
-            ml_anomaly: false,        // Sprint 23
-            ml_clusters: 3,           // Sprint 23
-            ml_compare: false,        // Sprint 23
+            stats_extended: false,             // Sprint 19
+            anomaly_threshold: 3.0,            // Sprint 19
+            anomaly_realtime: false,           // Sprint 20
+            anomaly_window_size: 100,          // Sprint 20
+            hpu_analysis: false,               // Sprint 21
+            hpu_cpu_only: false,               // Sprint 21
+            ml_anomaly: false,                 // Sprint 23
+            ml_clusters: 3,                    // Sprint 23
+            ml_compare: false,                 // Sprint 23
+            trace_transpiler_decisions: false, // Sprint 26
         };
         let result = attach_to_pid(999999, config);
         assert!(result.is_err());
