@@ -897,6 +897,11 @@ struct SyscallEntry {
     source: Option<crate::json_output::JsonSourceLocation>,
     function_name: Option<String>,
     caller_name: Option<String>,
+    // Sprint 26: Raw args for decision trace capture (write syscall interception)
+    raw_arg1: Option<u64>,
+    raw_arg2: Option<u64>,
+    #[allow(dead_code)] // May be used in future for more complex decision trace patterns
+    raw_arg3: Option<u64>,
 }
 
 /// Find the user function that triggered a syscall by unwinding the stack
@@ -1111,6 +1116,10 @@ fn handle_syscall_entry(
         source: json_source,
         function_name,
         caller_name,
+        // Sprint 26: Store raw args for decision trace capture
+        raw_arg1: Some(arg1),
+        raw_arg2: Some(arg2),
+        raw_arg3: Some(arg3),
     }))
 }
 
@@ -1317,6 +1326,70 @@ fn should_print_result(
     syscall_entry.is_some() && !in_stats_mode && !in_json_mode && !in_csv_mode && !in_html_mode
 }
 
+/// Sprint 26: Capture decision traces from write() syscalls to stderr
+///
+/// Intercepts write(2, buffer, count) calls and parses [DECISION] and [RESULT] lines
+fn capture_decision_trace(
+    child: Pid,
+    syscall_entry: &Option<SyscallEntry>,
+    decision_tracer: Option<&mut crate::decision_trace::DecisionTracer>,
+    bytes_written: i64,
+) {
+    // Only process if decision tracing is enabled
+    let Some(tracer) = decision_tracer else {
+        return;
+    };
+
+    // Only process if we have a syscall entry
+    let Some(entry) = syscall_entry else {
+        return;
+    };
+
+    // Only intercept write() syscalls
+    if entry.name != "write" {
+        return;
+    }
+
+    // Check if writing to stderr (fd = 2)
+    if entry.raw_arg1 != Some(2) {
+        return;
+    };
+
+    // Only process successful writes
+    if bytes_written <= 0 {
+        return;
+    }
+
+    // Get buffer address and size
+    let buffer_addr = entry.raw_arg2.unwrap_or(0);
+    let buffer_size = bytes_written as usize;
+
+    // Read buffer from child process memory
+    use nix::sys::uio::{process_vm_readv, RemoteIoVec};
+    use std::io::IoSliceMut;
+
+    let mut buffer = vec![0u8; buffer_size];
+    let mut local_iov = [IoSliceMut::new(&mut buffer)];
+    let remote_iov = [RemoteIoVec {
+        base: buffer_addr as usize,
+        len: buffer_size,
+    }];
+
+    // Try to read; silently ignore errors (child may have exited, etc.)
+    if process_vm_readv(child, &mut local_iov, &remote_iov).is_err() {
+        return;
+    }
+
+    // Convert to string, replacing invalid UTF-8 with replacement character
+    let content = String::from_utf8_lossy(&buffer);
+
+    // Parse each line through DecisionTracer
+    for line in content.lines() {
+        // Ignore parse errors - not all stderr lines are decision traces
+        let _ = tracer.parse_line(line);
+    }
+}
+
 fn handle_syscall_exit(
     child: Pid,
     syscall_entry: &Option<SyscallEntry>,
@@ -1366,6 +1439,14 @@ fn handle_syscall_exit(
         result,
         timing_mode,
         duration_us,
+    );
+
+    // Sprint 26: Capture decision traces from stderr writes
+    capture_decision_trace(
+        child,
+        syscall_entry,
+        tracers.decision_tracer.as_mut(),
+        result,
     );
 
     // Record CSV stats (we'll handle this in print_summaries)
@@ -1470,6 +1551,9 @@ mod tests {
             source: None,
             function_name: None,
             caller_name: None,
+            raw_arg1: Some(1),
+            raw_arg2: Some(2),
+            raw_arg3: Some(3),
         };
         assert_eq!(entry.name, "open");
         assert_eq!(entry.args.len(), 2);
@@ -1490,6 +1574,9 @@ mod tests {
             source: Some(source),
             function_name: Some("main".to_string()),
             caller_name: None,
+            raw_arg1: Some(0),
+            raw_arg2: Some(0),
+            raw_arg3: Some(0),
         };
         assert_eq!(entry.name, "read");
         assert!(entry.source.is_some());
