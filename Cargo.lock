@@ -100,13 +100,14 @@ checksum = "a23eb6b1614318a8071c9b2521f36b424b2c83db5eb3a0fead4a6c0809af6e61"
 
 [[package]]
 name = "aprender"
-version = "0.2.0"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f3266e0d32a357aae2ed71d818d23a475ab26b5b1ee6ae7d9d098185a26e217f"
+checksum = "f8bdce6b9ca0c80626d4fd10cb8f01fe787b1a5235042543e25654f48df2b93c"
 dependencies = [
  "bincode",
  "rand 0.8.5",
  "serde",
+ "serde_json",
  "trueno",
 ]
 
