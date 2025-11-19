@@ -116,6 +116,22 @@ pub struct Cli {
     #[arg(long = "explain")]
     pub explain: bool,
 
+    /// Enable deep learning (Autoencoder) anomaly detection (Sprint 23)
+    #[arg(long = "dl-anomaly")]
+    pub dl_anomaly: bool,
+
+    /// Reconstruction error threshold for Autoencoder (default: 2.0)
+    #[arg(long = "dl-threshold", value_name = "THRESHOLD", default_value = "2.0")]
+    pub dl_threshold: f32,
+
+    /// Hidden layer size for Autoencoder (default: 3)
+    #[arg(long = "dl-hidden-size", value_name = "SIZE", default_value = "3")]
+    pub dl_hidden_size: usize,
+
+    /// Number of training epochs for Autoencoder (default: 100)
+    #[arg(long = "dl-epochs", value_name = "N", default_value = "100")]
+    pub dl_epochs: usize,
+
     /// Path to transpiler source map JSON file (Sprint 24)
     #[arg(long = "transpiler-map", value_name = "FILE")]
     pub transpiler_map: Option<String>,
@@ -524,5 +540,108 @@ mod tests {
         ]);
         assert!(cli.ml_outliers);
         assert!(cli.ml_anomaly);
+    }
+
+    // Sprint 23: Deep Learning / Autoencoder tests
+    #[test]
+    fn test_cli_dl_anomaly_flag() {
+        let cli = Cli::parse_from(["renacer", "--dl-anomaly", "--", "echo", "test"]);
+        assert!(cli.dl_anomaly);
+    }
+
+    #[test]
+    fn test_cli_dl_anomaly_default_false() {
+        let cli = Cli::parse_from(["renacer", "--", "echo", "test"]);
+        assert!(!cli.dl_anomaly);
+    }
+
+    #[test]
+    fn test_cli_dl_threshold_default() {
+        let cli = Cli::parse_from(["renacer", "--dl-anomaly", "--", "echo", "test"]);
+        assert_eq!(cli.dl_threshold, 2.0);
+    }
+
+    #[test]
+    fn test_cli_dl_threshold_custom() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "--dl-anomaly",
+            "--dl-threshold",
+            "3.0",
+            "--",
+            "echo",
+            "test",
+        ]);
+        assert_eq!(cli.dl_threshold, 3.0);
+    }
+
+    #[test]
+    fn test_cli_dl_hidden_size_default() {
+        let cli = Cli::parse_from(["renacer", "--dl-anomaly", "--", "echo", "test"]);
+        assert_eq!(cli.dl_hidden_size, 3);
+    }
+
+    #[test]
+    fn test_cli_dl_hidden_size_custom() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "--dl-anomaly",
+            "--dl-hidden-size",
+            "5",
+            "--",
+            "echo",
+            "test",
+        ]);
+        assert_eq!(cli.dl_hidden_size, 5);
+    }
+
+    #[test]
+    fn test_cli_dl_epochs_default() {
+        let cli = Cli::parse_from(["renacer", "--dl-anomaly", "--", "echo", "test"]);
+        assert_eq!(cli.dl_epochs, 100);
+    }
+
+    #[test]
+    fn test_cli_dl_epochs_custom() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "--dl-anomaly",
+            "--dl-epochs",
+            "200",
+            "--",
+            "echo",
+            "test",
+        ]);
+        assert_eq!(cli.dl_epochs, 200);
+    }
+
+    #[test]
+    fn test_cli_dl_anomaly_with_statistics() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "-c",
+            "--dl-anomaly",
+            "--",
+            "echo",
+            "test",
+        ]);
+        assert!(cli.statistics);
+        assert!(cli.dl_anomaly);
+    }
+
+    #[test]
+    fn test_cli_dl_anomaly_with_other_ml() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "--dl-anomaly",
+            "--ml-anomaly",
+            "--ml-outliers",
+            "--",
+            "echo",
+            "test",
+        ]);
+        assert!(cli.dl_anomaly);
+        assert!(cli.ml_anomaly);
+        assert!(cli.ml_outliers);
     }
 }
