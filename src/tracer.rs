@@ -31,6 +31,10 @@ pub struct TracerConfig {
     pub ml_anomaly: bool,       // Sprint 23: ML-based anomaly detection using Aprender
     pub ml_clusters: usize,     // Sprint 23: Number of clusters for KMeans
     pub ml_compare: bool,       // Sprint 23: Compare ML results with z-score
+    pub ml_outliers: bool,      // Sprint 22: Isolation Forest outlier detection
+    pub ml_outlier_threshold: f32, // Sprint 22: Contamination threshold
+    pub ml_outlier_trees: usize,   // Sprint 22: Number of trees
+    pub explain: bool,          // Sprint 22: Enable explainability
     pub transpiler_map: Option<crate::transpiler_map::TranspilerMap>, // Sprint 24-28: Transpiler source mapping
 }
 
@@ -592,6 +596,49 @@ fn print_ml_analysis(
     }
 }
 
+/// Print Isolation Forest outlier analysis report (Sprint 22)
+fn print_isolation_forest_analysis(
+    stats_tracker: &Option<crate::stats::StatsTracker>,
+    num_trees: usize,
+    contamination: f32,
+    explain: bool,
+) {
+    if let Some(ref tracker) = stats_tracker {
+        let mut data = std::collections::HashMap::new();
+        for (syscall_name, stats) in tracker.stats_map() {
+            let total_time_ns = stats.total_time_us * 1000;
+            data.insert(syscall_name.clone(), (stats.count, total_time_ns));
+        }
+
+        let report = crate::isolation_forest::analyze_outliers(&data, num_trees, contamination, explain);
+
+        // Print report
+        eprint!("\n=== Isolation Forest Anomaly Detection ===\n");
+        eprint!("Trees: {}, Contamination: {:.1}%, Samples: {}\n\n",
+                report.num_trees, report.contamination * 100.0, report.total_samples);
+
+        if report.outliers.is_empty() {
+            eprint!("No outliers detected.\n");
+        } else {
+            eprint!("Detected {} outlier(s):\n\n", report.outliers.len());
+            for outlier in &report.outliers {
+                eprint!("  {} (anomaly score: {:.3})\n", outlier.syscall, outlier.anomaly_score);
+                eprint!("    Avg duration: {:.2} μs, Calls: {}\n",
+                        outlier.avg_duration_us, outlier.call_count);
+
+                if explain && !outlier.feature_importance.is_empty() {
+                    eprint!("    Feature Importance:\n");
+                    for (feature, importance) in &outlier.feature_importance {
+                        eprint!("      {}: {:.1}%\n", feature, importance);
+                    }
+                }
+                eprint!("\n");
+            }
+        }
+        eprint!("=========================================\n\n");
+    }
+}
+
 /// Analysis configuration for print_summaries
 struct AnalysisConfig {
     stats_extended: bool,
@@ -601,6 +648,10 @@ struct AnalysisConfig {
     ml_anomaly: bool,
     ml_clusters: usize,
     ml_compare: bool,
+    ml_outliers: bool,           // Sprint 22: Isolation Forest outlier detection
+    ml_outlier_threshold: f32,   // Sprint 22: Contamination threshold
+    ml_outlier_trees: usize,     // Sprint 22: Number of trees
+    explain: bool,               // Sprint 22: Enable explainability
 }
 
 /// Print optional profiling and tracing summaries
@@ -620,7 +671,7 @@ fn print_optional_summaries(
     }
 }
 
-/// Print analysis summaries (HPU, ML)
+/// Print analysis summaries (HPU, ML, Isolation Forest)
 fn print_analysis_summaries(
     stats_tracker: &Option<crate::stats::StatsTracker>,
     analysis: &AnalysisConfig,
@@ -634,6 +685,14 @@ fn print_analysis_summaries(
             analysis.ml_clusters,
             analysis.ml_compare,
             analysis.anomaly_threshold,
+        );
+    }
+    if analysis.ml_outliers {
+        print_isolation_forest_analysis(
+            stats_tracker,
+            analysis.ml_outlier_trees,
+            analysis.ml_outlier_threshold,
+            analysis.explain,
         );
     }
 }
@@ -875,6 +934,10 @@ fn trace_child(child: Pid, config: TracerConfig) -> Result<i32> {
             ml_anomaly: config.ml_anomaly,
             ml_clusters: config.ml_clusters,
             ml_compare: config.ml_compare,
+            ml_outliers: config.ml_outliers,             // Sprint 22
+            ml_outlier_threshold: config.ml_outlier_threshold, // Sprint 22
+            ml_outlier_trees: config.ml_outlier_trees,   // Sprint 22
+            explain: config.explain,                     // Sprint 22
         },
     );
     std::process::exit(main_exit_code);
@@ -1461,6 +1524,10 @@ mod tests {
             ml_anomaly: false,        // Sprint 23
             ml_clusters: 3,           // Sprint 23
             ml_compare: false,        // Sprint 23
+            ml_outliers: false,       // Sprint 22
+            ml_outlier_threshold: 0.1, // Sprint 22
+            ml_outlier_trees: 100,    // Sprint 22
+            explain: false,           // Sprint 22
             transpiler_map: None,     // Sprint 24-28
         };
         let result = trace_command(&empty, config);
@@ -1490,6 +1557,10 @@ mod tests {
             ml_anomaly: false,        // Sprint 23
             ml_clusters: 3,           // Sprint 23
             ml_compare: false,        // Sprint 23
+            ml_outliers: false,       // Sprint 22
+            ml_outlier_threshold: 0.1, // Sprint 22
+            ml_outlier_trees: 100,    // Sprint 22
+            explain: false,           // Sprint 22
             transpiler_map: None,     // Sprint 24-28
         };
         let result = trace_command(&cmd, config);
@@ -1555,6 +1626,10 @@ mod tests {
             ml_anomaly: false,        // Sprint 23
             ml_clusters: 3,           // Sprint 23
             ml_compare: false,        // Sprint 23
+            ml_outliers: false,       // Sprint 22
+            ml_outlier_threshold: 0.1, // Sprint 22
+            ml_outlier_trees: 100,    // Sprint 22
+            explain: false,           // Sprint 22
             transpiler_map: None,     // Sprint 24-28
         };
         let result = attach_to_pid(999999, config);

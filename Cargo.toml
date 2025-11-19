@@ -44,6 +44,9 @@ aprender = "0.4.1"
 # Regex filtering (Sprint 16)
 regex = "1.10"
 
+# Random number generation for Isolation Forest (Sprint 22)
+rand = "0.8"
+
 # Development tracing/debugging
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
