@@ -192,6 +192,7 @@ fn main() -> Result<()> {
         ml_anomaly: args.ml_anomaly,               // Sprint 23
         ml_clusters: args.ml_clusters,             // Sprint 23
         ml_compare: args.ml_compare,               // Sprint 23
+        trace_transpiler_decisions: args.trace_transpiler_decisions, // Sprint 26
     };
 
     // Either attach to PID or trace command (mutually exclusive)

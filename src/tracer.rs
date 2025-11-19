@@ -31,6 +31,7 @@ pub struct TracerConfig {
     pub ml_anomaly: bool,       // Sprint 23: ML-based anomaly detection using Aprender
     pub ml_clusters: usize,     // Sprint 23: Number of clusters for KMeans
     pub ml_compare: bool,       // Sprint 23: Compare ML results with z-score
+    pub trace_transpiler_decisions: bool, // Sprint 26: Trace transpiler compile-time decisions
 }
 
 /// Attach to a running process by PID and trace syscalls
@@ -109,6 +110,8 @@ struct Tracers {
     csv_stats_output: Option<crate::csv_output::CsvStatsOutput>,
     html_output: Option<crate::html_output::HtmlOutput>, // Sprint 22
     anomaly_detector: Option<crate::anomaly::AnomalyDetector>, // Sprint 20
+    #[allow(dead_code)] // Sprint 26: Will be used once stderr capture is wired
+    decision_tracer: Option<crate::decision_trace::DecisionTracer>, // Sprint 26
 }
 
 /// Initialize profiling-related tracers
@@ -205,6 +208,13 @@ fn initialize_tracers(config: &TracerConfig) -> Tracers {
         None
     };
 
+    // Initialize decision tracer for transpiler decision tracking (Sprint 26)
+    let decision_tracer = if config.trace_transpiler_decisions {
+        Some(crate::decision_trace::DecisionTracer::new())
+    } else {
+        None
+    };
+
     Tracers {
         profiling_ctx,
         function_profiler,
@@ -214,6 +224,7 @@ fn initialize_tracers(config: &TracerConfig) -> Tracers {
         csv_stats_output,
         html_output,
         anomaly_detector,
+        decision_tracer,
     }
 }
 
@@ -646,6 +657,7 @@ fn print_summaries(tracers: Tracers, timing_mode: bool, exit_code: i32, analysis
         profiling_ctx,
         function_profiler,
         anomaly_detector,
+        decision_tracer: _, // Sprint 26: Not used in summaries yet
     } = tracers;
 
     // Print statistics summary if in statistics mode (text format)
