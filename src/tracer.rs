@@ -32,6 +32,7 @@ pub struct TracerConfig {
     pub ml_clusters: usize,     // Sprint 23: Number of clusters for KMeans
     pub ml_compare: bool,       // Sprint 23: Compare ML results with z-score
     pub trace_transpiler_decisions: bool, // Sprint 26: Trace transpiler compile-time decisions
+    pub transpiler_map: Option<crate::transpiler_map::TranspilerMap>, // Sprint 24-28: Transpiler source mapping
 }
 
 /// Attach to a running process by PID and trace syscalls
@@ -428,6 +429,7 @@ fn process_syscall_entry(
                 config.statistics_mode,
                 structured_output,
                 config.function_time,
+                config.transpiler_map.as_ref(),
             )
         })
     } else {
@@ -438,6 +440,7 @@ fn process_syscall_entry(
             config.statistics_mode,
             structured_output,
             config.function_time,
+            config.transpiler_map.as_ref(),
         )
     }
 }
@@ -1065,6 +1068,7 @@ fn format_syscall_args_for_json(
 }
 
 /// Print syscall entry with optional source location
+#[allow(clippy::too_many_arguments)]
 fn print_syscall_entry(
     child: Pid,
     name: &str,
@@ -1073,12 +1077,20 @@ fn print_syscall_entry(
     arg2: u64,
     arg3: u64,
     source_info: &Option<crate::dwarf::SourceLocation>,
+    transpiler_map: Option<&crate::transpiler_map::TranspilerMap>,
 ) {
     // Print source location if available
     if let Some(src) = source_info {
-        print!("{}:{} ", src.file, src.line);
-        if let Some(func) = &src.function {
-            print!("{} ", func);
+        // Try to map to transpiler source first
+        if let Some(transpiled_source) = map_to_transpiler_source(src, transpiler_map) {
+            // Show both Rust and original source
+            print!("{} ", transpiled_source);
+        } else {
+            // Show just Rust source from DWARF
+            print!("{}:{} ", src.file, src.line);
+            if let Some(func) = &src.function {
+                print!("{} ", func);
+            }
         }
     }
 
@@ -1136,6 +1148,7 @@ fn handle_syscall_entry(
     statistics_mode: bool,
     structured_output: bool,
     function_profiling_enabled: bool,
+    transpiler_map: Option<&crate::transpiler_map::TranspilerMap>,
 ) -> Result<Option<SyscallEntry>> {
     let regs = ptrace::getregs(child).context("Failed to get registers")?;
 
@@ -1173,7 +1186,16 @@ fn handle_syscall_entry(
 
     // Print syscall entry if not in statistics or structured output mode
     if !statistics_mode && !structured_output {
-        print_syscall_entry(child, name, syscall_num, arg1, arg2, arg3, &source_info);
+        print_syscall_entry(
+            child,
+            name,
+            syscall_num,
+            arg1,
+            arg2,
+            arg3,
+            &source_info,
+            transpiler_map,
+        );
     }
 
     // Extract function names for profiling
@@ -1200,6 +1222,31 @@ fn handle_syscall_entry(
         raw_arg2: Some(arg2),
         raw_arg3: Some(arg3),
     }))
+}
+
+/// Map DWARF source location to transpiler source (Sprint 24-28)
+/// Returns a formatted string with the original source location if mapping is available
+fn map_to_transpiler_source(
+    dwarf_source: &crate::dwarf::SourceLocation,
+    transpiler_map: Option<&crate::transpiler_map::TranspilerMap>,
+) -> Option<String> {
+    if let Some(map) = transpiler_map {
+        // Extract line number from DWARF source location
+        let rust_line = dwarf_source.line as usize;
+
+        // Look up in transpiler map
+        if let Some(mapping) = map.lookup_line(rust_line) {
+            // Format as "python_file:line in python_function"
+            return Some(format!(
+                "{}:{} in {} [{}]",
+                map.source_file().display(),
+                mapping.python_line,
+                mapping.python_function,
+                map.source_language()
+            ));
+        }
+    }
+    None
 }
 
 /// Read a null-terminated string from the tracee's memory
@@ -1588,6 +1635,7 @@ mod tests {
             ml_clusters: 3,                    // Sprint 23
             ml_compare: false,                 // Sprint 23
             trace_transpiler_decisions: false, // Sprint 26
+            transpiler_map: None,              // Sprint 24-28
         };
         let result = trace_command(&empty, config);
         assert!(result.is_err());
@@ -1617,6 +1665,7 @@ mod tests {
             ml_clusters: 3,                    // Sprint 23
             ml_compare: false,                 // Sprint 23
             trace_transpiler_decisions: false, // Sprint 26
+            transpiler_map: None,              // Sprint 24-28
         };
         let result = trace_command(&cmd, config);
         assert!(result.is_err());
@@ -1688,6 +1737,7 @@ mod tests {
             ml_clusters: 3,                    // Sprint 23
             ml_compare: false,                 // Sprint 23
             trace_transpiler_decisions: false, // Sprint 26
+            transpiler_map: None,              // Sprint 24-28
         };
         let result = attach_to_pid(999999, config);
         assert!(result.is_err());
