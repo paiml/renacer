@@ -75,3 +75,10 @@
 - [Quality Gates](./contributing/quality-gates.md)
 - [Toyota Way Principles](./contributing/toyota-way.md)
 - [Release Process](./contributing/release-process.md)
+
+# Appendix
+
+- [Glossary](./appendix/glossary.md)
+- [FAQ](./appendix/faq.md)
+- [CHANGELOG](./appendix/changelog.md)
+- [Performance Tables](./appendix/performance-tables.md)
