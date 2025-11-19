@@ -13,6 +13,7 @@ pub mod filter;
 pub mod function_profiler;
 pub mod hpu;
 pub mod html_output;
+pub mod isolation_forest;
 pub mod json_output;
 pub mod ml_anomaly;
 pub mod profiling;

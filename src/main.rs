@@ -192,6 +192,10 @@ fn main() -> Result<()> {
         ml_anomaly: args.ml_anomaly,               // Sprint 23
         ml_clusters: args.ml_clusters,             // Sprint 23
         ml_compare: args.ml_compare,               // Sprint 23
+        ml_outliers: args.ml_outliers,             // Sprint 22
+        ml_outlier_threshold: args.ml_outlier_threshold, // Sprint 22
+        ml_outlier_trees: args.ml_outlier_trees,   // Sprint 22
+        explain: args.explain,                     // Sprint 22
         transpiler_map: source_map,                // Sprint 24-28
     };
 

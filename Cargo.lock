@@ -954,6 +954,7 @@ dependencies = [
  "object 0.37.3",
  "predicates",
  "proptest",
+ "rand 0.8.5",
  "regex",
  "serde",
  "serde_json",
