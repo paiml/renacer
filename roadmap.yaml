@@ -193,3 +193,416 @@ post_1_0_roadmap:
       - "Trueno export (structured traces)"
       - "Ruchy Ruby VM tracing"
       - "OpenTelemetry span export"
+
+# Sprint 27-31: Ruchy End-to-End Tracing Integration
+
+# MASTER TICKET: Ruchy End-to-End Tracing Integration
+master_tickets:
+  - ticket_id: "RENACER-100"
+    title: "Ruchy End-to-End Tracing Integration (Sprints 27-31)"
+    type: "EPIC"
+    status: "PLANNED"
+    priority: "HIGH"
+    specification: "docs/specifications/ruchy-tracing-support.md (v2.0.0)"
+    start_date: "2025-12-01"
+    target_date: "2026-01-26"
+    duration: "8 weeks (5 sprints)"
+
+    executive_summary: |
+      Implement production-ready end-to-end tracing infrastructure for the Ruchy ecosystem
+      that links transpiler decisions to runtime performance across local, Docker, and Lambda
+      environments. This is the foundation for data-driven compiler optimization.
+
+    objectives:
+      - "Capture transpiler decisions via memory-mapped file (zero I/O blocking)"
+      - "Implement <0.3% overhead runtime tracing with hash-based IDs"
+      - "Enable causal trace correlation across 3 environments (local/Docker/Lambda)"
+      - "Integrate with OpenTelemetry for industry-standard observability"
+      - "Publish academic paper (OOPSLA/PLDI 2026)"
+
+    deliverables:
+      - "Transpiler decision capture (memory-mapped file, u64 hashes)"
+      - "Runtime tracing with randomized sampling + circuit breaker"
+      - "W3C Trace Context propagation + Lambda Extension API"
+      - "OTLP exporters + Jaeger/Grafana integration"
+      - "Flamegraph generator with Ruby source attribution"
+      - "Decision impact dashboard (HTML)"
+      - "End-to-end documentation (3 environments)"
+      - "Academic paper submission"
+
+    child_sprints:
+      - "Sprint 27: Transpiler Decision Tracing (Phase 1)"
+      - "Sprint 28: Runtime Tracing with Hash-Based IDs (Phase 2)"
+      - "Sprint 29: Cross-Environment Correlation (Phase 3)"
+      - "Sprint 30: OpenTelemetry Integration (Phase 4)"
+      - "Sprint 31: Documentation and Publication (Phase 5)"
+
+    acceptance_criteria:
+      overall:
+        - "All 5 child sprints completed with quality gates passed"
+        - "<0.3% overhead validated on 3 benchmarks (fib, primes, array_sum)"
+        - "End-to-end trace: local transpilation → Docker build → Lambda execution"
+        - "Flamegraph accuracy: 95%+ Ruby source attribution"
+        - "Lambda flush safety: 1000 invocations, zero data loss"
+        - "Academic paper submitted to OOPSLA 2026 or PLDI 2026"
+        - "17 peer-reviewed citations documented"
+
+      phase_gates:
+        phase_1: "Transpiler decision capture (100+ decisions, zero I/O blocking)"
+        phase_2: "<0.3% overhead + DoS protection (10M call burst handled)"
+        phase_3: "Cross-environment correlation (causal ordering validated)"
+        phase_4: "OTLP integration (Jaeger + Grafana Tempo working)"
+        phase_5: "Documentation + paper submission"
+
+    quality_gates:
+      per_sprint:
+        - "85%+ test coverage (enforced via cargo-llvm-cov)"
+        - "85%+ mutation score (enforced via cargo-mutants)"
+        - "Zero clippy warnings"
+        - "pmat analyze tdg ≥85/100"
+
+      epic_completion:
+        - "All 5 sprint quality gates passed"
+        - "End-to-end integration test passing (local → Docker → Lambda)"
+        - "Performance benchmarks documented (<0.3% overhead)"
+        - "Security review complete (no secrets in traces)"
+        - "Documentation peer-reviewed by 2+ external reviewers"
+
+    risks:
+      critical:
+        - risk: "Overhead creep above 0.3%"
+          mitigation: "Continuous benchmarking, hash-based IDs, circuit breaker"
+          status: "monitoring"
+        - risk: "Lambda trace data loss"
+          mitigation: "Extension API with lifecycle hooks"
+          status: "mitigated"
+        - risk: "Clock skew correlation errors"
+          mitigation: "Causal ordering via span hierarchy"
+          status: "mitigated"
+
+      medium:
+        - risk: "Hash collision in decision IDs"
+          mitigation: "64-bit FNV-1a (2^64 space)"
+          probability: "low"
+        - risk: "Moiré sampling patterns"
+          mitigation: "Xorshift RNG"
+          status: "mitigated"
+        - risk: "DoS via cold function burst"
+          mitigation: "10K/sec rate limiter"
+          status: "mitigated"
+
+    dependencies:
+      upstream:
+        - "Renacer Sprint 26 complete (--trace-transpiler-decisions flag) ✅"
+        - "RuchyRuchy tracing infrastructure (lock-free buffers) ✅"
+
+      downstream:
+        - "Ruchy transpiler team for integration testing"
+        - "Ruchy-Docker team for container integration"
+        - "Ruchy-Lambda team for Extension API implementation"
+
+    metrics:
+      technical:
+        - "Overhead: <0.3% with 0.1% sampling"
+        - "Trace throughput: 10,000 events/sec max"
+        - "Lambda flush rate: 100% (zero data loss)"
+        - "Flamegraph accuracy: 95%+ source attribution"
+        - "Test coverage: 85%+ maintained"
+        - "Mutation score: 85%+ maintained"
+
+      business:
+        - "Academic paper submission: 1"
+        - "Blog post: 1 (ruchy.dev)"
+        - "GitHub stars target: 100+ in first month"
+        - "External documentation reviews: 2+"
+
+    toyota_way_principles:
+      genchi_genbutsu: "Measure actual production workloads, not synthetic benchmarks"
+      jidoka: "Quality gates block bad code, stop-the-line on regressions"
+      kaizen: "Iterative improvement across 5 sprints"
+      muda: "Zero allocation overhead (hash-based IDs, no strings)"
+      zero_defects: "100% test pass, zero data loss, zero clippy warnings"
+
+    academic_foundation:
+      citations: 17
+      key_papers:
+        - "Lozi et al. (EuroSys 2016): Lock-free tracing"
+        - "Lamport (CACM 1978): Causal ordering"
+        - "Wang et al. (USENIX ATC 2018): Lambda freeze behavior"
+        - "Mytkowicz et al. (ASPLOS 2009): Sampling bias"
+
+      novelty: |
+        First system to correlate transpiler decisions with runtime performance across
+        local, containerized, and serverless environments using causal ordering and
+        hash-based zero-allocation instrumentation.
+
+    success_criteria:
+      minimum_viable:
+        - "All 5 sprints completed"
+        - "<0.3% overhead validated"
+        - "End-to-end trace correlation working"
+
+      target:
+        - "Above + academic paper accepted"
+        - "Above + 100+ GitHub stars"
+        - "Above + production deployment in Ruchy project"
+
+      stretch:
+        - "Above + second paper (performance optimization ML)"
+        - "Above + integration with 3rd party observability platforms"
+
+sprints:
+  - name: "Sprint 27: Ruchy Transpiler Decision Tracing (Phase 1)"
+    sprint_number: 27
+    target_date: "2025-12-01"
+    status: "PLANNED"
+    specification: "docs/specifications/ruchy-tracing-support.md (v2.0.0)"
+    objectives:
+      - "Integrate Renacer with Ruchy transpiler for decision capture"
+    deliverables:
+      - "Memory-mapped file output (.ruchy/decisions.msgpack) for transpiler decisions"
+      - "Hash-based decision IDs (u64 via FNV-1a)"
+      - "Decision manifest generation (JSON sidecar)"
+      - "Renacer Sprint 26 integration complete (--trace-transpiler-decisions flag)"
+      - "Test suite: 50+ unit tests for decision parsing"
+      - "10 decision categories implemented (type_inference, optimization, codegen, stdlib)"
+    acceptance_criteria:
+      - "Renacer captures 100+ transpiler decisions from Ruchy compilation"
+      - "Zero I/O blocking (mmap validated vs stderr baseline)"
+      - "Decision manifest maps all u64 hashes to human-readable descriptions"
+      - "85%+ test coverage"
+      - "85%+ mutation score"
+      - "All quality gates pass (clippy, rustfmt, tests)"
+    quality_gates:
+      - "pmat analyze tdg ≥85/100"
+      - "cargo test --all-features (100% pass)"
+      - "cargo mutants (≥85% mutation score)"
+      - "No performance regression (transpiler compilation time <5% slower)"
+    risks:
+      - "Ruchy transpiler integration complexity"
+      - "Hash collision probability (mitigated: 64-bit hash space = 2^64 combinations)"
+    toyota_way:
+      genchi_genbutsu: "Measure actual transpiler I/O blocking vs mmap performance"
+      jidoka: "Automated quality gates block merge if coverage drops"
+      kaizen: "Iterative improvement based on transpiler team feedback"
+
+  - name: "Sprint 28: Runtime Tracing with Hash-Based IDs (Phase 2)"
+    sprint_number: 28
+    target_date: "2025-12-15"
+    status: "PLANNED"
+    objectives:
+      - "Implement zero-allocation runtime tracing in RuchyRuchy"
+    deliverables:
+      - "RuchyRuchy TraceEvent extension with DecisionImpact (u64 decision_id, span_id, parent_span_id)"
+      - "Xorshift RNG for randomized sampling"
+      - "Global rate limiter (10,000 traces/sec circuit breaker)"
+      - "Lock-free per-thread trace buffers (existing infrastructure enhancement)"
+      - "Generated Rust code with #[cfg(feature = \"trace\")] instrumentation"
+      - "Overhead benchmarks: Fibonacci, Prime Sieve, Array Sum"
+    acceptance_criteria:
+      - "<0.3% overhead with 0.1% sampling rate (hot functions)"
+      - "Zero allocation in trace path (validated via flamegraph)"
+      - "Circuit breaker prevents DoS (stress test: 10M cold function calls)"
+      - "Randomized sampling eliminates Moiré patterns (validated on 16-thread HTTP server)"
+      - "85%+ test coverage"
+      - "85%+ mutation score"
+    quality_gates:
+      - "Overhead benchmark: <0.3% on fib(35) = 9,227,465"
+      - "DoS stress test: max 10K traces/sec under 10M call burst"
+      - "Property-based tests: sampling rate invariants, trace ordering"
+    risks:
+      - "Overhead creep from instrumentation (mitigated: constant monitoring)"
+      - "Sampling bias in production (mitigated: Xorshift RNG + circuit breaker)"
+    toyota_way:
+      muda: "Eliminate all allocation overhead (u64 IDs, no strings)"
+      genchi_genbutsu: "Profile production workloads to validate <0.3% claim"
+
+  - name: "Sprint 29: Cross-Environment Correlation (Phase 3)"
+    sprint_number: 29
+    target_date: "2025-12-29"
+    status: "PLANNED"
+    objectives:
+      - "Enable causal trace correlation across local/Docker/Lambda"
+    deliverables:
+      - "W3C Trace Context propagation (TRACEPARENT header/env variable)"
+      - "OpenTelemetry span hierarchy (parent → child relationships)"
+      - "Ruchy-Docker integration (Docker build + runtime tracing)"
+      - "Ruchy-Lambda integration (Lambda Extension API for flush safety)"
+      - "Trace merging tool (merge_traces.py)"
+      - "End-to-end correlation validation (3 environments)"
+    acceptance_criteria:
+      - "Single trace_id links local transpilation → Docker build → Lambda execution"
+      - "Causal ordering preserved (span hierarchy, NOT timestamps)"
+      - "Lambda Extension API prevents trace data loss (100% flush rate)"
+      - "Trace merging tool produces unified OpenTelemetry JSON"
+      - "85%+ test coverage"
+      - "Integration tests: 20+ cross-environment scenarios"
+    quality_gates:
+      - "End-to-end test: trace local → Docker → Lambda → merged output"
+      - "Lambda flush validation: 1000 invocations, zero data loss"
+      - "Clock skew test: 10-second skew between environments, correct causal ordering"
+    risks:
+      - "Lambda environment freeze timing (mitigated: Extension API lifecycle hooks)"
+      - "Docker layer caching breaks trace correlation (mitigated: TRACEPARENT in ENV)"
+    toyota_way:
+      genchi_genbutsu: "Test on real AWS Lambda, not just mocks"
+      jidoka: "Stop deployment if trace flush validation fails"
+
+  - name: "Sprint 30: OpenTelemetry Integration (Phase 4)"
+    sprint_number: 30
+    target_date: "2026-01-12"
+    status: "PLANNED"
+    objectives:
+      - "Industry-standard trace export and visualization"
+    deliverables:
+      - "OTLP (OpenTelemetry Protocol) exporter for Renacer"
+      - "OTLP exporter for RuchyRuchy"
+      - "Jaeger integration (Docker Compose example)"
+      - "Grafana Tempo integration (Docker Compose example)"
+      - "Flamegraph generator with Ruby source annotations"
+      - "Decision impact dashboard (HTML + Chart.js)"
+    acceptance_criteria:
+      - "Traces viewable in Jaeger UI with decision annotations"
+      - "Flamegraphs show Ruby source locations (NOT Rust)"
+      - "Decision impact dashboard sorts by overhead (ms)"
+      - "100% OpenTelemetry spec compliance (OTLP v1.0)"
+      - "Examples: 3 observability platforms (Jaeger, Grafana Tempo, Zipkin)"
+    quality_gates:
+      - "OTLP schema validation (opentelemetry-proto)"
+      - "Jaeger end-to-end test (trace visible in UI)"
+      - "Flamegraph accuracy: 95%+ Ruby source attribution"
+    risks:
+      - "OpenTelemetry schema evolution (mitigated: lock to v1.0 spec)"
+      - "Visualization performance with 10K+ spans (mitigated: sampling)"
+    toyota_way:
+      genchi_genbutsu: "Validate with real production traces (not synthetic)"
+
+  - name: "Sprint 31: Documentation and Publication (Phase 5)"
+    sprint_number: 31
+    target_date: "2026-01-26"
+    status: "PLANNED"
+    objectives:
+      - "Public release and academic publication"
+    deliverables:
+      - "User guide: End-to-end tracing workflows (local, Docker, Lambda)"
+      - "Performance tuning guide (sampling rates, overhead analysis)"
+      - "Integration guide for each environment"
+      - "Academic paper draft (OOPSLA/PLDI submission)"
+      - "Blog post with case studies"
+      - "Public GitHub repository with examples"
+    acceptance_criteria:
+      - "Documentation peer-reviewed by 2+ external reviewers"
+      - "Reproducible examples for all 3 environments"
+      - "Academic paper submitted to conference (OOPSLA 2026 or PLDI 2026)"
+      - "Blog post published on ruchy.dev"
+      - "100+ GitHub stars in first month (target)"
+    quality_gates:
+      - "Documentation completeness check (all features documented)"
+      - "Example validation (all examples run successfully)"
+      - "Academic paper peer review (internal)"
+    risks:
+      - "Conference acceptance (mitigated: 17 peer-reviewed citations strengthen paper)"
+    toyota_way:
+      genchi_genbutsu: "Get feedback from real users before final release"
+      kaizen: "Continuous improvement based on community feedback"
+
+# Quality Gates for Ruchy Tracing Integration (Sprints 27-31)
+ruchy_tracing_quality_gates:
+  per_sprint:
+    - "85%+ test coverage (enforced via cargo-llvm-cov)"
+    - "85%+ mutation score (enforced via cargo-mutants)"
+    - "Zero clippy warnings"
+    - "pmat analyze tdg ≥85/100"
+    - "All integration tests pass"
+
+  phase_milestones:
+    phase_1_complete:
+      - "Transpiler decision capture validated (100+ decisions)"
+      - "Zero I/O blocking (mmap performance validated)"
+    phase_2_complete:
+      - "<0.3% overhead validated (3 benchmarks)"
+      - "DoS protection validated (10M call burst)"
+    phase_3_complete:
+      - "Cross-environment correlation validated (local → Docker → Lambda)"
+      - "Lambda flush safety validated (1000 invocations, zero loss)"
+    phase_4_complete:
+      - "OTLP export validated (Jaeger, Grafana Tempo)"
+      - "Flamegraph accuracy ≥95%"
+    phase_5_complete:
+      - "Documentation complete and peer-reviewed"
+      - "Academic paper submitted"
+
+# Risks Specific to Ruchy Tracing Integration
+ruchy_tracing_risks:
+  - risk: "Overhead creep above 0.3% target"
+    mitigation: "Continuous benchmarking, hash-based IDs, randomized sampling"
+    status: "monitoring"
+    owner: "Performance team"
+    reference: "ruchy-tracing-support.md Section 6"
+
+  - risk: "Lambda trace data loss from environment freeze"
+    mitigation: "Lambda Extension API with lifecycle hooks"
+    status: "mitigated"
+    owner: "Lambda integration team"
+    reference: "ruchy-tracing-support.md Section 4.4"
+
+  - risk: "Clock skew causing incorrect correlation"
+    mitigation: "Causal ordering via span hierarchy (NOT timestamps)"
+    status: "mitigated"
+    owner: "Cross-environment team"
+    reference: "ruchy-tracing-support.md Section 4.1"
+
+  - risk: "Hash collision in decision IDs"
+    mitigation: "64-bit hash space (2^64), FNV-1a algorithm"
+    status: "low probability"
+    owner: "Transpiler team"
+    reference: "ruchy-tracing-support.md Section 2.1"
+
+  - risk: "Moiré sampling patterns in multi-threaded workloads"
+    mitigation: "Xorshift RNG for randomized sampling"
+    status: "mitigated"
+    owner: "Runtime team"
+    reference: "ruchy-tracing-support.md Section 3.2"
+
+  - risk: "DoS via cold function burst traffic"
+    mitigation: "Global rate limiter (10K traces/sec circuit breaker)"
+    status: "mitigated"
+    owner: "Runtime team"
+    reference: "ruchy-tracing-support.md Section 3.2"
+
+# Academic Foundation (17 Peer-Reviewed Citations)
+ruchy_tracing_citations:
+  - citation: "Cooper & Torczon (2011): Engineering a Compiler"
+    relevance: "Compiler optimization theory"
+  - citation: "Lozi et al. (EuroSys 2016): The Linux Scheduler"
+    relevance: "Lock-free tracing (<1% overhead)"
+  - citation: "Mytkowicz et al. (ASPLOS 2009): Producing Wrong Data"
+    relevance: "Measurement bias, sampling"
+  - citation: "Ren et al. (IEEE Micro 2010): Google-Wide Profiling"
+    relevance: "Production profiling"
+  - citation: "Sigelman et al. (Google 2010): Dapper"
+    relevance: "Distributed tracing"
+  - citation: "Marr et al. (DLS 2016): Cross-Language Benchmarking"
+    relevance: "Benchmarking methodology"
+  - citation: "Blackburn et al. (CACM 2008): Wake up and Smell the Coffee"
+    relevance: "Benchmark design"
+  - citation: "Kalibera & Jones (ISMM 2013): Rigorous Benchmarking"
+    relevance: "Statistical rigor"
+  - citation: "Gregg (2019): BPF Performance Tools"
+    relevance: "eBPF tracing"
+  - citation: "Ball & Larus (MICRO 1996): Efficient Path Profiling"
+    relevance: "Program instrumentation"
+  - citation: "Zhao et al. (SOCC 2017): Log20"
+    relevance: "Log placement optimization (v2.0)"
+  - citation: "Lattner & Adve (CGO 2004): LLVM"
+    relevance: "Compact metadata (v2.0)"
+  - citation: "Moseley et al. (MEMOCODE 2006): Loop-Centric Profiling"
+    relevance: "Sampling bias (v2.0)"
+  - citation: "Dean & Barroso (CACM 2013): The Tail at Scale"
+    relevance: "Circuit breakers (v2.0)"
+  - citation: "Lamport (CACM 1978): Time, Clocks, and Ordering"
+    relevance: "Causal ordering (v2.0)"
+  - citation: "Mace et al. (SOSP 2015): Pivot Tracing"
+    relevance: "Happen-before relationships (v2.0)"
+  - citation: "Wang et al. (USENIX ATC 2018): Serverless Platforms"
+    relevance: "Lambda freeze behavior (v2.0)"
