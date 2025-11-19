@@ -561,6 +561,6 @@ renacer --format csv -- app | iconv -f UTF-8 -t UTF-8-BOM > trace.csv
 6. Version trace files for regression tracking
 
 **Next Steps:**
-- [Advanced Topics](../advanced/README.md) - Function profiling, anomaly detection
-- [Examples](../examples/README.md) - Real-world usage patterns
-- [Reference](../reference/README.md) - Complete API documentation
+- [Filtering](filtering.md) - Filter syscalls by type or pattern
+- [Statistics](statistics.md) - Aggregate syscall statistics
+- [Introduction](../SUMMARY.md) - Return to table of contents

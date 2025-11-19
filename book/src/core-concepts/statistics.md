@@ -511,5 +511,5 @@ read             1.2ms    3.4ms    45.6ms   234.5ms
 
 **Next Steps:**
 - [Output Formats](./output-formats.md) - Export to JSON/CSV/HTML
-- [Anomaly Detection](../advanced/anomaly-detection.md) - Automated performance issue detection
-- [Examples: Performance Profiling](../examples/performance-profiling.md) - Real-world optimization
+- [Filtering](filtering.md) - Filter syscalls by type or pattern
+- [Core Concepts Overview](../SUMMARY.md) - Return to table of contents
