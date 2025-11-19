@@ -635,6 +635,47 @@ fn print_decision_trace_summary(decision_tracer: Option<crate::decision_trace::D
             return;
         }
 
+        // Sprint 27 Phase 3: Write to memory-mapped file (.ruchy/decisions.msgpack)
+        let mmap_path = std::path::Path::new(".ruchy/decisions.msgpack");
+        let manifest_path = std::path::Path::new(".ruchy/decision_manifest.json");
+
+        // Write MessagePack file
+        match tracer.write_to_msgpack(mmap_path) {
+            Ok(_) => {
+                println!("\n✅ Decision traces written to: {}", mmap_path.display());
+            }
+            Err(e) => {
+                eprintln!(
+                    "⚠️  Failed to write decision traces to {}: {}",
+                    mmap_path.display(),
+                    e
+                );
+            }
+        }
+
+        // Write manifest file
+        match tracer.write_manifest(
+            manifest_path,
+            "2.0.0",
+            None, // git_commit (could add via git2 crate)
+            Some(env!("CARGO_PKG_VERSION")),
+        ) {
+            Ok(_) => {
+                println!(
+                    "✅ Decision manifest written to: {}",
+                    manifest_path.display()
+                );
+            }
+            Err(e) => {
+                eprintln!(
+                    "⚠️  Failed to write decision manifest to {}: {}",
+                    manifest_path.display(),
+                    e
+                );
+            }
+        }
+
+        // Also print summary to stdout for convenience
         println!("\n=== Transpiler Decision Traces ===\n");
 
         for trace in tracer.traces() {
@@ -649,10 +690,17 @@ fn print_decision_trace_summary(decision_tracer: Option<crate::decision_trace::D
                 print!(" result={}", result);
             }
 
+            // Print decision_id if available (Sprint 27)
+            if let Some(decision_id) = trace.decision_id {
+                print!(" id=0x{:X}", decision_id);
+            }
+
             println!();
         }
 
         println!("\nTotal decision traces: {}", tracer.count());
+        println!("Decision manifest: {}", manifest_path.display());
+        println!("Binary traces: {}", mmap_path.display());
     }
 }
 
