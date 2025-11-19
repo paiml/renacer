@@ -52,6 +52,44 @@ pub struct JsonMlAnomaly {
     pub cluster: usize,
 }
 
+/// Isolation Forest Analysis result (Sprint 22)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct JsonIsolationForestAnalysis {
+    /// Number of trees in forest
+    pub num_trees: usize,
+    /// Contamination threshold used
+    pub contamination: f32,
+    /// Total samples analyzed
+    pub total_samples: usize,
+    /// List of detected outliers
+    pub outliers: Vec<JsonIsolationForestOutlier>,
+}
+
+/// A detected outlier from Isolation Forest
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct JsonIsolationForestOutlier {
+    /// Syscall name
+    pub syscall: String,
+    /// Anomaly score (0.0 to 1.0, higher is more anomalous)
+    pub anomaly_score: f64,
+    /// Average duration in microseconds
+    pub avg_duration_us: f64,
+    /// Call count
+    pub call_count: u64,
+    /// Feature importance (if explainability enabled)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub feature_importance: Option<Vec<JsonFeatureImportance>>,
+}
+
+/// Feature importance for explainability (XAI)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct JsonFeatureImportance {
+    /// Feature name
+    pub feature: String,
+    /// Importance percentage (0-100)
+    pub importance: f64,
+}
+
 /// Summary statistics for the trace
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JsonSummary {
@@ -78,6 +116,9 @@ pub struct JsonOutput {
     /// ML anomaly analysis results (if --ml-anomaly enabled)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ml_analysis: Option<JsonMlAnalysis>,
+    /// Isolation Forest outlier analysis (if --ml-outliers enabled) (Sprint 22)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub isolation_forest_analysis: Option<JsonIsolationForestAnalysis>,
 }
 
 impl JsonOutput {
@@ -93,6 +134,7 @@ impl JsonOutput {
                 exit_code: 0,
             },
             ml_analysis: None,
+            isolation_forest_analysis: None,
         }
     }
 
@@ -126,6 +168,48 @@ impl JsonOutput {
             clusters: report.num_clusters,
             silhouette_score: report.silhouette_score,
             anomalies,
+        });
+    }
+
+    /// Set Isolation Forest analysis results (Sprint 22)
+    pub fn set_isolation_forest_analysis(
+        &mut self,
+        report: crate::isolation_forest::OutlierReport,
+        explain: bool,
+    ) {
+        let outliers = report
+            .outliers
+            .iter()
+            .map(|o| {
+                let feature_importance = if explain && !o.feature_importance.is_empty() {
+                    Some(
+                        o.feature_importance
+                            .iter()
+                            .map(|(feature, importance)| JsonFeatureImportance {
+                                feature: feature.clone(),
+                                importance: *importance,
+                            })
+                            .collect(),
+                    )
+                } else {
+                    None
+                };
+
+                JsonIsolationForestOutlier {
+                    syscall: o.syscall.clone(),
+                    anomaly_score: o.anomaly_score,
+                    avg_duration_us: o.avg_duration_us,
+                    call_count: o.call_count,
+                    feature_importance,
+                }
+            })
+            .collect();
+
+        self.isolation_forest_analysis = Some(JsonIsolationForestAnalysis {
+            num_trees: report.num_trees,
+            contamination: report.contamination,
+            total_samples: report.total_samples,
+            outliers,
         });
     }
 
