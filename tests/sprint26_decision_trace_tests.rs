@@ -50,19 +50,25 @@ fn main() {
         .output()
         .expect("Failed to execute renacer");
 
-    // For now, just verify renacer runs without crashing
-    // Once implementation is complete, we'll check for decision trace output
+    // Verify renacer runs successfully
     assert!(
         output.status.success(),
         "renacer should run successfully: {}",
         String::from_utf8_lossy(&output.stderr)
     );
 
-    // TODO (Sprint 26): Once implementation is complete, verify decision traces are captured
-    // Expected output should contain parsed decision traces
-    // let stdout = String::from_utf8_lossy(&output.stdout);
-    // assert!(stdout.contains("test_category::test_decision"));
-    // assert!(stdout.contains("test_key"));
+    // Sprint 26: Verify decision traces are captured and displayed
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("test_category::test_decision"),
+        "Output should contain decision name: {}",
+        stdout
+    );
+    assert!(
+        stdout.contains("test_key"),
+        "Output should contain input key: {}",
+        stdout
+    );
 }
 
 #[test]
@@ -140,7 +146,23 @@ fn main() {
 
     assert!(output.status.success());
 
-    // TODO (Sprint 26): Verify all decision traces are captured
+    // Sprint 26: Verify all decision traces are captured
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("flow::branch1"),
+        "Output should contain first decision: {}",
+        stdout
+    );
+    assert!(
+        stdout.contains("flow::branch2"),
+        "Output should contain second decision: {}",
+        stdout
+    );
+    assert!(
+        stdout.contains("condition"),
+        "Output should contain input parameters: {}",
+        stdout
+    );
 }
 
 #[test]
@@ -178,6 +200,21 @@ fn main() {
 
     assert!(output.status.success());
 
-    // TODO (Sprint 26): Verify only valid decision traces are captured,
-    // normal stderr messages are ignored
+    // Sprint 26: Verify only valid decision traces are captured
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("valid::decision"),
+        "Output should contain valid decision trace: {}",
+        stdout
+    );
+    assert!(
+        !stdout.contains("Normal error message"),
+        "Output should not contain non-decision stderr: {}",
+        stdout
+    );
+    assert!(
+        !stdout.contains("Another normal message"),
+        "Output should not contain non-decision stderr: {}",
+        stdout
+    );
 }

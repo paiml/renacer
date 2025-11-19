@@ -628,6 +628,34 @@ fn print_optional_summaries(
     }
 }
 
+/// Sprint 26: Print decision trace summary
+fn print_decision_trace_summary(decision_tracer: Option<crate::decision_trace::DecisionTracer>) {
+    if let Some(tracer) = decision_tracer {
+        if tracer.count() == 0 {
+            return;
+        }
+
+        println!("\n=== Transpiler Decision Traces ===\n");
+
+        for trace in tracer.traces() {
+            // Format: category::name with input and result
+            print!("[{}::{}] ", trace.category, trace.name);
+
+            // Print input (compact JSON)
+            print!("input={}", trace.input);
+
+            // Print result if available
+            if let Some(ref result) = trace.result {
+                print!(" result={}", result);
+            }
+
+            println!();
+        }
+
+        println!("\nTotal decision traces: {}", tracer.count());
+    }
+}
+
 /// Print analysis summaries (HPU, ML)
 fn print_analysis_summaries(
     stats_tracker: &Option<crate::stats::StatsTracker>,
@@ -657,7 +685,7 @@ fn print_summaries(tracers: Tracers, timing_mode: bool, exit_code: i32, analysis
         profiling_ctx,
         function_profiler,
         anomaly_detector,
-        decision_tracer: _, // Sprint 26: Not used in summaries yet
+        decision_tracer, // Sprint 26: Now used for decision trace output
     } = tracers;
 
     // Print statistics summary if in statistics mode (text format)
@@ -708,6 +736,9 @@ fn print_summaries(tracers: Tracers, timing_mode: bool, exit_code: i32, analysis
 
     // Print analysis reports (HPU, ML)
     print_analysis_summaries(&stats_tracker, analysis);
+
+    // Sprint 26: Print decision trace summary
+    print_decision_trace_summary(decision_tracer);
 }
 
 /// Per-process state for multi-process tracing
