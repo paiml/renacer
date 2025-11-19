@@ -39,7 +39,7 @@ backtrace = "0.3"
 trueno = "0.2.2"
 
 # Machine learning for anomaly detection (Sprint 23)
-aprender = "0.2.0"
+aprender = "0.3.0"
 
 # Regex filtering (Sprint 16)
 regex = "1.10"
