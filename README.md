@@ -6,10 +6,10 @@ Renacer (Spanish: "to be reborn") is a next-generation binary inspection and tra
 
 ## Project Status
 
-**Current Version:** 0.5.0 (Sprint 31 complete - Ruchy Runtime Integration)
-**Status:** Production-Ready + SIMD-Accelerated Statistics + Real-Time Anomaly Detection + HPU Analysis + HTML Reports + Multi-Transpiler Debugging + Distributed Tracing + Unified Decision Traces
+**Current Version:** 0.5.0 (Sprint 34 complete - Integration Tests)
+**Status:** Production-Ready + SIMD-Accelerated Statistics + Real-Time Anomaly Detection + HPU Analysis + HTML Reports + Multi-Transpiler Debugging + Distributed Tracing + Compute Tracing + Integration Tested
 **TDG Score:** 95.1/100 (A+ grade)
-**Test Coverage:** 263+ tests (all passing)
+**Test Coverage:** 277+ tests (all passing - includes 14 Jaeger integration tests)
 **Specification:** [docs/specifications/deep-strace-rust-wasm-binary-spec.md](docs/specifications/deep-strace-rust-wasm-binary-spec.md)
 
 ## Features
@@ -120,6 +120,36 @@ Renacer (Spanish: "to be reborn") is a next-generation binary inspection and tra
 - ✅ **Full Integration** - Compatible with source maps, filtering, timing
 - ✅ **Performance Analysis** - Correlate slow syscalls with transpiler decisions
 - ✅ **Debugging Aid** - Understand which transpiler decisions led to runtime behavior
+
+### Block-Level Compute Tracing (Sprint 32) 🆕
+- ✅ **Compute Block Spans** - Trace statistical computation blocks (Trueno SIMD operations)
+- ✅ **Adaptive Sampling** - Smart threshold-based sampling (default: trace blocks ≥100μs)
+- ✅ **Custom Thresholds** - Configurable sampling via `--trace-compute-threshold N`
+- ✅ **Debug Mode** - Trace all compute blocks with `--trace-compute-all` (bypass sampling)
+- ✅ **Rich Metrics** - Block name, duration, element count, operation type in span attributes
+- ✅ **Performance Insights** - Identify expensive statistical computations in distributed traces
+- ✅ **Zero Overhead** - No impact when disabled (opt-in via `--trace-compute`)
+- ✅ **Full Integration** - Compatible with OTLP export, transpiler decisions, source correlation
+
+### W3C Trace Context Propagation (Sprint 33) 🆕
+- ✅ **Distributed Tracing** - Propagate trace context across process boundaries
+- ✅ **W3C Standard** - Full W3C Trace Context specification compliance (traceparent format)
+- ✅ **Context Injection** - Explicit context via `--trace-parent` CLI flag
+- ✅ **Environment Detection** - Auto-detect `TRACEPARENT` environment variable
+- ✅ **Parent-Child Relationships** - Renacer spans correctly reference upstream trace IDs
+- ✅ **Cross-Service Correlation** - Link Renacer traces to broader distributed trace graphs
+- ✅ **Trace ID Preservation** - Maintain trace continuity across service boundaries
+- ✅ **Backward Compatible** - Works with or without trace context (auto-generates if absent)
+
+### Integration Testing Infrastructure (Sprint 34) 🆕
+- ✅ **Jaeger Backend Tests** - 14 integration tests against actual Jaeger All-in-One
+- ✅ **Compute Tracing Tests** - Verify adaptive sampling, span attributes, parent-child relationships
+- ✅ **Distributed Tracing Tests** - Validate W3C context propagation, trace ID preservation
+- ✅ **Full Stack Tests** - End-to-end tests with all features enabled (OTLP + compute + distributed)
+- ✅ **Docker Infrastructure** - Ready-to-use docker-compose-test.yml for test environment
+- ✅ **Test Utilities** - Reusable Jaeger API helpers for span verification
+- ✅ **Performance Tests** - Overhead measurement tests (baseline vs. full tracing)
+- ✅ **CI/CD Ready** - Designed for automated testing in GitHub Actions
 
 ### Quality Infrastructure (v0.2.0-0.5.0)
 - ✅ **Property-based testing** - 670+ test cases via proptest
@@ -438,6 +468,12 @@ cargo test
 
 # Property-based tests only (670+ cases)
 cargo test --test property_based_comprehensive
+
+# Integration tests with Jaeger backend (Sprint 34)
+# Requires Docker for Jaeger All-in-One
+docker compose -f docker-compose-test.yml up -d
+cargo test --test sprint34_integration_tests -- --ignored --test-threads=1
+docker compose -f docker-compose-test.yml down
 
 # With coverage
 cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
