@@ -18,7 +18,7 @@
 use anyhow::Result;
 #[cfg(feature = "otlp")]
 use opentelemetry::{
-    trace::{Span, SpanKind, Status, Tracer, TracerProvider as _},
+    trace::{Span, SpanContext, SpanKind, Status, TraceContextExt, TraceFlags, TraceState, Tracer, TracerProvider as _},
     KeyValue,
 };
 #[cfg(feature = "otlp")]
@@ -28,6 +28,8 @@ use opentelemetry_sdk::{
 };
 #[cfg(feature = "otlp")]
 use opentelemetry_otlp::WithExportConfig;
+
+use crate::trace_context::TraceContext; // Sprint 33
 
 /// Configuration for OTLP exporter
 #[derive(Debug, Clone)]
@@ -61,12 +63,13 @@ pub struct OtlpExporter {
     _provider: TracerProvider,
     tracer: opentelemetry_sdk::trace::Tracer,
     root_span: Option<opentelemetry_sdk::trace::Span>,
+    remote_parent_context: Option<opentelemetry::Context>, // Sprint 33: W3C Trace Context
 }
 
 #[cfg(feature = "otlp")]
 impl OtlpExporter {
-    /// Create a new OTLP exporter
-    pub fn new(config: OtlpConfig) -> Result<Self> {
+    /// Create a new OTLP exporter (Sprint 33: with optional trace context)
+    pub fn new(config: OtlpConfig, trace_context: Option<TraceContext>) -> Result<Self> {
         // Create a Tokio runtime for OTLP async operations
         let runtime = tokio::runtime::Runtime::new()
             .map_err(|e| anyhow::anyhow!("Failed to create Tokio runtime: {}", e))?;
@@ -105,25 +108,45 @@ impl OtlpExporter {
             Ok::<_, anyhow::Error>((provider, tracer))
         })?;
 
+        // Sprint 33: Create remote parent context from W3C Trace Context
+        let remote_parent_context = trace_context.map(|ctx| {
+            let span_context = SpanContext::new(
+                ctx.otel_trace_id(),
+                ctx.otel_parent_id(),
+                TraceFlags::new(ctx.trace_flags),
+                true,  // is_remote = true (context from external system)
+                TraceState::default(),
+            );
+
+            opentelemetry::Context::current().with_remote_span_context(span_context)
+        });
+
         Ok(OtlpExporter {
             _runtime: runtime,
             _provider: provider,
             tracer,
             root_span: None,
+            remote_parent_context,
         })
     }
 
-    /// Start a root span for the traced process
+    /// Start a root span for the traced process (Sprint 33: with optional parent context)
     pub fn start_root_span(&mut self, program: &str, pid: i32) {
-        let span = self
+        let span_builder = self
             .tracer
             .span_builder(format!("process: {}", program))
             .with_kind(SpanKind::Server)
             .with_attributes(vec![
                 KeyValue::new("process.command", program.to_string()),
                 KeyValue::new("process.pid", pid as i64),
-            ])
-            .start(&self.tracer);
+            ]);
+
+        // Sprint 33: If we have a remote parent context, make this span a child
+        let span = if let Some(ref parent_ctx) = self.remote_parent_context {
+            span_builder.start_with_context(&self.tracer, parent_ctx)
+        } else {
+            span_builder.start(&self.tracer)
+        };
 
         self.root_span = Some(span);
     }
@@ -324,7 +347,7 @@ mod tests {
             service_name: "test".to_string(),
         };
 
-        let result = OtlpExporter::new(config);
+        let result = OtlpExporter::new(config, None);
         assert!(result.is_err());
     }
 }
