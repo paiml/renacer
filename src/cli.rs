@@ -160,6 +160,17 @@ pub struct Cli {
     #[arg(long = "otlp-service-name", value_name = "NAME", default_value = "renacer")]
     pub otlp_service_name: String,
 
+    /// W3C Trace Context for distributed tracing (Sprint 33)
+    ///
+    /// Inject trace context to create Renacer spans as children of application spans.
+    /// Format: version-trace_id-parent_id-trace_flags
+    /// Example: 00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01
+    ///
+    /// If not provided, checks TRACEPARENT or OTEL_TRACEPARENT environment variables.
+    /// If no context found, creates new root trace (existing behavior).
+    #[arg(long = "trace-parent", value_name = "TRACEPARENT")]
+    pub trace_parent: Option<String>,
+
     /// Enable compute block tracing (Trueno SIMD operations) - Sprint 32
     ///
     /// Exports statistical computation blocks (e.g., calculate_statistics) as

@@ -204,6 +204,7 @@ fn main() -> Result<()> {
         transpiler_map: source_map,                // Sprint 24-28
         otlp_endpoint: args.otlp_endpoint,         // Sprint 30
         otlp_service_name: args.otlp_service_name, // Sprint 30
+        trace_parent: args.trace_parent,           // Sprint 33
     };
 
     // Either attach to PID or trace command (mutually exclusive)
