@@ -245,10 +245,10 @@ fn initialize_tracers(config: &TracerConfig) -> Tracers {
         }
 
         match crate::otlp_exporter::OtlpExporter::new(
-            crate::otlp_exporter::OtlpConfig {
-                endpoint: endpoint.clone(),
-                service_name: config.otlp_service_name.clone(),
-            },
+            crate::otlp_exporter::OtlpConfig::new(
+                endpoint.clone(),
+                config.otlp_service_name.clone(),
+            ),
             trace_context,
         ) {
             Ok(exporter) => {
