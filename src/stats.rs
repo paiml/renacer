@@ -189,7 +189,19 @@ impl StatsTracker {
     }
 
     /// Calculate extended statistics for a syscall using Trueno
-    pub fn calculate_extended_statistics(&self, syscall_name: &str) -> Option<ExtendedStats> {
+    ///
+    /// Sprint 32: Now accepts optional OtlpExporter for compute block tracing
+    ///
+    /// # Arguments
+    ///
+    /// * `syscall_name` - Name of the syscall to compute stats for
+    /// * `otlp_exporter` - Optional OTLP exporter for tracing (Sprint 32)
+    pub fn calculate_extended_statistics(
+        &self,
+        syscall_name: &str,
+        #[cfg(feature = "otlp")] otlp_exporter: Option<&crate::otlp_exporter::OtlpExporter>,
+        #[cfg(not(feature = "otlp"))] _otlp_exporter: Option<&()>,
+    ) -> Option<ExtendedStats> {
         let stats = self.stats.get(syscall_name)?;
 
         if stats.durations.is_empty() {
@@ -198,7 +210,23 @@ impl StatsTracker {
 
         // Convert durations to f32 for Trueno
         let durations: Vec<f32> = stats.durations.iter().map(|&d| d as f32).collect();
-        let v = trueno::Vector::from_slice(&durations);
+        let elements = durations.len();
+
+        // Trace entire compute block (Sprint 32: Block-level tracing)
+        #[cfg(feature = "otlp")]
+        let result = trace_compute_block!(otlp_exporter, "calculate_statistics", elements, {
+            Self::compute_extended_stats_block(&durations)
+        });
+
+        #[cfg(not(feature = "otlp"))]
+        let result = Self::compute_extended_stats_block(&durations);
+
+        Some(result)
+    }
+
+    /// Internal: Compute extended stats block (extracted for tracing)
+    fn compute_extended_stats_block(durations: &[f32]) -> ExtendedStats {
+        let v = trueno::Vector::from_slice(durations);
 
         // Use Trueno for basic statistics
         let mean = v.mean().unwrap_or(0.0);
@@ -207,7 +235,7 @@ impl StatsTracker {
         let max = v.max().unwrap_or(0.0);
 
         // Calculate percentiles (Trueno doesn't have built-in percentile function)
-        let mut sorted = durations.clone();
+        let mut sorted = durations.to_vec();
         sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
 
         let median = Self::calculate_percentile(&sorted, 50.0);
@@ -216,7 +244,7 @@ impl StatsTracker {
         let p95 = Self::calculate_percentile(&sorted, 95.0);
         let p99 = Self::calculate_percentile(&sorted, 99.0);
 
-        Some(ExtendedStats {
+        ExtendedStats {
             mean,
             stddev,
             min,
@@ -226,7 +254,7 @@ impl StatsTracker {
             p90,
             p95,
             p99,
-        })
+        }
     }
 
     /// Check if a duration is an anomaly (>threshold σ from mean)
