@@ -1,8 +1,10 @@
 # Renacer Makefile
 # Following bashrs and paiml-mcp-agent-toolkit patterns
 
+.SUFFIXES:
+
 .PHONY: help test coverage coverage-html coverage-clean mutants mutants-quick clean build release lint format check \
-        tier1 tier2 tier3 chaos-test chaos-full check-regression fuzz
+	tier1 tier2 tier3 chaos-test chaos-full check-regression fuzz benchmark
 
 help: ## Show this help message
 	@echo "Renacer - Pure Rust strace alternative"

@@ -200,6 +200,7 @@ fn main() -> Result<()> {
         dl_threshold: args.dl_threshold,           // Sprint 23
         dl_hidden_size: args.dl_hidden_size,       // Sprint 23
         dl_epochs: args.dl_epochs,                 // Sprint 23
+        trace_transpiler_decisions: args.trace_transpiler_decisions, // Sprint 26
         transpiler_map: source_map,                // Sprint 24-28
     };
 

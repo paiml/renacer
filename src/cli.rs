@@ -148,6 +148,10 @@ pub struct Cli {
     #[arg(long = "rewrite-errors")]
     pub rewrite_errors: bool,
 
+    /// Trace transpiler compile-time decisions for debugging (Sprint 26)
+    #[arg(long = "trace-transpiler-decisions")]
+    pub trace_transpiler_decisions: bool,
+
     /// Enable debug tracing output to stderr
     #[arg(long = "debug")]
     pub debug: bool,
@@ -440,11 +444,23 @@ mod tests {
         assert!(cli.show_transpiler_context);
     }
 
-    // Sprint 22: Isolation Forest / ML Outliers tests
     #[test]
     fn test_cli_ml_outliers_flag() {
         let cli = Cli::parse_from(["renacer", "--ml-outliers", "--", "echo", "test"]);
         assert!(cli.ml_outliers);
+        assert!(cli.command.is_some());
+    }
+
+    #[test]
+    fn test_cli_trace_transpiler_decisions_flag() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "--trace-transpiler-decisions",
+            "--",
+            "echo",
+            "test",
+        ]);
+        assert!(cli.trace_transpiler_decisions);
         assert!(cli.command.is_some());
     }
 
@@ -455,9 +471,30 @@ mod tests {
     }
 
     #[test]
+    fn test_cli_trace_transpiler_decisions_default_false() {
+        let cli = Cli::parse_from(["renacer", "--", "echo", "test"]);
+        assert!(!cli.trace_transpiler_decisions);
+    }
+
+    #[test]
     fn test_cli_ml_outlier_threshold_default() {
         let cli = Cli::parse_from(["renacer", "--ml-outliers", "--", "echo", "test"]);
         assert_eq!(cli.ml_outlier_threshold, 0.1);
+    }
+
+    #[test]
+    fn test_cli_trace_transpiler_decisions_with_transpiler_map() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "--transpiler-map",
+            "map.json",
+            "--trace-transpiler-decisions",
+            "--",
+            "echo",
+            "test",
+        ]);
+        assert!(cli.transpiler_map.is_some());
+        assert!(cli.trace_transpiler_decisions);
     }
 
     #[test]

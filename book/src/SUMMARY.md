@@ -24,6 +24,7 @@
 
 - [Trace File Operations](./examples/trace-file-ops.md)
 - [Debug Performance Issues](./examples/debug-performance.md)
+- [Debug Compilation & Transpilation](./examples/debug-compilation.md)
 - [Monitor Network Calls](./examples/monitor-network.md)
 - [Attach to Running Process](./examples/attach-process.md)
 - [Multi-Process Tracing](./examples/multi-process.md)
@@ -75,3 +76,10 @@
 - [Quality Gates](./contributing/quality-gates.md)
 - [Toyota Way Principles](./contributing/toyota-way.md)
 - [Release Process](./contributing/release-process.md)
+
+# Appendix
+
+- [Glossary](./appendix/glossary.md)
+- [FAQ](./appendix/faq.md)
+- [CHANGELOG](./appendix/changelog.md)
+- [Performance Tables](./appendix/performance-tables.md)
