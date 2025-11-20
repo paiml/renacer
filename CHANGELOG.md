@@ -5,9 +5,180 @@ All notable changes to Renacer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.5.0] - 2025-11-19
+## [0.5.0] - 2025-11-20
 
 ### Added
+
+#### Sprint 30: OpenTelemetry OTLP Integration (Complete)
+
+**Goal:** Export syscall traces as OpenTelemetry spans to observability backends (Jaeger, Grafana Tempo, etc.) via OTLP protocol
+
+**Ruchy Integration Milestone Phase 4 Complete** - Distributed tracing support for end-to-end observability
+
+**Implementation** (EXTREME TDD - RED → GREEN → REFACTOR cycle):
+- **RED Phase**: Created 12 integration tests (tests/sprint30_otlp_export_tests.rs)
+- **GREEN Phase Part 1**: Implemented OTLP exporter module (src/otlp_exporter.rs)
+- **GREEN Phase Part 2**: Integrated with tracer and main
+- **REFACTOR Phase**: Added Docker compose examples and comprehensive documentation
+
+**Features:**
+- **OTLP Protocol Support**: Both gRPC (port 4317) and HTTP (port 4318) endpoints
+- **Span Hierarchy**:
+  - Root span: `process: <program_name>` with process metadata
+  - Child spans: `syscall: <name>` for each system call
+- **Rich Span Attributes**:
+  - `syscall.name` - System call name
+  - `syscall.result` - Return value
+  - `syscall.duration_us` - Duration in microseconds (if timing enabled)
+  - `code.filepath` - Source file path (if debug symbols available)
+  - `code.lineno` - Source line number (if debug symbols available)
+  - `span.status` - ERROR status for failed syscalls (result < 0)
+- **Async Export**: Non-blocking span export with Tokio runtime
+  - Batch span processor for efficient export
+  - Graceful shutdown with span flushing
+- **Observability Backends**:
+  - Jaeger All-in-One
+  - Grafana Tempo
+  - Elastic APM
+  - Honeycomb
+  - Any OTLP-compatible collector
+- **CLI Flags**:
+  - `--otlp-endpoint <URL>` - OTLP endpoint URL (required for export)
+  - `--otlp-service-name <NAME>` - Service name for traces (default: "renacer")
+- **Full Integration**: Works with all Renacer features
+  - Source correlation (`--source`)
+  - Timing mode (`-T`)
+  - Syscall filtering (`-e trace=`)
+  - Statistics mode (`-c`)
+  - Multi-process tracing (`-f`)
+  - Function profiling (`--function-time`)
+- **Zero Overhead**: Optional feature, no impact when disabled
+
+**Architecture:**
+- `src/otlp_exporter.rs` - Complete OTLP exporter module (227 lines)
+  - `OtlpConfig` struct for configuration
+  - `OtlpExporter` struct with Tokio runtime for async operations
+  - `start_root_span()` - Initialize process root span
+  - `record_syscall()` - Export syscall as child span
+  - `end_root_span()` - Finalize root span with exit code
+  - `shutdown()` - Graceful shutdown with span flushing
+- `src/tracer.rs` - Integration with syscall tracing pipeline
+  - TracerConfig: Added `otlp_endpoint` and `otlp_service_name` fields
+  - Tracers struct: Added `otlp_exporter` field (feature-gated)
+  - initialize_tracers(): Create exporter when endpoint provided
+  - trace_child(): Start root span at process start
+  - handle_syscall_exit(): Record each syscall as OTLP span
+  - print_summaries(): End root span and shutdown on exit
+- `src/main.rs` - CLI argument passing to TracerConfig
+- `src/cli.rs` - OTLP command-line flags (from previous commit)
+
+**Dependencies:**
+- `opentelemetry = "0.31.0"` (optional)
+- `opentelemetry_sdk = "0.31.0"` with rt-tokio (optional)
+- `opentelemetry-otlp = "0.31.0"` with grpc-tonic, http-proto (optional)
+- `tokio = "1"` with rt, rt-multi-thread, macros (optional)
+- Feature flag: `otlp` enabled by default in Cargo.toml
+
+**Docker Compose Examples:**
+- `docker-compose-jaeger.yml` - Jaeger All-in-One setup
+  - Ports: 16686 (UI), 4317 (gRPC), 4318 (HTTP)
+  - Quick start for local testing
+- `docker-compose-tempo.yml` - Grafana Tempo + Grafana stack
+  - Tempo on port 4317/4318 for trace ingestion
+  - Grafana on port 3000 for trace visualization
+  - Includes configuration files for production-ready setup
+- `tempo-config.yml` - Tempo OTLP receiver configuration
+- `grafana-datasources.yml` - Grafana datasource provisioning
+
+**Documentation:**
+- `docs/otlp-integration.md` - Comprehensive OTLP integration guide
+  - Architecture and span structure
+  - Quick start guides for Jaeger and Tempo
+  - CLI usage with all flag combinations
+  - Span attributes reference
+  - Integration examples with other Renacer features
+  - Troubleshooting guide
+  - Performance considerations
+  - Observability backend comparison
+
+**Results:**
+- **Tests**: 252+ total (12 new for Sprint 30)
+  - 12 integration tests (tests/sprint30_otlp_export_tests.rs):
+    - test_otlp_endpoint_flag_accepted
+    - test_otlp_service_name_configuration
+    - test_otlp_grpc_protocol
+    - test_otlp_http_protocol
+    - test_otlp_with_timing_mode
+    - test_otlp_with_source_correlation
+    - test_otlp_with_statistics_mode
+    - test_otlp_with_filtering
+    - test_otlp_trace_hierarchy
+    - test_otlp_invalid_endpoint
+    - test_otlp_backward_compatibility
+    - test_otlp_endpoint_default_disabled
+  - All CLI and tracer unit tests updated with OTLP fields
+  - 100% test pass rate ✅
+- **Complexity**: All functions ≤10 ✅
+- **Clippy**: Zero warnings ✅
+- **TDG Score**: 95.1/100 (A+ grade maintained)
+- **Error Handling**: Graceful degradation - continues tracing if OTLP fails
+
+**CLI Flags:**
+```bash
+--otlp-endpoint <URL>          # OTLP endpoint (gRPC: :4317, HTTP: :4318)
+--otlp-service-name <NAME>     # Service name (default: "renacer")
+```
+
+**Examples:**
+```bash
+# Start Jaeger backend
+docker-compose -f docker-compose-jaeger.yml up -d
+
+# Basic OTLP export
+renacer --otlp-endpoint http://localhost:4317 --otlp-service-name my-app -- ./program
+# Open http://localhost:16686 to view traces
+
+# With source correlation
+renacer -s --otlp-endpoint http://localhost:4317 --otlp-service-name traced-app -- ./program
+
+# With timing and filtering
+renacer -T -e trace=file --otlp-endpoint http://localhost:4317 -- ./program
+
+# With statistics mode
+renacer -c --otlp-endpoint http://localhost:4317 -- cargo build
+
+# Multi-process tracing with OTLP
+renacer -f --otlp-endpoint http://localhost:4317 --otlp-service-name parent -- ./fork-app
+
+# Start Grafana Tempo stack
+docker-compose -f docker-compose-tempo.yml up -d
+renacer --otlp-endpoint http://localhost:4317 --otlp-service-name my-service -- ./app
+# Open http://localhost:3000 (Grafana) to query traces
+```
+
+**Span Structure Example:**
+```
+Root Span: "process: ./program" (kind: SERVER)
+  ├─ Attributes: process.command, process.pid, process.exit_code
+  └─ Child Span: "syscall: write" (kind: INTERNAL)
+      ├─ Attributes: syscall.name=write, syscall.result=22
+      ├─ Attributes: syscall.duration_us=150, code.filepath=src/main.rs
+      ├─ Attributes: code.lineno=15
+      └─ Status: OK (or ERROR if result < 0)
+```
+
+**Error Handling:**
+- OTLP initialization failure: Logs error to stderr, continues without export
+- Network failures: Buffered spans are retried by batch processor
+- Invalid endpoint: Graceful error message, no crash
+- Format: `[renacer: OTLP initialization failed: <error>]`
+
+**Performance:**
+- Async export: No blocking on syscall tracing path
+- Batch processing: Efficient span export in background
+- Tokio runtime: Created only when `--otlp-endpoint` provided
+- Memory overhead: Minimal (span buffers + Tokio runtime)
+- Network overhead: Batch export reduces HTTP/gRPC connections
 
 #### Sprint 24-28: Transpiler Decision Tracing & Source Mapping (Complete)
 
