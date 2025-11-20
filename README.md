@@ -6,10 +6,10 @@ Renacer (Spanish: "to be reborn") is a next-generation binary inspection and tra
 
 ## Project Status
 
-**Current Version:** 0.4.1 (Sprint 29 complete - Chaos Engineering + Fuzz Testing Infrastructure)
-**Status:** Production-Ready + SIMD-Accelerated Statistics + Real-Time Anomaly Detection + HPU Analysis + HTML Reports + Multi-Transpiler Debugging + Chaos Engineering
+**Current Version:** 0.5.0 (Sprint 30 complete - OpenTelemetry OTLP Integration)
+**Status:** Production-Ready + SIMD-Accelerated Statistics + Real-Time Anomaly Detection + HPU Analysis + HTML Reports + Multi-Transpiler Debugging + Distributed Tracing
 **TDG Score:** 95.1/100 (A+ grade)
-**Test Coverage:** 240+ tests (all passing)
+**Test Coverage:** 252+ tests (all passing)
 **Specification:** [docs/specifications/deep-strace-rust-wasm-binary-spec.md](docs/specifications/deep-strace-rust-wasm-binary-spec.md)
 
 ## Features
@@ -97,7 +97,19 @@ Renacer (Spanish: "to be reborn") is a next-generation binary inspection and tra
   - `fuzz` - Fuzz testing support
 - ✅ **Property-Based Tests** - 7 comprehensive proptest tests for chaos module
 
-### Quality Infrastructure (v0.2.0-0.4.1)
+### OpenTelemetry OTLP Integration (Sprint 30) 🆕
+- ✅ **Distributed Tracing** - Export syscall traces as OpenTelemetry spans
+- ✅ **OTLP Protocol** - Support for gRPC (port 4317) and HTTP (port 4318) endpoints
+- ✅ **Span Hierarchy** - Root span per process + child spans per syscall
+- ✅ **Rich Attributes** - Syscall name, result, duration, source location in span attributes
+- ✅ **Error Tracking** - Failed syscalls (result < 0) marked with ERROR status
+- ✅ **Observability Backends** - Works with Jaeger, Grafana Tempo, Elastic APM, Honeycomb
+- ✅ **Async Export** - Non-blocking span export with Tokio runtime
+- ✅ **Docker Examples** - Ready-to-use docker-compose files for Jaeger and Tempo
+- ✅ **Zero Overhead** - No impact when disabled (opt-in via `--otlp-endpoint`)
+- ✅ **Full Integration** - Compatible with all Renacer features (filtering, timing, source correlation)
+
+### Quality Infrastructure (v0.2.0-0.5.0)
 - ✅ **Property-based testing** - 670+ test cases via proptest
 - ✅ **Pre-commit hooks** - 5 quality gates (format, clippy, tests, audit, bash)
 - ✅ **Dependency policy** - cargo-deny configuration for security
@@ -182,6 +194,15 @@ renacer --transpiler-map algorithm.sourcemap.json -- ./algorithm_rs    # Load C�
 renacer --transpiler-map app.sourcemap.json --source -- ./transpiled-app  # Combine with DWARF
 renacer --transpiler-map map.json --function-time -- ./binary  # Function profiling with source maps
 renacer --transpiler-map map.json -c -- ./binary       # Source mapping with statistics
+
+# OpenTelemetry OTLP export (Sprint 30)
+docker-compose -f docker-compose-jaeger.yml up -d  # Start Jaeger
+renacer --otlp-endpoint http://localhost:4317 --otlp-service-name my-app -- ./program
+# Open http://localhost:16686 to view traces in Jaeger UI
+
+renacer -s --otlp-endpoint http://localhost:4317 -- ./program  # With source correlation
+renacer -T --otlp-endpoint http://localhost:4317 -- ./program  # With timing
+renacer -e trace=file --otlp-endpoint http://localhost:4317 -- ./program  # With filtering
 
 # Attach to running process
 renacer -p 1234
@@ -281,6 +302,34 @@ Top Anomalies (by Z-score):
   ... and 9 more
 ```
 
+### OpenTelemetry OTLP Export (Sprint 30)
+```bash
+# Start Jaeger backend
+$ docker-compose -f docker-compose-jaeger.yml up -d
+
+# Export syscall traces to Jaeger
+$ renacer -s --otlp-endpoint http://localhost:4317 --otlp-service-name test-app -- ./test
+[renacer: OTLP export enabled to http://localhost:4317]
+write(1, "Hello, OpenTelemetry!\n", 22) = 22  [src/main.rs:3 in main]
+exit_group(0) = ?
+
+# Open Jaeger UI at http://localhost:16686
+# - Service: "test-app"
+# - Root span: "process: ./test"
+#   - Child span: "syscall: write"
+#     - Attributes: syscall.name=write, syscall.result=22,
+#                   code.filepath=src/main.rs, code.lineno=3
+
+# Export with Grafana Tempo
+$ docker-compose -f docker-compose-tempo.yml up -d
+$ renacer --otlp-endpoint http://localhost:4317 --otlp-service-name my-service -- ./app
+
+# Open Grafana at http://localhost:3000
+# Navigate to Explore > Tempo > Search by service name: "my-service"
+```
+
+For complete OTLP integration guide, see [docs/otlp-integration.md](docs/otlp-integration.md).
+
 ## Performance
 
 Benchmarks vs strace (Sprint 11-12):
@@ -359,9 +408,17 @@ cargo deny check
 - `anomaly` - Real-time anomaly detection (Sprint 20)
 - `json_output` - JSON export format
 - `csv_output` - CSV export format (Sprint 17)
+- `html_output` - HTML export format (Sprint 22)
 - `function_profiler` - Function-level profiling with I/O detection
 - `stack_unwind` - Stack unwinding for call graphs
 - `profiling` - Self-profiling infrastructure
+- `hpu` - HPU-accelerated analysis (Sprint 21)
+- `ml_anomaly` - ML-based anomaly detection (Sprint 23)
+- `isolation_forest` - Isolation Forest outlier detection (Sprint 22)
+- `autoencoder` - Autoencoder anomaly detection (Sprint 23)
+- `transpiler_map` - Transpiler source mapping (Sprint 24-28)
+- `decision_trace` - Decision trace capture (Sprint 26-27)
+- `otlp_exporter` - OpenTelemetry OTLP export (Sprint 30)
 
 ### Dependencies
 - `nix` - Ptrace system calls
@@ -369,13 +426,32 @@ cargo deny check
 - `clap` - CLI parsing
 - `serde`, `serde_json` - JSON serialization
 - `trueno` - SIMD-accelerated statistics
+- `aprender` - ML anomaly detection
 - `proptest` - Property-based testing
+- `opentelemetry`, `opentelemetry_sdk`, `opentelemetry-otlp` - OTLP tracing (Sprint 30)
+- `tokio` - Async runtime for OTLP export (Sprint 30)
 
 ## Roadmap
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
-### v0.3.0 ✅ (Current - 2025-11-17)
+### v0.5.0 ✅ (Current - 2025-11-20)
+- OpenTelemetry OTLP integration (Sprint 30)
+- Distributed tracing with Jaeger, Tempo, and OTLP-compatible backends
+- Docker compose examples for observability stacks
+- Full integration with all Renacer features
+- Ruchy Integration Milestone Phase 4 complete
+
+### v0.4.0 ✅ (2025-11-18)
+- Chaos Engineering infrastructure (Sprint 29)
+- Fuzz testing integration
+- Transpiler source mapping for Python→Rust and C→Rust (Sprint 24-28)
+- Decision trace capture (Sprint 26-27)
+- ML/DL anomaly detection (Sprint 22-23)
+- HTML output format (Sprint 22)
+- HPU-accelerated analysis (Sprint 21)
+
+### v0.3.0 ✅ (2025-11-17)
 - Advanced filtering (negation, regex patterns)
 - CSV export format
 - Multi-process tracing (-f flag)
@@ -383,15 +459,15 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 - Real-time anomaly detection
 - Trueno Integration Milestone complete
 
-### v0.4.0 (Planned)
-- Multi-threaded tracing optimizations
-- eBPF backend option for reduced overhead
-- Performance dashboard
-- Additional output formats (HTML, Markdown)
+### v0.6.0 (Planned - Sprint 31-33)
+- Ruchy Runtime Integration - Link OTLP traces with transpiler decisions
+- Span Context Propagation - Connect Renacer traces with in-app spans
+- Custom Sampling - Trace sampling for high-volume systems
 
 ### v1.0.0 (Planned)
 - Production hardening
 - Cross-platform support (ARM64)
+- eBPF backend option for reduced overhead
 - Plugin architecture
 - Web UI for trace analysis
 
