@@ -6,22 +6,36 @@
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use std::time::Duration;
 
-/// Simulate span data structure
+use std::borrow::Cow;
+
+/// Simulate span data structure (Sprint 36: with zero-copy Cow)
 #[derive(Clone)]
 struct SpanData {
-    name: String,
-    attributes: Vec<(String, String)>,
+    name: Cow<'static, str>,
+    attributes: Vec<(Cow<'static, str>, String)>,
     timestamp: u64,
     duration: u64,
 }
 
 impl SpanData {
-    fn new(name: &str) -> Self {
+    fn new(name: &'static str) -> Self {
         SpanData {
-            name: name.to_string(),
+            name: Cow::Borrowed(name),
             attributes: vec![
-                ("syscall.name".to_string(), name.to_string()),
-                ("syscall.result".to_string(), "0".to_string()),
+                (Cow::Borrowed("syscall.name"), name.to_string()),
+                (Cow::Borrowed("syscall.result"), "0".to_string()),
+            ],
+            timestamp: 1234567890,
+            duration: 1000,
+        }
+    }
+
+    fn new_owned(name: String) -> Self {
+        SpanData {
+            name: Cow::Owned(name.clone()),
+            attributes: vec![
+                (Cow::Owned("syscall.name".to_string()), name),
+                (Cow::Owned("syscall.result".to_string()), "0".to_string()),
             ],
             timestamp: 1234567890,
             duration: 1000,
@@ -38,7 +52,7 @@ impl SimplePool {
     fn new(capacity: usize) -> Self {
         let mut pool = Vec::with_capacity(capacity);
         for i in 0..capacity {
-            pool.push(SpanData::new(&format!("syscall_{}", i)));
+            pool.push(SpanData::new_owned(format!("syscall_{}", i)));
         }
         SimplePool { pool }
     }
@@ -62,7 +76,7 @@ fn bench_heap_allocation(c: &mut Criterion) {
         b.iter(|| {
             let mut spans = Vec::new();
             for i in 0..1000 {
-                spans.push(SpanData::new(&format!("syscall_{}", i)));
+                spans.push(SpanData::new_owned(format!("syscall_{}", i)));
             }
             black_box(spans);
         });
@@ -193,7 +207,7 @@ fn bench_memory_footprint(c: &mut Criterion) {
         b.iter(|| {
             let mut spans = Vec::new();
             for i in 0..10000 {
-                spans.push(SpanData::new(&format!("syscall_{}", i)));
+                spans.push(SpanData::new_owned(format!("syscall_{}", i)));
             }
             black_box(spans);
         });

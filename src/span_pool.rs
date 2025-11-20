@@ -2,7 +2,11 @@
 ///
 /// Provides efficient object pooling for span allocations to reduce
 /// allocator pressure and improve performance.
+///
+/// Zero-copy optimizations: Uses Cow<'static, str> for strings that
+/// are often known at compile time (syscall names, operation types).
 
+use std::borrow::Cow;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// Configuration for the span pool
@@ -41,13 +45,16 @@ impl SpanPoolConfig {
     }
 }
 
-/// Pooled span data
+/// Pooled span data (Sprint 36: zero-copy with Cow)
 #[derive(Debug, Clone)]
 pub struct PooledSpan {
     pub trace_id: String,
     pub span_id: String,
-    pub name: String,
-    pub attributes: Vec<(String, String)>,
+    /// Operation name - often static (e.g., "syscall:open", "compute_block:mean")
+    /// Uses Cow for zero-copy when static strings are used
+    pub name: Cow<'static, str>,
+    /// Attributes with static keys (zero-copy optimization)
+    pub attributes: Vec<(Cow<'static, str>, String)>,
     pub timestamp_nanos: u64,
     pub duration_nanos: u64,
     pub status_code: i32, // 0 = OK, 1 = ERROR
@@ -59,7 +66,7 @@ impl PooledSpan {
         PooledSpan {
             trace_id: String::new(),
             span_id: String::new(),
-            name: String::new(),
+            name: Cow::Borrowed(""),
             attributes: Vec::new(),
             timestamp_nanos: 0,
             duration_nanos: 0,
@@ -71,11 +78,31 @@ impl PooledSpan {
     fn reset(&mut self) {
         self.trace_id.clear();
         self.span_id.clear();
-        self.name.clear();
+        self.name = Cow::Borrowed("");
         self.attributes.clear();
         self.timestamp_nanos = 0;
         self.duration_nanos = 0;
         self.status_code = 0;
+    }
+
+    /// Set span name from static string (zero-copy)
+    pub fn set_name_static(&mut self, name: &'static str) {
+        self.name = Cow::Borrowed(name);
+    }
+
+    /// Set span name from owned string
+    pub fn set_name_owned(&mut self, name: String) {
+        self.name = Cow::Owned(name);
+    }
+
+    /// Add attribute with static key (zero-copy for key)
+    pub fn add_attribute_static(&mut self, key: &'static str, value: String) {
+        self.attributes.push((Cow::Borrowed(key), value));
+    }
+
+    /// Add attribute with owned key
+    pub fn add_attribute_owned(&mut self, key: String, value: String) {
+        self.attributes.push((Cow::Owned(key), value));
     }
 }
 
@@ -255,7 +282,7 @@ mod tests {
 
         // Acquire and modify a span
         let mut span = pool.acquire();
-        span.name = "test".to_string();
+        span.set_name_owned("test".to_string());
         span.trace_id = "abc123".to_string();
         span.timestamp_nanos = 12345;
 
@@ -264,9 +291,39 @@ mod tests {
         let span2 = pool.acquire();
 
         // Should be reset
-        assert_eq!(span2.name, "");
+        assert_eq!(span2.name.as_ref(), "");
         assert_eq!(span2.trace_id, "");
         assert_eq!(span2.timestamp_nanos, 0);
+    }
+
+    #[test]
+    fn test_zero_copy_static_strings() {
+        let mut pool = SpanPool::new(SpanPoolConfig::new(10));
+
+        // Acquire span and use static string (zero-copy)
+        let mut span = pool.acquire();
+        span.set_name_static("syscall:open");
+        span.add_attribute_static("syscall.name", "open".to_string());
+        span.add_attribute_static("syscall.result", "3".to_string());
+
+        // Verify static borrowing (no allocation for keys)
+        assert_eq!(span.name.as_ref(), "syscall:open");
+        assert!(matches!(span.name, Cow::Borrowed(_)));
+        assert_eq!(span.attributes.len(), 2);
+        assert!(matches!(span.attributes[0].0, Cow::Borrowed(_)));
+        assert!(matches!(span.attributes[1].0, Cow::Borrowed(_)));
+
+        // Compare with owned version
+        let mut span2 = pool.acquire();
+        span2.set_name_owned("syscall:open".to_string());
+        span2.add_attribute_owned("syscall.name".to_string(), "open".to_string());
+
+        assert_eq!(span2.name.as_ref(), "syscall:open");
+        assert!(matches!(span2.name, Cow::Owned(_)));
+        assert!(matches!(span2.attributes[0].0, Cow::Owned(_)));
+
+        pool.release(span);
+        pool.release(span2);
     }
 
     #[test]
