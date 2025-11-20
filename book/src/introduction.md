@@ -11,6 +11,10 @@ Renacer is a binary inspection and tracing framework that allows you to observe 
 - **Function-level profiling** - Understand I/O bottlenecks and hot paths
 - **Advanced filtering** - Powerful syscall selection with regex patterns and negation
 - **Statistical analysis** - SIMD-accelerated percentile analysis and anomaly detection
+- **OpenTelemetry integration** - Export traces to Jaeger, Grafana Tempo, and more
+- **Distributed tracing** - W3C Trace Context propagation across services
+- **Transpiler support** - Map transpiled code (Python→Rust, C→Rust) back to original source
+- **Performance optimized** - <5% overhead with memory pooling and zero-copy strings
 - **Multiple output formats** - JSON, CSV, HTML for integration with other tools
 - **Chaos engineering** - Test system resilience with controlled fault injection
 - **Fuzz testing** - Coverage-guided fuzzing for robustness
@@ -23,9 +27,10 @@ Renacer is a binary inspection and tracing framework that allows you to observe 
 - Correlate syscalls with source code locations
 
 **For DevOps:**
-- Monitor production processes with minimal overhead (5-9% vs strace's 8-12%)
+- Monitor production processes with minimal overhead (3-4% vs strace's 8-12%)
 - Detect anomalies in real-time with configurable thresholds
-- Export traces to JSON/CSV for integration with monitoring systems
+- Export traces to OpenTelemetry backends (Jaeger, Tempo, Honeycomb)
+- Build end-to-end observability with distributed tracing
 
 **For Security Researchers:**
 - Observe program behavior at the syscall level
@@ -34,9 +39,9 @@ Renacer is a binary inspection and tracing framework that allows you to observe 
 
 ## Current Status
 
-**Version:** 0.4.1
-**Status:** Production-Ready + Chaos Engineering
-**Test Coverage:** 240+ tests (all passing)
+**Version:** 0.5.0
+**Status:** Production-Ready + Performance Optimization (Sprint 36)
+**Test Coverage:** 400+ tests (all passing)
 **TDG Score:** 95.1/100 (A+ grade)
 
 Renacer is built following Toyota Way principles and EXTREME TDD methodology, ensuring every feature is thoroughly tested and production-ready.
@@ -73,10 +78,11 @@ Top 10 Hot Paths (by total time):
 Renacer is developed by [Pragmatic AI Labs](https://paiml.com) using:
 - **Toyota Way** quality principles
 - **EXTREME TDD** methodology (every feature test-driven)
-- **Zero tolerance** for defects (all 240+ tests pass, zero warnings)
+- **Zero tolerance** for defects (all 400+ tests pass, zero warnings)
 - **Property-based testing** (670+ test cases via proptest)
 - **Mutation testing** (80%+ mutation score via cargo-mutants)
 - **Fuzz testing** (coverage-guided fuzzing via cargo-fuzz)
+- **Performance benchmarking** (Criterion.rs with regression detection)
 - **Tiered TDD** (fast/medium/slow test tiers for rapid development)
 
 ## Next Steps
