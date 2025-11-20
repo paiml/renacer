@@ -518,15 +518,22 @@ fn process_syscall_exit(
 }
 
 /// Print text statistics summary
+///
+/// Sprint 32: Now accepts optional OtlpExporter for compute block tracing
 fn print_text_stats(
     stats_tracker: &Option<crate::stats::StatsTracker>,
     stats_extended: bool,
     anomaly_threshold: f32,
+    #[cfg(feature = "otlp")] otlp_exporter: Option<&crate::otlp_exporter::OtlpExporter>,
+    #[cfg(not(feature = "otlp"))] _otlp_exporter: Option<&()>,
 ) {
     if let Some(ref tracker) = stats_tracker {
         tracker.print_summary();
         if stats_extended {
-            tracker.print_extended_summary(anomaly_threshold);
+            #[cfg(feature = "otlp")]
+            tracker.print_extended_summary(anomaly_threshold, otlp_exporter);
+            #[cfg(not(feature = "otlp"))]
+            tracker.print_extended_summary(anomaly_threshold, _otlp_exporter);
         }
     }
 }
@@ -631,7 +638,11 @@ fn print_csv_stats(
             });
         }
         if stats_extended {
-            tracker.print_extended_summary(anomaly_threshold);
+            // Note: CSV output doesn't get OTLP tracing - pass None
+            #[cfg(feature = "otlp")]
+            tracker.print_extended_summary(anomaly_threshold, None);
+            #[cfg(not(feature = "otlp"))]
+            tracker.print_extended_summary(anomaly_threshold, None);
         }
     }
     print!("{}", csv_stats.to_csv(timing_mode));
@@ -671,7 +682,13 @@ fn print_ml_analysis(
             // Compare with z-score anomaly detection
             let mut zscore_anomalies = Vec::new();
             for syscall_name in tracker.stats_map().keys() {
-                if let Some(extended) = tracker.calculate_extended_statistics(syscall_name) {
+                // Note: Pass None - this is for comparison, not primary compute
+                #[cfg(feature = "otlp")]
+                let extended = tracker.calculate_extended_statistics(syscall_name, None);
+                #[cfg(not(feature = "otlp"))]
+                let extended = tracker.calculate_extended_statistics(syscall_name, None);
+
+                if let Some(extended) = extended {
                     if extended.stddev > 0.0 {
                         let z_score = (extended.max - extended.mean) / extended.stddev;
                         if z_score > anomaly_threshold {
@@ -958,20 +975,31 @@ fn print_summaries(tracers: Tracers, timing_mode: bool, exit_code: i32, analysis
         }
     }
 
-    // Sprint 30: End root span and shutdown OTLP exporter
-    #[cfg(feature = "otlp")]
-    if let Some(ref mut exporter) = otlp_exporter {
-        exporter.end_root_span(exit_code);
-        exporter.shutdown();
-    }
-
     // Print statistics summary if in statistics mode (text format)
+    // Sprint 32: Do this BEFORE shutdown so compute tracing can export spans
     if stats_tracker.is_some() && csv_stats_output.is_none() {
+        #[cfg(feature = "otlp")]
         print_text_stats(
             &stats_tracker,
             analysis.stats_extended,
             analysis.anomaly_threshold,
+            otlp_exporter.as_ref(),
         );
+        #[cfg(not(feature = "otlp"))]
+        print_text_stats(
+            &stats_tracker,
+            analysis.stats_extended,
+            analysis.anomaly_threshold,
+            None,
+        );
+    }
+
+    // Sprint 30: End root span and shutdown OTLP exporter
+    // Sprint 32: Moved AFTER stats printing so compute blocks can be traced
+    #[cfg(feature = "otlp")]
+    if let Some(ref mut exporter) = otlp_exporter {
+        exporter.end_root_span(exit_code);
+        exporter.shutdown();
     }
 
     // Print JSON output if in JSON mode
