@@ -57,6 +57,12 @@ rand = "0.8"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 
+# OpenTelemetry for distributed tracing (Sprint 30)
+opentelemetry = { version = "0.31.0", optional = true }
+opentelemetry_sdk = { version = "0.31.0", features = ["rt-tokio"], optional = true }
+opentelemetry-otlp = { version = "0.31.0", features = ["grpc-tonic", "http-proto"], optional = true }
+tokio = { version = "1", features = ["rt", "macros"], optional = true }
+
 [dev-dependencies]
 # Testing
 assert_cmd = "2.0"
@@ -79,7 +85,7 @@ debug = true
 # Chaos engineering features (Sprint 29 - Red-Team Profile)
 # Following aprender/trueno patterns for feature organization
 [features]
-default = []
+default = ["otlp"]
 
 # Tier 1: Fast chaos (resource limits, signal injection)
 chaos-basic = []
@@ -95,6 +101,9 @@ chaos-full = ["chaos-byzantine", "dep:loom", "dep:arbitrary"]
 
 # Fuzz testing support
 fuzz = ["dep:arbitrary"]
+
+# OpenTelemetry OTLP export (Sprint 30)
+otlp = ["dep:opentelemetry", "dep:opentelemetry_sdk", "dep:opentelemetry-otlp", "dep:tokio"]
 
 [dependencies.loom]
 version = "0.7"
