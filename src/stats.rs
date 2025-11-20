@@ -259,7 +259,13 @@ impl StatsTracker {
 
     /// Check if a duration is an anomaly (>threshold σ from mean)
     pub fn is_anomaly(&self, syscall_name: &str, duration_us: u64, threshold: f32) -> bool {
-        if let Some(extended) = self.calculate_extended_statistics(syscall_name) {
+        // Note: Pass None for tracing - this is a quick check, not a compute block
+        #[cfg(feature = "otlp")]
+        let extended = self.calculate_extended_statistics(syscall_name, None);
+        #[cfg(not(feature = "otlp"))]
+        let extended = self.calculate_extended_statistics(syscall_name, None);
+
+        if let Some(extended) = extended {
             if extended.stddev > 0.0 {
                 let z_score = ((duration_us as f32 - extended.mean) / extended.stddev).abs();
                 return z_score > threshold;
@@ -269,7 +275,14 @@ impl StatsTracker {
     }
 
     /// Print extended statistics summary to stderr
-    pub fn print_extended_summary(&self, threshold: f32) {
+    ///
+    /// Sprint 32: Now accepts optional OtlpExporter for compute block tracing
+    pub fn print_extended_summary(
+        &self,
+        threshold: f32,
+        #[cfg(feature = "otlp")] otlp_exporter: Option<&crate::otlp_exporter::OtlpExporter>,
+        #[cfg(not(feature = "otlp"))] _otlp_exporter: Option<&()>,
+    ) {
         if self.stats.is_empty() {
             eprintln!("No syscalls traced.");
             return;
@@ -282,7 +295,12 @@ impl StatsTracker {
         sorted.sort_by(|a, b| b.1.count.cmp(&a.1.count));
 
         for (name, stats) in sorted {
-            if let Some(extended) = self.calculate_extended_statistics(name) {
+            #[cfg(feature = "otlp")]
+            let extended = self.calculate_extended_statistics(name, otlp_exporter);
+            #[cfg(not(feature = "otlp"))]
+            let extended = self.calculate_extended_statistics(name, _otlp_exporter);
+
+            if let Some(extended) = extended {
                 eprintln!("{} ({} calls):", name, stats.count);
                 eprintln!("  Mean:         {:.2} μs", extended.mean);
                 eprintln!("  Std Dev:      {:.2} μs", extended.stddev);
