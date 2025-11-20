@@ -1,8 +1,76 @@
 //! Syscall statistics tracking for -c mode
 //!
 //! Sprint 9-10: Statistics mode implementation
+//! Sprint 32: Compute block tracing (Toyota Way v2.0)
 
 use std::collections::HashMap;
+
+/// Trace a compute block (multiple Trueno operations) - Sprint 32
+///
+/// This macro implements **block-level tracing** following Toyota Way principles:
+/// - **Genchi Genbutsu**: No backend detection guessing
+/// - **Jidoka**: Mandatory adaptive sampling (default: skip if duration < 100μs)
+/// - **Muda**: Zero waste - no per-operation tracing overhead
+/// - **Poka-Yoke**: Safe by default - cannot DoS tracing backend
+///
+/// # Usage
+///
+/// ```ignore
+/// use crate::otlp_exporter::ComputeBlock;
+///
+/// let result = trace_compute_block!(otlp_exporter, "calculate_statistics", elements, {
+///     // Block of Trueno operations
+///     let v = trueno::Vector::from_slice(&data);
+///     ExtendedStats {
+///         mean: v.mean().unwrap_or(0.0),
+///         stddev: v.stddev().unwrap_or(0.0),
+///         // ... more operations
+///     }
+/// });
+/// ```
+///
+/// # Adaptive Sampling
+///
+/// - If `duration < 100μs`: No span exported (too fast, not interesting)
+/// - If `duration >= 100μs`: Export span to OTLP
+/// - Debug mode: Use `--trace-compute-all` to bypass threshold
+///
+/// # Arguments
+///
+/// * `$exporter` - Optional reference to `OtlpExporter` (None if OTLP disabled)
+/// * `$op_name` - Static string with operation name (e.g., "calculate_statistics")
+/// * `$elements` - Number of elements being processed (usize)
+/// * `$block` - Code block containing Trueno operations
+///
+/// # Returns
+///
+/// Returns the result of executing `$block`
+#[macro_export]
+macro_rules! trace_compute_block {
+    ($exporter:expr, $op_name:expr, $elements:expr, $block:block) => {{
+        let start = std::time::Instant::now();
+        let result = $block;
+        let duration_us = start.elapsed().as_micros() as u64;
+
+        // Adaptive sampling: Only trace if slow (Toyota Way: Jidoka - safe by default)
+        if duration_us >= 100 {
+            if let Some(exporter) = $exporter {
+                #[cfg(feature = "otlp")]
+                {
+                    use $crate::otlp_exporter::ComputeBlock;
+                    exporter.record_compute_block(ComputeBlock {
+                        operation: $op_name,
+                        duration_us,
+                        elements: $elements,
+                        is_slow: duration_us > 100,
+                    });
+                }
+            }
+        }
+
+        result
+    }};
+}
 
 /// Statistics for a single syscall type
 #[derive(Debug, Clone, Default)]
