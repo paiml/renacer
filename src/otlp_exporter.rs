@@ -38,6 +38,22 @@ pub struct OtlpConfig {
     pub service_name: String,
 }
 
+/// Compute block metadata for tracing (Sprint 32)
+///
+/// Represents a block of statistical computation containing multiple
+/// Trueno SIMD operations (e.g., mean, stddev, percentiles).
+#[derive(Debug, Clone)]
+pub struct ComputeBlock {
+    /// Operation name (e.g., "calculate_statistics", "detect_anomalies")
+    pub operation: &'static str,
+    /// Total duration of the block in microseconds
+    pub duration_us: u64,
+    /// Number of elements processed
+    pub elements: usize,
+    /// Whether this block exceeded the slow threshold (>100μs)
+    pub is_slow: bool,
+}
+
 /// OTLP exporter for syscall traces
 #[cfg(feature = "otlp")]
 pub struct OtlpExporter {
@@ -66,9 +82,15 @@ impl OtlpExporter {
             // Create batch span processor
             let span_processor = BatchSpanProcessor::builder(exporter).build();
 
-            // Create resource with service name
+            // Create resource with service name + compute tracing attributes (Sprint 32)
             let resource = Resource::builder()
                 .with_service_name(config.service_name.clone())
+                .with_attributes(vec![
+                    // Static compute tracing attributes at Resource level (Toyota Way: no waste)
+                    KeyValue::new("compute.library", "trueno"),
+                    KeyValue::new("compute.library.version", "0.4.0"),
+                    KeyValue::new("compute.tracing.abstraction", "block_level"),
+                ])
                 .build();
 
             // Create tracer provider
@@ -175,6 +197,39 @@ impl OtlpExporter {
                 attributes,
             );
         }
+    }
+
+    /// Record a compute block (multiple Trueno operations) as a span (Sprint 32)
+    ///
+    /// This exports a block of statistical computations (e.g., calculate_statistics)
+    /// as a single span. Following Toyota Way principles, we trace at the block level
+    /// rather than individual SIMD operations to avoid overhead (Muda) and false
+    /// observability (Genchi Genbutsu).
+    ///
+    /// # Arguments
+    ///
+    /// * `block` - Metadata about the compute block (operation, duration, elements)
+    ///
+    /// # Adaptive Sampling
+    ///
+    /// This method should only be called if duration >= threshold (default 100μs).
+    /// The caller (trace_compute_block! macro) handles sampling decisions.
+    pub fn record_compute_block(&self, block: ComputeBlock) {
+        let mut span = self
+            .tracer
+            .span_builder(format!("compute_block: {}", block.operation))
+            .with_kind(SpanKind::Internal)
+            .with_attributes(vec![
+                // Only dynamic attributes on span (Toyota Way: no attribute explosion)
+                KeyValue::new("compute.operation", block.operation.to_string()),
+                KeyValue::new("compute.duration_us", block.duration_us as i64),
+                KeyValue::new("compute.elements", block.elements as i64),
+                KeyValue::new("compute.is_slow", block.is_slow),
+            ])
+            .start(&self.tracer);
+
+        span.set_status(Status::Ok);
+        span.end();
     }
 
     /// Finish the root span
