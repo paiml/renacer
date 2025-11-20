@@ -869,23 +869,22 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
     fn test_cli_trace_compute_all_requires_trace_compute() {
-        // Should panic because --trace-compute-all requires --trace-compute
-        let _cli = Cli::parse_from([
+        // Should fail because --trace-compute-all requires --trace-compute
+        let result = Cli::try_parse_from([
             "renacer",
             "--trace-compute-all",
             "--",
             "echo",
             "test",
         ]);
+        assert!(result.is_err());
     }
 
     #[test]
-    #[should_panic]
     fn test_cli_trace_compute_threshold_requires_trace_compute() {
-        // Should panic because --trace-compute-threshold requires --trace-compute
-        let _cli = Cli::parse_from([
+        // Should fail because --trace-compute-threshold requires --trace-compute
+        let result = Cli::try_parse_from([
             "renacer",
             "--trace-compute-threshold",
             "50",
@@ -893,5 +892,6 @@ mod tests {
             "echo",
             "test",
         ]);
+        assert!(result.is_err());
     }
 }
