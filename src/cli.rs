@@ -152,6 +152,14 @@ pub struct Cli {
     #[arg(long = "trace-transpiler-decisions")]
     pub trace_transpiler_decisions: bool,
 
+    /// OpenTelemetry OTLP endpoint for trace export (Sprint 30)
+    #[arg(long = "otlp-endpoint", value_name = "URL")]
+    pub otlp_endpoint: Option<String>,
+
+    /// Service name for OpenTelemetry traces (Sprint 30)
+    #[arg(long = "otlp-service-name", value_name = "NAME", default_value = "renacer")]
+    pub otlp_service_name: String,
+
     /// Enable debug tracing output to stderr
     #[arg(long = "debug")]
     pub debug: bool,
@@ -680,5 +688,91 @@ mod tests {
         assert!(cli.dl_anomaly);
         assert!(cli.ml_anomaly);
         assert!(cli.ml_outliers);
+    }
+
+    // Sprint 30: OpenTelemetry OTLP Export tests
+    #[test]
+    fn test_cli_otlp_endpoint_flag() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "--otlp-endpoint",
+            "http://localhost:4317",
+            "--",
+            "echo",
+            "test",
+        ]);
+        assert!(cli.otlp_endpoint.is_some());
+        assert_eq!(cli.otlp_endpoint.unwrap(), "http://localhost:4317");
+    }
+
+    #[test]
+    fn test_cli_otlp_endpoint_default_none() {
+        let cli = Cli::parse_from(["renacer", "--", "echo", "test"]);
+        assert!(cli.otlp_endpoint.is_none());
+    }
+
+    #[test]
+    fn test_cli_otlp_service_name_default() {
+        let cli = Cli::parse_from(["renacer", "--", "echo", "test"]);
+        assert_eq!(cli.otlp_service_name, "renacer");
+    }
+
+    #[test]
+    fn test_cli_otlp_service_name_custom() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "--otlp-service-name",
+            "my-app",
+            "--",
+            "echo",
+            "test",
+        ]);
+        assert_eq!(cli.otlp_service_name, "my-app");
+    }
+
+    #[test]
+    fn test_cli_otlp_with_endpoint_and_service() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "--otlp-endpoint",
+            "http://jaeger:4317",
+            "--otlp-service-name",
+            "traced-app",
+            "--",
+            "echo",
+            "test",
+        ]);
+        assert_eq!(cli.otlp_endpoint.unwrap(), "http://jaeger:4317");
+        assert_eq!(cli.otlp_service_name, "traced-app");
+    }
+
+    #[test]
+    fn test_cli_otlp_with_statistics() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "-c",
+            "--otlp-endpoint",
+            "http://localhost:4317",
+            "--",
+            "echo",
+            "test",
+        ]);
+        assert!(cli.statistics);
+        assert!(cli.otlp_endpoint.is_some());
+    }
+
+    #[test]
+    fn test_cli_otlp_with_timing() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "-T",
+            "--otlp-endpoint",
+            "http://localhost:4317",
+            "--",
+            "echo",
+            "test",
+        ]);
+        assert!(cli.timing);
+        assert!(cli.otlp_endpoint.is_some());
     }
 }
