@@ -41,6 +41,8 @@ pub struct TracerConfig {
     pub dl_epochs: usize,       // Sprint 23: Training epochs
     pub trace_transpiler_decisions: bool, // Sprint 26: Trace transpiler compile-time decisions
     pub transpiler_map: Option<crate::transpiler_map::TranspilerMap>, // Sprint 24-28: Transpiler source mapping
+    pub otlp_endpoint: Option<String>, // Sprint 30: OpenTelemetry OTLP endpoint
+    pub otlp_service_name: String,     // Sprint 30: Service name for OTLP traces
 }
 
 /// Attach to a running process by PID and trace syscalls
@@ -121,6 +123,8 @@ struct Tracers {
     anomaly_detector: Option<crate::anomaly::AnomalyDetector>, // Sprint 20
     #[allow(dead_code)] // Sprint 26: Will be used once stderr capture is wired
     decision_tracer: Option<crate::decision_trace::DecisionTracer>, // Sprint 26
+    #[cfg(feature = "otlp")]
+    otlp_exporter: Option<crate::otlp_exporter::OtlpExporter>, // Sprint 30
 }
 
 /// Initialize profiling-related tracers
@@ -224,6 +228,26 @@ fn initialize_tracers(config: &TracerConfig) -> Tracers {
         None
     };
 
+    // Initialize OTLP exporter if endpoint is provided (Sprint 30)
+    #[cfg(feature = "otlp")]
+    let otlp_exporter = if let Some(ref endpoint) = config.otlp_endpoint {
+        match crate::otlp_exporter::OtlpExporter::new(crate::otlp_exporter::OtlpConfig {
+            endpoint: endpoint.clone(),
+            service_name: config.otlp_service_name.clone(),
+        }) {
+            Ok(exporter) => {
+                eprintln!("[renacer: OTLP export enabled to {}]", endpoint);
+                Some(exporter)
+            }
+            Err(e) => {
+                eprintln!("[renacer: OTLP initialization failed: {}]", e);
+                None
+            }
+        }
+    } else {
+        None
+    };
+
     Tracers {
         profiling_ctx,
         function_profiler,
@@ -234,6 +258,8 @@ fn initialize_tracers(config: &TracerConfig) -> Tracers {
         html_output,
         anomaly_detector,
         decision_tracer,
+        #[cfg(feature = "otlp")]
+        otlp_exporter,
     }
 }
 
@@ -915,7 +941,29 @@ fn print_summaries(tracers: Tracers, timing_mode: bool, exit_code: i32, analysis
         function_profiler,
         anomaly_detector,
         decision_tracer, // Sprint 26: Now used for decision trace output
+        #[cfg(feature = "otlp")]
+        mut otlp_exporter, // Sprint 30: OTLP exporter
     } = tracers;
+
+    // Sprint 31: Export decision traces to OTLP (before ending root span)
+    #[cfg(feature = "otlp")]
+    if let (Some(ref mut exporter), Some(ref tracer)) = (&mut otlp_exporter, &decision_tracer) {
+        for trace in tracer.traces() {
+            exporter.record_decision(
+                &trace.category,
+                &trace.name,
+                trace.result.as_ref().and_then(|v| v.as_str()),
+                trace.timestamp_us,
+            );
+        }
+    }
+
+    // Sprint 30: End root span and shutdown OTLP exporter
+    #[cfg(feature = "otlp")]
+    if let Some(ref mut exporter) = otlp_exporter {
+        exporter.end_root_span(exit_code);
+        exporter.shutdown();
+    }
 
     // Print statistics summary if in statistics mode (text format)
     if stats_tracker.is_some() && csv_stats_output.is_none() {
@@ -1095,6 +1143,18 @@ fn trace_child(child: Pid, config: TracerConfig) -> Result<i32> {
 
     let mut tracers = initialize_tracers(&config);
     trace!("tracers initialized");
+
+    // Sprint 30: Start root span for OTLP exporter
+    #[cfg(feature = "otlp")]
+    if let Some(ref mut exporter) = tracers.otlp_exporter {
+        // Get program name from /proc/{pid}/cmdline
+        let program_name = std::fs::read_to_string(format!("/proc/{}/cmdline", child))
+            .ok()
+            .and_then(|s| s.split('\0').next().map(|s| s.to_string()))
+            .unwrap_or_else(|| format!("pid:{}", child));
+
+        exporter.start_root_span(&program_name, child.as_raw());
+    }
 
     trace!("calling setup_ptrace_options");
     setup_ptrace_options(child, config.follow_forks)?;
@@ -1804,6 +1864,21 @@ fn handle_syscall_exit(
         duration_us,
     );
 
+    // Sprint 30: Record syscall to OTLP exporter
+    #[cfg(feature = "otlp")]
+    if let (Some(entry), Some(exporter)) = (syscall_entry, tracers.otlp_exporter.as_ref()) {
+        let source_file = entry.source.as_ref().map(|s| s.file.as_str());
+        let source_line = entry.source.as_ref().map(|s| s.line);
+
+        exporter.record_syscall(
+            &entry.name,
+            if duration_us > 0 { Some(duration_us) } else { None },
+            result,
+            source_file,
+            source_line,
+        );
+    }
+
     // Print result if not in statistics, JSON, CSV, or HTML mode
     if should_print_result(
         syscall_entry,
@@ -1853,6 +1928,8 @@ mod tests {
             dl_epochs: 100,                    // Sprint 23
             trace_transpiler_decisions: false, // Sprint 26
             transpiler_map: None,              // Sprint 24-28
+            otlp_endpoint: None,               // Sprint 30
+            otlp_service_name: "renacer".to_string(), // Sprint 30
         };
         let result = trace_command(&empty, config);
         assert!(result.is_err());
@@ -1891,6 +1968,8 @@ mod tests {
             dl_epochs: 100,                    // Sprint 23
             trace_transpiler_decisions: false, // Sprint 26
             transpiler_map: None,              // Sprint 24-28
+            otlp_endpoint: None,               // Sprint 30
+            otlp_service_name: "renacer".to_string(), // Sprint 30
         };
         let result = trace_command(&cmd, config);
         assert!(result.is_err());
@@ -1971,6 +2050,8 @@ mod tests {
             dl_epochs: 100,                    // Sprint 23
             trace_transpiler_decisions: false, // Sprint 26
             transpiler_map: None,              // Sprint 24-28
+            otlp_endpoint: None,               // Sprint 30
+            otlp_service_name: "renacer".to_string(), // Sprint 30
         };
         let result = attach_to_pid(999999, config);
         assert!(result.is_err());
