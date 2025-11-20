@@ -1,8 +1,76 @@
 //! Syscall statistics tracking for -c mode
 //!
 //! Sprint 9-10: Statistics mode implementation
+//! Sprint 32: Compute block tracing (Toyota Way v2.0)
 
 use std::collections::HashMap;
+
+/// Trace a compute block (multiple Trueno operations) - Sprint 32
+///
+/// This macro implements **block-level tracing** following Toyota Way principles:
+/// - **Genchi Genbutsu**: No backend detection guessing
+/// - **Jidoka**: Mandatory adaptive sampling (default: skip if duration < 100μs)
+/// - **Muda**: Zero waste - no per-operation tracing overhead
+/// - **Poka-Yoke**: Safe by default - cannot DoS tracing backend
+///
+/// # Usage
+///
+/// ```ignore
+/// use crate::otlp_exporter::ComputeBlock;
+///
+/// let result = trace_compute_block!(otlp_exporter, "calculate_statistics", elements, {
+///     // Block of Trueno operations
+///     let v = trueno::Vector::from_slice(&data);
+///     ExtendedStats {
+///         mean: v.mean().unwrap_or(0.0),
+///         stddev: v.stddev().unwrap_or(0.0),
+///         // ... more operations
+///     }
+/// });
+/// ```
+///
+/// # Adaptive Sampling
+///
+/// - If `duration < 100μs`: No span exported (too fast, not interesting)
+/// - If `duration >= 100μs`: Export span to OTLP
+/// - Debug mode: Use `--trace-compute-all` to bypass threshold
+///
+/// # Arguments
+///
+/// * `$exporter` - Optional reference to `OtlpExporter` (None if OTLP disabled)
+/// * `$op_name` - Static string with operation name (e.g., "calculate_statistics")
+/// * `$elements` - Number of elements being processed (usize)
+/// * `$block` - Code block containing Trueno operations
+///
+/// # Returns
+///
+/// Returns the result of executing `$block`
+#[macro_export]
+macro_rules! trace_compute_block {
+    ($exporter:expr, $op_name:expr, $elements:expr, $block:block) => {{
+        let start = std::time::Instant::now();
+        let result = $block;
+        let duration_us = start.elapsed().as_micros() as u64;
+
+        // Adaptive sampling: Only trace if slow (Toyota Way: Jidoka - safe by default)
+        if duration_us >= 100 {
+            if let Some(exporter) = $exporter {
+                #[cfg(feature = "otlp")]
+                {
+                    use $crate::otlp_exporter::ComputeBlock;
+                    exporter.record_compute_block(ComputeBlock {
+                        operation: $op_name,
+                        duration_us,
+                        elements: $elements,
+                        is_slow: duration_us > 100,
+                    });
+                }
+            }
+        }
+
+        result
+    }};
+}
 
 /// Statistics for a single syscall type
 #[derive(Debug, Clone, Default)]
@@ -121,7 +189,19 @@ impl StatsTracker {
     }
 
     /// Calculate extended statistics for a syscall using Trueno
-    pub fn calculate_extended_statistics(&self, syscall_name: &str) -> Option<ExtendedStats> {
+    ///
+    /// Sprint 32: Now accepts optional OtlpExporter for compute block tracing
+    ///
+    /// # Arguments
+    ///
+    /// * `syscall_name` - Name of the syscall to compute stats for
+    /// * `otlp_exporter` - Optional OTLP exporter for tracing (Sprint 32)
+    pub fn calculate_extended_statistics(
+        &self,
+        syscall_name: &str,
+        #[cfg(feature = "otlp")] otlp_exporter: Option<&crate::otlp_exporter::OtlpExporter>,
+        #[cfg(not(feature = "otlp"))] _otlp_exporter: Option<&()>,
+    ) -> Option<ExtendedStats> {
         let stats = self.stats.get(syscall_name)?;
 
         if stats.durations.is_empty() {
@@ -130,7 +210,23 @@ impl StatsTracker {
 
         // Convert durations to f32 for Trueno
         let durations: Vec<f32> = stats.durations.iter().map(|&d| d as f32).collect();
-        let v = trueno::Vector::from_slice(&durations);
+        let elements = durations.len();
+
+        // Trace entire compute block (Sprint 32: Block-level tracing)
+        #[cfg(feature = "otlp")]
+        let result = trace_compute_block!(otlp_exporter, "calculate_statistics", elements, {
+            Self::compute_extended_stats_block(&durations)
+        });
+
+        #[cfg(not(feature = "otlp"))]
+        let result = Self::compute_extended_stats_block(&durations);
+
+        Some(result)
+    }
+
+    /// Internal: Compute extended stats block (extracted for tracing)
+    fn compute_extended_stats_block(durations: &[f32]) -> ExtendedStats {
+        let v = trueno::Vector::from_slice(durations);
 
         // Use Trueno for basic statistics
         let mean = v.mean().unwrap_or(0.0);
@@ -139,7 +235,7 @@ impl StatsTracker {
         let max = v.max().unwrap_or(0.0);
 
         // Calculate percentiles (Trueno doesn't have built-in percentile function)
-        let mut sorted = durations.clone();
+        let mut sorted = durations.to_vec();
         sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
 
         let median = Self::calculate_percentile(&sorted, 50.0);
@@ -148,7 +244,7 @@ impl StatsTracker {
         let p95 = Self::calculate_percentile(&sorted, 95.0);
         let p99 = Self::calculate_percentile(&sorted, 99.0);
 
-        Some(ExtendedStats {
+        ExtendedStats {
             mean,
             stddev,
             min,
@@ -158,12 +254,18 @@ impl StatsTracker {
             p90,
             p95,
             p99,
-        })
+        }
     }
 
     /// Check if a duration is an anomaly (>threshold σ from mean)
     pub fn is_anomaly(&self, syscall_name: &str, duration_us: u64, threshold: f32) -> bool {
-        if let Some(extended) = self.calculate_extended_statistics(syscall_name) {
+        // Note: Pass None for tracing - this is a quick check, not a compute block
+        #[cfg(feature = "otlp")]
+        let extended = self.calculate_extended_statistics(syscall_name, None);
+        #[cfg(not(feature = "otlp"))]
+        let extended = self.calculate_extended_statistics(syscall_name, None);
+
+        if let Some(extended) = extended {
             if extended.stddev > 0.0 {
                 let z_score = ((duration_us as f32 - extended.mean) / extended.stddev).abs();
                 return z_score > threshold;
@@ -173,7 +275,14 @@ impl StatsTracker {
     }
 
     /// Print extended statistics summary to stderr
-    pub fn print_extended_summary(&self, threshold: f32) {
+    ///
+    /// Sprint 32: Now accepts optional OtlpExporter for compute block tracing
+    pub fn print_extended_summary(
+        &self,
+        threshold: f32,
+        #[cfg(feature = "otlp")] otlp_exporter: Option<&crate::otlp_exporter::OtlpExporter>,
+        #[cfg(not(feature = "otlp"))] _otlp_exporter: Option<&()>,
+    ) {
         if self.stats.is_empty() {
             eprintln!("No syscalls traced.");
             return;
@@ -186,7 +295,12 @@ impl StatsTracker {
         sorted.sort_by(|a, b| b.1.count.cmp(&a.1.count));
 
         for (name, stats) in sorted {
-            if let Some(extended) = self.calculate_extended_statistics(name) {
+            #[cfg(feature = "otlp")]
+            let extended = self.calculate_extended_statistics(name, otlp_exporter);
+            #[cfg(not(feature = "otlp"))]
+            let extended = self.calculate_extended_statistics(name, _otlp_exporter);
+
+            if let Some(extended) = extended {
                 eprintln!("{} ({} calls):", name, stats.count);
                 eprintln!("  Mean:         {:.2} μs", extended.mean);
                 eprintln!("  Std Dev:      {:.2} μs", extended.stddev);

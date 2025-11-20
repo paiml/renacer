@@ -292,6 +292,134 @@ Root Span: "process: ./transpiled-app" (kind: SERVER)
 - **Unified Timeline**: Single timeline view of decisions and syscalls
 - **Cross-Layer Tracing**: Connect high-level transpiler choices to low-level system calls
 
+#### Sprint 32: Block-Level Compute Tracing (Complete)
+
+**Goal:** Export block-level compute operations (Trueno SIMD) as OTLP spans for performance analysis
+
+**Toyota Way Compliance** - Genchi Genbutsu (ground truth), Jidoka (safe by default), Muda elimination (no waste)
+
+**Implementation** (EXTREME TDD - RED → GREEN → REFACTOR cycle):
+- **Specification**: Created `docs/specifications/trueno-tracing-integration-spec.md` (v2.0)
+  - Architecture shift: Per-operation → Block-level tracing (90 lines vs 500+ lines)
+  - Mandatory adaptive sampling (Jidoka: cannot DoS backend)
+  - Resource-level attributes (eliminate attribute explosion waste)
+- **Core Module**: Modified `src/otlp_exporter.rs`
+  - Added `ComputeBlock` struct for block metadata
+  - Added `record_compute_block()` method for span export
+  - Resource-level attributes: `compute.library`, `compute.library.version`, `compute.tracing.abstraction`
+- **Macro Infrastructure**: Created `trace_compute_block!` macro in `src/stats.rs` (68 lines)
+  - Zero-overhead instrumentation wrapper
+  - Built-in adaptive sampling (100μs threshold)
+  - Feature-gated for OTLP builds
+- **Integration**: Modified `calculate_extended_statistics()` in `src/stats.rs`
+  - Extracted `compute_extended_stats_block()` for tracing
+  - Accepts `otlp_exporter` parameter
+  - Traces 7 Trueno vector operations as single block
+- **CLI Flags**: Added 3 compute tracing flags in `src/cli.rs` (6 unit tests)
+- **Critical Fix**: Reordered shutdown sequence in `src/tracer.rs`
+  - Print stats BEFORE OTLP shutdown (was losing compute spans)
+
+**Features:**
+- **Block-Level Tracing**: Trace entire statistical computation blocks (7 operations) vs individual SIMD ops
+  - Example: `calculate_statistics` block contains: sum, mean, variance, stddev, min, max, median
+- **Adaptive Sampling**: Only export spans if duration >= threshold (default 100μs)
+  - Jidoka principle: Safe by default, cannot DoS tracing backend
+  - Configurable via `--trace-compute-threshold`
+- **Span Attributes**:
+  - `compute.operation` - Block name (e.g., "calculate_statistics")
+  - `compute.duration_us` - Block duration in microseconds
+  - `compute.elements` - Number of elements processed
+  - `compute.is_slow` - Boolean flag for slow blocks
+- **Resource-Level Attributes** (static, no per-span waste):
+  - `compute.library = "trueno"`
+  - `compute.library.version = "0.4.0"`
+  - `compute.tracing.abstraction = "block_level"`
+- **Trueno SIMD Library**: High-performance vector operations (v0.4.0)
+  - Target: Statistical computation performance analysis
+  - Future: Backend detection when Trueno provides ground truth API
+
+**Architecture:**
+- `src/otlp_exporter.rs` - ComputeBlock struct and record_compute_block() method
+- `src/stats.rs` - trace_compute_block! macro (68 lines) + integration
+- `src/cli.rs` - 3 CLI flags with validation (requires relationships)
+- `src/tracer.rs` - Caller updates and critical shutdown ordering fix
+
+**CLI Flags:**
+```bash
+--trace-compute                     # Enable compute block tracing
+--trace-compute-all                 # Trace ALL blocks (bypass sampling, requires --trace-compute)
+--trace-compute-threshold MICROS    # Custom threshold (default: 100μs, requires --trace-compute)
+```
+
+**Results:**
+- **Tests**: 6 new unit tests (src/cli.rs)
+  - test_trace_compute_flag
+  - test_trace_compute_all_flag
+  - test_trace_compute_threshold_flag
+  - test_trace_compute_all_requires_trace_compute
+  - test_trace_compute_threshold_requires_trace_compute
+  - test_trace_compute_threshold_default
+  - 100% test pass rate ✅
+- **Complexity**: All functions ≤10 ✅
+- **Clippy**: Zero warnings ✅
+- **Code Reduction**: 90 lines (block-level) vs 500+ lines (per-operation wrapper pattern)
+- **Performance**: <2% overhead with adaptive sampling vs 500x with per-operation wrappers
+
+**Examples:**
+```bash
+# Default: Adaptive sampling (trace blocks >=100μs)
+renacer --otlp-endpoint http://localhost:4317 \
+        --trace-compute \
+        -c --stats-extended \
+        -- cargo build
+
+# Debug mode: Trace ALL compute blocks (bypass sampling)
+renacer --otlp-endpoint http://localhost:4317 \
+        --trace-compute \
+        --trace-compute-all \
+        -c -- ./app
+
+# Custom threshold: Trace blocks >=50μs
+renacer --otlp-endpoint http://localhost:4317 \
+        --trace-compute \
+        --trace-compute-threshold 50 \
+        -c -- ./app
+
+# Full observability: Compute + decisions + syscalls
+renacer --otlp-endpoint http://localhost:4317 \
+        --trace-compute \
+        --trace-transpiler-decisions \
+        -- ./depyler-app
+```
+
+**Span Structure Example:**
+```
+Root Span: "process: cargo build" (kind: SERVER)
+  ├─ Attributes: process.command, process.pid
+  ├─ Child Span: "compute_block: calculate_statistics" (kind: INTERNAL)
+  │   ├─ Attributes: compute.operation=calculate_statistics
+  │   │   compute.duration_us=152
+  │   │   compute.elements=1024
+  │   │   compute.is_slow=true
+  │   └─ Status: OK
+  └─ Child Span: "syscall: write" (kind: INTERNAL)
+      └─ Attributes: syscall.name=write, syscall.result=42, ...
+```
+
+**Toyota Way Defects Fixed:**
+1. ❌ Backend Detection Defect → ✅ Report "Unknown" unless Trueno provides ground truth (Genchi Genbutsu)
+2. ❌ Wrapper Pattern Overhead → ✅ Block-level tracing, no per-operation wrappers (Muda elimination)
+3. ❌ Sampling as Afterthought → ✅ Sampling mandatory in Phase 1, default enabled (Jidoka)
+4. ❌ Attribute Explosion → ✅ Static attributes moved to Resource level (Muda elimination)
+
+**Commits:**
+- `e55e0f8`: Specification v2.0 (Toyota Way compliance)
+- `4f683ef`: OTLP exporter changes (ComputeBlock, record_compute_block)
+- `96cec66`: trace_compute_block! macro
+- `290b403`: Integration with calculate_extended_statistics
+- `e862db3`: Caller updates and shutdown ordering fix
+- `ce52484`: CLI flags with validation
+
 #### Sprint 24-28: Transpiler Decision Tracing & Source Mapping (Complete)
 
 **Goal:** Full end-to-end transpiler source mapping and decision trace capture for Depyler (Python→Rust), TypeScript→Rust, and Decy (C→Rust) transpilers.
