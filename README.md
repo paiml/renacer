@@ -251,6 +251,21 @@ renacer --otlp-endpoint http://localhost:4317 \
         --trace-transpiler-decisions \
         -- ./depyler-app  # Full observability: compute + decisions + syscalls
 
+# Distributed tracing (Sprint 33) - W3C Trace Context propagation
+export TRACEPARENT="00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"
+renacer --otlp-endpoint http://localhost:4317 -- ./app  # Auto-detect from env
+
+renacer --otlp-endpoint http://localhost:4317 \
+        --trace-parent "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00" \
+        -- ./app  # Explicit context injection
+
+renacer --otlp-endpoint http://localhost:4317 \
+        --trace-parent "00-abc123-def456-01" \
+        --trace-compute \
+        --trace-transpiler-decisions \
+        -c --stats-extended \
+        -- ./app  # Full distributed tracing stack
+
 # Attach to running process
 renacer -p 1234
 ```
