@@ -18,10 +18,7 @@ use tempfile::TempDir;
 fn test_ml_outliers_flag_accepted() {
     // Test that --ml-outliers flag is accepted
     let mut cmd = Command::cargo_bin("renacer").unwrap();
-    cmd.arg("--ml-outliers")
-        .arg("--")
-        .arg("echo")
-        .arg("test");
+    cmd.arg("--ml-outliers").arg("--").arg("echo").arg("test");
 
     // Should not error on flag parsing
     cmd.assert().success();
@@ -87,9 +84,9 @@ int main() {
         .arg(&test_program);
 
     // Should detect anomalies in output
-    cmd.assert()
-        .success()
-        .stderr(predicate::str::contains("Isolation Forest Anomaly Detection"));
+    cmd.assert().success().stderr(predicate::str::contains(
+        "Isolation Forest Anomaly Detection",
+    ));
 }
 
 // ============================================================================
@@ -106,11 +103,9 @@ fn test_explain_flag_provides_explainability() {
         .arg("echo")
         .arg("test");
 
-    cmd.assert()
-        .success()
-        .stderr(predicate::str::contains("Feature Importance").or(
-            predicate::str::contains("Explanation")
-        ));
+    cmd.assert().success().stderr(
+        predicate::str::contains("Feature Importance").or(predicate::str::contains("Explanation")),
+    );
 }
 
 // ============================================================================
@@ -127,11 +122,9 @@ fn test_ml_outliers_json_export() {
         .arg("echo")
         .arg("test");
 
-    cmd.assert()
-        .success()
-        .stdout(predicate::str::contains("isolation_forest").or(
-            predicate::str::contains("ml_outliers")
-        ));
+    cmd.assert().success().stdout(
+        predicate::str::contains("isolation_forest").or(predicate::str::contains("ml_outliers")),
+    );
 }
 
 // ============================================================================
@@ -230,7 +223,7 @@ fn test_ml_outliers_compare_with_kmeans() {
     let mut cmd = Command::cargo_bin("renacer").unwrap();
     cmd.arg("-c")
         .arg("--ml-outliers")
-        .arg("--ml-anomaly")  // Also enable KMeans for comparison
+        .arg("--ml-anomaly") // Also enable KMeans for comparison
         .arg("--")
         .arg("echo")
         .arg("test");
@@ -266,7 +259,7 @@ fn test_ml_outliers_threshold_configuration() {
     cmd.arg("-c")
         .arg("--ml-outliers")
         .arg("--ml-outlier-threshold")
-        .arg("0.6")  // Custom contamination threshold
+        .arg("0.6") // Custom contamination threshold
         .arg("--")
         .arg("echo")
         .arg("test");
@@ -284,7 +277,7 @@ fn test_ml_outliers_num_trees_configuration() {
     cmd.arg("-c")
         .arg("--ml-outliers")
         .arg("--ml-outlier-trees")
-        .arg("150")  // Custom number of trees
+        .arg("150") // Custom number of trees
         .arg("--")
         .arg("echo")
         .arg("test");

@@ -33,7 +33,7 @@ pub struct TracerConfig {
     pub ml_compare: bool,       // Sprint 23: Compare ML results with z-score
     pub ml_outliers: bool,      // Sprint 22: Isolation Forest outlier detection
     pub ml_outlier_threshold: f32, // Sprint 22: Contamination threshold
-    pub ml_outlier_trees: usize,   // Sprint 22: Number of trees
+    pub ml_outlier_trees: usize, // Sprint 22: Number of trees
     pub explain: bool,          // Sprint 22: Enable explainability
     pub dl_anomaly: bool,       // Sprint 23: Deep Learning Autoencoder anomaly detection
     pub dl_threshold: f32,      // Sprint 23: Reconstruction error threshold (σ multiplier)
@@ -216,11 +216,12 @@ fn initialize_tracers(config: &TracerConfig) -> Tracers {
         initialize_output_tracers(config);
 
     // Create stats_tracker if statistics mode is enabled OR if ML/DL anomaly analysis is enabled
-    let stats_tracker = if config.statistics_mode || config.ml_anomaly || config.ml_outliers || config.dl_anomaly {
-        Some(crate::stats::StatsTracker::new())
-    } else {
-        None
-    };
+    let stats_tracker =
+        if config.statistics_mode || config.ml_anomaly || config.ml_outliers || config.dl_anomaly {
+            Some(crate::stats::StatsTracker::new())
+        } else {
+            None
+        };
 
     // Initialize decision tracer for transpiler decision tracking (Sprint 26)
     let decision_tracer = if config.trace_transpiler_decisions {
@@ -235,10 +236,11 @@ fn initialize_tracers(config: &TracerConfig) -> Tracers {
         // Sprint 33: Extract trace context from CLI flag or environment
         use crate::trace_context::TraceContext;
 
-        let trace_context = config.trace_parent
+        let trace_context = config
+            .trace_parent
             .as_ref()
             .and_then(|s| TraceContext::parse(s).ok())
-            .or_else(|| TraceContext::from_env());
+            .or_else(TraceContext::from_env);
 
         if trace_context.is_some() {
             eprintln!("[renacer: Distributed tracing enabled - joining parent trace]");
@@ -734,32 +736,42 @@ fn print_isolation_forest_analysis(
             data.insert(syscall_name.clone(), (stats.count, total_time_ns));
         }
 
-        let report = crate::isolation_forest::analyze_outliers(&data, num_trees, contamination, explain);
+        let report =
+            crate::isolation_forest::analyze_outliers(&data, num_trees, contamination, explain);
 
         // Print report
-        eprint!("\n=== Isolation Forest Anomaly Detection ===\n");
-        eprint!("Trees: {}, Contamination: {:.1}%, Samples: {}\n\n",
-                report.num_trees, report.contamination * 100.0, report.total_samples);
+        eprintln!("\n=== Isolation Forest Anomaly Detection ===");
+        eprintln!(
+            "Trees: {}, Contamination: {:.1}%, Samples: {}\n",
+            report.num_trees,
+            report.contamination * 100.0,
+            report.total_samples
+        );
 
         if report.outliers.is_empty() {
-            eprint!("No outliers detected.\n");
+            eprintln!("No outliers detected.");
         } else {
-            eprint!("Detected {} outlier(s):\n\n", report.outliers.len());
+            eprintln!("Detected {} outlier(s):\n", report.outliers.len());
             for outlier in &report.outliers {
-                eprint!("  {} (anomaly score: {:.3})\n", outlier.syscall, outlier.anomaly_score);
-                eprint!("    Avg duration: {:.2} μs, Calls: {}\n",
-                        outlier.avg_duration_us, outlier.call_count);
+                eprintln!(
+                    "  {} (anomaly score: {:.3})",
+                    outlier.syscall, outlier.anomaly_score
+                );
+                eprintln!(
+                    "    Avg duration: {:.2} μs, Calls: {}",
+                    outlier.avg_duration_us, outlier.call_count
+                );
 
                 if explain && !outlier.feature_importance.is_empty() {
-                    eprint!("    Feature Importance:\n");
+                    eprintln!("    Feature Importance:");
                     for (feature, importance) in &outlier.feature_importance {
-                        eprint!("      {}: {:.1}%\n", feature, importance);
+                        eprintln!("      {}: {:.1}%", feature, importance);
                     }
                 }
-                eprint!("\n");
+                eprintln!();
             }
         }
-        eprint!("=========================================\n\n");
+        eprintln!("=========================================\n");
     }
 }
 
@@ -787,32 +799,40 @@ fn print_autoencoder_analysis(
         );
 
         // Print report
-        eprint!("\n=== Autoencoder Anomaly Detection ===\n");
-        eprint!("Hidden Size: {}, Epochs: {}, Threshold: {:.2}σ\n",
-                report.hidden_size, report.epochs, threshold);
-        eprint!("Samples: {}, Adaptive Threshold: {:.4}\n\n",
-                report.total_samples, report.threshold);
+        eprintln!("\n=== Autoencoder Anomaly Detection ===");
+        eprintln!(
+            "Hidden Size: {}, Epochs: {}, Threshold: {:.2}σ",
+            report.hidden_size, report.epochs, threshold
+        );
+        eprintln!(
+            "Samples: {}, Adaptive Threshold: {:.4}\n",
+            report.total_samples, report.threshold
+        );
 
         if report.anomalies.is_empty() {
-            eprint!("No anomalies detected.\n");
+            eprintln!("No anomalies detected.");
         } else {
-            eprint!("Detected {} anomal(y/ies):\n\n", report.anomalies.len());
+            eprintln!("Detected {} anomal(y/ies):\n", report.anomalies.len());
             for anomaly in &report.anomalies {
-                eprint!("  {} (reconstruction error: {:.4})\n",
-                        anomaly.syscall, anomaly.reconstruction_error);
-                eprint!("    Avg duration: {:.2} μs, Calls: {}\n",
-                        anomaly.avg_duration_us, anomaly.call_count);
+                eprintln!(
+                    "  {} (reconstruction error: {:.4})",
+                    anomaly.syscall, anomaly.reconstruction_error
+                );
+                eprintln!(
+                    "    Avg duration: {:.2} μs, Calls: {}",
+                    anomaly.avg_duration_us, anomaly.call_count
+                );
 
                 if explain && !anomaly.feature_contributions.is_empty() {
-                    eprint!("    Feature Contributions to Error:\n");
+                    eprintln!("    Feature Contributions to Error:");
                     for (feature, contribution) in &anomaly.feature_contributions {
-                        eprint!("      {}: {:.1}%\n", feature, contribution);
+                        eprintln!("      {}: {:.1}%", feature, contribution);
                     }
                 }
-                eprint!("\n");
+                eprintln!();
             }
         }
-        eprint!("======================================\n\n");
+        eprintln!("======================================\n");
     }
 }
 
@@ -825,14 +845,14 @@ struct AnalysisConfig {
     ml_anomaly: bool,
     ml_clusters: usize,
     ml_compare: bool,
-    ml_outliers: bool,           // Sprint 22: Isolation Forest outlier detection
-    ml_outlier_threshold: f32,   // Sprint 22: Contamination threshold
-    ml_outlier_trees: usize,     // Sprint 22: Number of trees
-    dl_anomaly: bool,            // Sprint 23: Deep Learning Autoencoder anomaly detection
-    dl_threshold: f32,           // Sprint 23: Reconstruction error threshold (σ multiplier)
-    dl_hidden_size: usize,       // Sprint 23: Hidden layer size
-    dl_epochs: usize,            // Sprint 23: Training epochs
-    explain: bool,               // Sprint 22/23: Enable explainability
+    ml_outliers: bool,         // Sprint 22: Isolation Forest outlier detection
+    ml_outlier_threshold: f32, // Sprint 22: Contamination threshold
+    ml_outlier_trees: usize,   // Sprint 22: Number of trees
+    dl_anomaly: bool,          // Sprint 23: Deep Learning Autoencoder anomaly detection
+    dl_threshold: f32,         // Sprint 23: Reconstruction error threshold (σ multiplier)
+    dl_hidden_size: usize,     // Sprint 23: Hidden layer size
+    dl_epochs: usize,          // Sprint 23: Training epochs
+    explain: bool,             // Sprint 22/23: Enable explainability
 }
 
 /// Print optional profiling and tracing summaries
@@ -1271,14 +1291,14 @@ fn trace_child(child: Pid, config: TracerConfig) -> Result<i32> {
             ml_anomaly: config.ml_anomaly,
             ml_clusters: config.ml_clusters,
             ml_compare: config.ml_compare,
-            ml_outliers: config.ml_outliers,             // Sprint 22
+            ml_outliers: config.ml_outliers, // Sprint 22
             ml_outlier_threshold: config.ml_outlier_threshold, // Sprint 22
-            ml_outlier_trees: config.ml_outlier_trees,   // Sprint 22
-            dl_anomaly: config.dl_anomaly,               // Sprint 23
-            dl_threshold: config.dl_threshold,           // Sprint 23
-            dl_hidden_size: config.dl_hidden_size,       // Sprint 23
-            dl_epochs: config.dl_epochs,                 // Sprint 23
-            explain: config.explain,                     // Sprint 22/23
+            ml_outlier_trees: config.ml_outlier_trees, // Sprint 22
+            dl_anomaly: config.dl_anomaly,   // Sprint 23
+            dl_threshold: config.dl_threshold, // Sprint 23
+            dl_hidden_size: config.dl_hidden_size, // Sprint 23
+            dl_epochs: config.dl_epochs,     // Sprint 23
+            explain: config.explain,         // Sprint 22/23
         },
     );
     std::process::exit(main_exit_code);
@@ -1916,7 +1936,11 @@ fn handle_syscall_exit(
 
         exporter.record_syscall(
             &entry.name,
-            if duration_us > 0 { Some(duration_us) } else { None },
+            if duration_us > 0 {
+                Some(duration_us)
+            } else {
+                None
+            },
             result,
             source_file,
             source_line,
@@ -1953,28 +1977,28 @@ mod tests {
             follow_forks: false,
             profile_self: false,
             function_time: false,
-            stats_extended: false,             // Sprint 19
-            anomaly_threshold: 3.0,            // Sprint 19
-            anomaly_realtime: false,           // Sprint 20
-            anomaly_window_size: 100,          // Sprint 20
-            hpu_analysis: false,               // Sprint 21
-            hpu_cpu_only: false,               // Sprint 21
-            ml_anomaly: false,                 // Sprint 23
-            ml_clusters: 3,                    // Sprint 23
-            ml_compare: false,                 // Sprint 23
-            ml_outliers: false,                // Sprint 22
-            ml_outlier_threshold: 0.1,         // Sprint 22
-            ml_outlier_trees: 100,             // Sprint 22
-            explain: false,                    // Sprint 22/23
-            dl_anomaly: false,                 // Sprint 23
-            dl_threshold: 2.0,                 // Sprint 23
-            dl_hidden_size: 3,                 // Sprint 23
-            dl_epochs: 100,                    // Sprint 23
-            trace_transpiler_decisions: false, // Sprint 26
-            transpiler_map: None,              // Sprint 24-28
-            otlp_endpoint: None,               // Sprint 30
+            stats_extended: false,                    // Sprint 19
+            anomaly_threshold: 3.0,                   // Sprint 19
+            anomaly_realtime: false,                  // Sprint 20
+            anomaly_window_size: 100,                 // Sprint 20
+            hpu_analysis: false,                      // Sprint 21
+            hpu_cpu_only: false,                      // Sprint 21
+            ml_anomaly: false,                        // Sprint 23
+            ml_clusters: 3,                           // Sprint 23
+            ml_compare: false,                        // Sprint 23
+            ml_outliers: false,                       // Sprint 22
+            ml_outlier_threshold: 0.1,                // Sprint 22
+            ml_outlier_trees: 100,                    // Sprint 22
+            explain: false,                           // Sprint 22/23
+            dl_anomaly: false,                        // Sprint 23
+            dl_threshold: 2.0,                        // Sprint 23
+            dl_hidden_size: 3,                        // Sprint 23
+            dl_epochs: 100,                           // Sprint 23
+            trace_transpiler_decisions: false,        // Sprint 26
+            transpiler_map: None,                     // Sprint 24-28
+            otlp_endpoint: None,                      // Sprint 30
             otlp_service_name: "renacer".to_string(), // Sprint 30
-            trace_parent: None,                // Sprint 33
+            trace_parent: None,                       // Sprint 33
         };
         let result = trace_command(&empty, config);
         assert!(result.is_err());
@@ -1994,28 +2018,28 @@ mod tests {
             follow_forks: false,
             profile_self: false,
             function_time: false,
-            stats_extended: false,             // Sprint 19
-            anomaly_threshold: 3.0,            // Sprint 19
-            anomaly_realtime: false,           // Sprint 20
-            anomaly_window_size: 100,          // Sprint 20
-            hpu_analysis: false,               // Sprint 21
-            hpu_cpu_only: false,               // Sprint 21
-            ml_anomaly: false,                 // Sprint 23
-            ml_clusters: 3,                    // Sprint 23
-            ml_compare: false,                 // Sprint 23
-            ml_outliers: false,                // Sprint 22
-            ml_outlier_threshold: 0.1,         // Sprint 22
-            ml_outlier_trees: 100,             // Sprint 22
-            explain: false,                    // Sprint 22/23
-            dl_anomaly: false,                 // Sprint 23
-            dl_threshold: 2.0,                 // Sprint 23
-            dl_hidden_size: 3,                 // Sprint 23
-            dl_epochs: 100,                    // Sprint 23
-            trace_transpiler_decisions: false, // Sprint 26
-            transpiler_map: None,              // Sprint 24-28
-            otlp_endpoint: None,               // Sprint 30
+            stats_extended: false,                    // Sprint 19
+            anomaly_threshold: 3.0,                   // Sprint 19
+            anomaly_realtime: false,                  // Sprint 20
+            anomaly_window_size: 100,                 // Sprint 20
+            hpu_analysis: false,                      // Sprint 21
+            hpu_cpu_only: false,                      // Sprint 21
+            ml_anomaly: false,                        // Sprint 23
+            ml_clusters: 3,                           // Sprint 23
+            ml_compare: false,                        // Sprint 23
+            ml_outliers: false,                       // Sprint 22
+            ml_outlier_threshold: 0.1,                // Sprint 22
+            ml_outlier_trees: 100,                    // Sprint 22
+            explain: false,                           // Sprint 22/23
+            dl_anomaly: false,                        // Sprint 23
+            dl_threshold: 2.0,                        // Sprint 23
+            dl_hidden_size: 3,                        // Sprint 23
+            dl_epochs: 100,                           // Sprint 23
+            trace_transpiler_decisions: false,        // Sprint 26
+            transpiler_map: None,                     // Sprint 24-28
+            otlp_endpoint: None,                      // Sprint 30
             otlp_service_name: "renacer".to_string(), // Sprint 30
-            trace_parent: None,                // Sprint 33
+            trace_parent: None,                       // Sprint 33
         };
         let result = trace_command(&cmd, config);
         assert!(result.is_err());
@@ -2077,28 +2101,28 @@ mod tests {
             follow_forks: false,
             profile_self: false,
             function_time: false,
-            stats_extended: false,             // Sprint 19
-            anomaly_threshold: 3.0,            // Sprint 19
-            anomaly_realtime: false,           // Sprint 20
-            anomaly_window_size: 100,          // Sprint 20
-            hpu_analysis: false,               // Sprint 21
-            hpu_cpu_only: false,               // Sprint 21
-            ml_anomaly: false,                 // Sprint 23
-            ml_clusters: 3,                    // Sprint 23
-            ml_compare: false,                 // Sprint 23
-            ml_outliers: false,                // Sprint 22
-            ml_outlier_threshold: 0.1,         // Sprint 22
-            ml_outlier_trees: 100,             // Sprint 22
-            explain: false,                    // Sprint 22/23
-            dl_anomaly: false,                 // Sprint 23
-            dl_threshold: 2.0,                 // Sprint 23
-            dl_hidden_size: 3,                 // Sprint 23
-            dl_epochs: 100,                    // Sprint 23
-            trace_transpiler_decisions: false, // Sprint 26
-            transpiler_map: None,              // Sprint 24-28
-            otlp_endpoint: None,               // Sprint 30
+            stats_extended: false,                    // Sprint 19
+            anomaly_threshold: 3.0,                   // Sprint 19
+            anomaly_realtime: false,                  // Sprint 20
+            anomaly_window_size: 100,                 // Sprint 20
+            hpu_analysis: false,                      // Sprint 21
+            hpu_cpu_only: false,                      // Sprint 21
+            ml_anomaly: false,                        // Sprint 23
+            ml_clusters: 3,                           // Sprint 23
+            ml_compare: false,                        // Sprint 23
+            ml_outliers: false,                       // Sprint 22
+            ml_outlier_threshold: 0.1,                // Sprint 22
+            ml_outlier_trees: 100,                    // Sprint 22
+            explain: false,                           // Sprint 22/23
+            dl_anomaly: false,                        // Sprint 23
+            dl_threshold: 2.0,                        // Sprint 23
+            dl_hidden_size: 3,                        // Sprint 23
+            dl_epochs: 100,                           // Sprint 23
+            trace_transpiler_decisions: false,        // Sprint 26
+            transpiler_map: None,                     // Sprint 24-28
+            otlp_endpoint: None,                      // Sprint 30
             otlp_service_name: "renacer".to_string(), // Sprint 30
-            trace_parent: None,                // Sprint 33
+            trace_parent: None,                       // Sprint 33
         };
         let result = attach_to_pid(999999, config);
         assert!(result.is_err());

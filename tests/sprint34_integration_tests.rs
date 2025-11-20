@@ -52,18 +52,24 @@ fn test_compute_jaeger_export() {
 
     // Wait for trace to appear in Jaeger (up to 10 seconds)
     std::thread::sleep(std::time::Duration::from_secs(2));
-    let trace = wait_for_trace(JAEGER_URL, "renacer", 10)
-        .expect("Failed to find trace in Jaeger");
+    let trace = wait_for_trace(JAEGER_URL, "renacer", 10).expect("Failed to find trace in Jaeger");
 
     eprintln!("[test] Found trace: {}", trace.trace_id);
     eprintln!("[test] Span count: {}", trace.spans.len());
 
     // Verify root span exists
     let mut root_attrs = HashMap::new();
-    root_attrs.insert("process.command".to_string(), "./tests/fixtures/simple_program".to_string());
+    root_attrs.insert(
+        "process.command".to_string(),
+        "./tests/fixtures/simple_program".to_string(),
+    );
 
-    verify_span_exists(&trace, "process: ./tests/fixtures/simple_program", &root_attrs)
-        .expect("Root span not found");
+    verify_span_exists(
+        &trace,
+        "process: ./tests/fixtures/simple_program",
+        &root_attrs,
+    )
+    .expect("Root span not found");
 
     // Verify at least one syscall span
     let syscall_count = count_spans(&trace, |s| s.operation_name.starts_with("syscall:"));
@@ -106,8 +112,7 @@ fn test_compute_adaptive_sampling() {
     std::thread::sleep(std::time::Duration::from_secs(2));
 
     // Query Jaeger for compute_block spans
-    let traces = query_jaeger_traces(JAEGER_URL, "renacer", None)
-        .expect("Failed to query Jaeger");
+    let traces = query_jaeger_traces(JAEGER_URL, "renacer", None).expect("Failed to query Jaeger");
 
     if traces.is_empty() {
         eprintln!("[test] ⚠ No traces found (expected for fast workload)");
@@ -166,12 +171,16 @@ fn test_compute_trace_all_flag() {
     std::thread::sleep(std::time::Duration::from_secs(2));
 
     // With --trace-compute-all, we should see more spans (including fast ones)
-    let traces = query_jaeger_traces(JAEGER_URL, "renacer", None)
-        .expect("Failed to query Jaeger");
+    let traces = query_jaeger_traces(JAEGER_URL, "renacer", None).expect("Failed to query Jaeger");
 
     if !traces.is_empty() {
-        let compute_spans = count_spans(&traces[0], |s| s.operation_name.starts_with("compute_block:"));
-        eprintln!("[test] Found {} compute_block spans with --trace-compute-all", compute_spans);
+        let compute_spans = count_spans(&traces[0], |s| {
+            s.operation_name.starts_with("compute_block:")
+        });
+        eprintln!(
+            "[test] Found {} compute_block spans with --trace-compute-all",
+            compute_spans
+        );
 
         // We might see spans with duration < 100μs now
         for span in &traces[0].spans {
@@ -211,8 +220,7 @@ fn test_compute_span_attributes() {
     // Wait for traces
     std::thread::sleep(std::time::Duration::from_secs(2));
 
-    let traces = query_jaeger_traces(JAEGER_URL, "renacer", None)
-        .expect("Failed to query Jaeger");
+    let traces = query_jaeger_traces(JAEGER_URL, "renacer", None).expect("Failed to query Jaeger");
 
     if !traces.is_empty() {
         // Find a compute_block span and verify its attributes
@@ -262,8 +270,7 @@ fn test_compute_parent_child_relationship() {
     // Wait for traces
     std::thread::sleep(std::time::Duration::from_secs(2));
 
-    let traces = query_jaeger_traces(JAEGER_URL, "renacer", None)
-        .expect("Failed to query Jaeger");
+    let traces = query_jaeger_traces(JAEGER_URL, "renacer", None).expect("Failed to query Jaeger");
 
     if !traces.is_empty() {
         let trace = &traces[0];
@@ -282,14 +289,12 @@ fn test_compute_parent_child_relationship() {
             .find(|s| s.operation_name.starts_with("compute_block:"))
         {
             // Verify compute span is child of root span
-            let has_root_parent = compute_span.references.iter().any(|r| {
-                r.ref_type == "CHILD_OF" && r.span_id == root_span.span_id
-            });
+            let has_root_parent = compute_span
+                .references
+                .iter()
+                .any(|r| r.ref_type == "CHILD_OF" && r.span_id == root_span.span_id);
 
-            assert!(
-                has_root_parent,
-                "Compute span should be child of root span"
-            );
+            assert!(has_root_parent, "Compute span should be child of root span");
 
             eprintln!("[test] ✓ Parent-child relationship verified");
         } else {
@@ -311,7 +316,7 @@ fn test_compute_multiple_blocks() {
         .arg("--otlp-endpoint")
         .arg(OTLP_ENDPOINT)
         .arg("--trace-compute")
-        .arg("--trace-compute-all")  // Ensure we capture all blocks
+        .arg("--trace-compute-all") // Ensure we capture all blocks
         .arg("-c")
         .arg("--stats-extended")
         .arg("--")
@@ -324,11 +329,12 @@ fn test_compute_multiple_blocks() {
     // Wait for traces
     std::thread::sleep(std::time::Duration::from_secs(2));
 
-    let traces = query_jaeger_traces(JAEGER_URL, "renacer", None)
-        .expect("Failed to query Jaeger");
+    let traces = query_jaeger_traces(JAEGER_URL, "renacer", None).expect("Failed to query Jaeger");
 
     if !traces.is_empty() {
-        let compute_spans = count_spans(&traces[0], |s| s.operation_name.starts_with("compute_block:"));
+        let compute_spans = count_spans(&traces[0], |s| {
+            s.operation_name.starts_with("compute_block:")
+        });
         eprintln!("[test] Found {} compute_block spans", compute_spans);
 
         // Just verify we can handle multiple blocks without errors
@@ -374,8 +380,8 @@ fn test_distributed_trace_context_propagation() {
     std::thread::sleep(std::time::Duration::from_secs(2));
 
     // Query Jaeger for our specific trace-id
-    let traces = query_jaeger_traces(JAEGER_URL, "renacer", Some(trace_id))
-        .expect("Failed to query Jaeger");
+    let traces =
+        query_jaeger_traces(JAEGER_URL, "renacer", Some(trace_id)).expect("Failed to query Jaeger");
 
     assert!(
         !traces.is_empty(),
@@ -451,13 +457,10 @@ fn test_distributed_env_var_extraction() {
     // Wait and verify in Jaeger
     std::thread::sleep(std::time::Duration::from_secs(2));
 
-    let traces = query_jaeger_traces(JAEGER_URL, "renacer", Some(trace_id))
-        .expect("Failed to query Jaeger");
+    let traces =
+        query_jaeger_traces(JAEGER_URL, "renacer", Some(trace_id)).expect("Failed to query Jaeger");
 
-    assert!(
-        !traces.is_empty(),
-        "Trace not found with env var injection"
-    );
+    assert!(!traces.is_empty(), "Trace not found with env var injection");
 
     eprintln!("[test] ✓ Environment variable extraction verified");
 }
@@ -522,8 +525,8 @@ fn test_distributed_trace_flags() {
     // Wait for trace
     std::thread::sleep(std::time::Duration::from_secs(2));
 
-    let traces = query_jaeger_traces(JAEGER_URL, "renacer", Some(trace_id))
-        .expect("Failed to query Jaeger");
+    let traces =
+        query_jaeger_traces(JAEGER_URL, "renacer", Some(trace_id)).expect("Failed to query Jaeger");
 
     if !traces.is_empty() {
         eprintln!("[test] ✓ Trace flags handled correctly");
@@ -559,8 +562,8 @@ fn test_distributed_service_name() {
     // Wait for trace
     std::thread::sleep(std::time::Duration::from_secs(2));
 
-    let traces = query_jaeger_traces(JAEGER_URL, "renacer", Some(trace_id))
-        .expect("Failed to query Jaeger");
+    let traces =
+        query_jaeger_traces(JAEGER_URL, "renacer", Some(trace_id)).expect("Failed to query Jaeger");
 
     if !traces.is_empty() {
         // Verify service name is "renacer"
@@ -608,8 +611,8 @@ fn test_full_observability_stack() {
     // Wait for trace
     std::thread::sleep(std::time::Duration::from_secs(3));
 
-    let traces = query_jaeger_traces(JAEGER_URL, "renacer", Some(trace_id))
-        .expect("Failed to query Jaeger");
+    let traces =
+        query_jaeger_traces(JAEGER_URL, "renacer", Some(trace_id)).expect("Failed to query Jaeger");
 
     assert!(!traces.is_empty(), "Full stack trace not found");
 
@@ -663,8 +666,8 @@ fn test_full_stack_span_hierarchy() {
     // Wait for trace
     std::thread::sleep(std::time::Duration::from_secs(3));
 
-    let traces = query_jaeger_traces(JAEGER_URL, "renacer", Some(trace_id))
-        .expect("Failed to query Jaeger");
+    let traces =
+        query_jaeger_traces(JAEGER_URL, "renacer", Some(trace_id)).expect("Failed to query Jaeger");
 
     assert!(!traces.is_empty(), "Hierarchy trace not found");
 
@@ -706,7 +709,10 @@ fn test_full_stack_span_hierarchy() {
         .count();
 
     eprintln!("[test] ✓ Span hierarchy verified");
-    eprintln!("[test] ✓ External parent → root span → {} syscall children", syscall_children);
+    eprintln!(
+        "[test] ✓ External parent → root span → {} syscall children",
+        syscall_children
+    );
 }
 
 /// Test 8: Performance overhead verification

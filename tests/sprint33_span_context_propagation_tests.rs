@@ -75,7 +75,9 @@ fn test_trace_parent_invalid_format_fallback() {
 
     // Should warn about invalid format but continue
     assert!(
-        stderr.contains("Invalid trace context") || stderr.contains("malformed") || output.status.success(),
+        stderr.contains("Invalid trace context")
+            || stderr.contains("malformed")
+            || output.status.success(),
         "Should handle invalid format gracefully: {}",
         stderr
     );
@@ -100,7 +102,9 @@ fn test_trace_parent_all_zero_trace_id() {
 
     // Should reject all-zero trace-id
     assert!(
-        stderr.contains("Invalid trace context") || stderr.contains("all-zero") || output.status.success(),
+        stderr.contains("Invalid trace context")
+            || stderr.contains("all-zero")
+            || output.status.success(),
         "Should reject all-zero trace-id: {}",
         stderr
     );
@@ -125,7 +129,9 @@ fn test_trace_parent_all_zero_parent_id() {
 
     // Should reject all-zero parent-id
     assert!(
-        stderr.contains("Invalid trace context") || stderr.contains("all-zero") || output.status.success(),
+        stderr.contains("Invalid trace context")
+            || stderr.contains("all-zero")
+            || output.status.success(),
         "Should reject all-zero parent-id: {}",
         stderr
     );
@@ -150,7 +156,9 @@ fn test_trace_parent_invalid_version() {
 
     // Should reject unknown version
     assert!(
-        stderr.contains("Invalid trace context") || stderr.contains("version") || output.status.success(),
+        stderr.contains("Invalid trace context")
+            || stderr.contains("version")
+            || output.status.success(),
         "Should reject unknown version: {}",
         stderr
     );

@@ -1,6 +1,6 @@
 [package]
 name = "renacer"
-version = "0.5.0"
+version = "0.5.1"
 edition = "2021"
 authors = ["Pragmatic AI Labs <info@paiml.com>"]
 description = "Pure Rust system call tracer with source-aware correlation for Rust binaries"
@@ -68,6 +68,7 @@ tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros"], optiona
 assert_cmd = "2.0"
 predicates = "3.1"
 tempfile = "3.13"
+serial_test = "3.2"
 
 # Property-based testing
 proptest = "1.5"

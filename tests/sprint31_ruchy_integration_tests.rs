@@ -322,7 +322,7 @@ echo "Result"
     cmd.arg("--otlp-endpoint")
         .arg("http://localhost:4317")
         .arg("--trace-transpiler-decisions")
-        .arg("-T")  // Enable timing
+        .arg("-T") // Enable timing
         .arg("--")
         .arg(&test_program);
 
@@ -394,7 +394,7 @@ echo "Output"
         .arg("http://localhost:4317")
         .arg("--trace-transpiler-decisions")
         .arg("-e")
-        .arg("trace=write")  // Filter to only write syscalls
+        .arg("trace=write") // Filter to only write syscalls
         .arg("--")
         .arg(&test_program);
 

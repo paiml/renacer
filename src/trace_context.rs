@@ -15,9 +15,9 @@ use std::fmt;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TraceContext {
     pub version: u8,
-    pub trace_id: [u8; 16],  // 128-bit trace ID
-    pub parent_id: [u8; 8],  // 64-bit parent span ID
-    pub trace_flags: u8,     // 8-bit flags (01 = sampled)
+    pub trace_id: [u8; 16], // 128-bit trace ID
+    pub parent_id: [u8; 8], // 64-bit parent span ID
+    pub trace_flags: u8,    // 8-bit flags (01 = sampled)
 }
 
 impl TraceContext {
@@ -33,8 +33,8 @@ impl TraceContext {
         }
 
         // Parse version (must be "00")
-        let version = u8::from_str_radix(parts[0], 16)
-            .map_err(|_| TraceContextError::InvalidVersion)?;
+        let version =
+            u8::from_str_radix(parts[0], 16).map_err(|_| TraceContextError::InvalidVersion)?;
         if version != 0 {
             return Err(TraceContextError::InvalidVersion);
         }
@@ -43,8 +43,7 @@ impl TraceContext {
         if parts[1].len() != 32 {
             return Err(TraceContextError::InvalidTraceId);
         }
-        let trace_id = hex_to_bytes_16(parts[1])
-            .ok_or(TraceContextError::InvalidTraceId)?;
+        let trace_id = hex_to_bytes_16(parts[1]).ok_or(TraceContextError::InvalidTraceId)?;
 
         // Validate trace_id is not all zeros
         if trace_id.iter().all(|&b| b == 0) {
@@ -55,8 +54,7 @@ impl TraceContext {
         if parts[2].len() != 16 {
             return Err(TraceContextError::InvalidParentId);
         }
-        let parent_id = hex_to_bytes_8(parts[2])
-            .ok_or(TraceContextError::InvalidParentId)?;
+        let parent_id = hex_to_bytes_8(parts[2]).ok_or(TraceContextError::InvalidParentId)?;
 
         // Validate parent_id is not all zeros
         if parent_id.iter().all(|&b| b == 0) {
@@ -67,8 +65,8 @@ impl TraceContext {
         if parts[3].len() != 2 {
             return Err(TraceContextError::InvalidTraceFlags);
         }
-        let trace_flags = u8::from_str_radix(parts[3], 16)
-            .map_err(|_| TraceContextError::InvalidTraceFlags)?;
+        let trace_flags =
+            u8::from_str_radix(parts[3], 16).map_err(|_| TraceContextError::InvalidTraceFlags)?;
 
         Ok(TraceContext {
             version,
@@ -141,7 +139,10 @@ pub enum TraceContextError {
 impl fmt::Display for TraceContextError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::InvalidFormat => write!(f, "Invalid traceparent format (expected: version-trace_id-parent_id-flags)"),
+            Self::InvalidFormat => write!(
+                f,
+                "Invalid traceparent format (expected: version-trace_id-parent_id-flags)"
+            ),
             Self::InvalidVersion => write!(f, "Invalid version (must be 00)"),
             Self::InvalidTraceId => write!(f, "Invalid trace_id (must be 32 hex characters)"),
             Self::InvalidParentId => write!(f, "Invalid parent_id (must be 16 hex characters)"),
@@ -208,15 +209,13 @@ mod tests {
 
         // Verify trace_id
         let expected_trace_id = [
-            0x0a, 0xf7, 0x65, 0x19, 0x16, 0xcd, 0x43, 0xdd,
-            0x84, 0x48, 0xeb, 0x21, 0x1c, 0x80, 0x31, 0x9c,
+            0x0a, 0xf7, 0x65, 0x19, 0x16, 0xcd, 0x43, 0xdd, 0x84, 0x48, 0xeb, 0x21, 0x1c, 0x80,
+            0x31, 0x9c,
         ];
         assert_eq!(ctx.trace_id, expected_trace_id);
 
         // Verify parent_id
-        let expected_parent_id = [
-            0xb7, 0xad, 0x6b, 0x71, 0x69, 0x20, 0x33, 0x31,
-        ];
+        let expected_parent_id = [0xb7, 0xad, 0x6b, 0x71, 0x69, 0x20, 0x33, 0x31];
         assert_eq!(ctx.parent_id, expected_parent_id);
     }
 
@@ -376,7 +375,10 @@ mod tests {
     // Test 19: from_env() with TRACEPARENT set
     #[test]
     fn test_from_env_traceparent() {
-        std::env::set_var("TRACEPARENT", "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01");
+        std::env::set_var(
+            "TRACEPARENT",
+            "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+        );
 
         let ctx = TraceContext::from_env();
         assert!(ctx.is_some());
@@ -392,7 +394,10 @@ mod tests {
     #[test]
     fn test_from_env_otel_traceparent() {
         std::env::remove_var("TRACEPARENT");
-        std::env::set_var("OTEL_TRACEPARENT", "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00");
+        std::env::set_var(
+            "OTEL_TRACEPARENT",
+            "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00",
+        );
 
         let ctx = TraceContext::from_env();
         assert!(ctx.is_some());

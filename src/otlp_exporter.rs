@@ -18,16 +18,19 @@
 use anyhow::Result;
 #[cfg(feature = "otlp")]
 use opentelemetry::{
-    trace::{Span, SpanContext, SpanKind, Status, TraceContextExt, TraceFlags, TraceState, Tracer, TracerProvider as _},
+    trace::{
+        Span, SpanContext, SpanKind, Status, TraceContextExt, TraceFlags, TraceState, Tracer,
+        TracerProvider as _,
+    },
     KeyValue,
 };
+#[cfg(feature = "otlp")]
+use opentelemetry_otlp::WithExportConfig;
 #[cfg(feature = "otlp")]
 use opentelemetry_sdk::{
     trace::{BatchSpanProcessor, SdkTracerProvider as TracerProvider},
     Resource,
 };
-#[cfg(feature = "otlp")]
-use opentelemetry_otlp::WithExportConfig;
 
 use crate::trace_context::TraceContext; // Sprint 33
 
@@ -153,8 +156,10 @@ impl OtlpExporter {
             let span_processor = BatchSpanProcessor::builder(exporter).build();
 
             // Log batch configuration for transparency
-            eprintln!("[renacer: OTLP batch config - size: {}, delay: {}ms, queue: {}]",
-                config.batch_size, config.batch_delay_ms, config.queue_size);
+            eprintln!(
+                "[renacer: OTLP batch config - size: {}, delay: {}ms, queue: {}]",
+                config.batch_size, config.batch_delay_ms, config.queue_size
+            );
 
             // Create resource with service name + compute tracing attributes (Sprint 32)
             let resource = Resource::builder()
@@ -185,7 +190,7 @@ impl OtlpExporter {
                 ctx.otel_trace_id(),
                 ctx.otel_parent_id(),
                 TraceFlags::new(ctx.trace_flags),
-                true,  // is_remote = true (context from external system)
+                true, // is_remote = true (context from external system)
                 TraceState::default(),
             );
 
@@ -286,10 +291,7 @@ impl OtlpExporter {
             }
 
             // Add event to the root span
-            span.add_event(
-                format!("decision: {}::{}", category, name),
-                attributes,
-            );
+            span.add_event(format!("decision: {}::{}", category, name), attributes);
         }
     }
 
@@ -417,26 +419,20 @@ mod tests {
     #[cfg(feature = "otlp")]
     fn test_otlp_config_presets() {
         // Test balanced preset
-        let balanced = OtlpConfig::balanced(
-            "http://localhost:4317".to_string(),
-            "test".to_string(),
-        );
+        let balanced =
+            OtlpConfig::balanced("http://localhost:4317".to_string(), "test".to_string());
         assert_eq!(balanced.batch_size, 512);
         assert_eq!(balanced.batch_delay_ms, 1000);
 
         // Test aggressive preset
-        let aggressive = OtlpConfig::aggressive(
-            "http://localhost:4317".to_string(),
-            "test".to_string(),
-        );
+        let aggressive =
+            OtlpConfig::aggressive("http://localhost:4317".to_string(), "test".to_string());
         assert_eq!(aggressive.batch_size, 2048);
         assert_eq!(aggressive.batch_delay_ms, 5000);
 
         // Test low-latency preset
-        let low_latency = OtlpConfig::low_latency(
-            "http://localhost:4317".to_string(),
-            "test".to_string(),
-        );
+        let low_latency =
+            OtlpConfig::low_latency("http://localhost:4317".to_string(), "test".to_string());
         assert_eq!(low_latency.batch_size, 128);
         assert_eq!(low_latency.batch_delay_ms, 100);
     }
@@ -444,13 +440,10 @@ mod tests {
     #[test]
     #[cfg(feature = "otlp")]
     fn test_otlp_config_builder() {
-        let config = OtlpConfig::new(
-            "http://localhost:4317".to_string(),
-            "test".to_string(),
-        )
-        .with_batch_size(1024)
-        .with_batch_delay_ms(2000)
-        .with_queue_size(4096);
+        let config = OtlpConfig::new("http://localhost:4317".to_string(), "test".to_string())
+            .with_batch_size(1024)
+            .with_batch_delay_ms(2000)
+            .with_queue_size(4096);
 
         assert_eq!(config.batch_size, 1024);
         assert_eq!(config.batch_delay_ms, 2000);
@@ -460,10 +453,7 @@ mod tests {
     #[test]
     #[cfg(not(feature = "otlp"))]
     fn test_otlp_disabled_returns_error() {
-        let config = OtlpConfig::new(
-            "http://localhost:4317".to_string(),
-            "test".to_string(),
-        );
+        let config = OtlpConfig::new("http://localhost:4317".to_string(), "test".to_string());
 
         let result = OtlpExporter::new(config, None);
         assert!(result.is_err());

@@ -2,7 +2,6 @@
 ///
 /// Measures the performance of object pooling for span data.
 /// Compares allocation patterns: pool vs. heap allocation.
-
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use std::time::Duration;
 

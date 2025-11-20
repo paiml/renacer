@@ -2,7 +2,6 @@
 ///
 /// Measures the performance overhead of Renacer tracing compared to native execution.
 /// These benchmarks help detect performance regressions and validate optimizations.
-
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use std::process::Command;
 use std::time::Duration;

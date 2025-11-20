@@ -5,7 +5,6 @@
 /// - OTLP export is disabled
 /// - Sampling drops the span
 /// - Span is never finished
-
 use std::borrow::Cow;
 
 /// Lazy span builder that defers work until commit

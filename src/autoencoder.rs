@@ -155,10 +155,9 @@ impl Autoencoder {
                 }
 
                 // Update decoder weights and bias
-                for i in 0..self.hidden_dim {
-                    for j in 0..self.input_dim {
-                        self.decoder_weights[i][j] +=
-                            learning_rate * output_error[j] * hidden[i];
+                for (i, &h) in hidden.iter().enumerate().take(self.hidden_dim) {
+                    for (j, &o_err) in output_error.iter().enumerate().take(self.input_dim) {
+                        self.decoder_weights[i][j] += learning_rate * o_err * h;
                     }
                 }
                 for (j, &o_err) in output_error.iter().enumerate() {
@@ -166,9 +165,9 @@ impl Autoencoder {
                 }
 
                 // Update encoder weights and bias
-                for i in 0..self.input_dim {
-                    for j in 0..self.hidden_dim {
-                        self.encoder_weights[i][j] += learning_rate * hidden_error[j] * sample[i];
+                for (i, &s) in sample.iter().enumerate().take(self.input_dim) {
+                    for (j, &h_err) in hidden_error.iter().enumerate().take(self.hidden_dim) {
+                        self.encoder_weights[i][j] += learning_rate * h_err * s;
                     }
                 }
                 for (j, &h_err) in hidden_error.iter().enumerate() {
@@ -205,9 +204,7 @@ pub struct AutoencoderReport {
 }
 
 /// Extract features from syscall statistics (reuse isolation_forest approach)
-fn extract_features(
-    syscall_data: &HashMap<String, (u64, u64)>,
-) -> (Vec<String>, Vec<Vec<f64>>) {
+fn extract_features(syscall_data: &HashMap<String, (u64, u64)>) -> (Vec<String>, Vec<Vec<f64>>) {
     let mut syscall_names = Vec::new();
     let mut features = Vec::new();
 
@@ -224,8 +221,8 @@ fn extract_features(
         // Feature vector: [avg_duration, call_count, total_duration]
         features.push(vec![
             avg_time_us,
-            (*count as f64).ln().max(0.0),  // Log scale for count
-            total_time_us.ln().max(0.0),    // Log scale for total time
+            (*count as f64).ln().max(0.0), // Log scale for count
+            total_time_us.ln().max(0.0),   // Log scale for total time
         ]);
     }
 
@@ -273,11 +270,8 @@ fn normalize_features(features: &[Vec<f64>]) -> (Vec<Vec<f64>>, Vec<f64>, Vec<f6
 }
 
 /// Calculate feature contributions for explainability (XAI)
-fn calculate_feature_contributions(
-    original: &[f64],
-    reconstructed: &[f64],
-) -> Vec<(String, f64)> {
-    let feature_names = vec!["avg_duration", "call_frequency", "total_duration"];
+fn calculate_feature_contributions(original: &[f64], reconstructed: &[f64]) -> Vec<(String, f64)> {
+    let feature_names = ["avg_duration", "call_frequency", "total_duration"];
 
     let total_error: f64 = original
         .iter()
@@ -336,7 +330,8 @@ pub fn analyze_anomalies(
         .map(|f| autoencoder.reconstruction_error(f))
         .collect();
 
-    let mean_error: f64 = reconstruction_errors.iter().sum::<f64>() / reconstruction_errors.len() as f64;
+    let mean_error: f64 =
+        reconstruction_errors.iter().sum::<f64>() / reconstruction_errors.len() as f64;
     let std_error: f64 = {
         let variance: f64 = reconstruction_errors
             .iter()
@@ -516,7 +511,10 @@ mod tests {
 
         let report = analyze_anomalies(&data, 2, 100, 1.5, false);
 
-        assert!(report.anomalies.len() > 0, "Should detect at least one anomaly");
+        assert!(
+            report.anomalies.len() > 0,
+            "Should detect at least one anomaly"
+        );
         assert_eq!(report.total_samples, 7);
     }
 
