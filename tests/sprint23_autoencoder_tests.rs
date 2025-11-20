@@ -18,10 +18,7 @@ use tempfile::TempDir;
 fn test_dl_anomaly_flag_accepted() {
     // Test that --dl-anomaly flag is accepted
     let mut cmd = Command::cargo_bin("renacer").unwrap();
-    cmd.arg("--dl-anomaly")
-        .arg("--")
-        .arg("echo")
-        .arg("test");
+    cmd.arg("--dl-anomaly").arg("--").arg("echo").arg("test");
 
     // Should not error on flag parsing
     cmd.assert().success();
@@ -87,11 +84,10 @@ int main() {
         .arg(&test_program);
 
     // Should detect anomalies in output
-    cmd.assert()
-        .success()
-        .stderr(predicate::str::contains("Autoencoder Anomaly Detection").or(
-            predicate::str::contains("Reconstruction Error")
-        ));
+    cmd.assert().success().stderr(
+        predicate::str::contains("Autoencoder Anomaly Detection")
+            .or(predicate::str::contains("Reconstruction Error")),
+    );
 }
 
 // ============================================================================
@@ -126,11 +122,9 @@ fn test_dl_anomaly_json_export() {
         .arg("echo")
         .arg("test");
 
-    cmd.assert()
-        .success()
-        .stdout(predicate::str::contains("autoencoder").or(
-            predicate::str::contains("dl_analysis")
-        ));
+    cmd.assert().success().stdout(
+        predicate::str::contains("autoencoder").or(predicate::str::contains("dl_analysis")),
+    );
 }
 
 // ============================================================================
@@ -229,7 +223,7 @@ fn test_dl_anomaly_with_other_ml() {
     let mut cmd = Command::cargo_bin("renacer").unwrap();
     cmd.arg("-c")
         .arg("--dl-anomaly")
-        .arg("--ml-anomaly")  // Also enable KMeans
+        .arg("--ml-anomaly") // Also enable KMeans
         .arg("--ml-outliers") // Also enable Isolation Forest
         .arg("--")
         .arg("echo")

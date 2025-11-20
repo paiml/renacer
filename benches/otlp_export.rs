@@ -2,7 +2,6 @@
 ///
 /// Measures the performance of OTLP span export operations.
 /// Focuses on batch processing, serialization, and network overhead.
-
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use std::time::Duration;
 

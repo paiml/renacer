@@ -105,7 +105,11 @@ pub struct Cli {
     pub ml_outliers: bool,
 
     /// Contamination threshold for Isolation Forest (default: 0.1, range: 0.0-0.5)
-    #[arg(long = "ml-outlier-threshold", value_name = "THRESHOLD", default_value = "0.1")]
+    #[arg(
+        long = "ml-outlier-threshold",
+        value_name = "THRESHOLD",
+        default_value = "0.1"
+    )]
     pub ml_outlier_threshold: f32,
 
     /// Number of trees in Isolation Forest (default: 100, min: 10)
@@ -157,7 +161,11 @@ pub struct Cli {
     pub otlp_endpoint: Option<String>,
 
     /// Service name for OpenTelemetry traces (Sprint 30)
-    #[arg(long = "otlp-service-name", value_name = "NAME", default_value = "renacer")]
+    #[arg(
+        long = "otlp-service-name",
+        value_name = "NAME",
+        default_value = "renacer"
+    )]
     pub otlp_service_name: String,
 
     /// W3C Trace Context for distributed tracing (Sprint 33)
@@ -601,14 +609,7 @@ mod tests {
 
     #[test]
     fn test_cli_ml_outliers_with_statistics() {
-        let cli = Cli::parse_from([
-            "renacer",
-            "-c",
-            "--ml-outliers",
-            "--",
-            "echo",
-            "test",
-        ]);
+        let cli = Cli::parse_from(["renacer", "-c", "--ml-outliers", "--", "echo", "test"]);
         assert!(cli.statistics);
         assert!(cli.ml_outliers);
     }
@@ -702,14 +703,7 @@ mod tests {
 
     #[test]
     fn test_cli_dl_anomaly_with_statistics() {
-        let cli = Cli::parse_from([
-            "renacer",
-            "-c",
-            "--dl-anomaly",
-            "--",
-            "echo",
-            "test",
-        ]);
+        let cli = Cli::parse_from(["renacer", "-c", "--dl-anomaly", "--", "echo", "test"]);
         assert!(cli.statistics);
         assert!(cli.dl_anomaly);
     }
@@ -819,13 +813,7 @@ mod tests {
     // Sprint 32: Compute Block Tracing tests
     #[test]
     fn test_cli_trace_compute_flag() {
-        let cli = Cli::parse_from([
-            "renacer",
-            "--trace-compute",
-            "--",
-            "echo",
-            "test",
-        ]);
+        let cli = Cli::parse_from(["renacer", "--trace-compute", "--", "echo", "test"]);
         assert!(cli.trace_compute);
         assert!(!cli.trace_compute_all);
         assert_eq!(cli.trace_compute_threshold, 100); // default
@@ -882,13 +870,7 @@ mod tests {
     #[test]
     fn test_cli_trace_compute_all_requires_trace_compute() {
         // Should fail because --trace-compute-all requires --trace-compute
-        let result = Cli::try_parse_from([
-            "renacer",
-            "--trace-compute-all",
-            "--",
-            "echo",
-            "test",
-        ]);
+        let result = Cli::try_parse_from(["renacer", "--trace-compute-all", "--", "echo", "test"]);
         assert!(result.is_err());
     }
 

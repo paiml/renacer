@@ -25,6 +25,6 @@ pub mod span_pool; // Sprint 36: Memory pool for span allocations
 pub mod stack_unwind;
 pub mod stats;
 pub mod syscalls;
-pub mod trace_context;  // Sprint 33: W3C Trace Context propagation
+pub mod trace_context; // Sprint 33: W3C Trace Context propagation
 pub mod tracer;
 pub mod transpiler_map;

@@ -87,8 +87,8 @@ pub fn query_jaeger_traces(
 
     eprintln!("[test-utils] Querying Jaeger: {}", url);
 
-    let response = reqwest::blocking::get(&url)
-        .map_err(|e| anyhow!("Failed to query Jaeger: {}", e))?;
+    let response =
+        reqwest::blocking::get(&url).map_err(|e| anyhow!("Failed to query Jaeger: {}", e))?;
 
     if !response.status().is_success() {
         return Err(anyhow!("Jaeger query failed: {}", response.status()));
@@ -102,11 +102,7 @@ pub fn query_jaeger_traces(
 }
 
 /// Wait for trace to appear in Jaeger (with retries)
-pub fn wait_for_trace(
-    jaeger_url: &str,
-    service: &str,
-    timeout_secs: u64,
-) -> Result<JaegerTrace> {
+pub fn wait_for_trace(jaeger_url: &str, service: &str, timeout_secs: u64) -> Result<JaegerTrace> {
     for i in 0..timeout_secs {
         let traces = query_jaeger_traces(jaeger_url, service, None)?;
         if !traces.is_empty() {
@@ -182,9 +178,10 @@ pub fn verify_parent_child(
         .ok_or_else(|| anyhow!("Child span '{}' not found", child_span_name))?;
 
     // Verify child has reference to parent
-    let has_parent_ref = child_span.references.iter().any(|r| {
-        r.ref_type == "CHILD_OF" && r.span_id == parent_span.span_id
-    });
+    let has_parent_ref = child_span
+        .references
+        .iter()
+        .any(|r| r.ref_type == "CHILD_OF" && r.span_id == parent_span.span_id);
 
     if !has_parent_ref {
         return Err(anyhow!(

@@ -1779,6 +1779,7 @@ mod tests {
         // Sprint 28: Sampling and rate limiting tests
         mod sprint28_sampling_tests {
             use crate::decision_trace::sampling::*;
+            use serial_test::serial;
 
             #[test]
             fn test_fast_random_non_zero() {
@@ -1814,6 +1815,7 @@ mod tests {
             }
 
             #[test]
+            #[serial]
             fn test_should_sample_trace_probability_one() {
                 // Probability 1.0 should always sample (until rate limit)
                 reset_trace_counter();
@@ -1831,6 +1833,7 @@ mod tests {
             }
 
             #[test]
+            #[serial]
             fn test_should_sample_trace_rate_limiter() {
                 // Circuit breaker should trip at GLOBAL_TRACE_LIMIT
                 reset_trace_counter();
@@ -1852,6 +1855,7 @@ mod tests {
             }
 
             #[test]
+            #[serial]
             fn test_reset_trace_counter() {
                 // Fill counter
                 reset_trace_counter();
@@ -1869,6 +1873,7 @@ mod tests {
             }
 
             #[test]
+            #[serial]
             fn test_sampling_rate_approximate() {
                 // Test that sampling rate is approximately correct
                 reset_trace_counter();
@@ -1927,6 +1932,7 @@ mod tests {
             }
 
             #[test]
+            #[serial]
             fn test_sampling_decision_performance() {
                 // Verify should_sample_trace is fast enough (<20ns per call)
                 use std::time::Instant;
@@ -1959,6 +1965,7 @@ mod tests {
         // Sprint 28: Property-based tests for sampling
         mod sprint28_sampling_property_tests {
             use crate::decision_trace::sampling::*;
+            use serial_test::serial;
 
             use proptest::proptest;
 
@@ -1977,6 +1984,7 @@ mod tests {
                 }
 
                 #[test]
+                #[serial]
                 fn prop_sampling_rate_bounded(probability in 0.0f64..=1.0f64) {
                     // Reset for clean test
                     reset_trace_counter();

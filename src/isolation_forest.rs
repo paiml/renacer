@@ -17,9 +17,6 @@ use rand::seq::SliceRandom;
 use rand::Rng;
 use std::collections::HashMap;
 
-/// Maximum tree depth to prevent excessive recursion
-const MAX_TREE_DEPTH: usize = 100;
-
 /// Default sub-sampling size (following original paper)
 const DEFAULT_SUBSAMPLE_SIZE: usize = 256;
 
@@ -75,14 +72,13 @@ impl IsolationNode {
 #[derive(Debug, Clone)]
 pub struct IsolationTree {
     root: IsolationNode,
-    max_depth: usize,
 }
 
 impl IsolationTree {
     /// Build a tree from samples
     fn build(samples: &[Vec<f64>], max_depth: usize) -> Self {
         let root = Self::build_node(samples, 0, max_depth);
-        IsolationTree { root, max_depth }
+        IsolationTree { root }
     }
 
     /// Recursively build tree nodes
@@ -216,9 +212,7 @@ impl IsolationForest {
 
         // Normalize by expected path length
         let c = IsolationNode::average_path_length(self.subsample_size);
-        let score = 2_f64.powf(-avg_path_length / c);
-
-        score
+        2_f64.powf(-avg_path_length / c)
     }
 
     /// Predict outliers based on contamination threshold
@@ -350,11 +344,7 @@ pub fn analyze_outliers(
 
 /// Calculate feature importance for explainability (XAI)
 fn calculate_feature_importance(features: &[f64]) -> Vec<(String, f64)> {
-    let feature_names = vec![
-        "avg_duration",
-        "call_frequency",
-        "total_duration",
-    ];
+    let feature_names = ["avg_duration", "call_frequency", "total_duration"];
 
     // Simple feature importance: normalized absolute values
     let total: f64 = features.iter().map(|&f| f.abs()).sum();
@@ -410,8 +400,17 @@ mod tests {
         let normal_score = forest.anomaly_score(&vec![1.0, 2.0]);
 
         // Outlier should have higher score
-        assert!(outlier_score > normal_score, "Outlier score ({}) should be > normal score ({})", outlier_score, normal_score);
-        assert!(outlier_score > 0.52, "Outlier score ({}) should be > 0.52", outlier_score); // Should be anomalous (>0.5 is anomaly baseline)
+        assert!(
+            outlier_score > normal_score,
+            "Outlier score ({}) should be > normal score ({})",
+            outlier_score,
+            normal_score
+        );
+        assert!(
+            outlier_score > 0.52,
+            "Outlier score ({}) should be > 0.52",
+            outlier_score
+        ); // Should be anomalous (>0.5 is anomaly baseline)
     }
 
     #[test]
