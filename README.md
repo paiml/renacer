@@ -497,7 +497,13 @@ cargo deny check
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
-### v0.5.0 ✅ (Current - 2025-11-20)
+### v0.6.0 ✅ (Current - 2025-11-20)
+- Ruchy Runtime Integration - Link OTLP traces with transpiler decisions (Sprint 31)
+- Block-Level Compute Tracing - Trueno SIMD operations as OTLP spans (Sprint 32)
+- W3C Trace Context Propagation - Distributed tracing support (Sprint 33)
+- Full observability stack: syscalls + decisions + compute + app traces
+
+### v0.5.0 ✅ (2025-11-20)
 - OpenTelemetry OTLP integration (Sprint 30)
 - Distributed tracing with Jaeger, Tempo, and OTLP-compatible backends
 - Docker compose examples for observability stacks
@@ -521,10 +527,10 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 - Real-time anomaly detection
 - Trueno Integration Milestone complete
 
-### v0.6.0 (Planned - Sprint 31-33)
-- Ruchy Runtime Integration - Link OTLP traces with transpiler decisions
-- Span Context Propagation - Connect Renacer traces with in-app spans
-- Custom Sampling - Trace sampling for high-volume systems
+### v0.7.0 (Planned - Sprint 34-36)
+- Advanced context propagation (tracestate, B3 format)
+- Span sampling strategies
+- Performance optimization
 
 ### v1.0.0 (Planned)
 - Production hardening
