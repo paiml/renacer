@@ -202,6 +202,8 @@ fn main() -> Result<()> {
         dl_epochs: args.dl_epochs,                 // Sprint 23
         trace_transpiler_decisions: args.trace_transpiler_decisions, // Sprint 26
         transpiler_map: source_map,                // Sprint 24-28
+        otlp_endpoint: args.otlp_endpoint,         // Sprint 30
+        otlp_service_name: args.otlp_service_name, // Sprint 30
     };
 
     // Either attach to PID or trace command (mutually exclusive)
