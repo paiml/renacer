@@ -39,6 +39,7 @@ pub struct TracerConfig {
     pub dl_threshold: f32,      // Sprint 23: Reconstruction error threshold (σ multiplier)
     pub dl_hidden_size: usize,  // Sprint 23: Autoencoder hidden layer size
     pub dl_epochs: usize,       // Sprint 23: Training epochs
+    pub trace_transpiler_decisions: bool, // Sprint 26: Trace transpiler compile-time decisions
     pub transpiler_map: Option<crate::transpiler_map::TranspilerMap>, // Sprint 24-28: Transpiler source mapping
 }
 
@@ -118,6 +119,8 @@ struct Tracers {
     csv_stats_output: Option<crate::csv_output::CsvStatsOutput>,
     html_output: Option<crate::html_output::HtmlOutput>, // Sprint 22
     anomaly_detector: Option<crate::anomaly::AnomalyDetector>, // Sprint 20
+    #[allow(dead_code)] // Sprint 26: Will be used once stderr capture is wired
+    decision_tracer: Option<crate::decision_trace::DecisionTracer>, // Sprint 26
 }
 
 /// Initialize profiling-related tracers
@@ -214,6 +217,13 @@ fn initialize_tracers(config: &TracerConfig) -> Tracers {
         None
     };
 
+    // Initialize decision tracer for transpiler decision tracking (Sprint 26)
+    let decision_tracer = if config.trace_transpiler_decisions {
+        Some(crate::decision_trace::DecisionTracer::new())
+    } else {
+        None
+    };
+
     Tracers {
         profiling_ctx,
         function_profiler,
@@ -223,6 +233,7 @@ fn initialize_tracers(config: &TracerConfig) -> Tracers {
         csv_stats_output,
         html_output,
         anomaly_detector,
+        decision_tracer,
     }
 }
 
@@ -781,8 +792,83 @@ fn print_optional_summaries(
         detector.print_summary();
     }
 }
+/// Sprint 26: Print decision trace summary
+fn print_decision_trace_summary(decision_tracer: Option<crate::decision_trace::DecisionTracer>) {
+    if let Some(tracer) = decision_tracer {
+        if tracer.count() == 0 {
+            return;
+        }
 
-/// Print analysis summaries (HPU, ML, Isolation Forest)
+        // Sprint 27 Phase 3: Write to memory-mapped file (.ruchy/decisions.msgpack)
+        let mmap_path = std::path::Path::new(".ruchy/decisions.msgpack");
+        let manifest_path = std::path::Path::new(".ruchy/decision_manifest.json");
+
+        // Write MessagePack file
+        match tracer.write_to_msgpack(mmap_path) {
+            Ok(_) => {
+                println!("\n✅ Decision traces written to: {}", mmap_path.display());
+            }
+            Err(e) => {
+                eprintln!(
+                    "⚠️  Failed to write decision traces to {}: {}",
+                    mmap_path.display(),
+                    e
+                );
+            }
+        }
+
+        // Write manifest file
+        match tracer.write_manifest(
+            manifest_path,
+            "2.0.0",
+            None, // git_commit (could add via git2 crate)
+            Some(env!("CARGO_PKG_VERSION")),
+        ) {
+            Ok(_) => {
+                println!(
+                    "✅ Decision manifest written to: {}",
+                    manifest_path.display()
+                );
+            }
+            Err(e) => {
+                eprintln!(
+                    "⚠️  Failed to write decision manifest to {}: {}",
+                    manifest_path.display(),
+                    e
+                );
+            }
+        }
+
+        // Also print summary to stdout for convenience
+        println!("\n=== Transpiler Decision Traces ===\n");
+
+        for trace in tracer.traces() {
+            // Format: category::name with input and result
+            print!("[{}::{}] ", trace.category, trace.name);
+
+            // Print input (compact JSON)
+            print!("input={}", trace.input);
+
+            // Print result if available
+            if let Some(ref result) = trace.result {
+                print!(" result={}", result);
+            }
+
+            // Print decision_id if available (Sprint 27)
+            if let Some(decision_id) = trace.decision_id {
+                print!(" id=0x{:X}", decision_id);
+            }
+
+            println!();
+        }
+
+        println!("\nTotal decision traces: {}", tracer.count());
+        println!("Decision manifest: {}", manifest_path.display());
+        println!("Binary traces: {}", mmap_path.display());
+    }
+}
+
+/// Print analysis summaries (HPU, ML, Isolation Forest, Autoencoder)
 fn print_analysis_summaries(
     stats_tracker: &Option<crate::stats::StatsTracker>,
     analysis: &AnalysisConfig,
@@ -828,6 +914,7 @@ fn print_summaries(tracers: Tracers, timing_mode: bool, exit_code: i32, analysis
         profiling_ctx,
         function_profiler,
         anomaly_detector,
+        decision_tracer, // Sprint 26: Now used for decision trace output
     } = tracers;
 
     // Print statistics summary if in statistics mode (text format)
@@ -901,6 +988,9 @@ fn print_summaries(tracers: Tracers, timing_mode: bool, exit_code: i32, analysis
 
     // Print analysis reports (HPU, ML)
     print_analysis_summaries(&stats_tracker, analysis);
+
+    // Sprint 26: Print decision trace summary
+    print_decision_trace_summary(decision_tracer);
 }
 
 /// Per-process state for multi-process tracing
@@ -1098,6 +1188,11 @@ struct SyscallEntry {
     source: Option<crate::json_output::JsonSourceLocation>,
     function_name: Option<String>,
     caller_name: Option<String>,
+    // Sprint 26: Raw args for decision trace capture (write syscall interception)
+    raw_arg1: Option<u64>,
+    raw_arg2: Option<u64>,
+    #[allow(dead_code)] // May be used in future for more complex decision trace patterns
+    raw_arg3: Option<u64>,
 }
 
 /// Find the user function that triggered a syscall by unwinding the stack
@@ -1182,6 +1277,7 @@ fn format_syscall_args_for_json(
 }
 
 /// Print syscall entry with optional source location
+#[allow(clippy::too_many_arguments)]
 fn print_syscall_entry(
     child: Pid,
     name: &str,
@@ -1330,6 +1426,10 @@ fn handle_syscall_entry(
         source: json_source,
         function_name,
         caller_name,
+        // Sprint 26: Store raw args for decision trace capture
+        raw_arg1: Some(arg1),
+        raw_arg2: Some(arg2),
+        raw_arg3: Some(arg3),
     }))
 }
 
@@ -1561,6 +1661,70 @@ fn should_print_result(
     syscall_entry.is_some() && !in_stats_mode && !in_json_mode && !in_csv_mode && !in_html_mode
 }
 
+/// Sprint 26: Capture decision traces from write() syscalls to stderr
+///
+/// Intercepts write(2, buffer, count) calls and parses [DECISION] and [RESULT] lines
+fn capture_decision_trace(
+    child: Pid,
+    syscall_entry: &Option<SyscallEntry>,
+    decision_tracer: Option<&mut crate::decision_trace::DecisionTracer>,
+    bytes_written: i64,
+) {
+    // Only process if decision tracing is enabled
+    let Some(tracer) = decision_tracer else {
+        return;
+    };
+
+    // Only process if we have a syscall entry
+    let Some(entry) = syscall_entry else {
+        return;
+    };
+
+    // Only intercept write() syscalls
+    if entry.name != "write" {
+        return;
+    }
+
+    // Check if writing to stderr (fd = 2)
+    if entry.raw_arg1 != Some(2) {
+        return;
+    };
+
+    // Only process successful writes
+    if bytes_written <= 0 {
+        return;
+    }
+
+    // Get buffer address and size
+    let buffer_addr = entry.raw_arg2.unwrap_or(0);
+    let buffer_size = bytes_written as usize;
+
+    // Read buffer from child process memory
+    use nix::sys::uio::{process_vm_readv, RemoteIoVec};
+    use std::io::IoSliceMut;
+
+    let mut buffer = vec![0u8; buffer_size];
+    let mut local_iov = [IoSliceMut::new(&mut buffer)];
+    let remote_iov = [RemoteIoVec {
+        base: buffer_addr as usize,
+        len: buffer_size,
+    }];
+
+    // Try to read; silently ignore errors (child may have exited, etc.)
+    if process_vm_readv(child, &mut local_iov, &remote_iov).is_err() {
+        return;
+    }
+
+    // Convert to string, replacing invalid UTF-8 with replacement character
+    let content = String::from_utf8_lossy(&buffer);
+
+    // Parse each line through DecisionTracer
+    for line in content.lines() {
+        // Ignore parse errors - not all stderr lines are decision traces
+        let _ = tracer.parse_line(line);
+    }
+}
+
 fn handle_syscall_exit(
     child: Pid,
     syscall_entry: &Option<SyscallEntry>,
@@ -1610,6 +1774,14 @@ fn handle_syscall_exit(
         result,
         timing_mode,
         duration_us,
+    );
+
+    // Sprint 26: Capture decision traces from stderr writes
+    capture_decision_trace(
+        child,
+        syscall_entry,
+        tracers.decision_tracer.as_mut(),
+        result,
     );
 
     // Record CSV stats (we'll handle this in print_summaries)
@@ -1662,24 +1834,25 @@ mod tests {
             follow_forks: false,
             profile_self: false,
             function_time: false,
-            stats_extended: false,    // Sprint 19
-            anomaly_threshold: 3.0,   // Sprint 19
-            anomaly_realtime: false,  // Sprint 20
-            anomaly_window_size: 100, // Sprint 20
-            hpu_analysis: false,      // Sprint 21
-            hpu_cpu_only: false,      // Sprint 21
-            ml_anomaly: false,        // Sprint 23
-            ml_clusters: 3,           // Sprint 23
-            ml_compare: false,        // Sprint 23
-            ml_outliers: false,       // Sprint 22
-            ml_outlier_threshold: 0.1, // Sprint 22
-            ml_outlier_trees: 100,    // Sprint 22
-            explain: false,           // Sprint 22/23
-            dl_anomaly: false,        // Sprint 23
-            dl_threshold: 2.0,        // Sprint 23
-            dl_hidden_size: 3,        // Sprint 23
-            dl_epochs: 100,           // Sprint 23
-            transpiler_map: None,     // Sprint 24-28
+            stats_extended: false,             // Sprint 19
+            anomaly_threshold: 3.0,            // Sprint 19
+            anomaly_realtime: false,           // Sprint 20
+            anomaly_window_size: 100,          // Sprint 20
+            hpu_analysis: false,               // Sprint 21
+            hpu_cpu_only: false,               // Sprint 21
+            ml_anomaly: false,                 // Sprint 23
+            ml_clusters: 3,                    // Sprint 23
+            ml_compare: false,                 // Sprint 23
+            ml_outliers: false,                // Sprint 22
+            ml_outlier_threshold: 0.1,         // Sprint 22
+            ml_outlier_trees: 100,             // Sprint 22
+            explain: false,                    // Sprint 22/23
+            dl_anomaly: false,                 // Sprint 23
+            dl_threshold: 2.0,                 // Sprint 23
+            dl_hidden_size: 3,                 // Sprint 23
+            dl_epochs: 100,                    // Sprint 23
+            trace_transpiler_decisions: false, // Sprint 26
+            transpiler_map: None,              // Sprint 24-28
         };
         let result = trace_command(&empty, config);
         assert!(result.is_err());
@@ -1699,24 +1872,25 @@ mod tests {
             follow_forks: false,
             profile_self: false,
             function_time: false,
-            stats_extended: false,    // Sprint 19
-            anomaly_threshold: 3.0,   // Sprint 19
-            anomaly_realtime: false,  // Sprint 20
-            anomaly_window_size: 100, // Sprint 20
-            hpu_analysis: false,      // Sprint 21
-            hpu_cpu_only: false,      // Sprint 21
-            ml_anomaly: false,        // Sprint 23
-            ml_clusters: 3,           // Sprint 23
-            ml_compare: false,        // Sprint 23
-            ml_outliers: false,       // Sprint 22
-            ml_outlier_threshold: 0.1, // Sprint 22
-            ml_outlier_trees: 100,    // Sprint 22
-            explain: false,           // Sprint 22/23
-            dl_anomaly: false,        // Sprint 23
-            dl_threshold: 2.0,        // Sprint 23
-            dl_hidden_size: 3,        // Sprint 23
-            dl_epochs: 100,           // Sprint 23
-            transpiler_map: None,     // Sprint 24-28
+            stats_extended: false,             // Sprint 19
+            anomaly_threshold: 3.0,            // Sprint 19
+            anomaly_realtime: false,           // Sprint 20
+            anomaly_window_size: 100,          // Sprint 20
+            hpu_analysis: false,               // Sprint 21
+            hpu_cpu_only: false,               // Sprint 21
+            ml_anomaly: false,                 // Sprint 23
+            ml_clusters: 3,                    // Sprint 23
+            ml_compare: false,                 // Sprint 23
+            ml_outliers: false,                // Sprint 22
+            ml_outlier_threshold: 0.1,         // Sprint 22
+            ml_outlier_trees: 100,             // Sprint 22
+            explain: false,                    // Sprint 22/23
+            dl_anomaly: false,                 // Sprint 23
+            dl_threshold: 2.0,                 // Sprint 23
+            dl_hidden_size: 3,                 // Sprint 23
+            dl_epochs: 100,                    // Sprint 23
+            trace_transpiler_decisions: false, // Sprint 26
+            transpiler_map: None,              // Sprint 24-28
         };
         let result = trace_command(&cmd, config);
         assert!(result.is_err());
@@ -1730,6 +1904,9 @@ mod tests {
             source: None,
             function_name: None,
             caller_name: None,
+            raw_arg1: Some(1),
+            raw_arg2: Some(2),
+            raw_arg3: Some(3),
         };
         assert_eq!(entry.name, "open");
         assert_eq!(entry.args.len(), 2);
@@ -1750,6 +1927,9 @@ mod tests {
             source: Some(source),
             function_name: Some("main".to_string()),
             caller_name: None,
+            raw_arg1: Some(0),
+            raw_arg2: Some(0),
+            raw_arg3: Some(0),
         };
         assert_eq!(entry.name, "read");
         assert!(entry.source.is_some());
@@ -1772,24 +1952,25 @@ mod tests {
             follow_forks: false,
             profile_self: false,
             function_time: false,
-            stats_extended: false,    // Sprint 19
-            anomaly_threshold: 3.0,   // Sprint 19
-            anomaly_realtime: false,  // Sprint 20
-            anomaly_window_size: 100, // Sprint 20
-            hpu_analysis: false,      // Sprint 21
-            hpu_cpu_only: false,      // Sprint 21
-            ml_anomaly: false,        // Sprint 23
-            ml_clusters: 3,           // Sprint 23
-            ml_compare: false,        // Sprint 23
-            ml_outliers: false,       // Sprint 22
-            ml_outlier_threshold: 0.1, // Sprint 22
-            ml_outlier_trees: 100,    // Sprint 22
-            explain: false,           // Sprint 22/23
-            dl_anomaly: false,        // Sprint 23
-            dl_threshold: 2.0,        // Sprint 23
-            dl_hidden_size: 3,        // Sprint 23
-            dl_epochs: 100,           // Sprint 23
-            transpiler_map: None,     // Sprint 24-28
+            stats_extended: false,             // Sprint 19
+            anomaly_threshold: 3.0,            // Sprint 19
+            anomaly_realtime: false,           // Sprint 20
+            anomaly_window_size: 100,          // Sprint 20
+            hpu_analysis: false,               // Sprint 21
+            hpu_cpu_only: false,               // Sprint 21
+            ml_anomaly: false,                 // Sprint 23
+            ml_clusters: 3,                    // Sprint 23
+            ml_compare: false,                 // Sprint 23
+            ml_outliers: false,                // Sprint 22
+            ml_outlier_threshold: 0.1,         // Sprint 22
+            ml_outlier_trees: 100,             // Sprint 22
+            explain: false,                    // Sprint 22/23
+            dl_anomaly: false,                 // Sprint 23
+            dl_threshold: 2.0,                 // Sprint 23
+            dl_hidden_size: 3,                 // Sprint 23
+            dl_epochs: 100,                    // Sprint 23
+            trace_transpiler_decisions: false, // Sprint 26
+            transpiler_map: None,              // Sprint 24-28
         };
         let result = attach_to_pid(999999, config);
         assert!(result.is_err());
