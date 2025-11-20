@@ -31,6 +31,14 @@ pub struct TracerConfig {
     pub ml_anomaly: bool,       // Sprint 23: ML-based anomaly detection using Aprender
     pub ml_clusters: usize,     // Sprint 23: Number of clusters for KMeans
     pub ml_compare: bool,       // Sprint 23: Compare ML results with z-score
+    pub ml_outliers: bool,      // Sprint 22: Isolation Forest outlier detection
+    pub ml_outlier_threshold: f32, // Sprint 22: Contamination threshold
+    pub ml_outlier_trees: usize,   // Sprint 22: Number of trees
+    pub explain: bool,          // Sprint 22: Enable explainability
+    pub dl_anomaly: bool,       // Sprint 23: Deep Learning Autoencoder anomaly detection
+    pub dl_threshold: f32,      // Sprint 23: Reconstruction error threshold (σ multiplier)
+    pub dl_hidden_size: usize,  // Sprint 23: Autoencoder hidden layer size
+    pub dl_epochs: usize,       // Sprint 23: Training epochs
     pub trace_transpiler_decisions: bool, // Sprint 26: Trace transpiler compile-time decisions
     pub transpiler_map: Option<crate::transpiler_map::TranspilerMap>, // Sprint 24-28: Transpiler source mapping
 }
@@ -202,8 +210,8 @@ fn initialize_tracers(config: &TracerConfig) -> Tracers {
     let (json_output, csv_output, csv_stats_output, html_output) =
         initialize_output_tracers(config);
 
-    // Create stats_tracker if statistics mode is enabled OR if ML anomaly analysis is enabled
-    let stats_tracker = if config.statistics_mode || config.ml_anomaly {
+    // Create stats_tracker if statistics mode is enabled OR if ML/DL anomaly analysis is enabled
+    let stats_tracker = if config.statistics_mode || config.ml_anomaly || config.ml_outliers || config.dl_anomaly {
         Some(crate::stats::StatsTracker::new())
     } else {
         None
@@ -524,6 +532,56 @@ fn generate_ml_analysis_for_json(
     }
 }
 
+/// Generate Isolation Forest analysis for JSON output (Sprint 22)
+fn generate_isolation_forest_analysis_for_json(
+    stats_tracker: &Option<crate::stats::StatsTracker>,
+    num_trees: usize,
+    contamination: f32,
+    explain: bool,
+) -> Option<crate::isolation_forest::OutlierReport> {
+    if let Some(ref tracker) = stats_tracker {
+        let mut data = std::collections::HashMap::new();
+        for (syscall_name, stats) in tracker.stats_map() {
+            let total_time_ns = stats.total_time_us * 1000;
+            data.insert(syscall_name.clone(), (stats.count, total_time_ns));
+        }
+        Some(crate::isolation_forest::analyze_outliers(
+            &data,
+            num_trees,
+            contamination,
+            explain,
+        ))
+    } else {
+        None
+    }
+}
+
+/// Generate Autoencoder analysis for JSON output (Sprint 23)
+fn generate_autoencoder_analysis_for_json(
+    stats_tracker: &Option<crate::stats::StatsTracker>,
+    hidden_size: usize,
+    epochs: usize,
+    threshold: f64,
+    explain: bool,
+) -> Option<crate::autoencoder::AutoencoderReport> {
+    if let Some(ref tracker) = stats_tracker {
+        let mut data = std::collections::HashMap::new();
+        for (syscall_name, stats) in tracker.stats_map() {
+            let total_time_ns = stats.total_time_us * 1000;
+            data.insert(syscall_name.clone(), (stats.count, total_time_ns));
+        }
+        Some(crate::autoencoder::analyze_anomalies(
+            &data,
+            hidden_size,
+            epochs,
+            threshold,
+            explain,
+        ))
+    } else {
+        None
+    }
+}
+
 /// Print CSV statistics output
 fn print_csv_stats(
     mut csv_stats: crate::csv_output::CsvStatsOutput,
@@ -603,6 +661,102 @@ fn print_ml_analysis(
     }
 }
 
+/// Print Isolation Forest outlier analysis report (Sprint 22)
+fn print_isolation_forest_analysis(
+    stats_tracker: &Option<crate::stats::StatsTracker>,
+    num_trees: usize,
+    contamination: f32,
+    explain: bool,
+) {
+    if let Some(ref tracker) = stats_tracker {
+        let mut data = std::collections::HashMap::new();
+        for (syscall_name, stats) in tracker.stats_map() {
+            let total_time_ns = stats.total_time_us * 1000;
+            data.insert(syscall_name.clone(), (stats.count, total_time_ns));
+        }
+
+        let report = crate::isolation_forest::analyze_outliers(&data, num_trees, contamination, explain);
+
+        // Print report
+        eprint!("\n=== Isolation Forest Anomaly Detection ===\n");
+        eprint!("Trees: {}, Contamination: {:.1}%, Samples: {}\n\n",
+                report.num_trees, report.contamination * 100.0, report.total_samples);
+
+        if report.outliers.is_empty() {
+            eprint!("No outliers detected.\n");
+        } else {
+            eprint!("Detected {} outlier(s):\n\n", report.outliers.len());
+            for outlier in &report.outliers {
+                eprint!("  {} (anomaly score: {:.3})\n", outlier.syscall, outlier.anomaly_score);
+                eprint!("    Avg duration: {:.2} μs, Calls: {}\n",
+                        outlier.avg_duration_us, outlier.call_count);
+
+                if explain && !outlier.feature_importance.is_empty() {
+                    eprint!("    Feature Importance:\n");
+                    for (feature, importance) in &outlier.feature_importance {
+                        eprint!("      {}: {:.1}%\n", feature, importance);
+                    }
+                }
+                eprint!("\n");
+            }
+        }
+        eprint!("=========================================\n\n");
+    }
+}
+
+/// Print Autoencoder anomaly detection report (Sprint 23)
+fn print_autoencoder_analysis(
+    stats_tracker: &Option<crate::stats::StatsTracker>,
+    hidden_size: usize,
+    epochs: usize,
+    threshold: f32,
+    explain: bool,
+) {
+    if let Some(ref tracker) = stats_tracker {
+        let mut data = std::collections::HashMap::new();
+        for (syscall_name, stats) in tracker.stats_map() {
+            let total_time_ns = stats.total_time_us * 1000;
+            data.insert(syscall_name.clone(), (stats.count, total_time_ns));
+        }
+
+        let report = crate::autoencoder::analyze_anomalies(
+            &data,
+            hidden_size,
+            epochs,
+            threshold as f64,
+            explain,
+        );
+
+        // Print report
+        eprint!("\n=== Autoencoder Anomaly Detection ===\n");
+        eprint!("Hidden Size: {}, Epochs: {}, Threshold: {:.2}σ\n",
+                report.hidden_size, report.epochs, threshold);
+        eprint!("Samples: {}, Adaptive Threshold: {:.4}\n\n",
+                report.total_samples, report.threshold);
+
+        if report.anomalies.is_empty() {
+            eprint!("No anomalies detected.\n");
+        } else {
+            eprint!("Detected {} anomal(y/ies):\n\n", report.anomalies.len());
+            for anomaly in &report.anomalies {
+                eprint!("  {} (reconstruction error: {:.4})\n",
+                        anomaly.syscall, anomaly.reconstruction_error);
+                eprint!("    Avg duration: {:.2} μs, Calls: {}\n",
+                        anomaly.avg_duration_us, anomaly.call_count);
+
+                if explain && !anomaly.feature_contributions.is_empty() {
+                    eprint!("    Feature Contributions to Error:\n");
+                    for (feature, contribution) in &anomaly.feature_contributions {
+                        eprint!("      {}: {:.1}%\n", feature, contribution);
+                    }
+                }
+                eprint!("\n");
+            }
+        }
+        eprint!("======================================\n\n");
+    }
+}
+
 /// Analysis configuration for print_summaries
 struct AnalysisConfig {
     stats_extended: bool,
@@ -612,6 +766,14 @@ struct AnalysisConfig {
     ml_anomaly: bool,
     ml_clusters: usize,
     ml_compare: bool,
+    ml_outliers: bool,           // Sprint 22: Isolation Forest outlier detection
+    ml_outlier_threshold: f32,   // Sprint 22: Contamination threshold
+    ml_outlier_trees: usize,     // Sprint 22: Number of trees
+    dl_anomaly: bool,            // Sprint 23: Deep Learning Autoencoder anomaly detection
+    dl_threshold: f32,           // Sprint 23: Reconstruction error threshold (σ multiplier)
+    dl_hidden_size: usize,       // Sprint 23: Hidden layer size
+    dl_epochs: usize,            // Sprint 23: Training epochs
+    explain: bool,               // Sprint 22/23: Enable explainability
 }
 
 /// Print optional profiling and tracing summaries
@@ -630,7 +792,6 @@ fn print_optional_summaries(
         detector.print_summary();
     }
 }
-
 /// Sprint 26: Print decision trace summary
 fn print_decision_trace_summary(decision_tracer: Option<crate::decision_trace::DecisionTracer>) {
     if let Some(tracer) = decision_tracer {
@@ -707,7 +868,7 @@ fn print_decision_trace_summary(decision_tracer: Option<crate::decision_trace::D
     }
 }
 
-/// Print analysis summaries (HPU, ML)
+/// Print analysis summaries (HPU, ML, Isolation Forest, Autoencoder)
 fn print_analysis_summaries(
     stats_tracker: &Option<crate::stats::StatsTracker>,
     analysis: &AnalysisConfig,
@@ -721,6 +882,23 @@ fn print_analysis_summaries(
             analysis.ml_clusters,
             analysis.ml_compare,
             analysis.anomaly_threshold,
+        );
+    }
+    if analysis.ml_outliers {
+        print_isolation_forest_analysis(
+            stats_tracker,
+            analysis.ml_outlier_trees,
+            analysis.ml_outlier_threshold,
+            analysis.explain,
+        );
+    }
+    if analysis.dl_anomaly {
+        print_autoencoder_analysis(
+            stats_tracker,
+            analysis.dl_hidden_size,
+            analysis.dl_epochs,
+            analysis.dl_threshold,
+            analysis.explain,
         );
     }
 }
@@ -756,6 +934,29 @@ fn print_summaries(tracers: Tracers, timing_mode: bool, exit_code: i32, analysis
                 generate_ml_analysis_for_json(&stats_tracker, analysis.ml_clusters)
             {
                 output.set_ml_analysis(report);
+            }
+        }
+        // Add Isolation Forest analysis to JSON if enabled (Sprint 22)
+        if analysis.ml_outliers {
+            if let Some(report) = generate_isolation_forest_analysis_for_json(
+                &stats_tracker,
+                analysis.ml_outlier_trees,
+                analysis.ml_outlier_threshold,
+                analysis.explain,
+            ) {
+                output.set_isolation_forest_analysis(report, analysis.explain);
+            }
+        }
+        // Add Autoencoder analysis to JSON if enabled (Sprint 23)
+        if analysis.dl_anomaly {
+            if let Some(report) = generate_autoencoder_analysis_for_json(
+                &stats_tracker,
+                analysis.dl_hidden_size,
+                analysis.dl_epochs,
+                analysis.dl_threshold as f64,
+                analysis.explain,
+            ) {
+                output.set_autoencoder_analysis(report, analysis.dl_threshold, analysis.explain);
             }
         }
         print_json_output(output, exit_code);
@@ -966,6 +1167,14 @@ fn trace_child(child: Pid, config: TracerConfig) -> Result<i32> {
             ml_anomaly: config.ml_anomaly,
             ml_clusters: config.ml_clusters,
             ml_compare: config.ml_compare,
+            ml_outliers: config.ml_outliers,             // Sprint 22
+            ml_outlier_threshold: config.ml_outlier_threshold, // Sprint 22
+            ml_outlier_trees: config.ml_outlier_trees,   // Sprint 22
+            dl_anomaly: config.dl_anomaly,               // Sprint 23
+            dl_threshold: config.dl_threshold,           // Sprint 23
+            dl_hidden_size: config.dl_hidden_size,       // Sprint 23
+            dl_epochs: config.dl_epochs,                 // Sprint 23
+            explain: config.explain,                     // Sprint 22/23
         },
     );
     std::process::exit(main_exit_code);
@@ -1634,6 +1843,14 @@ mod tests {
             ml_anomaly: false,                 // Sprint 23
             ml_clusters: 3,                    // Sprint 23
             ml_compare: false,                 // Sprint 23
+            ml_outliers: false,                // Sprint 22
+            ml_outlier_threshold: 0.1,         // Sprint 22
+            ml_outlier_trees: 100,             // Sprint 22
+            explain: false,                    // Sprint 22/23
+            dl_anomaly: false,                 // Sprint 23
+            dl_threshold: 2.0,                 // Sprint 23
+            dl_hidden_size: 3,                 // Sprint 23
+            dl_epochs: 100,                    // Sprint 23
             trace_transpiler_decisions: false, // Sprint 26
             transpiler_map: None,              // Sprint 24-28
         };
@@ -1664,6 +1881,14 @@ mod tests {
             ml_anomaly: false,                 // Sprint 23
             ml_clusters: 3,                    // Sprint 23
             ml_compare: false,                 // Sprint 23
+            ml_outliers: false,                // Sprint 22
+            ml_outlier_threshold: 0.1,         // Sprint 22
+            ml_outlier_trees: 100,             // Sprint 22
+            explain: false,                    // Sprint 22/23
+            dl_anomaly: false,                 // Sprint 23
+            dl_threshold: 2.0,                 // Sprint 23
+            dl_hidden_size: 3,                 // Sprint 23
+            dl_epochs: 100,                    // Sprint 23
             trace_transpiler_decisions: false, // Sprint 26
             transpiler_map: None,              // Sprint 24-28
         };
@@ -1736,6 +1961,14 @@ mod tests {
             ml_anomaly: false,                 // Sprint 23
             ml_clusters: 3,                    // Sprint 23
             ml_compare: false,                 // Sprint 23
+            ml_outliers: false,                // Sprint 22
+            ml_outlier_threshold: 0.1,         // Sprint 22
+            ml_outlier_trees: 100,             // Sprint 22
+            explain: false,                    // Sprint 22/23
+            dl_anomaly: false,                 // Sprint 23
+            dl_threshold: 2.0,                 // Sprint 23
+            dl_hidden_size: 3,                 // Sprint 23
+            dl_epochs: 100,                    // Sprint 23
             trace_transpiler_decisions: false, // Sprint 26
             transpiler_map: None,              // Sprint 24-28
         };
