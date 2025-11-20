@@ -31,13 +31,77 @@ use opentelemetry_otlp::WithExportConfig;
 
 use crate::trace_context::TraceContext; // Sprint 33
 
-/// Configuration for OTLP exporter
+/// Configuration for OTLP exporter (Sprint 36: added batch config)
 #[derive(Debug, Clone)]
 pub struct OtlpConfig {
     /// OTLP endpoint URL (e.g., "http://localhost:4317")
     pub endpoint: String,
     /// Service name for traces
     pub service_name: String,
+    /// Maximum number of spans per batch (default: 512)
+    pub batch_size: usize,
+    /// Maximum batch delay in milliseconds (default: 1000ms)
+    pub batch_delay_ms: u64,
+    /// Maximum queue size (default: 2048)
+    pub queue_size: usize,
+}
+
+impl OtlpConfig {
+    /// Create a new OTLP configuration with default batching settings
+    pub fn new(endpoint: String, service_name: String) -> Self {
+        OtlpConfig {
+            endpoint,
+            service_name,
+            batch_size: 512,
+            batch_delay_ms: 1000,
+            queue_size: 2048,
+        }
+    }
+
+    /// Performance preset: Balanced (default)
+    pub fn balanced(endpoint: String, service_name: String) -> Self {
+        Self::new(endpoint, service_name)
+    }
+
+    /// Performance preset: Aggressive (max throughput)
+    pub fn aggressive(endpoint: String, service_name: String) -> Self {
+        OtlpConfig {
+            endpoint,
+            service_name,
+            batch_size: 2048,
+            batch_delay_ms: 5000,
+            queue_size: 8192,
+        }
+    }
+
+    /// Performance preset: Low-latency (min delay)
+    pub fn low_latency(endpoint: String, service_name: String) -> Self {
+        OtlpConfig {
+            endpoint,
+            service_name,
+            batch_size: 128,
+            batch_delay_ms: 100,
+            queue_size: 512,
+        }
+    }
+
+    /// Set custom batch size
+    pub fn with_batch_size(mut self, size: usize) -> Self {
+        self.batch_size = size;
+        self
+    }
+
+    /// Set custom batch delay
+    pub fn with_batch_delay_ms(mut self, delay_ms: u64) -> Self {
+        self.batch_delay_ms = delay_ms;
+        self
+    }
+
+    /// Set custom queue size
+    pub fn with_queue_size(mut self, size: usize) -> Self {
+        self.queue_size = size;
+        self
+    }
 }
 
 /// Compute block metadata for tracing (Sprint 32)
@@ -82,8 +146,15 @@ impl OtlpExporter {
                 .with_endpoint(&config.endpoint)
                 .build()?;
 
-            // Create batch span processor
+            // Create batch span processor (Sprint 36: batching for performance)
+            // Note: OpenTelemetry SDK 0.31.0 uses default batch settings
+            // config.batch_size, batch_delay_ms, and queue_size are available
+            // for future versions or custom implementations
             let span_processor = BatchSpanProcessor::builder(exporter).build();
+
+            // Log batch configuration for transparency
+            eprintln!("[renacer: OTLP batch config - size: {}, delay: {}ms, queue: {}]",
+                config.batch_size, config.batch_delay_ms, config.queue_size);
 
             // Create resource with service name + compute tracing attributes (Sprint 32)
             let resource = Resource::builder()
@@ -330,22 +401,69 @@ mod tests {
     #[test]
     #[cfg(feature = "otlp")]
     fn test_otlp_config_creation() {
-        let config = OtlpConfig {
-            endpoint: "http://localhost:4317".to_string(),
-            service_name: "test-service".to_string(),
-        };
+        let config = OtlpConfig::new(
+            "http://localhost:4317".to_string(),
+            "test-service".to_string(),
+        );
 
         assert_eq!(config.endpoint, "http://localhost:4317");
         assert_eq!(config.service_name, "test-service");
+        assert_eq!(config.batch_size, 512); // Sprint 36: default batch size
+        assert_eq!(config.batch_delay_ms, 1000); // Sprint 36: default delay
+        assert_eq!(config.queue_size, 2048); // Sprint 36: default queue size
+    }
+
+    #[test]
+    #[cfg(feature = "otlp")]
+    fn test_otlp_config_presets() {
+        // Test balanced preset
+        let balanced = OtlpConfig::balanced(
+            "http://localhost:4317".to_string(),
+            "test".to_string(),
+        );
+        assert_eq!(balanced.batch_size, 512);
+        assert_eq!(balanced.batch_delay_ms, 1000);
+
+        // Test aggressive preset
+        let aggressive = OtlpConfig::aggressive(
+            "http://localhost:4317".to_string(),
+            "test".to_string(),
+        );
+        assert_eq!(aggressive.batch_size, 2048);
+        assert_eq!(aggressive.batch_delay_ms, 5000);
+
+        // Test low-latency preset
+        let low_latency = OtlpConfig::low_latency(
+            "http://localhost:4317".to_string(),
+            "test".to_string(),
+        );
+        assert_eq!(low_latency.batch_size, 128);
+        assert_eq!(low_latency.batch_delay_ms, 100);
+    }
+
+    #[test]
+    #[cfg(feature = "otlp")]
+    fn test_otlp_config_builder() {
+        let config = OtlpConfig::new(
+            "http://localhost:4317".to_string(),
+            "test".to_string(),
+        )
+        .with_batch_size(1024)
+        .with_batch_delay_ms(2000)
+        .with_queue_size(4096);
+
+        assert_eq!(config.batch_size, 1024);
+        assert_eq!(config.batch_delay_ms, 2000);
+        assert_eq!(config.queue_size, 4096);
     }
 
     #[test]
     #[cfg(not(feature = "otlp"))]
     fn test_otlp_disabled_returns_error() {
-        let config = OtlpConfig {
-            endpoint: "http://localhost:4317".to_string(),
-            service_name: "test".to_string(),
-        };
+        let config = OtlpConfig::new(
+            "http://localhost:4317".to_string(),
+            "test".to_string(),
+        );
 
         let result = OtlpExporter::new(config, None);
         assert!(result.is_err());

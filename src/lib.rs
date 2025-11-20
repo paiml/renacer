@@ -17,9 +17,11 @@ pub mod hpu;
 pub mod html_output;
 pub mod isolation_forest;
 pub mod json_output;
+pub mod lazy_span; // Sprint 36: Lazy span creation for performance
 pub mod ml_anomaly;
 pub mod otlp_exporter;
 pub mod profiling;
+pub mod span_pool; // Sprint 36: Memory pool for span allocations
 pub mod stack_unwind;
 pub mod stats;
 pub mod syscalls;
