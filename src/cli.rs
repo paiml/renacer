@@ -160,6 +160,35 @@ pub struct Cli {
     #[arg(long = "otlp-service-name", value_name = "NAME", default_value = "renacer")]
     pub otlp_service_name: String,
 
+    /// Enable compute block tracing (Trueno SIMD operations) - Sprint 32
+    ///
+    /// Exports statistical computation blocks (e.g., calculate_statistics) as
+    /// OpenTelemetry spans. Uses adaptive sampling: only traces blocks with
+    /// duration >= threshold (default: 100μs). Toyota Way compliant: safe by
+    /// default, cannot DoS tracing backend.
+    #[arg(long = "trace-compute")]
+    pub trace_compute: bool,
+
+    /// Trace ALL compute blocks (bypass adaptive sampling threshold) - Sprint 32
+    ///
+    /// Debug mode: traces even fast compute blocks (<100μs). Use for development
+    /// and debugging only. Can generate high span volume (~500 spans/sec).
+    /// Requires --trace-compute flag.
+    #[arg(long = "trace-compute-all", requires = "trace_compute")]
+    pub trace_compute_all: bool,
+
+    /// Custom threshold for compute block tracing (microseconds) - Sprint 32
+    ///
+    /// Only trace compute blocks with duration >= threshold. Default: 100μs.
+    /// Lower values increase span volume. Requires --trace-compute flag.
+    #[arg(
+        long = "trace-compute-threshold",
+        value_name = "MICROS",
+        default_value = "100",
+        requires = "trace_compute"
+    )]
+    pub trace_compute_threshold: u64,
+
     /// Enable debug tracing output to stderr
     #[arg(long = "debug")]
     pub debug: bool,
@@ -774,5 +803,95 @@ mod tests {
         ]);
         assert!(cli.timing);
         assert!(cli.otlp_endpoint.is_some());
+    }
+
+    // Sprint 32: Compute Block Tracing tests
+    #[test]
+    fn test_cli_trace_compute_flag() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "--trace-compute",
+            "--",
+            "echo",
+            "test",
+        ]);
+        assert!(cli.trace_compute);
+        assert!(!cli.trace_compute_all);
+        assert_eq!(cli.trace_compute_threshold, 100); // default
+    }
+
+    #[test]
+    fn test_cli_trace_compute_all_flag() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "--trace-compute",
+            "--trace-compute-all",
+            "--",
+            "echo",
+            "test",
+        ]);
+        assert!(cli.trace_compute);
+        assert!(cli.trace_compute_all);
+    }
+
+    #[test]
+    fn test_cli_trace_compute_threshold_custom() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "--trace-compute",
+            "--trace-compute-threshold",
+            "50",
+            "--",
+            "echo",
+            "test",
+        ]);
+        assert!(cli.trace_compute);
+        assert_eq!(cli.trace_compute_threshold, 50);
+    }
+
+    #[test]
+    fn test_cli_trace_compute_with_otlp() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "--otlp-endpoint",
+            "http://localhost:4317",
+            "--trace-compute",
+            "-c",
+            "--stats-extended",
+            "--",
+            "cargo",
+            "build",
+        ]);
+        assert!(cli.otlp_endpoint.is_some());
+        assert!(cli.trace_compute);
+        assert!(cli.statistics);
+        assert!(cli.stats_extended);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_cli_trace_compute_all_requires_trace_compute() {
+        // Should panic because --trace-compute-all requires --trace-compute
+        let _cli = Cli::parse_from([
+            "renacer",
+            "--trace-compute-all",
+            "--",
+            "echo",
+            "test",
+        ]);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_cli_trace_compute_threshold_requires_trace_compute() {
+        // Should panic because --trace-compute-threshold requires --trace-compute
+        let _cli = Cli::parse_from([
+            "renacer",
+            "--trace-compute-threshold",
+            "50",
+            "--",
+            "echo",
+            "test",
+        ]);
     }
 }
