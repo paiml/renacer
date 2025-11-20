@@ -43,6 +43,7 @@ pub struct TracerConfig {
     pub transpiler_map: Option<crate::transpiler_map::TranspilerMap>, // Sprint 24-28: Transpiler source mapping
     pub otlp_endpoint: Option<String>, // Sprint 30: OpenTelemetry OTLP endpoint
     pub otlp_service_name: String,     // Sprint 30: Service name for OTLP traces
+    pub trace_parent: Option<String>,  // Sprint 33: W3C Trace Context for distributed tracing
 }
 
 /// Attach to a running process by PID and trace syscalls
@@ -231,10 +232,25 @@ fn initialize_tracers(config: &TracerConfig) -> Tracers {
     // Initialize OTLP exporter if endpoint is provided (Sprint 30)
     #[cfg(feature = "otlp")]
     let otlp_exporter = if let Some(ref endpoint) = config.otlp_endpoint {
-        match crate::otlp_exporter::OtlpExporter::new(crate::otlp_exporter::OtlpConfig {
-            endpoint: endpoint.clone(),
-            service_name: config.otlp_service_name.clone(),
-        }) {
+        // Sprint 33: Extract trace context from CLI flag or environment
+        use crate::trace_context::TraceContext;
+
+        let trace_context = config.trace_parent
+            .as_ref()
+            .and_then(|s| TraceContext::parse(s).ok())
+            .or_else(|| TraceContext::from_env());
+
+        if trace_context.is_some() {
+            eprintln!("[renacer: Distributed tracing enabled - joining parent trace]");
+        }
+
+        match crate::otlp_exporter::OtlpExporter::new(
+            crate::otlp_exporter::OtlpConfig {
+                endpoint: endpoint.clone(),
+                service_name: config.otlp_service_name.clone(),
+            },
+            trace_context,
+        ) {
             Ok(exporter) => {
                 eprintln!("[renacer: OTLP export enabled to {}]", endpoint);
                 Some(exporter)
@@ -1958,6 +1974,7 @@ mod tests {
             transpiler_map: None,              // Sprint 24-28
             otlp_endpoint: None,               // Sprint 30
             otlp_service_name: "renacer".to_string(), // Sprint 30
+            trace_parent: None,                // Sprint 33
         };
         let result = trace_command(&empty, config);
         assert!(result.is_err());
@@ -1998,6 +2015,7 @@ mod tests {
             transpiler_map: None,              // Sprint 24-28
             otlp_endpoint: None,               // Sprint 30
             otlp_service_name: "renacer".to_string(), // Sprint 30
+            trace_parent: None,                // Sprint 33
         };
         let result = trace_command(&cmd, config);
         assert!(result.is_err());
@@ -2080,6 +2098,7 @@ mod tests {
             transpiler_map: None,              // Sprint 24-28
             otlp_endpoint: None,               // Sprint 30
             otlp_service_name: "renacer".to_string(), // Sprint 30
+            trace_parent: None,                // Sprint 33
         };
         let result = attach_to_pid(999999, config);
         assert!(result.is_err());

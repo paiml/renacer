@@ -292,6 +292,115 @@ Root Span: "process: ./transpiled-app" (kind: SERVER)
 - **Unified Timeline**: Single timeline view of decisions and syscalls
 - **Cross-Layer Tracing**: Connect high-level transpiler choices to low-level system calls
 
+#### Sprint 33: W3C Trace Context Propagation (Complete)
+
+**Goal:** Enable distributed tracing by propagating W3C Trace Context from instrumented applications to Renacer's syscall traces
+
+**W3C Standard Compliance** - Trace Context specification for distributed tracing
+
+**Implementation** (EXTREME TDD - RED → GREEN → REFACTOR cycle):
+- **Specification**: Created `docs/specifications/span-context-propagation-spec.md`
+  - W3C Trace Context standard (traceparent format)
+  - Multiple context injection methods (CLI, environment variables)
+  - OpenTelemetry integration architecture
+- **Core Module**: Created `src/trace_context.rs` (350 lines, 25 unit tests)
+  - `TraceContext` struct with W3C traceparent parser
+  - Environment variable extraction (TRACEPARENT, OTEL_TRACEPARENT)
+  - Validation: all-zero IDs, version checking, hex validation
+- **OTLP Integration**: Modified `src/otlp_exporter.rs`
+  - Added `remote_parent_context` field to store W3C context
+  - Modified `new()` to accept optional `TraceContext` parameter
+  - Modified `start_root_span()` to create child spans via `start_with_context()`
+  - Imported `TraceContextExt` trait for context propagation
+- **Tracer Integration**: Modified `src/tracer.rs`
+  - Added `trace_parent` field to TracerConfig
+  - Extract context from CLI flag or environment variables
+  - Log distributed tracing enablement
+- **CLI Integration**: Modified `src/cli.rs` and `src/main.rs`
+  - Added `--trace-parent` CLI flag
+  - Format: `version-trace_id-parent_id-trace_flags`
+  - Example: `00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01`
+
+**Features:**
+- **W3C Trace Context Standard**: Full compliance with W3C specification
+  - 128-bit trace ID (16 bytes)
+  - 64-bit parent span ID (8 bytes)
+  - 8-bit trace flags (sampling flag support)
+  - Version 00 (current W3C spec)
+- **Multiple Injection Methods**:
+  - `--trace-parent` CLI flag for explicit injection
+  - `TRACEPARENT` environment variable (auto-detected)
+  - `OTEL_TRACEPARENT` environment variable (OpenTelemetry convention)
+- **Parent-Child Span Relationships**:
+  - Renacer's root span becomes child of application span
+  - Same trace-id propagates across process boundaries
+  - Enables unified traces in Jaeger/Tempo/etc.
+- **Validation & Safety**:
+  - Reject all-zero trace IDs (W3C spec requirement)
+  - Reject all-zero parent IDs
+  - Validate version = 00
+  - Validate hex characters
+  - Graceful fallback: invalid context → new root trace
+- **Backward Compatibility**:
+  - No context provided → creates new root trace (existing behavior)
+  - Feature-gated with OTLP feature flag
+  - Zero impact when `--otlp-endpoint` not specified
+
+**CLI Flags:**
+```bash
+--trace-parent TRACEPARENT    # W3C Trace Context (version-trace_id-parent_id-flags)
+```
+
+**Results:**
+- **Tests**: 42 total (25 unit + 17 integration)
+  - Unit tests: test_parse_valid_traceparent, test_parse_invalid_format, test_all_zero_validation, etc.
+  - Integration tests: test_trace_parent_cli_flag_accepted, test_backward_compatibility, test_full_observability_stack, etc.
+  - 100% test pass rate ✅
+- **Complexity**: All functions ≤10 ✅
+- **Clippy**: Zero warnings ✅
+- **W3C Compliance**: Full standard compliance ✅
+
+**Examples:**
+```bash
+# Auto-detect from environment variable
+export TRACEPARENT="00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"
+renacer --otlp-endpoint http://localhost:4317 -- ./app
+
+# Explicit CLI injection
+renacer --otlp-endpoint http://localhost:4317 \
+        --trace-parent "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00" \
+        -- ./app
+
+# Full distributed tracing stack (Sprint 30-33)
+renacer --otlp-endpoint http://localhost:4317 \
+        --trace-parent "00-abc123-def456-01" \
+        --trace-compute \
+        --trace-transpiler-decisions \
+        -c --stats-extended \
+        -- ./app
+```
+
+**Span Hierarchy Example:**
+```
+Trace ID: 0af7651916cd43dd8448eb211c80319c
+
+  └─ HTTP Handler (app span - trace-id: abc123, span-id: def456)
+      └─ Database Query (app span - trace-id: abc123, span-id: ghi789)
+          └─ process: ./app (renacer span - trace-id: abc123, parent: ghi789, span-id: jkl012)
+              ├─ syscall: connect
+              ├─ syscall: write
+              └─ syscall: read
+```
+
+**Use Cases:**
+- **End-to-End Tracing**: Follow HTTP request from API gateway → app → syscalls
+- **Root Cause Analysis**: Correlate slow application operations with underlying syscalls
+- **Multi-Service Debugging**: Understand syscall behavior across distributed services
+- **Performance Attribution**: Link app-level spans with kernel-level operations
+
+**Commits:**
+- `df3d126`: Complete W3C Trace Context implementation (350 lines, 42 tests)
+
 #### Sprint 32: Block-Level Compute Tracing (Complete)
 
 **Goal:** Export block-level compute operations (Trueno SIMD) as OTLP spans for performance analysis
