@@ -5,6 +5,7 @@
 //! and comprehensive filtering.
 
 pub mod anomaly;
+pub mod autoencoder;
 pub mod chaos;
 pub mod cli;
 pub mod csv_output;
@@ -14,6 +15,7 @@ pub mod filter;
 pub mod function_profiler;
 pub mod hpu;
 pub mod html_output;
+pub mod isolation_forest;
 pub mod json_output;
 pub mod ml_anomaly;
 pub mod profiling;
