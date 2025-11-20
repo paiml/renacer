@@ -230,6 +230,27 @@ renacer --otlp-endpoint http://localhost:4317 \
         -T \
         -- ./app  # With timing for decision performance analysis
 
+# Block-level compute tracing (Sprint 32) - Trueno SIMD operations
+renacer --otlp-endpoint http://localhost:4317 \
+        --trace-compute \
+        -c --stats-extended \
+        -- cargo build  # Default: Adaptive sampling (trace blocks >=100μs)
+
+renacer --otlp-endpoint http://localhost:4317 \
+        --trace-compute \
+        --trace-compute-all \
+        -c -- ./app  # Debug mode: Trace ALL compute blocks (bypass sampling)
+
+renacer --otlp-endpoint http://localhost:4317 \
+        --trace-compute \
+        --trace-compute-threshold 50 \
+        -c -- ./app  # Custom threshold: Trace blocks >=50μs
+
+renacer --otlp-endpoint http://localhost:4317 \
+        --trace-compute \
+        --trace-transpiler-decisions \
+        -- ./depyler-app  # Full observability: compute + decisions + syscalls
+
 # Attach to running process
 renacer -p 1234
 ```
