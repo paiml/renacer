@@ -180,6 +180,118 @@ Root Span: "process: ./program" (kind: SERVER)
 - Memory overhead: Minimal (span buffers + Tokio runtime)
 - Network overhead: Batch export reduces HTTP/gRPC connections
 
+#### Sprint 31: Ruchy Runtime Integration - OTLP Decision Traces (Complete)
+
+**Goal:** Link OTLP traces with transpiler decision traces for unified end-to-end observability
+
+**Ruchy Integration Milestone Phase 5 Complete** - Decision traces as OpenTelemetry span events
+
+**Implementation** (EXTREME TDD - RED → GREEN → REFACTOR cycle):
+- **RED Phase**: Created 11 integration tests (tests/sprint31_ruchy_integration_tests.rs)
+- **GREEN Phase**: Added `record_decision()` to OtlpExporter and integrated with DecisionTracer
+- **REFACTOR Phase**: Documentation updates with unified tracing examples
+
+**Features:**
+- **Decision Traces as Span Events**: Transpiler decisions exported as OpenTelemetry span events
+  - Each decision becomes an event on the root process span
+  - Event name: `decision: <category>::<name>`
+- **Rich Event Attributes**:
+  - `decision.category` - Decision category (type_inference, optimization, etc.)
+  - `decision.name` - Decision name (infer_type, inline_function, etc.)
+  - `decision.result` - Decision result/outcome
+  - `decision.timestamp_us` - Timestamp in microseconds
+- **Unified Trace View**: Single trace containing both syscalls and decisions
+  - Root span: Process execution
+  - Child spans: Syscalls (as before)
+  - Span events: Transpiler decisions
+- **Full Feature Integration**:
+  - Works with `--otlp-endpoint` + `--trace-transpiler-decisions`
+  - Compatible with source maps (`--transpiler-map`)
+  - Compatible with syscall filtering (`-e trace=`)
+  - Backward compatible (OTLP without decisions, decisions without OTLP)
+
+**Architecture:**
+- `src/otlp_exporter.rs` - Added `record_decision()` method (lines 151-178)
+  - Accepts category, name, result, timestamp
+  - Creates span event on root span
+  - Handles both feature-gated and stub implementations
+- `src/tracer.rs` - Decision export integration (lines 948-959)
+  - Exports all decision traces before ending root span
+  - Iterates through DecisionTracer.traces()
+  - Converts JSON result values to strings
+- `tests/sprint31_ruchy_integration_tests.rs` - 11 comprehensive integration tests
+
+**Results:**
+- **Tests**: 263+ total (11 new for Sprint 31)
+  - 11 integration tests (tests/sprint31_ruchy_integration_tests.rs):
+    - test_otlp_with_decision_traces
+    - test_decision_as_span_event
+    - test_decision_correlation_with_syscalls
+    - test_otlp_with_source_map_and_decisions
+    - test_decision_span_event_attributes
+    - test_backward_compatibility_otlp_without_decisions
+    - test_backward_compatibility_decisions_without_otlp
+    - test_multiple_decisions_as_span_events
+    - test_decision_timing_in_span_events
+    - test_otlp_service_name_with_decisions
+    - test_decision_events_with_filtering
+  - Sprint 30: 12/12 tests passing ✅
+  - Sprint 31: 11/11 tests passing ✅
+  - 100% test pass rate ✅
+- **Complexity**: All functions ≤10 ✅
+- **Clippy**: Zero warnings ✅
+
+**Examples:**
+```bash
+# Export both syscalls and transpiler decisions to Jaeger
+renacer --otlp-endpoint http://localhost:4317 \
+        --trace-transpiler-decisions \
+        -- ./transpiled-app
+
+# With source maps for full observability
+renacer --otlp-endpoint http://localhost:4317 \
+        --trace-transpiler-decisions \
+        --transpiler-map app.sourcemap.json \
+        -- ./transpiled-app
+
+# With timing for decision performance analysis
+renacer --otlp-endpoint http://localhost:4317 \
+        --trace-transpiler-decisions \
+        -T \
+        -- ./transpiled-app
+
+# Filter syscalls but keep all decisions
+renacer --otlp-endpoint http://localhost:4317 \
+        --trace-transpiler-decisions \
+        -e trace=write \
+        -- ./transpiled-app
+```
+
+**Span Structure with Decisions:**
+```
+Root Span: "process: ./transpiled-app" (kind: SERVER)
+  ├─ Attributes: process.command, process.pid
+  ├─ Span Event: "decision: type_inference::infer_variable_type"
+  │   └─ Attributes: decision.category=type_inference
+  │       decision.name=infer_variable_type
+  │       decision.result=i32
+  │       decision.timestamp_us=1234567890
+  ├─ Span Event: "decision: optimization::inline_function"
+  │   └─ Attributes: decision.category=optimization
+  │       decision.name=inline_function
+  │       decision.result=inlined
+  │       decision.timestamp_us=1234567950
+  └─ Child Span: "syscall: write" (kind: INTERNAL)
+      └─ Attributes: syscall.name=write, syscall.result=22, ...
+```
+
+**Integration Benefits:**
+- **End-to-End Observability**: See both runtime behavior (syscalls) and compile-time decisions in one trace
+- **Performance Analysis**: Correlate slow syscalls with transpiler decisions that generated them
+- **Debugging**: Understand which transpiler decisions led to specific runtime behavior
+- **Unified Timeline**: Single timeline view of decisions and syscalls
+- **Cross-Layer Tracing**: Connect high-level transpiler choices to low-level system calls
+
 #### Sprint 24-28: Transpiler Decision Tracing & Source Mapping (Complete)
 
 **Goal:** Full end-to-end transpiler source mapping and decision trace capture for Depyler (Python→Rust), TypeScript→Rust, and Decy (C→Rust) transpilers.

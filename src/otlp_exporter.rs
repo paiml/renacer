@@ -148,6 +148,35 @@ impl OtlpExporter {
         span.end();
     }
 
+    /// Record a transpiler decision as a span event (Sprint 31)
+    pub fn record_decision(
+        &mut self,
+        category: &str,
+        name: &str,
+        result: Option<&str>,
+        timestamp_us: u64,
+    ) {
+        if let Some(ref mut span) = self.root_span {
+            // Create attributes for the decision event
+            let mut attributes = vec![
+                KeyValue::new("decision.category", category.to_string()),
+                KeyValue::new("decision.name", name.to_string()),
+                KeyValue::new("decision.timestamp_us", timestamp_us as i64),
+            ];
+
+            // Add result if available
+            if let Some(res) = result {
+                attributes.push(KeyValue::new("decision.result", res.to_string()));
+            }
+
+            // Add event to the root span
+            span.add_event(
+                format!("decision: {}::{}", category, name),
+                attributes,
+            );
+        }
+    }
+
     /// Finish the root span
     pub fn end_root_span(&mut self, exit_code: i32) {
         if let Some(mut span) = self.root_span.take() {
@@ -199,6 +228,15 @@ impl OtlpExporter {
         _result: i64,
         _source_file: Option<&str>,
         _source_line: Option<u32>,
+    ) {
+    }
+
+    pub fn record_decision(
+        &mut self,
+        _category: &str,
+        _name: &str,
+        _result: Option<&str>,
+        _timestamp_us: u64,
     ) {
     }
 
