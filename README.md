@@ -6,10 +6,10 @@ Renacer (Spanish: "to be reborn") is a next-generation binary inspection and tra
 
 ## Project Status
 
-**Current Version:** 0.5.0 (Sprint 30 complete - OpenTelemetry OTLP Integration)
-**Status:** Production-Ready + SIMD-Accelerated Statistics + Real-Time Anomaly Detection + HPU Analysis + HTML Reports + Multi-Transpiler Debugging + Distributed Tracing
+**Current Version:** 0.5.0 (Sprint 31 complete - Ruchy Runtime Integration)
+**Status:** Production-Ready + SIMD-Accelerated Statistics + Real-Time Anomaly Detection + HPU Analysis + HTML Reports + Multi-Transpiler Debugging + Distributed Tracing + Unified Decision Traces
 **TDG Score:** 95.1/100 (A+ grade)
-**Test Coverage:** 252+ tests (all passing)
+**Test Coverage:** 263+ tests (all passing)
 **Specification:** [docs/specifications/deep-strace-rust-wasm-binary-spec.md](docs/specifications/deep-strace-rust-wasm-binary-spec.md)
 
 ## Features
@@ -109,6 +109,18 @@ Renacer (Spanish: "to be reborn") is a next-generation binary inspection and tra
 - ✅ **Zero Overhead** - No impact when disabled (opt-in via `--otlp-endpoint`)
 - ✅ **Full Integration** - Compatible with all Renacer features (filtering, timing, source correlation)
 
+### Ruchy Runtime Integration (Sprint 31) 🆕
+- ✅ **Unified Tracing** - Link OTLP traces with transpiler decision traces
+- ✅ **Decision Span Events** - Export transpiler decisions as OpenTelemetry span events
+- ✅ **End-to-End Observability** - Single trace view of both syscalls and decisions
+- ✅ **Rich Event Attributes** - Category, name, result, timestamp for each decision
+- ✅ **Cross-Layer Correlation** - Connect high-level transpiler choices to low-level syscalls
+- ✅ **Unified Timeline** - See decisions and syscalls on the same timeline in Jaeger/Tempo
+- ✅ **Backward Compatible** - Works with or without OTLP, works with or without decisions
+- ✅ **Full Integration** - Compatible with source maps, filtering, timing
+- ✅ **Performance Analysis** - Correlate slow syscalls with transpiler decisions
+- ✅ **Debugging Aid** - Understand which transpiler decisions led to runtime behavior
+
 ### Quality Infrastructure (v0.2.0-0.5.0)
 - ✅ **Property-based testing** - 670+ test cases via proptest
 - ✅ **Pre-commit hooks** - 5 quality gates (format, clippy, tests, audit, bash)
@@ -203,6 +215,20 @@ renacer --otlp-endpoint http://localhost:4317 --otlp-service-name my-app -- ./pr
 renacer -s --otlp-endpoint http://localhost:4317 -- ./program  # With source correlation
 renacer -T --otlp-endpoint http://localhost:4317 -- ./program  # With timing
 renacer -e trace=file --otlp-endpoint http://localhost:4317 -- ./program  # With filtering
+
+# Unified tracing: OTLP + Transpiler decisions (Sprint 31)
+renacer --otlp-endpoint http://localhost:4317 --trace-transpiler-decisions -- ./transpiled-app
+# See both syscalls and transpiler decisions in Jaeger UI
+
+renacer --otlp-endpoint http://localhost:4317 \
+        --trace-transpiler-decisions \
+        --transpiler-map app.sourcemap.json \
+        -- ./depyler-app  # Full observability: decisions + syscalls + source maps
+
+renacer --otlp-endpoint http://localhost:4317 \
+        --trace-transpiler-decisions \
+        -T \
+        -- ./app  # With timing for decision performance analysis
 
 # Attach to running process
 renacer -p 1234

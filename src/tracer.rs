@@ -945,6 +945,19 @@ fn print_summaries(tracers: Tracers, timing_mode: bool, exit_code: i32, analysis
         mut otlp_exporter, // Sprint 30: OTLP exporter
     } = tracers;
 
+    // Sprint 31: Export decision traces to OTLP (before ending root span)
+    #[cfg(feature = "otlp")]
+    if let (Some(ref mut exporter), Some(ref tracer)) = (&mut otlp_exporter, &decision_tracer) {
+        for trace in tracer.traces() {
+            exporter.record_decision(
+                &trace.category,
+                &trace.name,
+                trace.result.as_ref().and_then(|v| v.as_str()),
+                trace.timestamp_us,
+            );
+        }
+    }
+
     // Sprint 30: End root span and shutdown OTLP exporter
     #[cfg(feature = "otlp")]
     if let Some(ref mut exporter) = otlp_exporter {
