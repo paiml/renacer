@@ -41,6 +41,7 @@ pub struct OtlpConfig {
 /// OTLP exporter for syscall traces
 #[cfg(feature = "otlp")]
 pub struct OtlpExporter {
+    _runtime: tokio::runtime::Runtime, // Tokio runtime for async OTLP operations
     _provider: TracerProvider,
     tracer: opentelemetry_sdk::trace::Tracer,
     root_span: Option<opentelemetry_sdk::trace::Span>,
@@ -50,30 +51,40 @@ pub struct OtlpExporter {
 impl OtlpExporter {
     /// Create a new OTLP exporter
     pub fn new(config: OtlpConfig) -> Result<Self> {
-        // Create OTLP exporter
-        let exporter = opentelemetry_otlp::SpanExporter::builder()
-            .with_tonic()
-            .with_endpoint(&config.endpoint)
-            .build()?;
+        // Create a Tokio runtime for OTLP async operations
+        let runtime = tokio::runtime::Runtime::new()
+            .map_err(|e| anyhow::anyhow!("Failed to create Tokio runtime: {}", e))?;
 
-        // Create batch span processor
-        let span_processor = BatchSpanProcessor::builder(exporter).build();
+        // Build OTLP exporter within the runtime context
+        let (provider, tracer) = runtime.block_on(async {
+            // Create OTLP exporter
+            let exporter = opentelemetry_otlp::SpanExporter::builder()
+                .with_tonic()
+                .with_endpoint(&config.endpoint)
+                .build()?;
 
-        // Create resource with service name
-        let resource = Resource::builder()
-            .with_service_name(config.service_name.clone())
-            .build();
+            // Create batch span processor
+            let span_processor = BatchSpanProcessor::builder(exporter).build();
 
-        // Create tracer provider
-        let provider = TracerProvider::builder()
-            .with_span_processor(span_processor)
-            .with_resource(resource)
-            .build();
+            // Create resource with service name
+            let resource = Resource::builder()
+                .with_service_name(config.service_name.clone())
+                .build();
 
-        // Get tracer
-        let tracer = provider.tracer("renacer");
+            // Create tracer provider
+            let provider = TracerProvider::builder()
+                .with_span_processor(span_processor)
+                .with_resource(resource)
+                .build();
+
+            // Get tracer
+            let tracer = provider.tracer("renacer");
+
+            Ok::<_, anyhow::Error>((provider, tracer))
+        })?;
 
         Ok(OtlpExporter {
+            _runtime: runtime,
             _provider: provider,
             tracer,
             root_span: None,
