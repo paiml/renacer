@@ -39,7 +39,7 @@
 
 use anyhow::Result;
 
-use crate::otlp_exporter::{GpuKernel, OtlpExporter};
+use crate::otlp_exporter::OtlpExporter;
 
 /// Configuration for CUDA kernel tracing
 ///
@@ -349,6 +349,7 @@ pub struct CudaDeviceInfo {
 
 // Stub implementation when CUDA tracing feature is disabled
 #[cfg(not(feature = "cuda-tracing"))]
+#[derive(Debug)]
 pub struct CudaTracerWrapper;
 
 #[cfg(not(feature = "cuda-tracing"))]

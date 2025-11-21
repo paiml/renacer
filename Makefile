@@ -16,7 +16,23 @@ test: ## Run tests (fast, no coverage)
 	@echo "🧪 Running tests..."
 	@cargo test --quiet
 
-coverage: ## Generate HTML coverage report and open in browser
+test-fast: ## Run tests quickly with nextest (parallel, < 5min target)
+	@echo "🧪 Running fast tests with nextest..."
+	@if command -v cargo-nextest >/dev/null 2>&1; then \
+		PROPTEST_CASES=50 RUST_TEST_THREADS=$$(nproc) cargo nextest run \
+			--workspace \
+			--status-level skip \
+			--failure-output immediate; \
+	else \
+		echo "⚠️  cargo-nextest not found. Installing..."; \
+		cargo install cargo-nextest; \
+		PROPTEST_CASES=50 RUST_TEST_THREADS=$$(nproc) cargo nextest run \
+			--workspace \
+			--status-level skip \
+			--failure-output immediate; \
+	fi
+
+coverage: ## Generate HTML coverage report and open in browser (max 10min target)
 	@echo "📊 Running comprehensive test coverage analysis..."
 	@echo "🔍 Checking for cargo-llvm-cov..."
 	@which cargo-llvm-cov > /dev/null 2>&1 || (echo "📦 Installing cargo-llvm-cov..." && cargo install cargo-llvm-cov --locked)
@@ -29,8 +45,8 @@ coverage: ## Generate HTML coverage report and open in browser
 	@mkdir -p target/coverage/html
 	@echo "⚙️  Temporarily disabling global cargo config (mold/custom linker breaks coverage)..."
 	@test -f ~/.cargo/config.toml && mv ~/.cargo/config.toml ~/.cargo/config.toml.cov-backup || true
-	@echo "🧪 Phase 1: Running tests with instrumentation (no report)..."
-	@cargo llvm-cov --no-report test --workspace --all-features || true
+	@echo "🧪 Phase 1: Running tests with instrumentation (reduced proptest cases)..."
+	@PROPTEST_CASES=20 RUST_TEST_THREADS=$$(nproc) timeout 600 cargo llvm-cov --no-report test --workspace --all-features || true
 	@echo "📊 Phase 2: Generating coverage reports..."
 	@cargo llvm-cov report --html --output-dir target/coverage/html || echo "⚠️  No coverage data generated"
 	@cargo llvm-cov report --lcov --output-path target/coverage/lcov.info || echo "⚠️  LCOV generation skipped"
