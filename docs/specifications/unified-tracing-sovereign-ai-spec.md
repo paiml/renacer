@@ -1227,6 +1227,479 @@ chaos-full = ["dep:loom", "dep:arbitrary"]
 
 ---
 
+## Appendix E: Code Review Guidelines
+
+This section provides a comprehensive review checklist for colleagues evaluating Renacer's implementation against this specification.
+
+### E.1 Architecture Review
+
+**Multi-Layer Observability (Section 3.2)**
+
+- [ ] **Layer 1 (Syscalls)**: Verify `src/tracer.rs` implements ptrace correctly
+  - Check syscall argument decoding for 450+ syscalls
+  - Validate file descriptor tracking across forks
+  - Confirm signal handling (SIGKILL, SIGTERM, SIGCHLD)
+  - Review timing precision (nanosecond timestamps via CLOCK_MONOTONIC)
+
+- [ ] **Layer 2 (File I/O)**: Review `src/profiling.rs` for semantic correlation
+  - Validate file operation grouping (open → read* → close)
+  - Check FD lifecycle management
+  - Verify path resolution for relative paths
+
+- [ ] **Layer 3 (Compute Blocks)**: Examine Trueno integration
+  - Review `src/otlp_exporter.rs:record_compute_block()`
+  - Validate SIMD/GPU backend discrimination
+  - Check FLOP counting accuracy
+  - Verify adaptive sampling implementation
+
+- [ ] **Layer 4 (GPU Kernels)**: Assess GPU tracing modules
+  - `src/gpu_tracer.rs` (wgpu cross-platform)
+  - `src/cuda_tracer.rs` (NVIDIA CUPTI)
+  - Verify memory transfer tracking (Host→Device, Device→Host)
+  - Check workgroup/dispatch size recording
+
+**Review Commands**:
+```bash
+# Check layer implementations
+rg "impl.*Tracer" src/
+rg "pub fn record_compute_block" src/
+rg "pub fn record_gpu_kernel" src/
+
+# Verify feature flags
+grep -A 5 "^\[features\]" Cargo.toml
+```
+
+### E.2 Formal Semantics Review (Section 6)
+
+**Happens-Before Ordering (Section 6.2)**
+
+- [ ] **Lamport Clock Implementation**: Review timestamp ordering
+  - Check `src/trace_context.rs:LamportClock`
+  - Verify `tick()` increments on local events
+  - Validate `sync()` updates on message receive
+  - Confirm atomic operations use `SeqCst` ordering
+
+- [ ] **Causal Chain Construction**: Examine span parent relationships
+  - Review `src/otlp_exporter.rs:set_parent_span_id()`
+  - Verify GPU kernels link to launching syscalls (ioctl)
+  - Check transitive closure computation
+
+**Test Coverage**:
+```bash
+# Find Lamport clock tests
+rg "test.*lamport\|test.*happens_before" tests/
+
+# Check causal ordering tests
+cargo test trace_context --lib -- --nocapture
+```
+
+**Critical Invariants to Verify**:
+```rust
+// In src/trace_context.rs
+assert!(parent_timestamp < child_timestamp);  // Temporal consistency
+assert!(trace_id == parent_trace_id);         // Same trace
+assert!(span_id != parent_span_id);           // Distinct spans
+```
+
+### E.3 Performance Review (Section 9)
+
+**Overhead Analysis (Section 9.1)**
+
+- [ ] **Benchmark Validation**: Reproduce overhead measurements
+  ```bash
+  # Run syscall overhead benchmark
+  cargo bench --bench syscall_overhead
+
+  # Compare with/without tracing
+  hyperfine --warmup 3 \
+    './target/release/app' \
+    'renacer -- ./target/release/app'
+  ```
+
+- [ ] **Memory Pool Efficiency**: Review `src/span_pool.rs`
+  - Check pool hit rate (target: >95%)
+  - Verify zero-copy `Cow<'static, str>` usage
+  - Validate pool growth strategy (bounded capacity)
+  - Test pool under high load (10,000+ spans/sec)
+
+**Expected Results**:
+| Metric | Target | How to Verify |
+|--------|--------|---------------|
+| Syscall overhead | <2% | `cargo bench syscall_overhead` |
+| GPU tracing overhead | <5% | `cargo bench --features gpu-tracing` |
+| Memory pool hit rate | >95% | `cargo test span_pool -- --nocapture` |
+| Peak memory (10K spans) | <250KB | `heaptrack ./target/release/renacer` |
+
+### E.4 Integration Review (Section 5)
+
+**Batuta Validation Integration (Section 5.1)**
+
+- [ ] **Semantic Equivalence Algorithm**: Review validation logic
+  - Check `src/tracer.rs:compare_traces()`
+  - Verify syscall sequence diff algorithm
+  - Validate fuzzy matching tolerance (5% default)
+  - Test with real Python → Rust transpilations
+
+**Integration Test**:
+```bash
+# Clone Batuta and test integration
+git clone https://github.com/paiml/Batuta ../Batuta
+cd ../Batuta
+
+# Run Batuta Phase 4 validation with Renacer
+batuta validate \
+  --original ./examples/python/simple.py \
+  --transpiled ./examples/rust/simple \
+  --trace-tool ../renacer/target/release/renacer
+```
+
+**Trueno Compute Integration (Section 5.2)**
+
+- [ ] **Backend Selection Hooks**: Verify Trueno integration
+  ```bash
+  # Check Trueno features in Cargo.toml
+  grep "trueno.*=" Cargo.toml
+
+  # Test compute block tracing
+  cargo test --features otlp trueno_integration
+  ```
+
+- [ ] **Adaptive Sampling**: Review sampling policy
+  - Check `src/otlp_exporter.rs:should_trace_compute_block()`
+  - Verify threshold logic (>100μs default)
+  - Test sample rate for fast operations (1% default)
+
+### E.5 OpenTelemetry Compliance (Section 7.1)
+
+**OTLP Export Validation**
+
+- [ ] **Span Format Conformance**: Verify OTLP protobuf structure
+  ```bash
+  # Start Jaeger test environment
+  docker run -d --name jaeger-review \
+    -e COLLECTOR_OTLP_ENABLED=true \
+    -p 16686:16686 -p 4317:4317 \
+    jaegertracing/all-in-one:latest
+
+  # Export trace and inspect
+  renacer --otlp-endpoint http://localhost:4317 -- ./test_app
+
+  # View at http://localhost:16686
+  ```
+
+- [ ] **W3C Trace Context**: Check propagation correctness
+  - Review `src/trace_context.rs:propagate_trace_context()`
+  - Verify `traceparent` header format: `00-{trace_id}-{span_id}-01`
+  - Test cross-process trace propagation
+
+**OTLP Validation Checklist**:
+```bash
+# Check OTLP span attributes
+rg "KeyValue::new" src/otlp_exporter.rs
+
+# Verify resource attributes
+rg "service\.name|compute\.library" src/otlp_exporter.rs
+
+# Test OTLP export
+cargo test otlp --features otlp -- --nocapture
+```
+
+### E.6 Security Review
+
+**Memory Safety**
+
+- [ ] **Unsafe Code Audit**: Minimize and justify unsafe blocks
+  ```bash
+  # Find all unsafe blocks
+  rg "unsafe" src/ --stats
+
+  # Expected: <20 unsafe blocks, mostly in:
+  # - src/tracer.rs (ptrace FFI)
+  # - src/cuda_tracer.rs (CUPTI FFI, feature-gated)
+  # - src/gpu_tracer.rs (GPU context access, feature-gated)
+  ```
+
+- [ ] **Unsafe Justification**: Each unsafe block must have:
+  1. Safety comment explaining invariants
+  2. Reference to C API documentation
+  3. Boundary checks before pointer dereference
+  4. Validation tests
+
+**Example Review** (src/tracer.rs):
+```rust
+// ✅ GOOD: Documented safety invariant
+unsafe {
+    // SAFETY: ptrace guarantees valid register state after PTRACE_GETREGS.
+    // We validate pid exists and is traced before calling.
+    // See ptrace(2) man page section on PTRACE_GETREGS.
+    ptrace::getregs(pid)?
+}
+
+// ❌ BAD: No safety comment
+unsafe {
+    *(ptr as *mut u64) = value;
+}
+```
+
+**Fuzzing Target Review**:
+```bash
+# Check fuzz targets
+ls fuzz/fuzz_targets/
+
+# Expected targets:
+# - filter_parser.rs (syscall filter parsing)
+# - dwarf_parser.rs (DWARF debug info)
+
+# Run fuzz tests (requires cargo-fuzz)
+cargo +nightly fuzz run filter_parser -- -max_total_time=60
+```
+
+### E.7 Test Coverage Review
+
+**Coverage Targets (Per Code-Coverage Protocol)**
+
+- [ ] **Overall Coverage**: Target 93.76% (current), goal 95%
+  ```bash
+  make coverage
+  # Opens HTML report showing per-module coverage
+  ```
+
+- [ ] **Critical Modules** (must be >90%):
+  - [ ] `src/tracer.rs` (syscall tracing core)
+  - [ ] `src/otlp_exporter.rs` (OTLP export)
+  - [ ] `src/trace_context.rs` (span context propagation)
+  - [ ] `src/gpu_tracer.rs` (GPU tracing, if GPU available)
+  - [ ] `src/decision_trace.rs` (transpiler decisions)
+
+- [ ] **Property-Based Tests**: Verify proptest usage
+  ```bash
+  # Check property test count
+  rg "proptest!" tests/ | wc -l
+
+  # Run with increased cases
+  PROPTEST_CASES=1000 cargo test
+  ```
+
+- [ ] **Integration Tests**: Validate end-to-end scenarios
+  ```bash
+  # Count integration tests
+  ls tests/sprint*.rs | wc -l
+
+  # Run specific integration test suites
+  cargo test sprint34_integration  # OTLP export
+  cargo test sprint33_span_context # Trace propagation
+  cargo test sprint37_gpu_kernel   # GPU tracing
+  ```
+
+**Mutation Testing**:
+```bash
+# Run mutation tests (requires cargo-mutants)
+cargo mutants --file src/tracer.rs
+cargo mutants --file src/otlp_exporter.rs
+
+# Target: >75% mutation kill rate
+```
+
+### E.8 Documentation Review
+
+**Specification Alignment**
+
+- [ ] **API Documentation**: Verify rustdoc coverage
+  ```bash
+  cargo doc --no-deps --open
+
+  # Check for missing docs
+  cargo rustdoc -- -D missing-docs
+  ```
+
+- [ ] **Example Code**: Validate all examples compile and run
+  ```bash
+  # Test all examples
+  for example in examples/*.rs; do
+    cargo run --example "$(basename "$example" .rs)" || echo "FAIL: $example"
+  done
+  ```
+
+- [ ] **Book Chapters**: Check for spec/implementation drift
+  ```bash
+  # List book chapters
+  ls docs/book/src/*.md
+
+  # Chapters should cover:
+  # - Getting Started
+  # - Architecture
+  # - GPU Tracing
+  # - Batuta Integration
+  # - Performance Tuning
+  ```
+
+### E.9 Reproducibility Review
+
+**Build Verification**
+
+- [ ] **Clean Build**: Test from scratch
+  ```bash
+  cargo clean
+  cargo build --release
+  cargo test --all-targets --all-features
+  ```
+
+- [ ] **Feature Combinations**: Test all feature permutations
+  ```bash
+  # Minimal build (no features)
+  cargo build --no-default-features
+
+  # OTLP only
+  cargo build --features otlp
+
+  # GPU tracing
+  cargo build --features gpu-tracing
+
+  # Full features
+  cargo build --all-features
+  ```
+
+- [ ] **Platform Testing**: Validate cross-platform builds
+  ```bash
+  # Linux x86_64 (primary)
+  cargo build --target x86_64-unknown-linux-gnu
+
+  # Linux ARM64 (Raspberry Pi, AWS Graviton)
+  cross build --target aarch64-unknown-linux-gnu
+
+  # macOS (limited, no ptrace)
+  # Expected: Some tests skipped on macOS
+  ```
+
+### E.10 Pre-Commit Validation
+
+**Quality Gates** (must pass before merge):
+
+```bash
+# Run all pre-commit checks
+.git/hooks/pre-commit
+
+# Expected: <30 seconds total
+# Gates:
+# 1. Format check (cargo fmt)
+# 2. Clippy (zero warnings with -D warnings)
+# 3. Lib tests (389 tests pass)
+# 4. bashrs quality check (Makefile)
+# 5. Security audit (cargo audit)
+```
+
+**Continuous Integration**:
+```bash
+# Simulate CI pipeline locally
+make ci
+
+# Expected workflow:
+# 1. Format check
+# 2. Clippy
+# 3. Build (all features)
+# 4. Test (all targets)
+# 5. Bench (smoke tests)
+# 6. Doc generation
+```
+
+---
+
+## Appendix F: Peer Review Checklist
+
+Use this checklist when conducting a formal code review:
+
+### Section 1: Specification Compliance
+
+- [ ] Architecture matches Section 3 (multi-layer observability)
+- [ ] Formal semantics implemented per Section 6 (Lamport clocks)
+- [ ] Performance targets met per Section 9 (<5% overhead)
+- [ ] Integration points functional per Section 5 (Batuta, Trueno)
+- [ ] OTLP export conforms to Section 7.1
+
+### Section 2: Code Quality
+
+- [ ] Test coverage ≥93% (current: 93.76%, target: 95%)
+- [ ] Zero clippy warnings with `-D warnings`
+- [ ] Property-based tests for critical paths
+- [ ] Mutation score ≥75% on core modules
+- [ ] Pre-commit hook completes in <30s
+
+### Section 3: Safety & Security
+
+- [ ] Unsafe blocks justified with safety comments
+- [ ] Fuzzing targets for parser code
+- [ ] Input validation on all external data
+- [ ] No panics in release builds (use `Result` instead)
+- [ ] Memory leaks checked with valgrind/miri
+
+### Section 4: Performance
+
+- [ ] Syscall overhead <2% (measured via `cargo bench`)
+- [ ] GPU tracing overhead <5%
+- [ ] Memory pool hit rate >95%
+- [ ] Zero-copy optimizations used (`Cow`, `Arc`)
+- [ ] Adaptive sampling prevents tracing DoS
+
+### Section 5: Integration
+
+- [ ] Batuta validation workflow functional
+- [ ] Trueno compute tracing hooks working
+- [ ] OTLP export compatible with Jaeger/Tempo
+- [ ] W3C Trace Context propagation correct
+- [ ] Cross-process tracing functional
+
+### Section 6: Documentation
+
+- [ ] Rustdoc coverage 100% for public APIs
+- [ ] Examples compile and run
+- [ ] Book chapters aligned with spec
+- [ ] CHANGELOG.md updated
+- [ ] Migration guide provided (if breaking changes)
+
+### Section 7: Reproducibility
+
+- [ ] Clean build succeeds
+- [ ] All feature combinations tested
+- [ ] Cross-platform compatibility verified
+- [ ] Docker image builds successfully
+- [ ] Installation instructions validated
+
+---
+
+## Reviewer Signature
+
+**Reviewer Name**: _________________________
+
+**Date**: _________________________
+
+**Approval**: [ ] Approved  [ ] Approved with comments  [ ] Revisions required
+
+**Comments**:
+```
+[Space for detailed review comments]
+```
+
+**Checklist Summary**:
+- Architecture Review: ___/10 sections complete
+- Formal Semantics: ___/5 invariants verified
+- Performance: ___/5 benchmarks validated
+- Integration: ___/5 integration points tested
+- Security: ___/5 safety checks passed
+- Test Coverage: ___/5 coverage targets met
+- Documentation: ___/3 doc sections reviewed
+- Reproducibility: ___/3 build tests passed
+- Pre-Commit: ___/5 quality gates passed
+
+**Overall Assessment**: ___/51 checks passed
+
+**Recommendation**:
+- [ ] Merge to main
+- [ ] Merge after minor fixes
+- [ ] Requires major revisions
+- [ ] Reject
+
+---
+
 **End of Specification**
 
 For questions, issues, or contributions:
@@ -1247,3 +1720,20 @@ For questions, issues, or contributions:
   note={Version 0.5.1}
 }
 ```
+
+> ## Gemini Code Review
+>
+> This is an exceptionally well-structured and comprehensive technical specification. It clearly outlines the motivation, architecture, and implementation of a sophisticated, unified tracing system for a sovereign AI stack.
+>
+> Here are some of the key strengths:
+>
+> *   **Clarity and Organization:** The document is logically structured, starting with a high-level executive summary and progressively diving into deeper technical details. The table of contents is clear and the use of headings and subheadings makes it easy to navigate.
+> *   **Strong Motivation:** It does an excellent job of explaining the "why" behind the project, clearly articulating the limitations of existing tools and the unique requirements of a "sovereign AI" environment.
+> *   **Detailed Architecture:** The multi-layer observability model is well-defined, and the data flow and correlation mechanisms are explained with clear diagrams and code snippets.
+> *   **Formal Rigor:** The inclusion of a "Formal Semantics" section with definitions for traces, causal ordering, and semantic equivalence adds a layer of precision that is often missing from similar documents.
+> *   **Practical Implementation Details:** The specification doesn't just stay at a high level. It delves into practical implementation choices like OTLP, W3C Trace Context, and adaptive sampling, showing a clear path from theory to practice.
+> *   **Rich Use Cases:** The use cases for semantic equivalence, performance profiling, and anomaly detection are concrete and demonstrate the real-world value of the system.
+> *   **Performance-Aware Design:** The document shows a strong focus on performance, with detailed overhead analysis, memory footprint considerations, and scalability benchmarks.
+> *   **Excellent Referencing:** The use of footnotes to cite influential papers and relevant technologies adds credibility and provides avenues for deeper exploration.
+>
+> This document serves as an excellent model for how to write a technical specification. It is thorough, well-reasoned, and provides a clear blueprint for development. There are no obvious gaps or points of confusion. It's an impressive piece of technical writing.
