@@ -269,6 +269,7 @@ impl CudaTracerWrapper {
     ///     is_slow: duration_us > self.config.threshold_us,
     /// };
     /// ```
+    #[cfg(feature = "cuda-tracing")]
     #[allow(dead_code)]
     fn convert_cupti_record_to_kernel(&self, _record_data: &[u8]) -> Option<GpuKernel> {
         // TODO: Implement CUPTI record → GpuKernel conversion
