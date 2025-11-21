@@ -271,7 +271,8 @@ impl OtlpExporter {
             );
 
             // Create resource with service name + compute tracing attributes (Sprint 32 + 37)
-            let resource_attrs = vec![
+            #[cfg_attr(not(feature = "gpu-tracing"), allow(unused_mut))]
+            let mut resource_attrs = vec![
                 // Sprint 32: Static SIMD compute tracing attributes at Resource level (Toyota Way: no waste)
                 KeyValue::new("compute.library", "trueno"),
                 KeyValue::new("compute.library.version", "0.4.0"),
