@@ -123,6 +123,26 @@ pub struct ComputeBlock {
     pub is_slow: bool,
 }
 
+/// GPU kernel metadata for tracing (Sprint 37)
+///
+/// Represents a single GPU kernel execution (compute shader, render pass, etc.)
+/// captured via wgpu timestamp queries.
+#[derive(Debug, Clone)]
+pub struct GpuKernel {
+    /// Kernel name (e.g., "sum_aggregation", "matrix_multiply")
+    pub kernel: String,
+    /// Total duration in microseconds
+    pub duration_us: u64,
+    /// GPU backend (always "wgpu" for Phase 1)
+    pub backend: &'static str,
+    /// Workgroup size for compute shaders (e.g., "[256,1,1]")
+    pub workgroup_size: Option<String>,
+    /// Number of elements processed (if known)
+    pub elements: Option<usize>,
+    /// Whether this kernel exceeded the slow threshold (>100μs)
+    pub is_slow: bool,
+}
+
 /// OTLP exporter for syscall traces
 #[cfg(feature = "otlp")]
 pub struct OtlpExporter {
@@ -161,15 +181,24 @@ impl OtlpExporter {
                 config.batch_size, config.batch_delay_ms, config.queue_size
             );
 
-            // Create resource with service name + compute tracing attributes (Sprint 32)
+            // Create resource with service name + compute tracing attributes (Sprint 32 + 37)
+            let resource_attrs = vec![
+                // Sprint 32: Static SIMD compute tracing attributes at Resource level (Toyota Way: no waste)
+                KeyValue::new("compute.library", "trueno"),
+                KeyValue::new("compute.library.version", "0.4.0"),
+                KeyValue::new("compute.tracing.abstraction", "block_level"),
+            ];
+
+            // Sprint 37: GPU kernel tracing attributes (only if gpu-tracing feature enabled)
+            #[cfg(feature = "gpu-tracing")]
+            {
+                resource_attrs.push(KeyValue::new("gpu.library", "wgpu"));
+                resource_attrs.push(KeyValue::new("gpu.tracing.abstraction", "kernel_level"));
+            }
+
             let resource = Resource::builder()
                 .with_service_name(config.service_name.clone())
-                .with_attributes(vec![
-                    // Static compute tracing attributes at Resource level (Toyota Way: no waste)
-                    KeyValue::new("compute.library", "trueno"),
-                    KeyValue::new("compute.library.version", "0.4.0"),
-                    KeyValue::new("compute.tracing.abstraction", "block_level"),
-                ])
+                .with_attributes(resource_attrs)
                 .build();
 
             // Create tracer provider
@@ -322,6 +351,47 @@ impl OtlpExporter {
                 KeyValue::new("compute.elements", block.elements as i64),
                 KeyValue::new("compute.is_slow", block.is_slow),
             ])
+            .start(&self.tracer);
+
+        span.set_status(Status::Ok);
+        span.end();
+    }
+
+    /// Record a GPU kernel execution as a span (Sprint 37)
+    ///
+    /// Exports GPU kernel timing captured via wgpu-profiler timestamp queries.
+    /// Follows Sprint 32's adaptive sampling pattern (only trace if duration > threshold).
+    ///
+    /// # Arguments
+    ///
+    /// * `kernel` - Metadata about the GPU kernel execution
+    ///
+    /// # Adaptive Sampling
+    ///
+    /// This method should only be called if duration >= threshold (default 100μs).
+    /// The caller (GpuProfilerWrapper) handles sampling decisions.
+    pub fn record_gpu_kernel(&self, kernel: GpuKernel) {
+        let mut span_attrs = vec![
+            // Only dynamic attributes on span (Toyota Way: no attribute explosion)
+            KeyValue::new("gpu.backend", kernel.backend.to_string()),
+            KeyValue::new("gpu.kernel", kernel.kernel.clone()),
+            KeyValue::new("gpu.duration_us", kernel.duration_us as i64),
+            KeyValue::new("gpu.is_slow", kernel.is_slow),
+        ];
+
+        // Optional attributes
+        if let Some(ref wg_size) = kernel.workgroup_size {
+            span_attrs.push(KeyValue::new("gpu.workgroup_size", wg_size.clone()));
+        }
+        if let Some(elements) = kernel.elements {
+            span_attrs.push(KeyValue::new("gpu.elements", elements as i64));
+        }
+
+        let mut span = self
+            .tracer
+            .span_builder(format!("gpu_kernel: {}", kernel.kernel))
+            .with_kind(SpanKind::Internal)
+            .with_attributes(span_attrs)
             .start(&self.tracer);
 
         span.set_status(Status::Ok);

@@ -13,6 +13,7 @@ pub mod decision_trace;
 pub mod dwarf;
 pub mod filter;
 pub mod function_profiler;
+pub mod gpu_tracer; // Sprint 37: GPU kernel-level tracing for wgpu
 pub mod hpu;
 pub mod html_output;
 pub mod isolation_forest;
