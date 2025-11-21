@@ -5,6 +5,89 @@ All notable changes to Renacer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1] - 2025-11-21
+
+### Added
+
+#### Documentation
+
+**Comprehensive Book Chapters:**
+- **Section 5.2: Adaptive Backend Selection** (docs/book/section52-adaptive-backend.md)
+  - Complete documentation for AdaptiveBackend system
+  - Backend selection algorithm (GPU/SIMD/Scalar)
+  - Performance profiling and hot-path detection (>10k calls/sec)
+  - Trueno integration patterns
+  - 19 tests documented with coverage metrics
+  - OTLP export capabilities
+
+- **Renacer Complete Guide** (docs/book/renacer-complete-guide.md)
+  - Consolidated guide for entire unified tracing system
+  - System architecture with unified trace model
+  - Feature matrix covering Sprint 37-40
+  - Quick start guide for all 8 major components
+  - 3 real-world use cases (ML training debug, transpilation validation, SIMD optimization)
+  - API reference with code examples
+  - Performance tuning guide
+  - Deployment guide (Jaeger, Grafana Cloud, Docker)
+  - Troubleshooting section
+
+- **Red Team Quality Assessment** (docs/qa/red-team-report.md)
+  - Comprehensive security and architecture assessment
+  - Architectural analysis with strengths/weaknesses
+  - Code quality analysis (testing strategy, unsafe code usage)
+  - Security analysis with threat model
+  - 10 peer-reviewed references
+
+#### Security
+
+**Comprehensive Security Documentation** (docs/SECURITY.md, 587 lines):
+
+**Red Team Recommendations - All Implemented:**
+
+1. **Dependency Auditing**
+   - ✅ cargo-audit integrated in pre-commit hooks
+   - Zero critical vulnerabilities (1 allowed warning for yanked crate)
+   - Documented vulnerability scanning workflow
+
+2. **Fuzzing Infrastructure**
+   - ✅ cargo-fuzz setup with filter_parser.rs target
+   - Documented fuzzing best practices
+   - LLVM libFuzzer integration
+   - Corpus management guidelines
+
+3. **Unsafe Code Audit**
+   - ✅ All 4 unsafe blocks documented with safety invariants
+   - **Block 1:** Memory-mapped decision trace (writable) - src/decision_trace.rs
+     - Risk: Low
+     - Invariants: File descriptor validity, no concurrent writers, RAII lifetime
+   - **Block 2:** Memory-mapped DWARF data (read-only) - src/dwarf.rs
+     - Risk: Low
+     - Invariants: Read-only guarantee, lifetime safety
+   - **Block 3:** Process forking (ptrace setup) - src/tracer.rs
+     - Risk: Medium (inherent fork complexity)
+     - Invariants: No pre-fork threads, async-signal-safe operations
+   - **Block 4:** CString FFI (CUDA CUPTI) - src/cuda_tracer.rs
+     - Risk: Low (commented-out documentation example)
+     - Invariants: Pointer validity, null-termination
+
+4. **CI Security Scanning**
+   - ✅ Pre-commit hooks with security checks
+   - cargo clippy -D warnings (deny all warnings)
+   - Dependabot integration for automated updates
+   - Documented CI/CD security workflow
+
+**Additional Security Documentation:**
+- Threat model with 4 attack vectors analyzed
+- Input validation security (ELF, DWARF, MessagePack parsers)
+- Ptrace privilege requirements and mitigation strategies
+- Resource exhaustion defenses (adaptive sampling, timeouts)
+- Security considerations for all major features
+- Security contact and responsible disclosure policy
+
+### Changed
+- Updated version from 0.5.1 to 0.6.1
+- Enhanced security posture with comprehensive documentation
+
 ## [0.6.0] - 2025-11-21
 
 ### Added
