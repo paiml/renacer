@@ -328,7 +328,7 @@ mod tests {
     #[test]
     fn test_pool_disabled() {
         let mut pool = SpanPool::new(SpanPoolConfig::disabled());
-        assert_eq!(pool.is_enabled(), false);
+        assert!(!pool.is_enabled());
         assert_eq!(pool.capacity(), 0);
 
         // Acquire should always allocate

@@ -7,6 +7,7 @@ use std::time::Duration;
 
 /// Simulate span data for export
 #[derive(Clone)]
+#[allow(dead_code)] // Benchmark mock data
 struct ExportSpan {
     trace_id: String,
     span_id: String,

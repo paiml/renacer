@@ -5,7 +5,6 @@
 //       from instrumented applications to Renacer's syscall traces
 
 use assert_cmd::Command;
-use predicates::prelude::*;
 
 /// Test 1: --trace-parent CLI flag is accepted
 #[test]

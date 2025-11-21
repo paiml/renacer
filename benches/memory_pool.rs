@@ -9,6 +9,7 @@ use std::borrow::Cow;
 
 /// Simulate span data structure (Sprint 36: with zero-copy Cow)
 #[derive(Clone)]
+#[allow(dead_code)] // Benchmark mock data
 struct SpanData {
     name: Cow<'static, str>,
     attributes: Vec<(Cow<'static, str>, String)>,
@@ -16,6 +17,7 @@ struct SpanData {
     duration: u64,
 }
 
+#[allow(dead_code)] // Benchmark mock helpers
 impl SpanData {
     fn new(name: &'static str) -> Self {
         SpanData {
