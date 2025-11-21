@@ -49,6 +49,8 @@
 
 use anyhow::Result;
 
+#[cfg(feature = "gpu-tracing")]
+use crate::otlp_exporter::GpuKernel;
 use crate::otlp_exporter::OtlpExporter;
 
 /// Configuration for GPU kernel tracing

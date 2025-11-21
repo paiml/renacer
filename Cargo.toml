@@ -67,6 +67,9 @@ tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros"], optiona
 wgpu = { version = "23.0", optional = true }
 wgpu-profiler = { version = "0.18", optional = true }
 
+# CUDA kernel tracing (Sprint 38)
+cudarc = { version = "0.18", optional = true, features = ["f16", "cuda-version-from-build-system"] }
+
 [dev-dependencies]
 # Testing
 assert_cmd = "2.0"
@@ -131,6 +134,9 @@ otlp = ["dep:opentelemetry", "dep:opentelemetry_sdk", "dep:opentelemetry-otlp", 
 
 # GPU kernel-level tracing (Sprint 37)
 gpu-tracing = ["dep:wgpu", "dep:wgpu-profiler", "otlp"]
+
+# CUDA kernel-level tracing (Sprint 38)
+cuda-tracing = ["dep:cudarc", "otlp"]
 
 [dependencies.loom]
 version = "0.7"

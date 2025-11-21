@@ -9,6 +9,7 @@ pub mod autoencoder;
 pub mod chaos;
 pub mod cli;
 pub mod csv_output;
+pub mod cuda_tracer; // Sprint 38: CUDA kernel-level tracing via CUPTI
 pub mod decision_trace;
 pub mod dwarf;
 pub mod filter;
