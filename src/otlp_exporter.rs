@@ -143,6 +143,95 @@ pub struct GpuKernel {
     pub is_slow: bool,
 }
 
+/// GPU memory transfer direction (Sprint 39 - Phase 4)
+///
+/// Represents the direction of CPU↔GPU data movement.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TransferDirection {
+    /// CPU → GPU (buffer upload, write_buffer)
+    CpuToGpu,
+    /// GPU → CPU (buffer download/readback, map_async)
+    GpuToCpu,
+}
+
+impl TransferDirection {
+    /// Get string representation of transfer direction
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            TransferDirection::CpuToGpu => "cpu_to_gpu",
+            TransferDirection::GpuToCpu => "gpu_to_cpu",
+        }
+    }
+}
+
+/// GPU memory transfer metadata for tracing (Sprint 39 - Phase 4)
+///
+/// Represents a single CPU↔GPU memory transfer operation captured via wall-clock timing.
+/// Tracks buffer uploads (CPU→GPU) and downloads (GPU→CPU) to identify PCIe bandwidth
+/// bottlenecks.
+#[derive(Debug, Clone)]
+pub struct GpuMemoryTransfer {
+    /// Transfer name/label (e.g., "mesh_data_upload", "framebuffer_readback")
+    pub label: String,
+    /// Transfer direction (CPU→GPU or GPU→CPU)
+    pub direction: TransferDirection,
+    /// Number of bytes transferred
+    pub bytes: usize,
+    /// Total duration in microseconds
+    pub duration_us: u64,
+    /// Calculated bandwidth in MB/s
+    pub bandwidth_mbps: f64,
+    /// Optional buffer usage hint (e.g., "VERTEX", "UNIFORM", "STORAGE")
+    pub buffer_usage: Option<String>,
+    /// Whether this transfer exceeded the slow threshold (>100μs)
+    pub is_slow: bool,
+}
+
+impl GpuMemoryTransfer {
+    /// Create a new GPU memory transfer record
+    ///
+    /// Automatically calculates bandwidth from bytes and duration.
+    ///
+    /// # Arguments
+    ///
+    /// * `label` - Transfer name/label
+    /// * `direction` - Transfer direction (CPU→GPU or GPU→CPU)
+    /// * `bytes` - Number of bytes transferred
+    /// * `duration_us` - Transfer duration in microseconds
+    /// * `buffer_usage` - Optional buffer usage hint
+    /// * `threshold_us` - Slow threshold for adaptive sampling
+    ///
+    /// # Returns
+    ///
+    /// New GpuMemoryTransfer with calculated bandwidth
+    pub fn new(
+        label: String,
+        direction: TransferDirection,
+        bytes: usize,
+        duration_us: u64,
+        buffer_usage: Option<String>,
+        threshold_us: u64,
+    ) -> Self {
+        // Calculate bandwidth: MB/s = (bytes / 1_048_576) / (duration_us / 1_000_000)
+        // Simplified: (bytes * 1_000_000) / (duration_us * 1_048_576)
+        let bandwidth_mbps = if duration_us > 0 {
+            (bytes as f64 * 1_000_000.0) / (duration_us as f64 * 1_048_576.0)
+        } else {
+            0.0
+        };
+
+        GpuMemoryTransfer {
+            label,
+            direction,
+            bytes,
+            duration_us,
+            bandwidth_mbps,
+            buffer_usage,
+            is_slow: duration_us > threshold_us,
+        }
+    }
+}
+
 /// OTLP exporter for syscall traces
 #[cfg(feature = "otlp")]
 pub struct OtlpExporter {
@@ -390,6 +479,48 @@ impl OtlpExporter {
         let mut span = self
             .tracer
             .span_builder(format!("gpu_kernel: {}", kernel.kernel))
+            .with_kind(SpanKind::Internal)
+            .with_attributes(span_attrs)
+            .start(&self.tracer);
+
+        span.set_status(Status::Ok);
+        span.end();
+    }
+
+    /// Record a GPU memory transfer as a span (Sprint 39 - Phase 4)
+    ///
+    /// Exports GPU memory transfer timing (CPU↔GPU) captured via wall-clock measurement.
+    /// Follows Sprint 37's adaptive sampling pattern (only trace if duration > threshold).
+    ///
+    /// # Arguments
+    ///
+    /// * `transfer` - Metadata about the GPU memory transfer
+    ///
+    /// # Adaptive Sampling
+    ///
+    /// This method should only be called if duration >= threshold (default 100μs).
+    /// The caller (transfer tracking wrapper) handles sampling decisions.
+    pub fn record_gpu_transfer(&self, transfer: GpuMemoryTransfer) {
+        let mut span_attrs = vec![
+            // Only dynamic attributes on span (Toyota Way: no attribute explosion)
+            KeyValue::new(
+                "gpu_transfer.direction",
+                transfer.direction.as_str().to_string(),
+            ),
+            KeyValue::new("gpu_transfer.bytes", transfer.bytes as i64),
+            KeyValue::new("gpu_transfer.duration_us", transfer.duration_us as i64),
+            KeyValue::new("gpu_transfer.bandwidth_mbps", transfer.bandwidth_mbps),
+            KeyValue::new("gpu_transfer.is_slow", transfer.is_slow),
+        ];
+
+        // Optional buffer usage
+        if let Some(ref usage) = transfer.buffer_usage {
+            span_attrs.push(KeyValue::new("gpu_transfer.buffer_usage", usage.clone()));
+        }
+
+        let mut span = self
+            .tracer
+            .span_builder(format!("gpu_transfer: {}", transfer.label))
             .with_kind(SpanKind::Internal)
             .with_attributes(span_attrs)
             .start(&self.tracer);
