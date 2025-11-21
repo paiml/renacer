@@ -40,27 +40,37 @@ coverage: ## Generate HTML coverage report and open in browser (max 10min target
 		echo "📦 Installing llvm-tools-preview..."; \
 		rustup component add llvm-tools-preview; \
 	fi
-	@echo "🧹 Cleaning old coverage data..."
-	@cargo llvm-cov clean --workspace
-	@mkdir -p target/coverage/html
-	@echo "⚙️  Temporarily disabling global cargo config (mold/custom linker breaks coverage)..."
-	@test -f ~/.cargo/config.toml && mv ~/.cargo/config.toml ~/.cargo/config.toml.cov-backup || true
-	@echo "🧪 Phase 1: Running tests with instrumentation (reduced proptest cases)..."
-	@PROPTEST_CASES=20 RUST_TEST_THREADS=$$(nproc) timeout 600 cargo llvm-cov --no-report test --workspace --all-features || true
-	@echo "📊 Phase 2: Generating coverage reports..."
-	@cargo llvm-cov report --html --output-dir target/coverage/html || echo "⚠️  No coverage data generated"
-	@cargo llvm-cov report --lcov --output-path target/coverage/lcov.info || echo "⚠️  LCOV generation skipped"
-	@echo "⚙️  Restoring global cargo config..."
-	@test -f ~/.cargo/config.toml.cov-backup && mv ~/.cargo/config.toml.cov-backup ~/.cargo/config.toml || true
-	@echo ""
-	@echo "📊 Coverage Summary:"
-	@cargo llvm-cov report --summary-only || echo "Run 'cargo test' to generate coverage data first"
-	@echo ""
-	@echo "📊 Coverage reports generated:"
-	@echo "- HTML: target/coverage/html/index.html"
-	@echo "- LCOV: target/coverage/lcov.info"
-	@echo ""
-	@xdg-open target/coverage/html/index.html 2>/dev/null || \
+	@echo "🔍 Detecting GPU hardware..."
+	@GPU_FEATURES=""; \
+	if command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi >/dev/null 2>&1; then \
+		echo "✅ NVIDIA GPU detected - enabling gpu-tracing and cuda-tracing features"; \
+		GPU_FEATURES="--features gpu-tracing,cuda-tracing"; \
+		export CUDA_VISIBLE_DEVICES=0; \
+	else \
+		echo "⚠️  No NVIDIA GPU detected - running without GPU features"; \
+		GPU_FEATURES=""; \
+	fi; \
+	echo "🧹 Cleaning old coverage data..."; \
+	cargo llvm-cov clean --workspace; \
+	mkdir -p target/coverage/html; \
+	echo "⚙️  Temporarily disabling global cargo config (mold/custom linker breaks coverage)..."; \
+	test -f ~/.cargo/config.toml && mv ~/.cargo/config.toml ~/.cargo/config.toml.cov-backup || true; \
+	echo "🧪 Phase 1: Running tests with instrumentation (reduced proptest cases)..."; \
+	PROPTEST_CASES=20 RUST_TEST_THREADS=$$(nproc) timeout 600 cargo llvm-cov --no-report test --workspace $$GPU_FEATURES || true; \
+	echo "📊 Phase 2: Generating coverage reports..."; \
+	cargo llvm-cov report --html --output-dir target/coverage/html || echo "⚠️  No coverage data generated"; \
+	cargo llvm-cov report --lcov --output-path target/coverage/lcov.info || echo "⚠️  LCOV generation skipped"; \
+	echo "⚙️  Restoring global cargo config..."; \
+	test -f ~/.cargo/config.toml.cov-backup && mv ~/.cargo/config.toml.cov-backup ~/.cargo/config.toml || true; \
+	echo ""; \
+	echo "📊 Coverage Summary:"; \
+	cargo llvm-cov report --summary-only || echo "Run 'cargo test' to generate coverage data first"; \
+	echo ""; \
+	echo "📊 Coverage reports generated:"; \
+	echo "- HTML: target/coverage/html/index.html"; \
+	echo "- LCOV: target/coverage/lcov.info"; \
+	echo ""; \
+	xdg-open target/coverage/html/index.html 2>/dev/null || \
 		open target/coverage/html/index.html 2>/dev/null || \
 		echo "✅ Open target/coverage/html/index.html in your browser"
 
