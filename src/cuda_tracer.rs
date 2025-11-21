@@ -39,6 +39,10 @@
 
 use anyhow::Result;
 
+#[cfg(feature = "cuda-tracing")]
+use crate::otlp_exporter::{GpuKernel, OtlpExporter};
+
+#[cfg(not(feature = "cuda-tracing"))]
 use crate::otlp_exporter::OtlpExporter;
 
 /// Configuration for CUDA kernel tracing
