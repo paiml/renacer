@@ -376,8 +376,8 @@ mod tests {
         ];
 
         let tree = IsolationTree::build(&samples, 10);
-        let outlier_path = tree.path_length(&vec![10.0, 20.0]);
-        let normal_path = tree.path_length(&vec![1.0, 2.0]);
+        let outlier_path = tree.path_length(&[10.0, 20.0]);
+        let normal_path = tree.path_length(&[1.0, 2.0]);
 
         // Outlier should have shorter path
         assert!(outlier_path < normal_path);
@@ -396,8 +396,8 @@ mod tests {
         let mut forest = IsolationForest::new(100, Some(4));
         forest.fit(&samples);
 
-        let outlier_score = forest.anomaly_score(&vec![10.0, 20.0]);
-        let normal_score = forest.anomaly_score(&vec![1.0, 2.0]);
+        let outlier_score = forest.anomaly_score(&[10.0, 20.0]);
+        let normal_score = forest.anomaly_score(&[1.0, 2.0]);
 
         // Outlier should have higher score
         assert!(
@@ -437,7 +437,7 @@ mod tests {
 
         let report = analyze_outliers(&data, 100, 0.1, false);
 
-        assert!(report.outliers.len() > 0);
+        assert!(!report.outliers.is_empty());
         assert_eq!(report.total_samples, 3);
     }
 

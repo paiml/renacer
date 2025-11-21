@@ -13,7 +13,7 @@
 
 #[cfg(all(feature = "gpu-tracing", feature = "otlp"))]
 mod gpu_tracing_tests {
-    use renacer::gpu_tracer::{GpuProfilerWrapper, GpuTracerConfig};
+    use renacer::gpu_tracer::GpuTracerConfig;
     use renacer::otlp_exporter::{GpuKernel, OtlpConfig, OtlpExporter};
 
     /// Test that slow GPU kernels (>100μs) are traced

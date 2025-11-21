@@ -512,7 +512,7 @@ mod tests {
         let report = analyze_anomalies(&data, 2, 100, 1.5, false);
 
         assert!(
-            report.anomalies.len() > 0,
+            !report.anomalies.is_empty(),
             "Should detect at least one anomaly"
         );
         assert_eq!(report.total_samples, 7);

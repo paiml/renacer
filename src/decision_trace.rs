@@ -1049,9 +1049,8 @@ mod tests {
             // We can't predict exact hash but can verify it's consistent
             let decision_id = generate_decision_id("optimization", "inline_candidate", "foo.rb", 3);
 
-            // Should be 64-bit value
+            // Should be 64-bit non-zero value
             assert!(decision_id > 0);
-            assert!(decision_id <= u64::MAX);
         }
 
         #[test]
@@ -1340,7 +1339,7 @@ mod tests {
             let manifest = DecisionManifest::load_from_file(&manifest_path).unwrap();
             assert_eq!(manifest.version, "2.0.0");
             assert_eq!(manifest.git_commit, Some("abc123".to_string()));
-            assert!(manifest.entries.len() > 0);
+            assert!(!manifest.entries.is_empty());
         }
 
         // Sprint 27 Phase 2: Property-based tests for hash collision resistance

@@ -1,7 +1,6 @@
 // Sprint 30: OpenTelemetry OTLP Export Integration Tests
 // EXTREME TDD: RED phase - Integration tests for OTLP trace export
 
-use predicates::prelude::*;
 use std::fs;
 use tempfile::TempDir;
 
