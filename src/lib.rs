@@ -24,6 +24,7 @@ pub mod lazy_span; // Sprint 36: Lazy span creation for performance
 pub mod ml_anomaly;
 pub mod otlp_exporter;
 pub mod profiling;
+pub mod semantic_equivalence; // Sprint 40: Semantic Equivalence (Specification Section 6.3)
 pub mod span_pool; // Sprint 36: Memory pool for span allocations
 pub mod stack_unwind;
 pub mod stats;
@@ -32,3 +33,4 @@ pub mod trace_context; // Sprint 33: W3C Trace Context propagation
 pub mod tracer;
 pub mod transpiler_map;
 pub mod unified_trace; // Sprint 40: Unified Trace Model (Specification Section 3.1)
+pub mod validation_engine; // Sprint 40: ValidationEngine for Batuta Integration (Specification Section 5.1)
