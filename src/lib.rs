@@ -4,6 +4,7 @@
 //! in Rust binaries, with support for DWARF debug information, function profiling,
 //! and comprehensive filtering.
 
+pub mod adaptive_backend; // Sprint 40: Adaptive Backend Selection (Specification Section 5.2)
 pub mod adaptive_sampler; // Sprint 40: Adaptive Sampling (Specification Section 7.3)
 pub mod anomaly;
 pub mod autoencoder;
