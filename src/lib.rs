@@ -4,6 +4,7 @@
 //! in Rust binaries, with support for DWARF debug information, function profiling,
 //! and comprehensive filtering.
 
+pub mod adaptive_sampler; // Sprint 40: Adaptive Sampling (Specification Section 7.3)
 pub mod anomaly;
 pub mod autoencoder;
 pub mod chaos;
@@ -30,3 +31,4 @@ pub mod syscalls;
 pub mod trace_context; // Sprint 33: W3C Trace Context propagation
 pub mod tracer;
 pub mod transpiler_map;
+pub mod unified_trace; // Sprint 40: Unified Trace Model (Specification Section 3.1)
