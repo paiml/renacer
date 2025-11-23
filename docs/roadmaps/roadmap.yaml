@@ -17,3 +17,366 @@ roadmap:
   subtasks: []
   estimated_effort: null
   labels: []
+  notes: null
+- id: GOLDEN-001
+  github_issue: null
+  item_type: epic
+  title: 'Golden Thread OpenTelemetry Integration (Sprints 40-44)'
+  status: completed
+  priority: high
+  assigned_to: null
+  created: 2025-11-23T09:02:24.258396285+00:00
+  updated: 2025-11-23T20:00:00.000000000+00:00
+  spec: docs/specifications/golden-thread-open-telemetry-spec.md
+  acceptance_criteria:
+    - 'Lock-free ring buffer with <1% overhead (Toyota Way: Heijunka)'
+    - 'Lamport logical clocks for causal ordering (Toyota Way: Poka-Yoke)'
+    - 'State-based semantic equivalence (Toyota Way: Genchi Genbutsu)'
+    - 'Run-length encoding 262,144× compression (Toyota Way: Muda)'
+    - 'Build-time trace assertions fail CI (Toyota Way: Andon)'
+    - 'Trueno-DB storage with SQL queries (<20ms p95)'
+    - 'Trueno-Graph causal analysis with critical path'
+    - '19 peer-reviewed citations documented'
+  phases:
+    - name: 'Sprint 40: Golden Thread Core'
+      deliverables:
+        - 'Trueno-DB integration (Parquet schema, SQL interface)'
+        - 'Lock-free ring buffer architecture'
+        - 'Lamport logical clock implementation'
+        - 'Dual-write to OTLP + trueno-db'
+      tests:
+        - 'Insert 1M spans, query by trace ID (<20ms)'
+        - 'Ring buffer backpressure (drop spans gracefully)'
+        - 'Logical clock propagation across fork()'
+    - name: 'Sprint 41: Causal Graph Analysis'
+      deliverables:
+        - 'Trueno-Graph CSR construction from spans'
+        - 'Critical path algorithm (longest path DP)'
+        - 'Anti-pattern detection (God Process, Tight Loop, PCIe bottleneck)'
+        - 'Run-length encoding for tight loops'
+      tests:
+        - 'Build graph from 1K spans (<100ms)'
+        - 'RLE compression (262,144× for loops)'
+        - 'Anti-pattern detection accuracy'
+    - name: 'Sprint 42: Batuta Integration'
+      deliverables:
+        - 'Trace context propagation (TRACEPARENT + RENACER_LOGICAL_CLOCK)'
+        - 'State-based semantic equivalence (payload hashing)'
+        - 'Python vs Rust comparison (100 test programs)'
+      tests:
+        - 'End-to-end: Batuta pipeline → single trace ID'
+        - 'State-based equivalence (buffered I/O optimization)'
+    - name: 'Sprint 43: Query Optimization'
+      deliverables:
+        - 'Composite indexes (trace_id, timestamp)'
+        - 'Parquet row groups (10K rows/group)'
+        - 'Predicate pushdown to Parquet layer'
+      tests:
+        - '1M spans: <20ms p95'
+        - '10M spans: <200ms p95'
+        - 'Regression detection (<10% increase)'
+    - name: 'Sprint 44: Build-Time Assertions'
+      deliverables:
+        - 'renacer.toml DSL for trace assertions'
+        - 'Assertion evaluation engine'
+        - 'Cargo test integration'
+        - 'CI/CD failure on regression'
+      tests:
+        - 'Critical path assertion fails CI'
+        - 'Anti-pattern assertion fails CI'
+        - 'DSL parser handles all conditions'
+  subtasks:
+    - GOLDEN-040
+    - GOLDEN-041
+    - GOLDEN-042
+    - GOLDEN-043
+    - GOLDEN-044
+  estimated_effort: '5 sprints (10 weeks)'
+  labels:
+    - 'toyota-way'
+    - 'observability'
+    - 'trueno-integration'
+    - 'peer-reviewed'
+  notes: |
+    Toyota Way Architecture Review:
+    - Heijunka (Flow): Ring buffer prevents observability from blocking app
+    - Poka-Yoke (Error-proofing): Lamport clocks guarantee causal correctness
+    - Genchi Genbutsu (Real data): State-based comparison validates optimization
+    - Muda (Waste): RLE eliminates storage bloat from loops
+    - Andon (Visual control): Build-time assertions catch regressions early
+
+    Key Innovations:
+    - Lock-free ring buffer (250-2500× latency reduction vs synchronous I/O)
+    - Logical clocks (eliminates false causality from clock skew)
+    - State-based equivalence (allows optimization without false positives)
+    - Run-length encoding (262,144× compression for tight loops)
+    - Build-time assertions (shift-left performance validation)
+- id: GOLDEN-040
+  github_issue: null
+  item_type: task
+  title: 'Sprint 40: Golden Thread Core - Trueno-DB + Ring Buffer + Lamport Clocks'
+  status: completed
+  priority: high
+  assigned_to: null
+  created: 2025-11-23T09:05:00.000000000+00:00
+  updated: 2025-11-23T16:00:00.000000000+00:00
+  spec: docs/specifications/golden-thread-open-telemetry-spec.md
+  parent: GOLDEN-001
+  acceptance_criteria:
+    - 'Lock-free ring buffer with crossbeam::queue::ArrayQueue'
+    - 'Ring buffer capacity: 8192 spans, overflow: drop (never block)'
+    - 'Hot path latency: <1μs (enqueue only, no I/O)'
+    - 'Sidecar thread drains buffer to OTLP + trueno-db'
+    - 'Lamport logical clock implementation (AtomicU64)'
+    - 'Logical clock propagation via RENACER_LOGICAL_CLOCK env var'
+    - 'Trueno-DB Parquet schema with SpanRecord struct'
+    - 'SQL query interface: SELECT * FROM spans WHERE trace_id=?'
+    - 'Query performance: 1M spans <20ms (p95)'
+    - 'Test coverage: 85%+ for new modules'
+  deliverables:
+    - 'src/ring_buffer.rs - Lock-free ring buffer with sidecar thread'
+    - 'src/lamport_clock.rs - Logical clock implementation'
+    - 'src/trueno_db_storage.rs - Trueno-DB integration'
+    - 'src/span_record.rs - Parquet-compatible span schema'
+    - 'tests/sprint40_ring_buffer_tests.rs - Ring buffer tests'
+    - 'tests/sprint40_lamport_clock_tests.rs - Logical clock tests'
+    - 'tests/sprint40_trueno_db_tests.rs - Database tests'
+    - 'benches/ring_buffer_overhead.rs - <1μs validation'
+  estimated_effort: '2 weeks'
+  labels:
+    - 'sprint-40'
+    - 'toyota-way-heijunka'
+    - 'toyota-way-poka-yoke'
+    - 'performance'
+  notes: |
+    Toyota Way Principles:
+    - Heijunka (Flow): Ring buffer isolates app from I/O latency
+    - Poka-Yoke (Error-proofing): Lamport clocks guarantee correct causality
+
+    Dependencies:
+    - crossbeam = "0.8" (lock-free data structures)
+    - trueno-db = "0.3" (Parquet storage)
+    - Add to Cargo.toml
+
+    Key Metrics:
+    - Hot path: <1μs (ring buffer enqueue)
+    - Cold path: 10ms batching (sidecar thread)
+    - Query: <20ms for 1M spans
+    - Overhead: <1% total (Google SLO)
+
+    Testing Strategy:
+    - Property tests: Ring buffer never blocks
+    - Stress tests: 10K spans/sec sustained
+    - Benchmark: Compare vs synchronous I/O
+    - Integration: Fork propagates logical clock
+- id: GOLDEN-041
+  github_issue: null
+  item_type: task
+  title: 'Sprint 41: Causal Graph Analysis - Trueno-Graph + RLE Compression'
+  status: completed
+  priority: high
+  assigned_to: null
+  created: 2025-11-23T16:00:00.000000000+00:00
+  updated: 2025-11-23T17:30:00.000000000+00:00
+  spec: docs/specifications/golden-thread-open-telemetry-spec.md
+  parent: GOLDEN-001
+  acceptance_criteria:
+    - 'Trueno-Graph CSR construction from spans'
+    - 'Critical path algorithm (longest path DP)'
+    - 'Anti-pattern detection (God Process, Tight Loop, PCIe bottleneck)'
+    - 'Run-length encoding for tight loops'
+    - 'Build graph from 1K spans (<100ms)'
+    - 'RLE compression (262,144× for loops)'
+    - 'Anti-pattern detection accuracy'
+  deliverables:
+    - 'src/causal_graph.rs - CSR graph construction from spans'
+    - 'src/critical_path.rs - Longest path algorithm (dynamic programming)'
+    - 'src/anti_patterns.rs - God Process, Tight Loop, PCIe detection'
+    - 'src/rle_compression.rs - Run-length encoding for span sequences'
+    - 'tests/sprint41_causal_graph_tests.rs - Graph construction tests'
+    - 'tests/sprint41_critical_path_tests.rs - Critical path tests'
+    - 'tests/sprint41_anti_patterns_tests.rs - Anti-pattern detection tests'
+    - 'tests/sprint41_rle_tests.rs - RLE compression tests'
+    - 'benches/graph_construction.rs - <100ms validation'
+  estimated_effort: '2 weeks'
+  labels:
+    - 'sprint-41'
+    - 'toyota-way-genchi-genbutsu'
+    - 'toyota-way-muda'
+    - 'performance'
+  notes: |
+    Toyota Way Principles:
+    - Genchi Genbutsu (Go and See): Real causal graph analysis from actual traces
+    - Muda (Waste): RLE eliminates storage bloat from tight loops
+
+    Dependencies:
+    - trueno-graph = "0.3" (CSR graph for causal analysis)
+    - Add to Cargo.toml
+
+    Key Metrics:
+    - Graph construction: <100ms for 1K spans
+    - RLE compression: 262,144× for tight loops
+    - Anti-pattern detection: >90% accuracy
+
+    Testing Strategy:
+    - Unit tests: CSR construction correctness
+    - Integration tests: End-to-end critical path
+    - Benchmarks: Graph construction performance
+    - Property tests: RLE compression ratio
+- id: GOLDEN-042
+  github_issue: null
+  item_type: task
+  title: 'Sprint 42: Batuta Integration - Trace Context + Semantic Equivalence'
+  status: completed
+  priority: high
+  assigned_to: null
+  created: 2025-11-23T17:30:00.000000000+00:00
+  updated: 2025-11-23T18:00:00.000000000+00:00
+  spec: docs/specifications/golden-thread-open-telemetry-spec.md
+  parent: GOLDEN-001
+  acceptance_criteria:
+    - 'W3C Trace Context propagation (TRACEPARENT header)'
+    - 'RENACER_LOGICAL_CLOCK environment variable propagation'
+    - 'State-based semantic equivalence (SHA-256 payload hashing)'
+    - 'Python vs Rust comparison (100 test programs)'
+    - 'End-to-end: Batuta pipeline → single trace ID'
+    - 'Semantic equivalence validates buffered I/O optimization'
+    - 'Test coverage: 85%+ for new modules'
+  deliverables:
+    - 'Enhance src/trace_context.rs - W3C Trace Context + RENACER_LOGICAL_CLOCK'
+    - 'Create src/semantic_equivalence.rs - State-based comparison engine'
+    - 'tests/sprint42_trace_propagation_tests.rs - Trace context tests'
+    - 'tests/sprint42_semantic_equivalence_tests.rs - Equivalence tests'
+    - 'tests/sprint42_batuta_integration_tests.rs - End-to-end tests'
+    - 'benches/state_hashing.rs - Hashing performance validation'
+  estimated_effort: '2 weeks'
+  labels:
+    - 'sprint-42'
+    - 'toyota-way-genchi-genbutsu'
+    - 'batuta-integration'
+    - 'observability'
+  notes: |
+    Toyota Way Principles:
+    - Genchi Genbutsu (Real data): State-based comparison validates real optimizations
+
+    Dependencies:
+    - sha2 = "0.10" (SHA-256 hashing for state comparison)
+    - batuta CLI (for integration testing)
+    - Add to Cargo.toml
+
+    Key Metrics:
+    - Trace context propagation: 100% across fork/exec
+    - Semantic equivalence: <1μs per comparison
+    - Python vs Rust: 100 test programs validated
+
+    Testing Strategy:
+    - Unit tests: Trace context parsing/serialization
+    - Integration tests: Batuta transpilation + renacer tracing
+    - Property tests: State equivalence is symmetric and transitive
+    - Benchmark: State hashing performance
+- id: GOLDEN-043
+  github_issue: null
+  item_type: task
+  title: 'Sprint 43: Query Optimization - Trueno-DB Performance Tuning'
+  status: completed
+  priority: high
+  assigned_to: null
+  created: 2025-11-23T18:00:00.000000000+00:00
+  updated: 2025-11-23T19:00:00.000000000+00:00
+  spec: docs/specifications/golden-thread-open-telemetry-spec.md
+  parent: GOLDEN-001
+  acceptance_criteria:
+    - 'Composite indexes (trace_id, timestamp)'
+    - 'Parquet row groups (10K rows/group)'
+    - 'Predicate pushdown to Parquet layer'
+    - '1M spans: <20ms p95 query latency'
+    - '10M spans: <200ms p95 query latency'
+    - 'Regression detection (<10% increase)'
+    - 'Test coverage: 85%+ for new modules'
+  deliverables:
+    - 'Enhance src/trueno_db_storage.rs - Add composite indexes'
+    - 'Add Parquet row group configuration (10K rows/group)'
+    - 'Implement predicate pushdown optimization'
+    - 'tests/sprint43_query_performance_tests.rs - Performance validation'
+    - 'benches/trueno_db_queries.rs - Query latency benchmarks'
+  estimated_effort: '2 weeks'
+  labels:
+    - 'sprint-43'
+    - 'performance'
+    - 'database'
+    - 'query-optimization'
+  notes: |
+    Query Optimization Techniques:
+    - Composite indexes: Leverage Parquet column statistics
+    - Row groups: Optimize for query patterns (time-series)
+    - Predicate pushdown: Filter at Parquet level (reduce I/O)
+
+    Target Performance:
+    - 1M spans: <20ms p95 (current baseline)
+    - 10M spans: <200ms p95 (10× data, 10× latency)
+    - 100M spans: <2s p95 (future target)
+
+    Testing Strategy:
+    - Benchmark: Generate synthetic traces at scale
+    - Property tests: Query results independent of optimization
+    - Regression tests: Alert on >10% latency increase
+- id: GOLDEN-044
+  github_issue: null
+  item_type: task
+  title: 'Sprint 44: Build-Time Assertions - renacer.toml DSL + CI Integration'
+  status: completed
+  priority: high
+  assigned_to: null
+  created: 2025-11-23T19:00:00.000000000+00:00
+  updated: 2025-11-23T20:00:00.000000000+00:00
+  spec: docs/specifications/golden-thread-open-telemetry-spec.md
+  parent: GOLDEN-001
+  acceptance_criteria:
+    - 'renacer.toml DSL for trace assertions (declarative syntax)'
+    - 'Assertion evaluation engine (parse + validate traces)'
+    - 'Cargo test integration (fail tests on violation)'
+    - 'Critical path assertion example (max latency)'
+    - 'Anti-pattern assertion example (detect God Process)'
+    - 'DSL parser handles all assertion types'
+    - 'CI/CD fails on regression (assertion violations)'
+    - 'Test coverage: 85%+ for new modules'
+  deliverables:
+    - 'src/assertion_dsl.rs - renacer.toml parser (TOML → AST)'
+    - 'src/assertion_engine.rs - Evaluation engine (AST → bool)'
+    - 'src/assertion_types.rs - Assertion types (CriticalPath, AntiPattern, etc.)'
+    - 'tests/sprint44_assertion_dsl_tests.rs - DSL parser tests'
+    - 'tests/sprint44_assertion_engine_tests.rs - Engine tests'
+    - 'tests/sprint44_ci_integration_tests.rs - Cargo test integration'
+    - 'examples/renacer.toml - Example assertion file'
+  estimated_effort: '2 weeks'
+  labels:
+    - 'sprint-44'
+    - 'toyota-way-andon'
+    - 'build-time-validation'
+    - 'shift-left'
+  notes: |
+    Toyota Way Principles:
+    - Andon (Visual control): Build-time assertions catch regressions early
+    - Jidoka (Automation with human touch): Fail fast, stop the line
+
+    DSL Example (renacer.toml):
+    ```toml
+    [[assertion]]
+    name = "critical_path_max_latency"
+    type = "critical_path"
+    max_duration_ms = 100
+    fail_on_violation = true
+
+    [[assertion]]
+    name = "no_god_process"
+    type = "anti_pattern"
+    pattern = "GodProcess"
+    threshold = 0.8
+    fail_on_violation = true
+    ```
+
+    Testing Strategy:
+    - Unit tests: DSL parser correctness
+    - Integration tests: End-to-end assertion evaluation
+    - Cargo test integration: Assert tests fail on violation
+    - CI/CD: GitHub Actions fail on regression

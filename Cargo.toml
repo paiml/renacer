@@ -1,6 +1,6 @@
 [package]
 name = "renacer"
-version = "0.6.1"
+version = "0.6.2"
 edition = "2021"
 authors = ["Pragmatic AI Labs <info@paiml.com>"]
 description = "Pure Rust system call tracer with source-aware correlation for Rust binaries"
@@ -25,6 +25,7 @@ thiserror = "1.0"
 # JSON serialization
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+hex = "0.4"
 
 # MessagePack for Sprint 27 decision trace (v2.0.0 spec)
 rmp-serde = "1.3"
@@ -45,7 +46,22 @@ backtrace = "0.3"
 trueno = "0.4.0"
 
 # Machine learning for anomaly detection (Sprint 23)
-aprender = "0.4.1"
+aprender = "0.7.0"
+
+# Lock-free data structures for ring buffer (Sprint 40)
+crossbeam = "0.8"
+
+# Parquet storage for golden thread traces (Sprint 40)
+trueno-db = "0.3.1"
+
+# Graph database for causal analysis (Sprint 41)
+trueno-graph = "0.1.0"
+
+# SHA-256 hashing for state-based semantic equivalence (Sprint 42)
+sha2 = "0.10"
+
+# TOML parsing for build-time assertions (Sprint 44)
+toml = "0.8"
 
 # Regex filtering (Sprint 16)
 regex = "1.10"
@@ -97,6 +113,10 @@ harness = false
 
 [[bench]]
 name = "memory_pool"
+harness = false
+
+[[bench]]
+name = "ring_buffer_overhead"
 harness = false
 
 [profile.release]
