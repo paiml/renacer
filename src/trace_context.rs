@@ -86,6 +86,32 @@ impl TraceContext {
             .and_then(|s| Self::parse(&s).ok())
     }
 
+    /// Set trace context as environment variable (Sprint 42: Batuta Integration)
+    ///
+    /// Sets TRACEPARENT for child processes to inherit trace context.
+    /// This enables distributed tracing across exec() boundaries.
+    pub fn set_env(&self) {
+        std::env::set_var("TRACEPARENT", self.to_string());
+    }
+
+    /// Extract logical clock from environment variable (Sprint 42: Batuta Integration)
+    ///
+    /// Checks RENACER_LOGICAL_CLOCK environment variable.
+    /// Returns None if not set or invalid format.
+    pub fn logical_clock_from_env() -> Option<u64> {
+        std::env::var("RENACER_LOGICAL_CLOCK")
+            .ok()
+            .and_then(|s| s.parse::<u64>().ok())
+    }
+
+    /// Set logical clock as environment variable (Sprint 42: Batuta Integration)
+    ///
+    /// Sets RENACER_LOGICAL_CLOCK for child processes to inherit.
+    /// This propagates Lamport logical clocks across exec() boundaries.
+    pub fn set_logical_clock_env(timestamp: u64) {
+        std::env::set_var("RENACER_LOGICAL_CLOCK", timestamp.to_string());
+    }
+
     /// Check if trace is sampled (trace_flags & 0x01)
     pub fn is_sampled(&self) -> bool {
         self.trace_flags & 0x01 != 0

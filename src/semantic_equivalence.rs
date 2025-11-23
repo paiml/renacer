@@ -395,8 +395,18 @@ impl SemanticValidator {
         original: &UnifiedTrace,
         transpiled: &UnifiedTrace,
     ) -> PerformanceComparison {
-        let orig_runtime = original.total_duration_nanos().unwrap_or(0);
-        let trans_runtime = transpiled.total_duration_nanos().unwrap_or(0);
+        // Sum up syscall durations to get total runtime
+        // This is more accurate than process span duration (Lamport clock ticks)
+        let orig_runtime: u64 = original
+            .syscall_spans
+            .iter()
+            .map(|s| s.duration_nanos)
+            .sum();
+        let trans_runtime: u64 = transpiled
+            .syscall_spans
+            .iter()
+            .map(|s| s.duration_nanos)
+            .sum();
 
         PerformanceComparison::new(orig_runtime, trans_runtime)
     }
