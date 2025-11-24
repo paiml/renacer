@@ -4,7 +4,81 @@
 .SUFFIXES:
 
 .PHONY: help test coverage coverage-html coverage-clean mutants mutants-quick clean build release lint format check \
-	tier1 tier2 tier3 chaos-test chaos-full check-regression fuzz benchmark
+	tier1 tier2 tier3 chaos-test chaos-full check-regression fuzz benchmark install-llvm verify-llvm
+
+# =============================================================================
+# Installation & Dependencies
+# =============================================================================
+
+install-llvm: ## Install LLVM/Clang development libraries (for projects like decy)
+	@echo "🔧 Installing LLVM/Clang development libraries..."
+	@if [ -f /etc/debian_version ]; then \
+		echo "📦 Detected Debian/Ubuntu"; \
+		sudo apt-get update; \
+		sudo apt-get install -y llvm-14-dev libclang-14-dev clang-14 build-essential pkg-config; \
+		echo "🔗 Setting up LLVM environment variables..."; \
+		if ! grep -q "LLVM_CONFIG_PATH" ~/.zshrc; then \
+			echo 'export LLVM_CONFIG_PATH=/usr/bin/llvm-config-14' >> ~/.zshrc; \
+		fi; \
+		if ! grep -q "LIBCLANG_PATH" ~/.zshrc; then \
+			echo 'export LIBCLANG_PATH=/usr/lib/llvm-14/lib' >> ~/.zshrc; \
+		fi; \
+		export LLVM_CONFIG_PATH=/usr/bin/llvm-config-14; \
+		export LIBCLANG_PATH=/usr/lib/llvm-14/lib; \
+		echo "✅ LLVM/Clang libraries installed"; \
+		echo "⚠️  Run 'source ~/.zshrc' to reload environment"; \
+	elif [ -f /etc/redhat-release ]; then \
+		echo "📦 Detected RHEL/CentOS/Fedora"; \
+		sudo yum install -y llvm-devel clang-devel || sudo dnf install -y llvm-devel clang-devel; \
+		echo "✅ LLVM/Clang libraries installed"; \
+	elif [ "$$(uname)" = "Darwin" ]; then \
+		echo "📦 Detected macOS"; \
+		brew install llvm; \
+		echo "🔗 Setting up LLVM environment variables..."; \
+		if ! grep -q "LLVM_CONFIG_PATH" ~/.zshrc; then \
+			echo 'export PATH="/usr/local/opt/llvm/bin:$$PATH"' >> ~/.zshrc; \
+			echo 'export LDFLAGS="-L/usr/local/opt/llvm/lib"' >> ~/.zshrc; \
+			echo 'export CPPFLAGS="-I/usr/local/opt/llvm/include"' >> ~/.zshrc; \
+			echo 'export LIBCLANG_PATH=/usr/local/opt/llvm/lib' >> ~/.zshrc; \
+		fi; \
+		echo "✅ LLVM/Clang libraries installed"; \
+		echo "⚠️  Run 'source ~/.zshrc' to reload environment"; \
+	else \
+		echo "❌ Unsupported platform. Please install LLVM/Clang manually."; \
+		exit 1; \
+	fi
+
+verify-llvm: ## Verify LLVM/Clang installation
+	@echo "🔍 Verifying LLVM/Clang installation..."
+	@echo ""
+	@if command -v llvm-config >/dev/null 2>&1 || command -v llvm-config-14 >/dev/null 2>&1; then \
+		echo "✅ LLVM found:"; \
+		llvm-config-14 --version 2>/dev/null || llvm-config --version; \
+	else \
+		echo "❌ LLVM not found"; \
+	fi
+	@echo ""
+	@if [ -n "$$LLVM_CONFIG_PATH" ]; then \
+		echo "✅ LLVM_CONFIG_PATH: $$LLVM_CONFIG_PATH"; \
+	else \
+		echo "⚠️  LLVM_CONFIG_PATH not set"; \
+	fi
+	@echo ""
+	@if [ -n "$$LIBCLANG_PATH" ]; then \
+		echo "✅ LIBCLANG_PATH: $$LIBCLANG_PATH"; \
+		if [ -d "$$LIBCLANG_PATH" ]; then \
+			echo "✅ libclang directory exists"; \
+			ls -la "$$LIBCLANG_PATH"/libclang.so* 2>/dev/null || echo "⚠️  libclang.so not found"; \
+		else \
+			echo "❌ libclang directory does not exist"; \
+		fi; \
+	else \
+		echo "⚠️  LIBCLANG_PATH not set"; \
+	fi
+
+# =============================================================================
+# Testing & Quality
+# =============================================================================
 
 help: ## Show this help message
 	@echo "Renacer - Pure Rust strace alternative"

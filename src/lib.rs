@@ -15,6 +15,7 @@ pub mod autoencoder;
 pub mod causal_graph; // Sprint 41: Causal graph construction for critical path analysis
 pub mod chaos;
 pub mod cli;
+pub mod cluster; // Single-Shot Compile Tooling: TOML-based syscall clustering (Section 6.1)
 pub mod critical_path; // Sprint 41: Critical path analysis (longest path in DAG)
 pub mod csv_output;
 pub mod cuda_tracer; // Sprint 38: CUDA kernel-level tracing via CUPTI

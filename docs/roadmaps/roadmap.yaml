@@ -380,3 +380,32 @@ roadmap:
     - Integration tests: End-to-end assertion evaluation
     - Cargo test integration: Assert tests fail on violation
     - CI/CD: GitHub Actions fail on regression
+- id: CLUSTER-001
+  github_issue: null
+  item_type: task
+  title: 'Implement TOML-Based Syscall Clustering (Section 6.1)'
+  status: in_progress
+  priority: critical
+  assigned_to: claude
+  created: 2025-11-24T10:52:00.000000000+00:00
+  updated: 2025-11-24T10:52:00.000000000+00:00
+  spec: docs/specifications/single-shot-compile-tooling-spec.md
+  acceptance_criteria:
+    - 'ClusterRegistry reads from clusters.toml (user-extensible)'
+    - 'Supports args_filter (fd_path_pattern, arg_contains) for context-aware classification'
+    - 'Default cluster pack ships with transpiler patterns'
+    - 'Poka-Yoke: warns on unmatched syscalls, suggests additions'
+    - 'Unit tests: classification, filtering, TOML parsing'
+  phases: []
+  subtasks:
+    - 'Define ClusterDefinition struct (Deserialize from TOML)'
+    - 'Implement ClusterRegistry::from_toml()'
+    - 'Add classify() method with args_filter support'
+    - 'Create clusters-default.toml with standard patterns'
+    - 'Write unit tests for classification edge cases'
+  estimated_effort: '4 hours'
+  labels:
+    - kaizen
+    - toyota-way
+    - poka-yoke
+  notes: 'Critical Kaizen improvement from Toyota Way review. Addresses Open-Closed Principle violation. References: [3] Kuhn et al. (2007) - Semantic clustering should be configuration-driven.'
