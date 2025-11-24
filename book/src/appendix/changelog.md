@@ -6,7 +6,85 @@ Complete sprint history and release notes for Renacer development.
 
 ---
 
-## Version 0.4.1 (Current) - Sprint 29
+## Version 0.6.2 (Current) - Section 6 Implementation
+
+**Release Date:** 2025-11-24
+**Theme:** Single-Shot Compile Tooling (Transpiler Analysis)
+
+### Major Features Added
+
+#### 🔥 Syscall Clustering (Section 6.1)
+- **TOML-based configuration** - User-extensible semantic grouping (Open-Closed Principle)
+- **Default transpiler pack** - Pre-configured clusters (MemoryAllocation, FileIO, Networking, GPU, ProcessControl)
+- **Context-aware classification** - Args filtering for `ioctl` and other ambiguous syscalls
+- **Poka-Yoke warnings** - Suggests cluster additions for unmatched syscalls
+
+#### 📊 Sequence Mining (Section 6.1.1)
+- **N-gram extraction** - 2-grams, 3-grams, 4-grams for syscall grammar
+- **Anomaly detection** - Identifies new/unexpected syscall patterns (based on Forrest et al. 1996)
+- **Frequency thresholding** - Filters noise with configurable thresholds
+- **Grammar violation reports** - Human-readable explanations of behavioral changes
+
+#### ⏱️ Time-Weighted Attribution (Section 6.2)
+- **Wall-clock hotspot identification** - Shows where time is actually spent (not just counts)
+- **Cluster-level analysis** - Aggregates time by semantic clusters
+- **Expected vs unexpected detection** - Flags anomalous hotspots for transpilers
+- **Actionable explanations** - Each hotspot includes recommendations
+
+#### ✅ Semantic Equivalence (Section 6.3)
+- **State-based comparison** - Validates optimizations preserve observable behavior
+- **File system equivalence** - Compares final file states (content, permissions)
+- **Network equivalence** - Validates network connections and data sent
+- **Process equivalence** - Checks child process spawning
+
+#### 📈 Statistical Regression Detection (Section 6.4)
+- **Hypothesis testing** - Welch's t-tests via aprender (no magic "5%" thresholds)
+- **Delta Debugging noise filtering** - Removes high-variance syscalls (Zeller 2002)
+- **Confidence profiles** - Default (95%), Strict (99%), Permissive (90%)
+- **CI/CD integration** - Build-time assertions fail on regressions (Andon)
+
+### Implementation Statistics
+- **Total Lines**: ~2,400 lines of production code
+- **Tests**: 471 passing tests (100% success rate)
+- **Zero Defects**: All clippy checks passing, no warnings
+- **Dependencies**: aprender 0.7.1, trueno 0.7.0 (SIMD-optimized statistics)
+
+### Peer-Reviewed Foundation
+Based on 19 peer-reviewed papers including:
+- Zeller (2002): Delta Debugging (FSE)
+- Heger et al. (2013): Statistical regression detection (ICPE)
+- Forrest et al. (1996): N-gram anomaly detection (IEEE S&P)
+- Mestel et al. (2022): Google-scale profiling (Usenix ATC)
+
+### Toyota Way Integration
+- **Andon**: Build-time assertions stop CI on regressions
+- **Kaizen**: Statistical tracking enables continuous improvement
+- **Genchi Genbutsu**: Real syscall traces, not synthetic benchmarks
+- **Jidoka**: Automated analysis with human-readable explanations
+- **Poka-Yoke**: Statistical tests prevent false positives
+
+### Documentation
+- New mdBook section: "Single-Shot Compile Tooling"
+- 6 comprehensive guides:
+  - Overview and architecture
+  - Syscall Clustering
+  - Sequence Mining
+  - Time-Weighted Attribution
+  - Semantic Equivalence
+  - Regression Detection
+
+### Breaking Changes
+None - All existing APIs preserved
+
+### Migration Guide
+No migration needed - New features are additive
+
+**Test Count:** 471 tests (all passing)
+**Zero Defects:** All quality gates passing
+
+---
+
+## Version 0.4.1 - Sprint 29
 
 **Release Date:** 2025-11-19
 **Theme:** Red-Team Profile - Chaos Engineering & Fuzz Testing

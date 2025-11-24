@@ -3,7 +3,7 @@
 //! This tests the critical path module with realistic trace scenarios.
 
 use renacer::causal_graph::CausalGraph;
-use renacer::critical_path::{find_critical_path, CriticalPathResult};
+use renacer::critical_path::find_critical_path;
 use renacer::span_record::{SpanKind, SpanRecord, StatusCode};
 use std::collections::HashMap;
 
