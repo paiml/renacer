@@ -375,7 +375,7 @@ mod tests {
                 0,
                 0,
             );
-            let _ = buffer.push(span);
+            buffer.push(span);
         }
 
         // Give sidecar thread time to drain

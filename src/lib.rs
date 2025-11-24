@@ -33,6 +33,7 @@ pub mod lazy_span; // Sprint 36: Lazy span creation for performance
 pub mod ml_anomaly;
 pub mod otlp_exporter;
 pub mod profiling;
+pub mod regression; // Single-Shot Compile Tooling: Statistical regression detection (Section 6.4)
 pub mod ring_buffer; // Sprint 40: Lock-free ring buffer for span export (Toyota Way: Heijunka)
 pub mod rle_compression; // Sprint 41: Run-length encoding for tight loop compression (Toyota Way: Muda)
 pub mod semantic_equivalence; // Sprint 40: Semantic Equivalence (Specification Section 6.3)
@@ -42,6 +43,7 @@ pub mod span_record; // Sprint 40: Parquet-compatible span schema
 pub mod stack_unwind;
 pub mod stats;
 pub mod syscalls;
+pub mod time_attribution; // Single-Shot Compile Tooling: Time-weighted attribution (Section 6.2)
 pub mod trace_context; // Sprint 33: W3C Trace Context propagation
 pub mod tracer;
 pub mod transpiler_map;

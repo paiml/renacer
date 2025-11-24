@@ -43,10 +43,10 @@ memmap2 = "0.9"
 backtrace = "0.3"
 
 # High-performance SIMD/GPU compute (sister project - published on crates.io)
-trueno = "0.4.0"
+trueno = "0.7.0"
 
 # Machine learning for anomaly detection (Sprint 23)
-aprender = "0.7.0"
+aprender = "0.7.1"
 
 # Lock-free data structures for ring buffer (Sprint 40)
 crossbeam = "0.8"

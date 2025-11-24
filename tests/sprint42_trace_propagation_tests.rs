@@ -3,9 +3,11 @@
 //! Tests W3C Trace Context + RENACER_LOGICAL_CLOCK propagation across process boundaries.
 
 use renacer::trace_context::{LamportClock, TraceContext};
+use serial_test::serial;
 use std::env;
 
 #[test]
+#[serial]
 fn test_trace_context_env_propagation() {
     // Create a trace context
     let trace_id = [
@@ -36,6 +38,7 @@ fn test_trace_context_env_propagation() {
 }
 
 #[test]
+#[serial]
 fn test_logical_clock_env_propagation() {
     // Set logical clock
     let timestamp = 42u64;
@@ -50,6 +53,7 @@ fn test_logical_clock_env_propagation() {
 }
 
 #[test]
+#[serial]
 fn test_logical_clock_env_missing() {
     env::remove_var("RENACER_LOGICAL_CLOCK");
 
@@ -58,6 +62,7 @@ fn test_logical_clock_env_missing() {
 }
 
 #[test]
+#[serial]
 fn test_logical_clock_env_invalid() {
     env::set_var("RENACER_LOGICAL_CLOCK", "not_a_number");
 
@@ -68,6 +73,7 @@ fn test_logical_clock_env_invalid() {
 }
 
 #[test]
+#[serial]
 fn test_logical_clock_env_large_value() {
     let timestamp = u64::MAX;
     TraceContext::set_logical_clock_env(timestamp);
@@ -79,6 +85,7 @@ fn test_logical_clock_env_large_value() {
 }
 
 #[test]
+#[serial]
 fn test_combined_propagation() {
     // Scenario: Parent process sets both TRACEPARENT and RENACER_LOGICAL_CLOCK
     // Child process inherits both
@@ -111,6 +118,7 @@ fn test_combined_propagation() {
 }
 
 #[test]
+#[serial]
 fn test_fork_simulation() {
     // Simulate fork() scenario where child inherits environment
 
@@ -151,6 +159,7 @@ fn test_fork_simulation() {
 }
 
 #[test]
+#[serial]
 fn test_exec_simulation() {
     // Simulate exec() scenario where new process inherits environment
 
@@ -185,6 +194,7 @@ fn test_exec_simulation() {
 }
 
 #[test]
+#[serial]
 fn test_multi_hop_propagation() {
     // Scenario: Process A → Process B → Process C
     // Each process increments logical clock and propagates
@@ -236,6 +246,7 @@ fn test_multi_hop_propagation() {
 }
 
 #[test]
+#[serial]
 fn test_trace_context_round_trip() {
     // Test that trace context can be serialized and deserialized via env vars
 
@@ -263,6 +274,7 @@ fn test_trace_context_round_trip() {
 }
 
 #[test]
+#[serial]
 fn test_logical_clock_sync_across_processes() {
     // Scenario: Two concurrent processes sync their clocks
 
@@ -293,6 +305,7 @@ fn test_logical_clock_sync_across_processes() {
 }
 
 #[test]
+#[serial]
 fn test_trace_sampling_propagation() {
     // Test that sampling decision propagates
 
@@ -325,10 +338,10 @@ fn test_trace_sampling_propagation() {
 }
 
 #[test]
+#[serial]
 fn test_concurrent_env_var_access() {
     // Test thread safety of environment variable access
 
-    use std::sync::Arc;
     use std::thread;
 
     let handles: Vec<_> = (0..10)
@@ -352,6 +365,7 @@ fn test_concurrent_env_var_access() {
 }
 
 #[test]
+#[serial]
 fn test_zero_logical_clock() {
     // Test edge case: logical clock = 0
 
@@ -363,6 +377,7 @@ fn test_zero_logical_clock() {
 }
 
 #[test]
+#[serial]
 fn test_batuta_integration_scenario() {
     // Scenario: Batuta transpiles Python → Rust, both should have same trace ID
 

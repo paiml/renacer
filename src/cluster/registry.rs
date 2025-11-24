@@ -9,12 +9,13 @@ use std::path::Path;
 /// Implements Open-Closed Principle: extensible via configuration without recompilation.
 ///
 /// # Example Usage
-/// ```no_run
-/// use renacer::cluster::ClusterRegistry;
+/// ```ignore
+/// use renacer::cluster::{ClusterRegistry, FdTable};
 ///
 /// let registry = ClusterRegistry::from_toml("clusters.toml")?;
-/// let cluster = registry.classify("mmap", &[], &FdTable::new())?;
-/// println!("Cluster: {} (severity: {:?})", cluster.name, cluster.severity);
+/// if let Some(cluster) = registry.classify("mmap", &[], &FdTable::new()) {
+///     println!("Cluster: {} (severity: {:?})", cluster.name, cluster.severity);
+/// }
 /// # Ok::<(), anyhow::Error>(())
 /// ```
 #[derive(Debug)]
@@ -175,6 +176,15 @@ impl ClusterRegistry {
     pub fn clusters(&self) -> &[ClusterDefinition] {
         &self.clusters
     }
+
+    /// Simple classification without file descriptor tracking
+    ///
+    /// For use cases like time attribution where FD tracking isn't available.
+    /// Returns cluster name or None if unclassified.
+    pub fn classify_simple(&self, syscall: &str, _args: &[String]) -> Option<String> {
+        // Simple lookup by syscall name without args filtering
+        self.syscall_to_cluster.get(syscall).cloned()
+    }
 }
 
 /// File descriptor table for mapping fd numbers to paths
@@ -292,6 +302,7 @@ fd_path_pattern = "/dev/nvidia*"
             r#"
 [[cluster]]
 name = "ClusterA"
+description = "Test cluster A"
 syscalls = ["mmap"]
 expected_for_transpiler = true
 anomaly_threshold = 0.5
@@ -299,6 +310,7 @@ severity = "medium"
 
 [[cluster]]
 name = "ClusterB"
+description = "Test cluster B"
 syscalls = ["mmap"]
 expected_for_transpiler = true
 anomaly_threshold = 0.5

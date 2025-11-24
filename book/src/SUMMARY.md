@@ -51,6 +51,12 @@
 - [Distributed Tracing](./advanced/distributed-tracing.md)
 - [Transpiler Integration](./advanced/transpiler-integration.md)
 - [Performance Optimization](./advanced/performance-optimization.md)
+- [Single-Shot Compile Tooling](./advanced/single-shot-compile.md)
+  - [Syscall Clustering](./advanced/syscall-clustering.md)
+  - [Sequence Mining](./advanced/sequence-mining.md)
+  - [Time-Weighted Attribution](./advanced/time-attribution.md)
+  - [Semantic Equivalence](./advanced/semantic-equivalence.md)
+  - [Regression Detection](./advanced/regression-detection.md)
 
 # Reference
 

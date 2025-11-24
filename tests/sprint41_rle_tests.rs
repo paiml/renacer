@@ -2,7 +2,7 @@
 //!
 //! This tests the run-length encoding module with realistic tight loop scenarios.
 
-use renacer::rle_compression::{compress_spans, decompress_segment, CompressedTrace, RleSegment};
+use renacer::rle_compression::{compress_spans, decompress_segment};
 use renacer::span_record::{SpanKind, SpanRecord, StatusCode};
 use std::collections::HashMap;
 
