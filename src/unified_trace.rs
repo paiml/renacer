@@ -281,12 +281,10 @@ impl UnifiedTrace {
         let timestamp_b = self.get_span_timestamp(span_b_id);
 
         // If either span not found, no causal relationship
-        if timestamp_a.is_none() || timestamp_b.is_none() {
-            return false;
-        }
-
-        let ts_a = timestamp_a.unwrap();
-        let ts_b = timestamp_b.unwrap();
+        let (ts_a, ts_b) = match (timestamp_a, timestamp_b) {
+            (Some(a), Some(b)) => (a, b),
+            _ => return false,
+        };
 
         // For non-parent relationships, timestamp consistency is required
         // but not sufficient for happens-before (could be concurrent siblings)

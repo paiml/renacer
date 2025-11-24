@@ -76,7 +76,10 @@ impl MlAnomalyAnalyzer {
         let mut kmeans = KMeans::new(k);
 
         // Create matrix from features (n_samples x 1 feature)
-        let features = Matrix::from_vec(syscall_names.len(), 1, features_data.clone()).unwrap();
+        let features = match Matrix::from_vec(syscall_names.len(), 1, features_data.clone()) {
+            Ok(m) => m,
+            Err(_) => return self.insufficient_data_report(syscall_names.len()),
+        };
 
         // Fit and predict
         if kmeans.fit(&features).is_err() {
@@ -250,8 +253,12 @@ impl MlAnomalyAnalyzer {
             }
         }
 
-        // Sort by average time descending
-        anomalies.sort_by(|a, b| b.avg_time_us.partial_cmp(&a.avg_time_us).unwrap());
+        // Sort by average time descending (handle NaN gracefully)
+        anomalies.sort_by(|a, b| {
+            b.avg_time_us
+                .partial_cmp(&a.avg_time_us)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
         anomalies
     }

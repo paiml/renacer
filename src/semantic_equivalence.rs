@@ -219,7 +219,11 @@ impl SemanticValidator {
             }
         } else {
             ValidationResult::Fail {
-                divergence_point: diff.divergence_point.unwrap(),
+                divergence_point: diff.divergence_point.unwrap_or_else(|| DivergencePoint {
+                    syscall_index: 0,
+                    original_syscall: "unknown".to_string(),
+                    transpiled_syscall: "unknown".to_string(),
+                }),
                 explanation: diff.explanation,
             }
         }
