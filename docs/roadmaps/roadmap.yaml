@@ -405,11 +405,11 @@ roadmap:
   github_issue: null
   item_type: task
   title: 'New task: UNWRAP-CRITICAL-001'
-  status: inprogress
+  status: completed
   priority: medium
   assigned_to: null
   created: 2025-11-24T15:04:13.094301878+00:00
-  updated: 2025-11-24T15:04:13.094301878+00:00
+  updated: 2025-11-24T15:25:36.286330433+00:00
   spec: null
   acceptance_criteria: []
   phases: []

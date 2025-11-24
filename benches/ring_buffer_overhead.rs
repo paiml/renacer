@@ -68,7 +68,7 @@ fn bench_ring_buffer_push(c: &mut Criterion) {
     c.bench_function("ring_buffer_push", |b| {
         b.iter(|| {
             let span = create_bench_span(i);
-            buffer.push(black_box(span)).unwrap();
+            buffer.push(black_box(span));
             i += 1;
         });
     });
@@ -93,7 +93,7 @@ fn bench_ring_buffer_push_varying_capacity(c: &mut Criterion) {
 
                 b.iter(|| {
                     let span = create_bench_span(i);
-                    buffer.push(black_box(span)).unwrap();
+                    buffer.push(black_box(span));
                     i += 1;
                 });
 
@@ -177,7 +177,7 @@ fn bench_complete_hot_path(c: &mut Criterion) {
             );
 
             // 3. Push to ring buffer
-            buffer.push(black_box(span)).unwrap();
+            buffer.push(black_box(span));
         });
     });
 
@@ -215,7 +215,7 @@ fn bench_ring_buffer_stats(c: &mut Criterion) {
 
     // Fill buffer with some spans
     for i in 0..100 {
-        buffer.push(create_bench_span(i)).unwrap();
+        buffer.push(create_bench_span(i));
     }
 
     c.bench_function("ring_buffer_stats", |b| {

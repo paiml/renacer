@@ -1,0 +1,629 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Anomaly Detection - The Renacer Book - Pure Rust System Call Tracing</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="A comprehensive guide to renacer: syscall tracing, DWARF correlation, and performance analysis">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "rust";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The Renacer Book - Pure Rust System Call Tracing</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer/edit/main/book/src/advanced/anomaly-detection.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="real-time-anomaly-detection"><a class="header" href="#real-time-anomaly-detection">Real-Time Anomaly Detection</a></h1>
+<p>Renacer provides real-time anomaly detection using sliding window statistics to identify unusual syscall behavior as your program runs.</p>
+<blockquote>
+<p><strong>TDD-Verified:</strong> All examples validated by <a href="../../../tests/sprint20_realtime_anomaly_tests.rs"><code>tests/sprint20_realtime_anomaly_tests.rs</code></a></p>
+</blockquote>
+<h2 id="overview"><a class="header" href="#overview">Overview</a></h2>
+<p>Real-time anomaly detection monitors syscall execution and alerts you immediately when unusual patterns occur:</p>
+<ul>
+<li><strong>Live Monitoring:</strong> Detect anomalies as they happen (not post-hoc)</li>
+<li><strong>Sliding Window Baselines:</strong> Per-syscall adaptive baselines using recent samples</li>
+<li><strong>Severity Classification:</strong> Low (3-4σ), Medium (4-5σ), High (&gt;5σ)</li>
+<li><strong>SIMD-Accelerated:</strong> Trueno Vector operations for fast statistics</li>
+<li><strong>Zero Overhead:</strong> No impact when disabled (opt-in via <code>--anomaly-realtime</code>)</li>
+</ul>
+<h3 id="real-time-vs-post-hoc-detection"><a class="header" href="#real-time-vs-post-hoc-detection">Real-Time vs Post-Hoc Detection</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>Feature</th><th>Real-Time (Sprint 20)</th><th>Post-Hoc (Sprint 19)</th></tr></thead><tbody>
+<tr><td><strong>Detection</strong></td><td>Live during execution</td><td>After trace completes</td></tr>
+<tr><td><strong>Baseline</strong></td><td>Sliding window (last N samples)</td><td>All samples (global mean)</td></tr>
+<tr><td><strong>Use Case</strong></td><td>Monitor long-running apps</td><td>Analyze completed traces</td></tr>
+<tr><td><strong>Overhead</strong></td><td>Minimal (&lt;1%)</td><td>None (post-processing)</td></tr>
+<tr><td><strong>Flag</strong></td><td><code>--anomaly-realtime</code></td><td><code>--stats-extended</code> + threshold</td></tr>
+</tbody></table>
+</div>
+<h2 id="basic-usage"><a class="header" href="#basic-usage">Basic Usage</a></h2>
+<h3 id="enable-real-time-detection"><a class="header" href="#enable-real-time-detection">Enable Real-Time Detection</a></h3>
+<pre><code class="language-bash">renacer --anomaly-realtime -T -- ./my-app
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_realtime_anomaly_detects_slow_syscall</code></p>
+<p>This enables real-time monitoring with:</p>
+<ul>
+<li><strong>Default window size:</strong> 100 samples per syscall</li>
+<li><strong>Default threshold:</strong> 3.0σ (standard deviations)</li>
+<li><strong>Minimum samples:</strong> 10 per syscall before detection starts</li>
+</ul>
+<h3 id="real-time-alert-output"><a class="header" href="#real-time-alert-output">Real-Time Alert Output</a></h3>
+<p>When an anomaly is detected, you'll see an immediate alert:</p>
+<pre><code class="language-bash">$ renacer --anomaly-realtime -T -- ./slow-app
+
+openat(AT_FDCWD, "/etc/ld.so.cache", O_RDONLY) = 3
+read(3, buf, 832) = 832
+⚠️  ANOMALY: write took 5234 μs (4.2σ from baseline 102.3 μs) - 🟡 Medium
+write(1, "processing...", 14) = 14
+⚠️  ANOMALY: fsync took 8234 μs (6.3σ from baseline 123.4 μs) - 🔴 High
+fsync(3) = 0
+close(3) = 0
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_realtime_anomaly_detects_slow_syscall</code></p>
+<p>Each alert shows:</p>
+<ul>
+<li><strong>Syscall name</strong> - Which syscall triggered the anomaly</li>
+<li><strong>Duration</strong> - Actual time taken (μs)</li>
+<li><strong>Z-score</strong> - How many standard deviations from baseline</li>
+<li><strong>Baseline</strong> - Current mean for this syscall</li>
+<li><strong>Severity</strong> - Visual indicator (🟢 Low, 🟡 Medium, 🔴 High)</li>
+</ul>
+<h2 id="severity-classification"><a class="header" href="#severity-classification">Severity Classification</a></h2>
+<p>Anomalies are classified by their Z-score:</p>
+<div class="table-wrapper"><table><thead><tr><th>Severity</th><th>Z-Score Range</th><th>Icon</th><th>Meaning</th></tr></thead><tbody>
+<tr><td><strong>Low</strong></td><td>3.0σ - 4.0σ</td><td>🟢</td><td>Noticeable slowdown</td></tr>
+<tr><td><strong>Medium</strong></td><td>4.0σ - 5.0σ</td><td>🟡</td><td>Significant slowdown</td></tr>
+<tr><td><strong>High</strong></td><td>&gt;5.0σ</td><td>🔴</td><td>Extreme slowdown / potential issue</td></tr>
+</tbody></table>
+</div>
+<p><strong>Tested by:</strong> <code>test_anomaly_severity_classification</code></p>
+<p>Example severity classification:</p>
+<pre><code class="language-bash"># 50ms delay on baseline 1ms syscall = ~50σ = High
+⚠️  ANOMALY: write took 50234 μs (48.2σ from baseline 1023.4 μs) - 🔴 High
+
+# 5ms delay on baseline 1ms syscall = ~5σ = High
+⚠️  ANOMALY: read took 6123 μs (5.1σ from baseline 1123.4 μs) - 🔴 High
+
+# 3.5ms delay on baseline 1ms syscall = ~3.5σ = Low
+⚠️  ANOMALY: openat took 4234 μs (3.4σ from baseline 1023.4 μs) - 🟢 Low
+</code></pre>
+<h2 id="configuration"><a class="header" href="#configuration">Configuration</a></h2>
+<h3 id="custom-window-size"><a class="header" href="#custom-window-size">Custom Window Size</a></h3>
+<p>Control how many recent samples to keep per syscall:</p>
+<pre><code class="language-bash">renacer --anomaly-realtime --anomaly-window-size 50 -T -- ./app
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_anomaly_window_size_configuration</code>, <code>test_anomaly_sliding_window_wraparound</code></p>
+<ul>
+<li><strong>Default:</strong> 100 samples</li>
+<li><strong>Smaller window (20-50):</strong> More sensitive to recent changes</li>
+<li><strong>Larger window (200-500):</strong> More stable baseline, less noise</li>
+</ul>
+<p><strong>Window Size Trade-offs:</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Window Size</th><th>Pros</th><th>Cons</th></tr></thead><tbody>
+<tr><td><strong>Small (20-50)</strong></td><td>Adapts quickly to changing patterns</td><td>More false positives</td></tr>
+<tr><td><strong>Medium (100)</strong></td><td>Good balance (default)</td><td>May miss transient issues</td></tr>
+<tr><td><strong>Large (200+)</strong></td><td>Stable baselines, fewer alerts</td><td>Slower adaptation</td></tr>
+</tbody></table>
+</div>
+<h3 id="minimum-samples"><a class="header" href="#minimum-samples">Minimum Samples</a></h3>
+<p>Anomaly detection requires <strong>at least 10 samples</strong> per syscall before alerts begin:</p>
+<pre><code class="language-bash">$ renacer --anomaly-realtime -T -e trace=write -- echo "test"
+# No anomalies detected (only 1-2 write syscalls)
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_anomaly_requires_minimum_samples</code></p>
+<p>This prevents false alarms during application startup when baselines are unreliable.</p>
+<h2 id="summary-report"><a class="header" href="#summary-report">Summary Report</a></h2>
+<p>After the trace completes, a summary report is displayed:</p>
+<pre><code class="language-bash">=== Real-Time Anomaly Detection Report ===
+Total anomalies detected: 12
+
+Severity Distribution:
+  🔴 High (&gt;5.0σ):   2 anomalies
+  🟡 Medium (4-5σ): 5 anomalies
+  🟢 Low (3-4σ):    5 anomalies
+
+Top Anomalies (by Z-score):
+  1. 🔴 fsync - 6.3σ (8234 μs, baseline: 123.4 ± 1287.2 μs)
+  2. 🔴 write - 5.7σ (5234 μs, baseline: 102.3 ± 902.1 μs)
+  3. 🟡 read - 4.8σ (2341 μs, baseline: 87.6 ± 468.9 μs)
+  ... and 9 more
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_realtime_anomaly_detects_slow_syscall</code></p>
+<p>The report shows:</p>
+<ul>
+<li><strong>Total count</strong> - Number of anomalies detected</li>
+<li><strong>Severity distribution</strong> - Breakdown by Low/Medium/High</li>
+<li><strong>Top anomalies</strong> - 10 most severe by Z-score</li>
+<li><strong>Baseline statistics</strong> - Mean ± standard deviation</li>
+</ul>
+<h2 id="integration-with-other-features"><a class="header" href="#integration-with-other-features">Integration with Other Features</a></h2>
+<h3 id="with-statistics-mode--c"><a class="header" href="#with-statistics-mode--c">With Statistics Mode (-c)</a></h3>
+<p>Combine real-time detection with summary statistics:</p>
+<pre><code class="language-bash">renacer -c --anomaly-realtime -T -- cargo build
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_anomaly_realtime_with_statistics</code></p>
+<p>Output includes:</p>
+<ol>
+<li><strong>Live alerts</strong> during execution (stderr)</li>
+<li><strong>Statistics table</strong> at the end (stderr)</li>
+<li><strong>Anomaly summary</strong> at the end (stderr)</li>
+</ol>
+<h3 id="with-filtering--e"><a class="header" href="#with-filtering--e">With Filtering (-e)</a></h3>
+<p>Monitor anomalies only for specific syscalls:</p>
+<pre><code class="language-bash">renacer --anomaly-realtime -e trace=write -T -- ./app
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_anomaly_realtime_with_filtering</code></p>
+<p>This:</p>
+<ul>
+<li><strong>Traces only</strong> filtered syscalls (e.g., <code>write</code>)</li>
+<li><strong>Builds baselines</strong> only for filtered syscalls</li>
+<li><strong>Detects anomalies</strong> only in filtered syscalls</li>
+</ul>
+<p><strong>Use case:</strong> Focus on I/O operations without noise from other syscalls.</p>
+<h3 id="with-multi-process-tracing--f"><a class="header" href="#with-multi-process-tracing--f">With Multi-Process Tracing (-f)</a></h3>
+<p>Detect anomalies across all processes:</p>
+<pre><code class="language-bash">renacer -f --anomaly-realtime -T -- make -j8
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_anomaly_realtime_with_multiprocess</code></p>
+<p>Each process (parent + children) has:</p>
+<ul>
+<li><strong>Independent baselines</strong> per syscall</li>
+<li><strong>Separate anomaly detection</strong> (not shared across processes)</li>
+</ul>
+<h3 id="with-json-output"><a class="header" href="#with-json-output">With JSON Output</a></h3>
+<p>Export anomalies to JSON for programmatic analysis:</p>
+<pre><code class="language-bash">renacer --anomaly-realtime -T --format json -- ./app &gt; trace.json
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_anomaly_json_export</code></p>
+<p>JSON includes <code>anomalies</code> array in the output (if anomalies detected):</p>
+<pre><code class="language-json">{
+  "pid": 12345,
+  "syscall": "write",
+  "duration_us": 5234,
+  "anomaly": {
+    "z_score": 4.2,
+    "baseline_mean": 102.3,
+    "baseline_stddev": 902.1,
+    "severity": "Medium"
+  }
+}
+</code></pre>
+<h2 id="edge-cases--error-handling"><a class="header" href="#edge-cases--error-handling">Edge Cases &amp; Error Handling</a></h2>
+<h3 id="insufficient-samples"><a class="header" href="#insufficient-samples">Insufficient Samples</a></h3>
+<p>With too few syscalls, anomaly detection does not trigger:</p>
+<pre><code class="language-bash">$ renacer --anomaly-realtime -T -e trace=write -- echo "test"
+# Output: No "ANOMALY" alerts (only 1 write syscall)
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_anomaly_requires_minimum_samples</code></p>
+<p>Minimum 10 samples required per syscall type before detection starts.</p>
+<h3 id="zero-variance"><a class="header" href="#zero-variance">Zero Variance</a></h3>
+<p>When all samples are identical (stddev = 0), the system handles gracefully:</p>
+<pre><code class="language-bash">$ renacer --anomaly-realtime -T -- ./uniform-app
+# No division-by-zero errors, no false anomalies
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_anomaly_with_zero_variance</code></p>
+<p>Implementation checks for <code>stddev &gt; 0.0</code> before calculating Z-score.</p>
+<h3 id="sliding-window-wraparound"><a class="header" href="#sliding-window-wraparound">Sliding Window Wraparound</a></h3>
+<p>When sample count exceeds window size, old samples are removed:</p>
+<pre><code class="language-bash">$ renacer --anomaly-realtime --anomaly-window-size 50 -T -- ./many-syscalls
+# Window maintains last 50 samples per syscall (FIFO)
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_anomaly_sliding_window_wraparound</code></p>
+<p>Memory usage stays constant (O(window_size × syscall_types)).</p>
+<h3 id="backward-compatibility"><a class="header" href="#backward-compatibility">Backward Compatibility</a></h3>
+<p>Without <code>--anomaly-realtime</code>, <strong>no overhead</strong> occurs:</p>
+<pre><code class="language-bash">$ renacer -T -- ./app
+# No anomaly detection, no performance impact
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_backward_compatibility_without_anomaly_realtime</code></p>
+<p>Ensures existing users see no behavior change.</p>
+<h2 id="how-it-works"><a class="header" href="#how-it-works">How It Works</a></h2>
+<h3 id="sliding-window-statistics"><a class="header" href="#sliding-window-statistics">Sliding Window Statistics</a></h3>
+<p>For each syscall type (e.g., <code>write</code>, <code>read</code>):</p>
+<ol>
+<li><strong>Sample Collection:</strong> Last N durations stored (N = window size)</li>
+<li><strong>Statistics Update:</strong> After each syscall:
+<ul>
+<li>Calculate mean: <code>μ = Σ(samples) / N</code></li>
+<li>Calculate stddev: <code>σ = √(Σ(x - μ)² / N)</code></li>
+<li>Uses Trueno SIMD for fast computation</li>
+</ul>
+</li>
+<li><strong>Anomaly Check:</strong> If <code>|duration - μ| / σ &gt; threshold</code>:
+<ul>
+<li>Classify severity (Low/Medium/High)</li>
+<li>Emit alert immediately</li>
+<li>Store in summary</li>
+</ul>
+</li>
+</ol>
+<h3 id="per-syscall-baselines"><a class="header" href="#per-syscall-baselines">Per-Syscall Baselines</a></h3>
+<p>Each syscall type has <strong>independent baselines</strong>:</p>
+<pre><code>write:  μ = 102μs, σ = 45μs  (baseline from last 100 writes)
+read:   μ = 523μs, σ = 234μs (baseline from last 100 reads)
+fsync:  μ = 1234μs, σ = 567μs (baseline from last 100 fsyncs)
+</code></pre>
+<p><strong>Why separate baselines?</strong></p>
+<ul>
+<li>Different syscalls have different typical latencies</li>
+<li><code>fsync</code> is naturally slower than <code>write</code></li>
+<li>Comparing <code>fsync</code> to <code>write</code> baseline would always flag as anomaly</li>
+</ul>
+<h3 id="simd-acceleration"><a class="header" href="#simd-acceleration">SIMD Acceleration</a></h3>
+<p>Uses Trueno library for fast statistics:</p>
+<pre><code class="language-rust">use trueno::Vector;
+
+let v = Vector::from_slice(&amp;samples);
+let mean = v.mean().unwrap_or(0.0);     // SIMD-accelerated
+let stddev = v.stddev().unwrap_or(0.0); // SIMD-accelerated</code></pre>
+<p><strong>Performance:</strong> ~3-10x faster than naive loops for large windows.</p>
+<h2 id="practical-examples"><a class="header" href="#practical-examples">Practical Examples</a></h2>
+<h3 id="example-1-database-slow-query-detection"><a class="header" href="#example-1-database-slow-query-detection">Example 1: Database Slow Query Detection</a></h3>
+<pre><code class="language-bash">$ renacer --anomaly-realtime -e trace=file -T -- pg_bench
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>read(3, buf, 8192) = 8192
+read(3, buf, 8192) = 8192
+⚠️  ANOMALY: fsync took 15234 μs (8.2σ from baseline 1023.4 μs) - 🔴 High
+fsync(3) = 0
+read(3, buf, 8192) = 8192
+</code></pre>
+<p><strong>Diagnosis:</strong> <code>fsync</code> taking 15ms instead of 1ms indicates:</p>
+<ul>
+<li>Disk I/O bottleneck</li>
+<li>WAL (Write-Ahead Log) blocking</li>
+<li>Consider: <code>fsync=off</code> for testing, SSD upgrade, or async I/O</li>
+</ul>
+<p><strong>Tested by:</strong> <code>test_realtime_anomaly_detects_slow_syscall</code></p>
+<h3 id="example-2-network-latency-spikes"><a class="header" href="#example-2-network-latency-spikes">Example 2: Network Latency Spikes</a></h3>
+<pre><code class="language-bash">$ renacer --anomaly-realtime -e trace=network -T -- ./http_server
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>sendto(4, buf, 1024) = 1024
+recvfrom(4, buf, 2048) = 512
+⚠️  ANOMALY: recvfrom took 50234 μs (12.3σ from baseline 2023.4 μs) - 🔴 High
+recvfrom(4, buf, 2048) = 512
+sendto(4, buf, 1024) = 1024
+</code></pre>
+<p><strong>Diagnosis:</strong> <code>recvfrom</code> taking 50ms instead of 2ms indicates:</p>
+<ul>
+<li>Network congestion</li>
+<li>Client-side delays</li>
+<li>Consider: Timeout adjustments, connection pooling</li>
+</ul>
+<h3 id="example-3-cicd-pipeline-monitoring"><a class="header" href="#example-3-cicd-pipeline-monitoring">Example 3: CI/CD Pipeline Monitoring</a></h3>
+<pre><code class="language-bash">$ renacer -f --anomaly-realtime -c -T -- make test
+</code></pre>
+<p><strong>Use case:</strong> Detect slow build steps in multi-process builds:</p>
+<ul>
+<li><code>-f</code>: Follow all child processes (parallel builds)</li>
+<li><code>--anomaly-realtime</code>: Alert on slow I/O</li>
+<li><code>-c</code>: Statistics summary at end</li>
+<li><code>-T</code>: Timing data</li>
+</ul>
+<p><strong>Output identifies:</strong></p>
+<ul>
+<li>Which subprocess had slow I/O</li>
+<li>Which syscalls were outliers</li>
+<li>Summary statistics for optimization</li>
+</ul>
+<h2 id="troubleshooting"><a class="header" href="#troubleshooting">Troubleshooting</a></h2>
+<h3 id="no-anomalies-detected-but-i-know-there-are-issues"><a class="header" href="#no-anomalies-detected-but-i-know-there-are-issues">"No anomalies detected" but I know there are issues</a></h3>
+<p><strong>Possible reasons:</strong></p>
+<ol>
+<li>
+<p><strong>Not enough samples:</strong></p>
+<pre><code class="language-bash"># Check: Run longer workload
+renacer --anomaly-realtime -T -- ./short-lived-app
+# Fix: Ensure app makes &gt;10 syscalls per type
+</code></pre>
+</li>
+<li>
+<p><strong>Threshold too high:</strong></p>
+<pre><code class="language-bash"># Default threshold is 3.0σ
+# For more sensitive detection, lower threshold (Sprint 19):
+renacer -c --stats-extended --anomaly-threshold 2.0 -- ./app
+</code></pre>
+</li>
+<li>
+<p><strong>High variance baseline:</strong></p>
+<ul>
+<li>If syscall latency naturally varies (e.g., network I/O)</li>
+<li>Anomalies may not exceed 3σ threshold</li>
+<li>Check summary report for baseline stddev</li>
+</ul>
+</li>
+</ol>
+<p><strong>Tested by:</strong> <code>test_anomaly_requires_minimum_samples</code></p>
+<h3 id="too-many-false-positives"><a class="header" href="#too-many-false-positives">Too many false positives</a></h3>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li>
+<p><strong>Increase threshold:</strong></p>
+<pre><code class="language-bash"># Use Sprint 19 post-hoc analysis with higher threshold
+renacer -c --stats-extended --anomaly-threshold 4.0 -- ./app
+</code></pre>
+</li>
+<li>
+<p><strong>Increase window size:</strong></p>
+<pre><code class="language-bash"># More stable baselines = fewer alerts
+renacer --anomaly-realtime --anomaly-window-size 200 -T -- ./app
+</code></pre>
+</li>
+<li>
+<p><strong>Filter specific syscalls:</strong></p>
+<pre><code class="language-bash"># Only monitor critical I/O operations
+renacer --anomaly-realtime -e trace=fsync,write -T -- ./app
+</code></pre>
+</li>
+</ol>
+<p><strong>Tested by:</strong> <code>test_anomaly_window_size_configuration</code>, <code>test_anomaly_realtime_with_filtering</code></p>
+<h3 id="anomaly-detection-not-working-with-quick-commands"><a class="header" href="#anomaly-detection-not-working-with-quick-commands">Anomaly detection not working with quick commands</a></h3>
+<p><strong>Problem:</strong></p>
+<pre><code class="language-bash">$ renacer --anomaly-realtime -T -- echo "test"
+# No anomalies (only 1-2 syscalls)
+</code></pre>
+<p><strong>Explanation:</strong> Need ≥10 samples per syscall type for reliable statistics.</p>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li>Use longer-running workloads</li>
+<li>Use post-hoc analysis instead (Sprint 19):
+<pre><code class="language-bash">renacer -c --stats-extended -- echo "test"
+</code></pre>
+</li>
+</ol>
+<p><strong>Tested by:</strong> <code>test_anomaly_requires_minimum_samples</code></p>
+<h2 id="comparison-with-sprint-19-post-hoc-detection"><a class="header" href="#comparison-with-sprint-19-post-hoc-detection">Comparison with Sprint 19 Post-Hoc Detection</a></h2>
+<h3 id="when-to-use-real-time-sprint-20"><a class="header" href="#when-to-use-real-time-sprint-20">When to Use Real-Time (Sprint 20)</a></h3>
+<p>✅ <strong>Use <code>--anomaly-realtime</code> when:</strong></p>
+<ul>
+<li>Monitoring long-running applications</li>
+<li>Need immediate alerts (not post-analysis)</li>
+<li>Debugging live performance issues</li>
+<li>CI/CD pipeline monitoring</li>
+</ul>
+<h3 id="when-to-use-post-hoc-sprint-19"><a class="header" href="#when-to-use-post-hoc-sprint-19">When to Use Post-Hoc (Sprint 19)</a></h3>
+<p>✅ <strong>Use <code>--stats-extended</code> when:</strong></p>
+<ul>
+<li>Analyzing completed traces</li>
+<li>Need percentiles (P50, P75, P90, P95, P99)</li>
+<li>Short-lived commands (&lt;10 syscalls per type)</li>
+<li>Historical analysis</li>
+</ul>
+<h3 id="combined-approach"><a class="header" href="#combined-approach">Combined Approach</a></h3>
+<p>Use both for comprehensive analysis:</p>
+<pre><code class="language-bash">renacer -c --stats-extended --anomaly-realtime -T -- ./app
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_anomaly_threshold_from_sprint19_still_works</code></p>
+<p>This provides:</p>
+<ul>
+<li><strong>Real-time alerts</strong> during execution</li>
+<li><strong>Percentile analysis</strong> at the end</li>
+<li><strong>Both Z-score methods</strong> (sliding window + global)</li>
+</ul>
+<h2 id="performance"><a class="header" href="#performance">Performance</a></h2>
+<ul>
+<li><strong>Overhead:</strong> &lt;1% when enabled (SIMD-accelerated statistics)</li>
+<li><strong>Memory:</strong> O(window_size × syscall_types) - typically &lt;1MB</li>
+<li><strong>Speed:</strong> SIMD operations via Trueno (3-10x faster than naive loops)</li>
+</ul>
+<p><strong>Zero overhead when disabled</strong> (not enabled by default).</p>
+<h2 id="summary"><a class="header" href="#summary">Summary</a></h2>
+<p>Real-time anomaly detection provides:</p>
+<ul>
+<li>✅ <strong>Live monitoring</strong> with immediate alerts</li>
+<li>✅ <strong>Sliding window baselines</strong> per syscall type</li>
+<li>✅ <strong>Severity classification</strong> (Low/Medium/High with emojis)</li>
+<li>✅ <strong>SIMD-accelerated</strong> statistics via Trueno</li>
+<li>✅ <strong>Integration</strong> with filtering, multi-process, statistics, JSON</li>
+<li>✅ <strong>Zero overhead</strong> when disabled (opt-in only)</li>
+</ul>
+<p><strong>All examples tested in:</strong> <a href="../../../tests/sprint20_realtime_anomaly_tests.rs"><code>tests/sprint20_realtime_anomaly_tests.rs</code></a></p>
+<h2 id="related"><a class="header" href="#related">Related</a></h2>
+<ul>
+<li><a href="./statistical-analysis.html">Statistical Analysis</a> - Post-hoc Z-score analysis (Sprint 19)</li>
+<li><a href="./machine-learning.html">Machine Learning</a> - ML-based anomaly detection (Sprint 23)</li>
+<li><a href="../core-concepts/filtering.html">Filtering Syscalls</a> - Focus detection with filters</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../advanced/simd-acceleration.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../advanced/post-hoc-anomaly.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../advanced/simd-acceleration.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../advanced/post-hoc-anomaly.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../ace.js"></script>
+        <script src="../editor.js"></script>
+        <script src="../mode-rust.js"></script>
+        <script src="../theme-dawn.js"></script>
+        <script src="../theme-tomorrow_night.js"></script>
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

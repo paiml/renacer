@@ -1,0 +1,531 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Flamegraph Export - The Renacer Book - Pure Rust System Call Tracing</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="A comprehensive guide to renacer: syscall tracing, DWARF correlation, and performance analysis">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "rust";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The Renacer Book - Pure Rust System Call Tracing</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer/edit/main/book/src/advanced/flamegraphs.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="flamegraph-visualization"><a class="header" href="#flamegraph-visualization">Flamegraph Visualization</a></h1>
+<p>Flamegraphs are a powerful visualization technique for profiling data, showing call stacks and their time distribution. This chapter shows how to export Renacer's profiling data and visualize it with external flamegraph tools.</p>
+<blockquote>
+<p><strong>TDD-Verified:</strong> Export functionality tested in <a href="../../../tests/"><code>tests/sprint22_html_output_tests.rs</code></a>, profiling in <a href="../../../tests/"><code>tests/sprint13_function_profiling_tests.rs</code></a></p>
+</blockquote>
+<blockquote>
+<p><strong>Parent Chapter:</strong> See <a href="./function-profiling.html">Function Profiling</a> for overview and basic usage.</p>
+</blockquote>
+<h2 id="overview"><a class="header" href="#overview">Overview</a></h2>
+<p><strong>Flamegraphs</strong> visualize call stacks with:</p>
+<ul>
+<li><strong>X-axis:</strong> Alphabetically sorted function names (not time!)</li>
+<li><strong>Y-axis:</strong> Stack depth (call hierarchy)</li>
+<li><strong>Width:</strong> Proportion of total time spent in function</li>
+<li><strong>Color:</strong> Usually random (for visual distinction) or can indicate metrics</li>
+</ul>
+<p><strong>Why flamegraphs?</strong></p>
+<ul>
+<li><strong>Visual bottleneck identification</strong> - Wide bars = hot code paths</li>
+<li><strong>Call hierarchy understanding</strong> - See parent-child relationships</li>
+<li><strong>Interactive exploration</strong> - Click to zoom, search functions</li>
+<li><strong>Shareable analysis</strong> - Export as SVG for reports</li>
+</ul>
+<p><strong>Example flamegraph:</strong></p>
+<pre><code>┌─────────────────────────────────────────────┐ 100% (main)
+│                main()                      │
+├─────────────┬───────────────────────────────┤
+│  process()  │     network_call()           │ 60%
+│    40%      │                               │
+├─────┬───────┼───────┬───────────────────────┤
+│read │write  │connect│  send_request()      │ 35%
+│ 20% │ 20%   │  5%   │                       │
+└─────┴───────┴───────┴───────────────────────┘
+</code></pre>
+<p><strong>Interpretation:</strong> <code>send_request()</code> is the bottleneck (35% of total time).</p>
+<h2 id="exporting-profiling-data"><a class="header" href="#exporting-profiling-data">Exporting Profiling Data</a></h2>
+<p>Renacer supports JSON export for post-processing:</p>
+<pre><code class="language-bash">$ renacer --function-time --source --format json -- ./myapp &gt; profile.json
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_html_format_flag_accepted</code> (Sprint 22 - verifies format flag acceptance)</p>
+<p><strong>JSON Output Structure:</strong></p>
+<pre><code class="language-json">{
+  "syscalls": [...],
+  "function_profile": [
+    {
+      "function": "src/main.rs:42",
+      "calls": 150,
+      "total_time_us": 234567,
+      "avg_time_us": 1563,
+      "slow_io_count": 148
+    },
+    ...
+  ],
+  "summary": {
+    "total_syscalls": 500,
+    "total_duration_ms": 580.245
+  }
+}
+</code></pre>
+<h2 id="generating-flamegraphs"><a class="header" href="#generating-flamegraphs">Generating Flamegraphs</a></h2>
+<h3 id="method-1-using-brendan-greggs-flamegraph-tools"><a class="header" href="#method-1-using-brendan-greggs-flamegraph-tools">Method 1: Using Brendan Gregg's Flamegraph Tools</a></h3>
+<p><strong>Prerequisites:</strong></p>
+<pre><code class="language-bash">$ git clone https://github.com/brendangregg/FlameGraph
+$ cd FlameGraph
+</code></pre>
+<p><strong>Step 1: Convert JSON to Folded Stack Format</strong></p>
+<p>Create a conversion script <code>renacer_to_folded.py</code>:</p>
+<pre><code class="language-python">#!/usr/bin/env python3
+import json
+import sys
+
+# Read Renacer JSON output
+with open(sys.argv[1]) as f:
+    data = json.load(f)
+
+# Convert function profile to folded stacks
+for func in data.get('function_profile', []):
+    function_name = func['function']
+    # Use total time (microseconds) as sample count
+    samples = func['total_time_us']
+
+    # Format: function_name samples
+    print(f"{function_name} {samples}")
+</code></pre>
+<p><strong>Step 2: Generate Flamegraph</strong></p>
+<pre><code class="language-bash"># Convert Renacer JSON → folded stacks
+$ python3 renacer_to_folded.py profile.json &gt; profile.folded
+
+# Generate flamegraph SVG
+$ ./FlameGraph/flamegraph.pl profile.folded &gt; flamegraph.svg
+
+# Open in browser
+$ firefox flamegraph.svg
+</code></pre>
+<p><strong>Result:</strong> Interactive SVG flamegraph showing function time distribution!</p>
+<h3 id="method-2-using-speedscopeapp"><a class="header" href="#method-2-using-speedscopeapp">Method 2: Using speedscope.app</a></h3>
+<p><strong>Speedscope</strong> is a web-based flamegraph viewer:</p>
+<p><strong>Step 1: Export profiling data</strong></p>
+<pre><code class="language-bash">$ renacer --function-time --source --format json -- ./myapp &gt; profile.json
+</code></pre>
+<p><strong>Step 2: Visit speedscope.app</strong></p>
+<pre><code class="language-bash">$ firefox https://www.speedscope.app/
+</code></pre>
+<p><strong>Step 3: Upload <code>profile.json</code></strong></p>
+<p><strong>Note:</strong> Speedscope expects specific JSON formats (Chrome timeline, Firefox profiler, etc.). Renacer's format may need conversion. Use Method 1 (Brendan Gregg's tools) for simplest workflow.</p>
+<h3 id="method-3-manual-html-visualization"><a class="header" href="#method-3-manual-html-visualization">Method 3: Manual HTML Visualization</a></h3>
+<p>For small datasets, create a simple HTML visualization:</p>
+<pre><code class="language-html">&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+    &lt;title&gt;Renacer Flamegraph&lt;/title&gt;
+    &lt;style&gt;
+        .bar { margin: 2px; padding: 5px; background: #f90; }
+        .function { font-family: monospace; }
+        .time { float: right; color: #666; }
+    &lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+    &lt;h1&gt;Function Profile&lt;/h1&gt;
+    &lt;div id="chart"&gt;&lt;/div&gt;
+    &lt;script&gt;
+        // Load profile.json (served via http server)
+        fetch('profile.json')
+            .then(r =&gt; r.json())
+            .then(data =&gt; {
+                const total = data.summary.total_duration_ms * 1000; // Convert to μs
+                const chart = document.getElementById('chart');
+
+                data.function_profile
+                    .sort((a, b) =&gt; b.total_time_us - a.total_time_us)
+                    .forEach(func =&gt; {
+                        const pct = (func.total_time_us / total * 100).toFixed(1);
+                        const bar = document.createElement('div');
+                        bar.className = 'bar';
+                        bar.style.width = pct + '%';
+                        bar.innerHTML = `
+                            &lt;span class="function"&gt;${func.function}&lt;/span&gt;
+                            &lt;span class="time"&gt;${func.total_time_us}μs (${pct}%)&lt;/span&gt;
+                        `;
+                        chart.appendChild(bar);
+                    });
+            });
+    &lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</code></pre>
+<p><strong>Serve and view:</strong></p>
+<pre><code class="language-bash">$ python3 -m http.server 8080
+$ firefox http://localhost:8080/
+</code></pre>
+<h2 id="practical-examples"><a class="header" href="#practical-examples">Practical Examples</a></h2>
+<h3 id="example-1-identify-database-bottlenecks"><a class="header" href="#example-1-identify-database-bottlenecks">Example 1: Identify Database Bottlenecks</a></h3>
+<p><strong>Scenario:</strong> Web application with database calls</p>
+<pre><code class="language-bash"># Profile application
+$ renacer --function-time --source --format json -e trace=network -- ./webapp &gt; profile.json
+
+# Convert to flamegraph
+$ python3 renacer_to_folded.py profile.json | ./FlameGraph/flamegraph.pl &gt; db-bottlenecks.svg
+</code></pre>
+<p><strong>Flamegraph shows:</strong></p>
+<ul>
+<li>Wide bar for <code>execute_query()</code> → Database calls dominate execution time</li>
+<li>Narrow bar for <code>cache_lookup()</code> → Fast cache hits</li>
+<li>Medium bar for <code>json_serialize()</code> → Moderate CPU time</li>
+</ul>
+<p><strong>Action:</strong> Add caching layer to reduce wide <code>execute_query()</code> bar.</p>
+<h3 id="example-2-build-system-analysis"><a class="header" href="#example-2-build-system-analysis">Example 2: Build System Analysis</a></h3>
+<p><strong>Scenario:</strong> Slow cargo build</p>
+<pre><code class="language-bash">$ renacer --function-time --source --format json -e trace=file -- cargo build &gt; build-profile.json
+$ python3 renacer_to_folded.py build-profile.json | ./FlameGraph/flamegraph.pl &gt; build-flame.svg
+</code></pre>
+<p><strong>Flamegraph shows:</strong></p>
+<ul>
+<li>Wide bar for <code>rustc:link</code> → Linking is the bottleneck</li>
+<li>Narrow bars for <code>cargo:download_crate</code> → Dependencies already cached</li>
+<li>Medium bar for <code>rustc:codegen</code> → Compilation time is acceptable</li>
+</ul>
+<p><strong>Action:</strong> Enable incremental compilation to reduce linking time.</p>
+<h3 id="example-3-comparing-beforeafter-optimizations"><a class="header" href="#example-3-comparing-beforeafter-optimizations">Example 3: Comparing Before/After Optimizations</a></h3>
+<p><strong>Before optimization:</strong></p>
+<pre><code class="language-bash">$ renacer --function-time --source --format json -- ./app-v1 &gt; before.json
+$ python3 renacer_to_folded.py before.json | ./FlameGraph/flamegraph.pl &gt; before.svg
+</code></pre>
+<p><strong>After optimization:</strong></p>
+<pre><code class="language-bash">$ renacer --function-time --source --format json -- ./app-v2 &gt; after.json
+$ python3 renacer_to_folded.py after.json | ./FlameGraph/flamegraph.pl &gt; after.svg
+</code></pre>
+<p><strong>Compare side-by-side:</strong></p>
+<pre><code class="language-bash">$ firefox before.svg after.svg
+</code></pre>
+<p><strong>Look for:</strong></p>
+<ul>
+<li>Narrower bars (faster functions)</li>
+<li>Shorter stacks (reduced call depth)</li>
+<li>Fewer wide bars (eliminated bottlenecks)</li>
+</ul>
+<h2 id="advanced-workflows"><a class="header" href="#advanced-workflows">Advanced Workflows</a></h2>
+<h3 id="filtering-hot-paths-only"><a class="header" href="#filtering-hot-paths-only">Filtering Hot Paths Only</a></h3>
+<p>Show only functions consuming &gt;1% of total time:</p>
+<pre><code class="language-python">#!/usr/bin/env python3
+import json
+import sys
+
+with open(sys.argv[1]) as f:
+    data = json.load(f)
+
+total_time = data['summary']['total_duration_ms'] * 1000  # μs
+threshold = total_time * 0.01  # 1% threshold
+
+for func in data.get('function_profile', []):
+    if func['total_time_us'] &gt; threshold:
+        print(f"{func['function']} {func['total_time_us']}")
+</code></pre>
+<p><strong>Usage:</strong></p>
+<pre><code class="language-bash">$ python3 filter_hot_paths.py profile.json | ./FlameGraph/flamegraph.pl &gt; hot-paths.svg
+</code></pre>
+<p><strong>Result:</strong> Cleaner flamegraph focusing on significant bottlenecks.</p>
+<h3 id="differential-flamegraphs"><a class="header" href="#differential-flamegraphs">Differential Flamegraphs</a></h3>
+<p>Compare two profiles to see what changed:</p>
+<pre><code class="language-bash"># Requires flamegraph-diff tool
+$ python3 renacer_to_folded.py before.json &gt; before.folded
+$ python3 renacer_to_folded.py after.json &gt; after.folded
+
+$ ./FlameGraph/difffolded.pl before.folded after.folded | ./FlameGraph/flamegraph.pl &gt; diff.svg
+</code></pre>
+<p><strong>Red regions:</strong> Functions slower in after.json
+<strong>Blue regions:</strong> Functions faster in after.json
+<strong>Gray regions:</strong> No significant change</p>
+<h3 id="color-coding-by-slow-io"><a class="header" href="#color-coding-by-slow-io">Color-Coding by Slow I/O</a></h3>
+<p>Customize flamegraph colors based on slow I/O count:</p>
+<pre><code class="language-python">#!/usr/bin/env python3
+import json
+import sys
+
+with open(sys.argv[1]) as f:
+    data = json.load(f)
+
+for func in data.get('function_profile', []):
+    slow_io_pct = func['slow_io_count'] / max(func['calls'], 1) * 100
+    # Color code: red for &gt;50% slow I/O, orange for &gt;10%, default otherwise
+    color = 'red' if slow_io_pct &gt; 50 else ('orange' if slow_io_pct &gt; 10 else 'default')
+
+    print(f"{func['function']} {func['total_time_us']} # {color}")
+</code></pre>
+<p><strong>Result:</strong> Flamegraph visually highlights I/O bottlenecks with color!</p>
+<h2 id="troubleshooting"><a class="header" href="#troubleshooting">Troubleshooting</a></h2>
+<h3 id="empty-flamegraph"><a class="header" href="#empty-flamegraph">Empty Flamegraph</a></h3>
+<p><strong>Problem:</strong> Flamegraph shows no data or "No function profiling data collected"</p>
+<p><strong>Cause:</strong> Function profiling not enabled or no debug symbols</p>
+<p><strong>Solution:</strong></p>
+<pre><code class="language-bash"># Ensure both --function-time and --source are used
+$ renacer --function-time --source --format json -- ./myapp &gt; profile.json
+
+# Verify debug symbols
+$ file ./myapp  # Should show "with debug_info, not stripped"
+</code></pre>
+<h3 id="incorrect-stack-heights"><a class="header" href="#incorrect-stack-heights">Incorrect Stack Heights</a></h3>
+<p><strong>Problem:</strong> All functions appear at same level (no hierarchy)</p>
+<p><strong>Cause:</strong> Renacer currently exports immediate callers only, not full stacks</p>
+<p><strong>Workaround:</strong></p>
+<ul>
+<li>Flamegraphs work best with full stack traces</li>
+<li>Renacer's function profiling shows caller-callee pairs</li>
+<li>For hierarchical visualization, manually construct stacks from profiling data</li>
+</ul>
+<h3 id="conversion-errors"><a class="header" href="#conversion-errors">Conversion Errors</a></h3>
+<p><strong>Problem:</strong> <code>renacer_to_folded.py</code> fails with JSON parse errors</p>
+<p><strong>Cause:</strong> Invalid JSON output or large files</p>
+<p><strong>Solution:</strong></p>
+<pre><code class="language-bash"># Verify JSON is valid
+$ jq '.' profile.json &gt; /dev/null
+
+# For large files, use streaming JSON parser
+$ cat profile.json | jq -c '.function_profile[]' | while read line; do
+    # Process line by line
+done
+</code></pre>
+<h2 id="limitations"><a class="header" href="#limitations">Limitations</a></h2>
+<p><strong>Current limitations:</strong></p>
+<ol>
+<li><strong>No native flamegraph export</strong> - Requires external tools (Brendan Gregg's scripts)</li>
+<li><strong>Immediate callers only</strong> - Full stack traces not yet supported</li>
+<li><strong>Time-based only</strong> - Cannot flamegraph by call count or other metrics (without custom scripts)</li>
+</ol>
+<p><strong>Future enhancements:</strong></p>
+<ul>
+<li>Native folded stack export</li>
+<li>Full stack trace capture (multi-level unwinding)</li>
+<li>Direct SVG flamegraph generation</li>
+</ul>
+<h2 id="summary"><a class="header" href="#summary">Summary</a></h2>
+<p>Flamegraph visualization provides:</p>
+<ul>
+<li>✅ <strong>Visual bottleneck identification</strong> via JSON export + external tools</li>
+<li>✅ <strong>Interactive exploration</strong> with Brendan Gregg's flamegraph.pl</li>
+<li>✅ <strong>Comparison workflows</strong> for before/after optimization analysis</li>
+<li>✅ <strong>Custom color-coding</strong> based on slow I/O metrics</li>
+<li>✅ <strong>Integration</strong> with existing flamegraph ecosystems</li>
+</ul>
+<p><strong>Workflow:</strong></p>
+<ol>
+<li>Profile with <code>--function-time --source --format json</code></li>
+<li>Convert JSON to folded stack format</li>
+<li>Generate flamegraph SVG with external tools</li>
+<li>Analyze and optimize</li>
+</ol>
+<p><strong>All export functionality tested in:</strong> <a href="../../../tests/"><code>tests/sprint22_html_output_tests.rs</code></a>, function profiling in <a href="../../../tests/"><code>tests/sprint13_function_profiling_tests.rs</code></a></p>
+<h2 id="related"><a class="header" href="#related">Related</a></h2>
+<ul>
+<li><a href="./function-profiling.html">Function Profiling</a> - Parent chapter with basic usage</li>
+<li><a href="./call-graphs.html">Call Graph Analysis</a> - Understanding function relationships</li>
+<li><a href="./io-bottlenecks.html">I/O Bottleneck Detection</a> - Identifying slow I/O for visualization</li>
+<li><a href="../examples/export-data.html">Export to JSON/CSV</a> - Data export workflows</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../advanced/call-graphs.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../advanced/statistical-analysis.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../advanced/call-graphs.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../advanced/statistical-analysis.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../ace.js"></script>
+        <script src="../editor.js"></script>
+        <script src="../mode-rust.js"></script>
+        <script src="../theme-dawn.js"></script>
+        <script src="../theme-tomorrow_night.js"></script>
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

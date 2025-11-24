@@ -1,0 +1,691 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Statistical Analysis - The Renacer Book - Pure Rust System Call Tracing</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="A comprehensive guide to renacer: syscall tracing, DWARF correlation, and performance analysis">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "rust";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The Renacer Book - Pure Rust System Call Tracing</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer/edit/main/book/src/advanced/statistical-analysis.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="statistical-analysis"><a class="header" href="#statistical-analysis">Statistical Analysis</a></h1>
+<p>Renacer provides SIMD-accelerated statistical analysis of syscall performance using the Trueno library, enabling deep insights into latency distributions and anomaly detection.</p>
+<blockquote>
+<p><strong>TDD-Verified:</strong> All examples validated by <a href="../../../tests/sprint19_enhanced_stats_tests.rs"><code>tests/sprint19_enhanced_stats_tests.rs</code></a></p>
+</blockquote>
+<h2 id="overview"><a class="header" href="#overview">Overview</a></h2>
+<p>Enhanced statistical analysis provides comprehensive latency metrics beyond basic averages:</p>
+<ul>
+<li><strong>Percentile Analysis:</strong> P50, P75, P90, P95, P99 latency distributions</li>
+<li><strong>Descriptive Statistics:</strong> Mean, standard deviation, min, max</li>
+<li><strong>Post-Hoc Anomaly Detection:</strong> Z-score based outlier identification</li>
+<li><strong>SIMD-Accelerated:</strong> Trueno Vector operations for 3-10x faster computation</li>
+<li><strong>Zero Overhead:</strong> No impact when disabled (opt-in via <code>--stats-extended</code>)</li>
+</ul>
+<h3 id="post-hoc-vs-real-time-analysis"><a class="header" href="#post-hoc-vs-real-time-analysis">Post-Hoc vs Real-Time Analysis</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>Feature</th><th>Post-Hoc (Sprint 19)</th><th>Real-Time (Sprint 20)</th></tr></thead><tbody>
+<tr><td><strong>Detection</strong></td><td>After trace completes</td><td>Live during execution</td></tr>
+<tr><td><strong>Baseline</strong></td><td>All samples (global mean)</td><td>Sliding window (last N samples)</td></tr>
+<tr><td><strong>Use Case</strong></td><td>Historical analysis, percentiles</td><td>Monitor long-running apps</td></tr>
+<tr><td><strong>Overhead</strong></td><td>None (post-processing)</td><td>Minimal (&lt;1%)</td></tr>
+<tr><td><strong>Flag</strong></td><td><code>--stats-extended</code></td><td><code>--anomaly-realtime</code></td></tr>
+</tbody></table>
+</div>
+<h2 id="basic-usage"><a class="header" href="#basic-usage">Basic Usage</a></h2>
+<h3 id="enable-extended-statistics"><a class="header" href="#enable-extended-statistics">Enable Extended Statistics</a></h3>
+<pre><code class="language-bash">renacer -c --stats-extended -T -- cargo build
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_stats_extended_calculates_percentiles</code></p>
+<p>This enables:</p>
+<ul>
+<li><strong>Percentile calculations:</strong> P50, P75, P90, P95, P99</li>
+<li><strong>Descriptive statistics:</strong> Mean, StdDev, Min, Max</li>
+<li><strong>Anomaly detection:</strong> Z-score based outliers (threshold: 3.0σ)</li>
+<li><strong>SIMD acceleration:</strong> Trueno Vector operations</li>
+</ul>
+<p><strong>Note:</strong> Requires <code>-T</code> flag for timing data. Without <code>-T</code>, only call counts are shown.</p>
+<h3 id="extended-statistics-output"><a class="header" href="#extended-statistics-output">Extended Statistics Output</a></h3>
+<pre><code class="language-bash">$ renacer -c --stats-extended -T -- cargo test
+
+% time     seconds  usecs/call     calls    errors syscall
+------ ----------- ----------- --------- --------- ----------------
+ 65.43    0.142301        4234        42         0 read
+ 18.92    0.041234        2062        20         0 write
+ 10.23    0.022301         892        25         0 openat
+  3.21    0.007001         700        10         0 close
+  2.21    0.004812         481        10         0 mmap
+------ ----------- ----------- --------- --------- ----------------
+100.00    0.217649                   107         0 total
+
+=== Extended Statistics (SIMD-accelerated via Trueno) ===
+
+read (42 calls):
+  Mean:         4234.50 μs
+  Std Dev:      1234.67 μs
+  Min:          2123.00 μs
+  Max:          9234.00 μs
+  Median (P50): 3890.00 μs
+  P75:          5123.00 μs
+  P90:          6234.00 μs
+  P95:          7123.00 μs
+  P99:          8934.00 μs
+
+write (20 calls):
+  Mean:         2062.00 μs
+  Std Dev:      823.45 μs
+  Min:          1023.00 μs
+  Max:          4234.00 μs
+  Median (P50): 1980.00 μs
+  P75:          2456.00 μs
+  P90:          3123.00 μs
+  P95:          3678.00 μs
+  P99:          4123.00 μs
+
+=== Post-Hoc Anomaly Detection (threshold: 3.0σ) ===
+2 anomalies detected:
+  - read: 9234.00 μs (3.8σ above mean)
+  - write: 4234.00 μs (3.2σ above mean)
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_stats_extended_calculates_percentiles</code>, <code>test_stats_extended_shows_min_max</code></p>
+<p>Each syscall type shows:</p>
+<ul>
+<li><strong>Mean</strong> - Average duration</li>
+<li><strong>Std Dev</strong> - Standard deviation (variance measure)</li>
+<li><strong>Min/Max</strong> - Fastest and slowest execution</li>
+<li><strong>Percentiles</strong> - Distribution breakdown (P50=median, P95=95th percentile, etc.)</li>
+</ul>
+<h2 id="percentile-interpretation"><a class="header" href="#percentile-interpretation">Percentile Interpretation</a></h2>
+<p>Percentiles show the latency distribution:</p>
+<div class="table-wrapper"><table><thead><tr><th>Percentile</th><th>Meaning</th></tr></thead><tbody>
+<tr><td><strong>P50 (Median)</strong></td><td>50% of calls are faster than this value</td></tr>
+<tr><td><strong>P75</strong></td><td>75% of calls are faster than this value</td></tr>
+<tr><td><strong>P90</strong></td><td>90% of calls are faster than this value</td></tr>
+<tr><td><strong>P95</strong></td><td>95% of calls are faster than this value</td></tr>
+<tr><td><strong>P99</strong></td><td>99% of calls are faster than this value (tail latency)</td></tr>
+</tbody></table>
+</div>
+<p><strong>Example Interpretation:</strong></p>
+<pre><code>read (42 calls):
+  Median (P50): 3890.00 μs   # Typical latency
+  P95:          7123.00 μs   # 95% complete under 7ms
+  P99:          8934.00 μs   # Worst 1% take ~9ms (tail latency)
+</code></pre>
+<ul>
+<li><strong>P50 (3.9ms):</strong> Most reads complete in ~4ms</li>
+<li><strong>P95 (7.1ms):</strong> 5% of reads are slower (potential outliers)</li>
+<li><strong>P99 (8.9ms):</strong> 1% of reads are very slow (investigate these)</li>
+</ul>
+<p><strong>Tested by:</strong> <code>test_stats_extended_calculates_percentiles</code></p>
+<h2 id="post-hoc-anomaly-detection"><a class="header" href="#post-hoc-anomaly-detection">Post-Hoc Anomaly Detection</a></h2>
+<p>Anomalies are identified using Z-score analysis:</p>
+<pre><code class="language-bash">$ renacer -c --stats-extended -T -- ./slow-app
+
+=== Post-Hoc Anomaly Detection (threshold: 3.0σ) ===
+3 anomalies detected:
+  - fsync: 15234.00 μs (6.3σ above mean)
+  - write: 5234.00 μs (4.2σ above mean)
+  - read: 2341.00 μs (3.5σ above mean)
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_anomaly_detection_slow_syscall</code></p>
+<p><strong>Z-Score Meaning:</strong></p>
+<ul>
+<li><strong>3.0σ-4.0σ:</strong> Noticeable outlier</li>
+<li><strong>4.0σ-5.0σ:</strong> Significant outlier</li>
+<li><strong>&gt;5.0σ:</strong> Extreme outlier (investigate!)</li>
+</ul>
+<h3 id="custom-anomaly-threshold"><a class="header" href="#custom-anomaly-threshold">Custom Anomaly Threshold</a></h3>
+<p>Adjust sensitivity with <code>--anomaly-threshold</code>:</p>
+<pre><code class="language-bash">renacer -c --stats-extended --anomaly-threshold 2.5 -T -- ./app
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_anomaly_threshold_configuration</code></p>
+<ul>
+<li><strong>Default:</strong> 3.0σ (captures significant outliers)</li>
+<li><strong>Lower (2.0-2.5σ):</strong> More sensitive (more alerts)</li>
+<li><strong>Higher (4.0-5.0σ):</strong> Less sensitive (only extreme outliers)</li>
+</ul>
+<p><strong>Trade-offs:</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Threshold</th><th>Sensitivity</th><th>False Positives</th><th>Use Case</th></tr></thead><tbody>
+<tr><td><strong>2.0σ</strong></td><td>Very high</td><td>Many</td><td>Aggressive optimization</td></tr>
+<tr><td><strong>2.5σ</strong></td><td>High</td><td>Some</td><td>Development debugging</td></tr>
+<tr><td><strong>3.0σ</strong></td><td>Moderate</td><td>Few</td><td>Production analysis (default)</td></tr>
+<tr><td><strong>4.0σ</strong></td><td>Low</td><td>Rare</td><td>Critical bottlenecks only</td></tr>
+</tbody></table>
+</div>
+<h2 id="integration-with-other-features"><a class="header" href="#integration-with-other-features">Integration with Other Features</a></h2>
+<h3 id="with-timing-mode--t"><a class="header" href="#with-timing-mode--t">With Timing Mode (-T)</a></h3>
+<p><strong>Required</strong> for duration-based statistics:</p>
+<pre><code class="language-bash">renacer -c --stats-extended -T -- ./app
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_stats_extended_with_timing</code></p>
+<p>Without <code>-T</code>, only call counts are shown:</p>
+<pre><code class="language-bash">$ renacer -c --stats-extended -- ./app
+% time     seconds  usecs/call     calls    errors syscall
+------ ----------- ----------- --------- --------- ----------------
+# No timing data available for percentiles
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_stats_extended_no_timing_data</code></p>
+<h3 id="with-filtering--e"><a class="header" href="#with-filtering--e">With Filtering (-e)</a></h3>
+<p>Analyze only specific syscalls:</p>
+<pre><code class="language-bash">renacer -c --stats-extended -e trace=write,read -T -- ./app
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_stats_extended_with_filtering</code></p>
+<p>Output shows extended statistics <strong>only</strong> for filtered syscalls (write, read).</p>
+<p><strong>Use case:</strong> Focus analysis on I/O operations without noise from other syscalls.</p>
+<h3 id="with-multi-process-tracing--f"><a class="header" href="#with-multi-process-tracing--f">With Multi-Process Tracing (-f)</a></h3>
+<p>Aggregate statistics across all processes:</p>
+<pre><code class="language-bash">renacer -f -c --stats-extended -T -- make -j8
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_stats_extended_with_multiprocess</code></p>
+<p>Statistics combine data from:</p>
+<ul>
+<li>Parent process</li>
+<li>All child processes (fork, vfork, clone)</li>
+</ul>
+<p><strong>Use case:</strong> Analyze parallel build performance, identify slowest subprocess.</p>
+<h3 id="with-json-output"><a class="header" href="#with-json-output">With JSON Output</a></h3>
+<p>Statistics summary goes to <strong>stderr</strong>, trace goes to <strong>stdout</strong>:</p>
+<pre><code class="language-bash">renacer -c --stats-extended -T --format json -- ./app &gt; trace.json 2&gt; stats.txt
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_stats_extended_json_output</code></p>
+<p><strong>Output split:</strong></p>
+<ul>
+<li><strong>stdout:</strong> JSON trace data</li>
+<li><strong>stderr:</strong> Extended statistics summary (human-readable)</li>
+</ul>
+<h3 id="with-csv-output"><a class="header" href="#with-csv-output">With CSV Output</a></h3>
+<p>Statistics summary goes to <strong>stderr</strong>, CSV goes to <strong>stdout</strong>:</p>
+<pre><code class="language-bash">renacer -c --stats-extended -T --format csv -- ./app &gt; trace.csv 2&gt; stats.txt
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_stats_extended_csv_output</code></p>
+<p><strong>Output split:</strong></p>
+<ul>
+<li><strong>stdout:</strong> CSV trace data</li>
+<li><strong>stderr:</strong> Extended statistics summary (human-readable)</li>
+</ul>
+<h2 id="edge-cases--error-handling"><a class="header" href="#edge-cases--error-handling">Edge Cases &amp; Error Handling</a></h2>
+<h3 id="single-syscall-no-variance"><a class="header" href="#single-syscall-no-variance">Single Syscall (No Variance)</a></h3>
+<p>With only one data point:</p>
+<pre><code class="language-bash">$ renacer -c --stats-extended -T -- echo "test"
+
+write (1 calls):
+  Mean:         1234.00 μs
+  Std Dev:      0.00 μs       # No variance with single sample
+  Min:          1234.00 μs
+  Max:          1234.00 μs
+  Median (P50): 1234.00 μs
+  P75:          1234.00 μs
+  P90:          1234.00 μs
+  P95:          1234.00 μs
+  P99:          1234.00 μs    # All percentiles equal
+
+=== Post-Hoc Anomaly Detection (threshold: 3.0σ) ===
+0 anomalies detected (stddev = 0, cannot compute Z-score)
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_stats_extended_single_syscall</code></p>
+<p>No anomalies can be detected when stddev = 0 (division by zero avoided).</p>
+<h3 id="no-timing-data"><a class="header" href="#no-timing-data">No Timing Data</a></h3>
+<p>Without <code>-T</code> flag:</p>
+<pre><code class="language-bash">$ renacer -c --stats-extended -- ./app
+
+% time     seconds  usecs/call     calls    errors syscall
+------ ----------- ----------- --------- --------- ----------------
+ # Standard statistics table (counts only)
+
+=== Extended Statistics ===
+# No duration data available (use -T flag for timing)
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_stats_extended_no_timing_data</code></p>
+<p>Percentile analysis requires duration data (<code>-T</code> flag).</p>
+<h3 id="large-datasets"><a class="header" href="#large-datasets">Large Datasets</a></h3>
+<p>SIMD acceleration handles large traces efficiently:</p>
+<pre><code class="language-bash">$ renacer -c --stats-extended -T -- ./high-volume-app
+# 1000+ syscalls per type processed efficiently via Trueno
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_stats_extended_large_dataset</code></p>
+<p><strong>Performance:</strong> Trueno SIMD operations are 3-10x faster than naive loops for large datasets.</p>
+<h3 id="backward-compatibility"><a class="header" href="#backward-compatibility">Backward Compatibility</a></h3>
+<p>Without <code>--stats-extended</code>, <strong>no overhead</strong> occurs:</p>
+<pre><code class="language-bash">$ renacer -c -T -- ./app
+# Standard statistics table only (no extended stats)
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_backward_compatibility_without_stats_extended</code></p>
+<p>Ensures existing users see no behavior change.</p>
+<h2 id="how-it-works"><a class="header" href="#how-it-works">How It Works</a></h2>
+<h3 id="simd-accelerated-statistics"><a class="header" href="#simd-accelerated-statistics">SIMD-Accelerated Statistics</a></h3>
+<p>Uses Trueno library for high-performance vector operations:</p>
+<pre><code class="language-rust">use trueno::Vector;
+
+// Convert durations to vector
+let durations: Vec&lt;f32&gt; = stats.durations.iter().map(|&amp;d| d as f32).collect();
+let v = Vector::from_slice(&amp;durations);
+
+// SIMD-accelerated computations
+let mean = v.mean().unwrap_or(0.0);     // Vectorized mean
+let stddev = v.stddev().unwrap_or(0.0); // Vectorized standard deviation
+let min = v.min().unwrap_or(0.0);       // Vectorized min
+let max = v.max().unwrap_or(0.0);       // Vectorized max</code></pre>
+<p><strong>Performance Benefit:</strong> 3-10x faster than scalar loops for large datasets.</p>
+<h3 id="percentile-calculation"><a class="header" href="#percentile-calculation">Percentile Calculation</a></h3>
+<p>Percentiles calculated via interpolation on sorted data:</p>
+<ol>
+<li><strong>Sort durations:</strong> <code>[100, 150, 200, 250, 300]</code></li>
+<li><strong>Calculate index:</strong> For P90: <code>0.90 * (5-1) = 3.6</code></li>
+<li><strong>Interpolate:</strong> Between index 3 (250) and 4 (300): <code>250 + 0.6*(300-250) = 280</code></li>
+<li><strong>Result:</strong> P90 = 280μs</li>
+</ol>
+<p><strong>Implementation:</strong></p>
+<pre><code class="language-rust">fn calculate_percentile(sorted_data: &amp;[f32], percentile: f32) -&gt; f32 {
+    let index = (percentile / 100.0) * (sorted_data.len() - 1) as f32;
+    let lower = index.floor() as usize;
+    let upper = index.ceil() as usize;
+
+    if lower == upper {
+        sorted_data[lower]
+    } else {
+        let weight = index - lower as f32;
+        sorted_data[lower] * (1.0 - weight) + sorted_data[upper] * weight
+    }
+}</code></pre>
+<h3 id="z-score-anomaly-detection"><a class="header" href="#z-score-anomaly-detection">Z-Score Anomaly Detection</a></h3>
+<p>Anomalies identified using statistical Z-score:</p>
+<pre><code>Z-score = (duration - mean) / stddev
+</code></pre>
+<p><strong>Example:</strong></p>
+<pre><code>write syscall: duration = 5234μs
+Baseline: mean = 1023μs, stddev = 987μs
+
+Z-score = (5234 - 1023) / 987 = 4.26σ
+
+Result: 4.26σ &gt; 3.0σ threshold → ANOMALY
+</code></pre>
+<p><strong>Classification:</strong></p>
+<ul>
+<li>Z &gt; 3.0σ: Anomaly detected</li>
+<li>Severity based on magnitude (3-4σ: Low, 4-5σ: Medium, &gt;5σ: High)</li>
+</ul>
+<h2 id="practical-examples"><a class="header" href="#practical-examples">Practical Examples</a></h2>
+<h3 id="example-1-identifying-tail-latency"><a class="header" href="#example-1-identifying-tail-latency">Example 1: Identifying Tail Latency</a></h3>
+<pre><code class="language-bash">$ renacer -c --stats-extended -T -e trace=read -- ./database-app
+
+read (1000 calls):
+  Mean:         1234.00 μs
+  Std Dev:      456.00 μs
+  Min:          823.00 μs
+  Max:          8234.00 μs
+  Median (P50): 1123.00 μs   # Typical read: ~1ms
+  P95:          2123.00 μs   # 95% under 2ms ✅
+  P99:          5234.00 μs   # Worst 1% take 5ms+ ⚠️
+
+=== Post-Hoc Anomaly Detection ===
+10 anomalies detected (P99+ outliers)
+</code></pre>
+<p><strong>Diagnosis:</strong></p>
+<ul>
+<li><strong>P50-P95 are reasonable</strong> (~1-2ms)</li>
+<li><strong>P99 jumps to 5ms+</strong> - tail latency issue</li>
+<li><strong>Anomalies at P99</strong> - disk I/O spikes or cache misses</li>
+</ul>
+<p><strong>Action:</strong> Investigate P99 reads (likely disk-bound, consider caching).</p>
+<p><strong>Tested by:</strong> <code>test_stats_extended_calculates_percentiles</code></p>
+<h3 id="example-2-comparing-beforeafter-optimization"><a class="header" href="#example-2-comparing-beforeafter-optimization">Example 2: Comparing Before/After Optimization</a></h3>
+<p><strong>Before optimization:</strong></p>
+<pre><code class="language-bash">$ renacer -c --stats-extended -T -- ./app-v1
+
+write (500 calls):
+  Median (P50): 2345.00 μs
+  P95:          5678.00 μs
+  P99:          8234.00 μs
+</code></pre>
+<p><strong>After optimization:</strong></p>
+<pre><code class="language-bash">$ renacer -c --stats-extended -T -- ./app-v2
+
+write (500 calls):
+  Median (P50): 1234.00 μs   # 47% faster ✅
+  P95:          2345.00 μs   # 59% faster ✅
+  P99:          3456.00 μs   # 58% faster ✅
+</code></pre>
+<p><strong>Result:</strong> Optimization improved both typical (P50) and tail (P99) latency.</p>
+<p><strong>Tested by:</strong> <code>test_stats_extended_large_dataset</code></p>
+<h3 id="example-3-cicd-performance-regression-detection"><a class="header" href="#example-3-cicd-performance-regression-detection">Example 3: CI/CD Performance Regression Detection</a></h3>
+<pre><code class="language-bash">$ renacer -f -c --stats-extended -T -- make test
+
+# Baseline (commit A): P95 = 2.3ms
+# Current (commit B): P95 = 5.6ms ⚠️ REGRESSION
+
+=== Post-Hoc Anomaly Detection ===
+25 anomalies detected (up from 5 in baseline)
+</code></pre>
+<p><strong>Diagnosis:</strong> Recent commit introduced performance regression.</p>
+<p><strong>Action:</strong> Bisect commits to find regression source.</p>
+<p><strong>Tested by:</strong> <code>test_stats_extended_with_multiprocess</code></p>
+<h2 id="troubleshooting"><a class="header" href="#troubleshooting">Troubleshooting</a></h2>
+<h3 id="no-duration-data-available"><a class="header" href="#no-duration-data-available">"No duration data available"</a></h3>
+<p><strong>Problem:</strong></p>
+<pre><code class="language-bash">$ renacer -c --stats-extended -- ./app
+# No percentiles shown
+</code></pre>
+<p><strong>Solution:</strong> Add <code>-T</code> flag for timing data:</p>
+<pre><code class="language-bash">$ renacer -c --stats-extended -T -- ./app
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_stats_extended_no_timing_data</code></p>
+<h3 id="0-anomalies-detected-but-i-see-slow-syscalls"><a class="header" href="#0-anomalies-detected-but-i-see-slow-syscalls">"0 anomalies detected" but I see slow syscalls</a></h3>
+<p><strong>Possible reasons:</strong></p>
+<ol>
+<li>
+<p><strong>High variance baseline:</strong></p>
+<ul>
+<li>If syscalls naturally vary (e.g., network I/O), stddev is high</li>
+<li>Slow syscalls may not exceed 3σ threshold</li>
+<li><strong>Solution:</strong> Lower threshold: <code>--anomaly-threshold 2.0</code></li>
+</ul>
+</li>
+<li>
+<p><strong>Insufficient samples:</strong></p>
+<ul>
+<li>With &lt;10 samples, anomaly detection may be unreliable</li>
+<li><strong>Solution:</strong> Run longer workload or use real-time detection (Sprint 20)</li>
+</ul>
+</li>
+<li>
+<p><strong>Outliers within normal distribution:</strong></p>
+<ul>
+<li>P99 may be slow but still within 3σ</li>
+<li><strong>Solution:</strong> Check percentiles (P95, P99) manually</li>
+</ul>
+</li>
+</ol>
+<p><strong>Tested by:</strong> <code>test_anomaly_detection_slow_syscall</code></p>
+<h3 id="too-many-false-positives"><a class="header" href="#too-many-false-positives">Too many false positives</a></h3>
+<p><strong>Problem:</strong></p>
+<pre><code class="language-bash">=== Post-Hoc Anomaly Detection ===
+50 anomalies detected (many false positives)
+</code></pre>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li>
+<p><strong>Increase threshold:</strong></p>
+<pre><code class="language-bash">renacer -c --stats-extended --anomaly-threshold 4.0 -T -- ./app
+</code></pre>
+</li>
+<li>
+<p><strong>Filter noisy syscalls:</strong></p>
+<pre><code class="language-bash"># Only analyze critical I/O operations
+renacer -c --stats-extended -e trace=fsync,write -T -- ./app
+</code></pre>
+</li>
+<li>
+<p><strong>Use percentiles instead:</strong></p>
+<ul>
+<li>Focus on P95/P99 values rather than anomaly count</li>
+<li>Percentiles show distribution without binary anomaly classification</li>
+</ul>
+</li>
+</ol>
+<p><strong>Tested by:</strong> <code>test_anomaly_threshold_configuration</code>, <code>test_stats_extended_with_filtering</code></p>
+<h3 id="extended-stats-not-showing-with-jsoncsv"><a class="header" href="#extended-stats-not-showing-with-jsoncsv">Extended stats not showing with JSON/CSV</a></h3>
+<p><strong>Expected behavior:</strong> Extended stats go to <strong>stderr</strong>, traces go to <strong>stdout</strong>.</p>
+<p><strong>Solution:</strong> Capture both streams:</p>
+<pre><code class="language-bash">renacer -c --stats-extended -T --format json -- ./app &gt; trace.json 2&gt; stats.txt
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_stats_extended_json_output</code>, <code>test_stats_extended_csv_output</code></p>
+<h2 id="comparison-with-real-time-detection"><a class="header" href="#comparison-with-real-time-detection">Comparison with Real-Time Detection</a></h2>
+<h3 id="when-to-use-post-hoc-sprint-19"><a class="header" href="#when-to-use-post-hoc-sprint-19">When to Use Post-Hoc (Sprint 19)</a></h3>
+<p>✅ <strong>Use <code>--stats-extended</code> when:</strong></p>
+<ul>
+<li>Analyzing completed traces</li>
+<li>Need percentile distributions (P50, P75, P90, P95, P99)</li>
+<li>Short-lived commands</li>
+<li>Historical performance analysis</li>
+<li>Regression testing (compare before/after)</li>
+</ul>
+<h3 id="when-to-use-real-time-sprint-20"><a class="header" href="#when-to-use-real-time-sprint-20">When to Use Real-Time (Sprint 20)</a></h3>
+<p>✅ <strong>Use <code>--anomaly-realtime</code> when:</strong></p>
+<ul>
+<li>Monitoring long-running applications</li>
+<li>Need immediate alerts during execution</li>
+<li>Debugging live performance issues</li>
+<li>CI/CD pipeline monitoring</li>
+</ul>
+<h3 id="combined-approach"><a class="header" href="#combined-approach">Combined Approach</a></h3>
+<p>Use both for comprehensive analysis:</p>
+<pre><code class="language-bash">renacer -c --stats-extended --anomaly-realtime -T -- ./app
+</code></pre>
+<p><strong>Provides:</strong></p>
+<ul>
+<li><strong>Real-time alerts</strong> during execution (sliding window)</li>
+<li><strong>Post-hoc analysis</strong> at the end (global statistics)</li>
+<li><strong>Percentile distributions</strong> for historical comparison</li>
+<li><strong>Both Z-score methods</strong> (sliding window + global)</li>
+</ul>
+<h2 id="performance"><a class="header" href="#performance">Performance</a></h2>
+<ul>
+<li><strong>Overhead:</strong> None (post-processing after trace completes)</li>
+<li><strong>Memory:</strong> O(n) where n = total syscalls (stores all durations)</li>
+<li><strong>Speed:</strong> 3-10x faster via Trueno SIMD compared to scalar loops</li>
+<li><strong>Large datasets:</strong> Handles 1000+ syscalls per type efficiently</li>
+</ul>
+<p><strong>Zero overhead when disabled</strong> (not enabled by default).</p>
+<h2 id="summary"><a class="header" href="#summary">Summary</a></h2>
+<p>Statistical analysis provides:</p>
+<ul>
+<li>✅ <strong>Percentile distributions</strong> (P50, P75, P90, P95, P99)</li>
+<li>✅ <strong>Descriptive statistics</strong> (mean, stddev, min, max)</li>
+<li>✅ <strong>Post-hoc anomaly detection</strong> via Z-score</li>
+<li>✅ <strong>SIMD-accelerated</strong> via Trueno (3-10x faster)</li>
+<li>✅ <strong>Integration</strong> with filtering, multi-process, JSON, CSV</li>
+<li>✅ <strong>Zero overhead</strong> when disabled (opt-in only)</li>
+</ul>
+<p><strong>All examples tested in:</strong> <a href="../../../tests/sprint19_enhanced_stats_tests.rs"><code>tests/sprint19_enhanced_stats_tests.rs</code></a></p>
+<h2 id="related"><a class="header" href="#related">Related</a></h2>
+<ul>
+<li><a href="./anomaly-detection.html">Real-Time Anomaly Detection</a> - Live monitoring (Sprint 20)</li>
+<li><a href="./machine-learning.html">Machine Learning</a> - ML-based anomaly detection (Sprint 23)</li>
+<li><a href="../getting-started/basic-tracing.html">Basic Tracing</a> - Core syscall tracing</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../advanced/flamegraphs.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../advanced/percentiles.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../advanced/flamegraphs.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../advanced/percentiles.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../ace.js"></script>
+        <script src="../editor.js"></script>
+        <script src="../mode-rust.js"></script>
+        <script src="../theme-dawn.js"></script>
+        <script src="../theme-tomorrow_night.js"></script>
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

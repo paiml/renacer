@@ -1,0 +1,739 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Text Format - The Renacer Book - Pure Rust System Call Tracing</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="A comprehensive guide to renacer: syscall tracing, DWARF correlation, and performance analysis">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "rust";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The Renacer Book - Pure Rust System Call Tracing</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer/edit/main/book/src/reference/format-text.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="text-format-specification"><a class="header" href="#text-format-specification">Text Format Specification</a></h1>
+<p>Complete technical reference for Renacer's default text output format (strace-compatible).</p>
+<hr />
+<h2 id="overview"><a class="header" href="#overview">Overview</a></h2>
+<p>The text format provides human-readable syscall trace output optimized for terminal viewing and strace compatibility. It outputs formatted syscall entries to stdout with optional source correlation and timing information.</p>
+<p><strong>Format Identifier:</strong> <code>text</code> (default format)</p>
+<p><strong>Sprints:</strong> 3-4 (initial), 5-6 (DWARF), 9-10 (timing), 13 (function profiling), 20 (real-time anomaly)</p>
+<hr />
+<h2 id="quick-start"><a class="header" href="#quick-start">Quick Start</a></h2>
+<h3 id="basic-usage"><a class="header" href="#basic-usage">Basic Usage</a></h3>
+<pre><code class="language-bash"># Default format (no flag needed)
+renacer -- ls
+
+# Explicitly specify text format
+renacer --format text -- ls
+
+# Pipe to grep/awk for filtering
+renacer -- ls | grep "openat"
+
+# Save to file
+renacer -- ls &gt; trace.txt
+
+# Follow forks for multi-process tracing
+renacer -f -- make
+</code></pre>
+<hr />
+<h2 id="output-format"><a class="header" href="#output-format">Output Format</a></h2>
+<h3 id="basic-syscall-format"><a class="header" href="#basic-syscall-format">Basic Syscall Format</a></h3>
+<p><strong>Pattern:</strong></p>
+<pre><code>syscall_name(arg1, arg2, arg3, ...) = result
+</code></pre>
+<p><strong>Example:</strong></p>
+<pre><code>openat(AT_FDCWD, "/etc/passwd", O_RDONLY) = 3
+read(3, "root:x:0:0:root:/root:/bin/bash\n"..., 4096) = 1024
+close(3) = 0
+</code></pre>
+<p><strong>Field Descriptions:</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Component</th><th>Description</th><th>Example</th></tr></thead><tbody>
+<tr><td><code>syscall_name</code></td><td>System call name</td><td><code>openat</code>, <code>read</code>, <code>write</code></td></tr>
+<tr><td><code>(args...)</code></td><td>Comma-separated arguments</td><td><code>3, "hello", 4096</code></td></tr>
+<tr><td><code>result</code></td><td>Return value</td><td><code>0</code> (success), <code>-1</code> (error), <code>3</code> (fd)</td></tr>
+</tbody></table>
+</div>
+<hr />
+<h3 id="argument-formatting"><a class="header" href="#argument-formatting">Argument Formatting</a></h3>
+<p>Arguments are formatted based on their type and semantic meaning:</p>
+<h4 id="file-descriptors"><a class="header" href="#file-descriptors">File Descriptors</a></h4>
+<pre><code>read(3, ...) = 256
+close(5) = 0
+</code></pre>
+<p><strong>Format:</strong> Decimal integer</p>
+<hr />
+<h4 id="file-paths-strings"><a class="header" href="#file-paths-strings">File Paths (Strings)</a></h4>
+<pre><code>openat(AT_FDCWD, "/tmp/test.txt", O_RDONLY) = 3
+</code></pre>
+<p><strong>Format:</strong> Double-quoted string (<code>"path"</code>)</p>
+<p><strong>Truncation:</strong> Long paths are truncated with <code>...</code>:</p>
+<pre><code>openat(AT_FDCWD, "/very/long/path/to/file/that/ex"..., O_RDONLY) = 3
+</code></pre>
+<p><strong>Truncation Threshold:</strong> 40 characters (configurable in implementation)</p>
+<hr />
+<h4 id="flags-and-bitmasks"><a class="header" href="#flags-and-bitmasks">Flags and Bitmasks</a></h4>
+<pre><code>openat(AT_FDCWD, "/tmp/file", O_RDONLY|O_CLOEXEC) = 3
+mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f...
+</code></pre>
+<p><strong>Format:</strong> Symbolic constant names joined with <code>|</code></p>
+<p><strong>Common Flag Families:</strong></p>
+<ul>
+<li><strong>File:</strong> <code>O_RDONLY</code>, <code>O_WRONLY</code>, <code>O_RDWR</code>, <code>O_CREAT</code>, <code>O_APPEND</code>, <code>O_CLOEXEC</code></li>
+<li><strong>Memory:</strong> <code>PROT_READ</code>, <code>PROT_WRITE</code>, <code>PROT_EXEC</code>, <code>MAP_PRIVATE</code>, <code>MAP_SHARED</code></li>
+<li><strong>Access:</strong> <code>R_OK</code>, <code>W_OK</code>, <code>X_OK</code>, <code>F_OK</code></li>
+</ul>
+<hr />
+<h4 id="special-constants"><a class="header" href="#special-constants">Special Constants</a></h4>
+<pre><code>openat(AT_FDCWD, "file.txt", O_RDONLY) = 3
+fstatat(AT_FDCWD, ".", {...}, AT_SYMLINK_NOFOLLOW) = 0
+</code></pre>
+<p><strong>Format:</strong> Symbolic constant name</p>
+<p><strong>Common Constants:</strong></p>
+<ul>
+<li><code>AT_FDCWD</code> (-100) - Use current working directory</li>
+<li><code>NULL</code> - Null pointer</li>
+<li><code>SEEK_SET</code>, <code>SEEK_CUR</code>, <code>SEEK_END</code> - lseek whence values</li>
+</ul>
+<hr />
+<h4 id="buffers-and-data"><a class="header" href="#buffers-and-data">Buffers and Data</a></h4>
+<pre><code>read(3, "hello world\n", 4096) = 12
+write(1, "output\n", 7) = 7
+</code></pre>
+<p><strong>Format:</strong></p>
+<ul>
+<li><strong>Read buffers:</strong> Contents in double quotes (if printable)</li>
+<li><strong>Non-printable data:</strong> Hex escapes (<code>\x0a</code> for newline)</li>
+<li><strong>Binary data:</strong> Truncated with byte count</li>
+</ul>
+<p><strong>Binary Data Example:</strong></p>
+<pre><code>read(3, "\x7fELF\x02\x01\x01\x00\x00\x00\x00\x00"..., 832) = 832
+</code></pre>
+<hr />
+<h4 id="pointers"><a class="header" href="#pointers">Pointers</a></h4>
+<pre><code>mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7ffff7a00000
+brk(0x555555560000) = 0x555555560000
+</code></pre>
+<p><strong>Format:</strong> Hexadecimal with <code>0x</code> prefix</p>
+<p><strong>NULL Pointer:</strong> <code>NULL</code> (not <code>0x0</code>)</p>
+<hr />
+<h4 id="structures"><a class="header" href="#structures">Structures</a></h4>
+<pre><code>fstat(3, {st_mode=S_IFREG|0644, st_size=1234, ...}) = 0
+stat("/tmp/file", {st_dev=makedev(0x8, 0x1), ...}) = 0
+</code></pre>
+<p><strong>Format:</strong> <code>{field=value, field=value, ...}</code></p>
+<p><strong>Truncation:</strong> Large structures abbreviated with <code>...</code></p>
+<hr />
+<h3 id="return-values"><a class="header" href="#return-values">Return Values</a></h3>
+<h4 id="success-non-negative"><a class="header" href="#success-non-negative">Success (Non-Negative)</a></h4>
+<pre><code>open("/tmp/file", O_RDONLY) = 3
+read(3, "hello", 5) = 5
+</code></pre>
+<p><strong>Format:</strong> Decimal integer</p>
+<p><strong>Common Values:</strong></p>
+<ul>
+<li><code>0</code> - Success (for syscalls like <code>close</code>, <code>unlink</code>)</li>
+<li><code>&gt; 0</code> - Successful result (file descriptor, bytes read, etc.)</li>
+</ul>
+<hr />
+<h4 id="errors-negative"><a class="header" href="#errors-negative">Errors (Negative)</a></h4>
+<pre><code>open("/nonexistent", O_RDONLY) = -1 ENOENT (No such file or directory)
+read(99, ..., 4096) = -1 EBADF (Bad file descriptor)
+</code></pre>
+<p><strong>Format:</strong> <code>-1 ERRNAME (Error description)</code></p>
+<p><strong>Common Errors:</strong></p>
+<ul>
+<li><code>ENOENT</code> - No such file or directory</li>
+<li><code>EACCES</code> - Permission denied</li>
+<li><code>EBADF</code> - Bad file descriptor</li>
+<li><code>EINVAL</code> - Invalid argument</li>
+<li><code>ENOMEM</code> - Out of memory</li>
+</ul>
+<p><strong>Error Highlighting:</strong> Errors are typically displayed in <strong>red</strong> when output is to a terminal that supports color.</p>
+<hr />
+<h4 id="unfinished-syscalls"><a class="header" href="#unfinished-syscalls">Unfinished Syscalls</a></h4>
+<pre><code>exit_group(0) = ?
+</code></pre>
+<p><strong>Format:</strong> <code>?</code> (question mark)</p>
+<p><strong>Meaning:</strong> Syscall did not return (process terminated during call)</p>
+<hr />
+<h3 id="source-correlation-sprint-5-6"><a class="header" href="#source-correlation-sprint-5-6">Source Correlation (Sprint 5-6)</a></h3>
+<p>When <code>--source</code> flag is used and DWARF debug info is available:</p>
+<pre><code>src/main.rs:42 read_config openat(AT_FDCWD, "/etc/config", O_RDONLY) = 3
+src/main.rs:45 read_config read(3, "key=value\n", 4096) = 10
+</code></pre>
+<p><strong>Format:</strong></p>
+<pre><code>&lt;file&gt;:&lt;line&gt; &lt;function&gt; &lt;syscall&gt;
+</code></pre>
+<p><strong>Field Descriptions:</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Component</th><th>Description</th><th>Example</th></tr></thead><tbody>
+<tr><td><code>&lt;file&gt;</code></td><td>Source file path</td><td><code>src/main.rs</code></td></tr>
+<tr><td><code>&lt;line&gt;</code></td><td>Line number (1-indexed)</td><td><code>42</code></td></tr>
+<tr><td><code>&lt;function&gt;</code></td><td>Function name</td><td><code>read_config</code></td></tr>
+<tr><td><code>&lt;syscall&gt;</code></td><td>Standard syscall format</td><td><code>openat(...) = 3</code></td></tr>
+</tbody></table>
+</div>
+<p><strong>Requirements:</strong></p>
+<ol>
+<li><code>--source</code> flag enabled</li>
+<li>Binary compiled with debug info (<code>-g</code> or <code>RUSTFLAGS="-C debuginfo=2"</code>)</li>
+<li>DWARF sections present in binary</li>
+</ol>
+<hr />
+<h3 id="timing-mode-sprint-9-10"><a class="header" href="#timing-mode-sprint-9-10">Timing Mode (Sprint 9-10)</a></h3>
+<p>When <code>--timing</code> (or <code>-T</code>) flag is used:</p>
+<pre><code>openat(AT_FDCWD, "/etc/passwd", O_RDONLY) = 3 &lt;0.000234&gt;
+read(3, "root:x:0:0:root:/root:/bin/bash\n"..., 4096) = 1024 &lt;0.000089&gt;
+close(3) = 0 &lt;0.000012&gt;
+</code></pre>
+<p><strong>Format:</strong></p>
+<pre><code>syscall(...) = result &lt;seconds&gt;
+</code></pre>
+<p><strong>Timing Format:</strong></p>
+<ul>
+<li><strong>Unit:</strong> Seconds (with microsecond precision)</li>
+<li><strong>Precision:</strong> 6 decimal places (<code>0.000234</code> = 234 μs)</li>
+<li><strong>Delimiters:</strong> Angle brackets <code>&lt;...&gt;</code></li>
+</ul>
+<p><strong>Combined with Source:</strong></p>
+<pre><code>src/main.rs:42 read_config openat(AT_FDCWD, "/etc/config", O_RDONLY) = 3 &lt;0.000145&gt;
+</code></pre>
+<hr />
+<h3 id="statistics-mode-sprint-9-10"><a class="header" href="#statistics-mode-sprint-9-10">Statistics Mode (Sprint 9-10)</a></h3>
+<p>When <code>-c</code> flag is used, syscall details are <strong>suppressed</strong> and only a summary is printed:</p>
+<pre><code class="language-bash">$ renacer -c -- ls
+% time     seconds  usecs/call     calls    errors syscall
+------ ----------- ----------- --------- --------- ----------------
+ 45.23    0.000234          12        20           openat
+ 23.45    0.000121          15         8           read
+ 12.34    0.000064          16         4           fstat
+  8.90    0.000046          23         2           write
+  5.67    0.000029          14         2           close
+  4.41    0.000023          23         1           execve
+------ ----------- ----------- --------- --------- ----------------
+100.00    0.000517                    37         2 total
+</code></pre>
+<p><strong>Column Descriptions:</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Column</th><th>Description</th><th>Example</th></tr></thead><tbody>
+<tr><td><code>% time</code></td><td>Percentage of total time</td><td><code>45.23</code></td></tr>
+<tr><td><code>seconds</code></td><td>Total time in seconds</td><td><code>0.000234</code></td></tr>
+<tr><td><code>usecs/call</code></td><td>Average time per call (μs)</td><td><code>12</code></td></tr>
+<tr><td><code>calls</code></td><td>Number of calls</td><td><code>20</code></td></tr>
+<tr><td><code>errors</code></td><td>Number of failed calls</td><td><code>2</code></td></tr>
+<tr><td><code>syscall</code></td><td>Syscall name</td><td><code>openat</code></td></tr>
+</tbody></table>
+</div>
+<p><strong>Sorting:</strong> By descending <code>% time</code> (slowest syscalls first)</p>
+<p><strong>See Also:</strong> <a href="../core-concepts/statistics.html">Statistics Mode</a> for complete details</p>
+<hr />
+<h3 id="real-time-anomaly-detection-sprint-20"><a class="header" href="#real-time-anomaly-detection-sprint-20">Real-Time Anomaly Detection (Sprint 20)</a></h3>
+<p>When <code>--anomaly-realtime</code> flag is used, anomalies are printed to <strong>stderr</strong>:</p>
+<pre><code class="language-bash">$ renacer --anomaly-realtime -- ./myapp
+openat(AT_FDCWD, "/etc/config", O_RDONLY) = 3
+read(3, "key=value\n", 4096) = 10
+⚠️  ANOMALY: read took 12456 μs (3.2σ from baseline 234.5 μs) - 🟡 Medium
+close(3) = 0
+</code></pre>
+<p><strong>Anomaly Format (stderr):</strong></p>
+<pre><code>⚠️  ANOMALY: &lt;syscall&gt; took &lt;duration&gt; μs (&lt;z-score&gt;σ from baseline &lt;baseline&gt; μs) - &lt;severity&gt;
+</code></pre>
+<p><strong>Severity Levels:</strong></p>
+<ul>
+<li>🟢 <strong>Low</strong> - 2σ to 3σ deviation</li>
+<li>🟡 <strong>Medium</strong> - 3σ to 4σ deviation</li>
+<li>🔴 <strong>High</strong> - &gt;4σ deviation</li>
+</ul>
+<p><strong>Output Streams:</strong></p>
+<ul>
+<li><strong>stdout:</strong> Normal syscall trace</li>
+<li><strong>stderr:</strong> Anomaly warnings</li>
+</ul>
+<p><strong>See Also:</strong> <a href="../advanced/realtime-anomaly.html">Real-Time Anomaly Detection</a></p>
+<hr />
+<h2 id="output-streams"><a class="header" href="#output-streams">Output Streams</a></h2>
+<h3 id="stdout-standard-output"><a class="header" href="#stdout-standard-output">stdout (Standard Output)</a></h3>
+<p><strong>Contains:</strong></p>
+<ul>
+<li>Syscall trace entries</li>
+<li>Statistics summary (if <code>-c</code> flag)</li>
+<li>Function profiling (if <code>--function-time</code> flag)</li>
+<li>HPU analysis (if <code>--hpu-analysis</code> flag)</li>
+</ul>
+<p><strong>Example:</strong></p>
+<pre><code class="language-bash">renacer -- ls &gt; trace.txt
+# All syscall entries written to trace.txt
+</code></pre>
+<hr />
+<h3 id="stderr-standard-error"><a class="header" href="#stderr-standard-error">stderr (Standard Error)</a></h3>
+<p><strong>Contains:</strong></p>
+<ul>
+<li>Renacer diagnostic messages</li>
+<li>DWARF loading status</li>
+<li>Real-time anomaly warnings</li>
+<li>Error messages</li>
+</ul>
+<p><strong>Example Messages:</strong></p>
+<pre><code>[renacer: DWARF debug info loaded from ./target/debug/myapp]
+[renacer: Attached to process 12345]
+[renacer: Warning - failed to load DWARF: No debug sections found]
+</code></pre>
+<p><strong>Filtering stderr:</strong></p>
+<pre><code class="language-bash"># Suppress Renacer diagnostics
+renacer -- ls 2&gt;/dev/null &gt; trace.txt
+
+# Show only errors
+renacer -- ls &gt; trace.txt
+</code></pre>
+<hr />
+<h2 id="color-support"><a class="header" href="#color-support">Color Support</a></h2>
+<h3 id="terminal-detection"><a class="header" href="#terminal-detection">Terminal Detection</a></h3>
+<p>Renacer automatically enables color output when:</p>
+<ol>
+<li>stdout is a TTY (interactive terminal)</li>
+<li><code>TERM</code> environment variable is set</li>
+<li><code>NO_COLOR</code> environment variable is <strong>not</strong> set</li>
+</ol>
+<p><strong>Disable Color:</strong></p>
+<pre><code class="language-bash"># Via environment variable
+NO_COLOR=1 renacer -- ls
+
+# Via redirection (auto-disables)
+renacer -- ls &gt; trace.txt
+</code></pre>
+<hr />
+<h3 id="color-scheme"><a class="header" href="#color-scheme">Color Scheme</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>Element</th><th>Color</th><th>Example</th></tr></thead><tbody>
+<tr><td>Syscall name</td><td><strong>Cyan</strong></td><td><code>openat</code></td></tr>
+<tr><td>Error result</td><td><strong>Red</strong></td><td><code>-1 ENOENT</code></td></tr>
+<tr><td>File path</td><td><strong>Green</strong></td><td><code>"/etc/passwd"</code></td></tr>
+<tr><td>Return value (success)</td><td><strong>Default</strong></td><td><code>3</code></td></tr>
+<tr><td>Source location</td><td><strong>Blue</strong></td><td><code>src/main.rs:42</code></td></tr>
+<tr><td>Function name</td><td><strong>Yellow</strong></td><td><code>read_config</code></td></tr>
+</tbody></table>
+</div>
+<p><strong>Implementation Note:</strong> Colors use ANSI escape codes (e.g., <code>\x1b[36m</code> for cyan).</p>
+<hr />
+<h2 id="compatibility"><a class="header" href="#compatibility">Compatibility</a></h2>
+<h3 id="strace-compatibility"><a class="header" href="#strace-compatibility">strace Compatibility</a></h3>
+<p>Renacer text output is designed to be <strong>mostly compatible</strong> with strace format:</p>
+<p><strong>Compatible Features:</strong></p>
+<ul>
+<li><code>syscall(args...) = result</code> format</li>
+<li>Error format: <code>-1 ERRNO (Description)</code></li>
+<li>Argument formatting (strings, flags, structures)</li>
+<li><code>-c</code> statistics output</li>
+<li><code>-T</code> timing suffix <code>&lt;seconds&gt;</code></li>
+</ul>
+<p><strong>Differences from strace:</strong></p>
+<ul>
+<li><strong>Source correlation:</strong> Renacer adds <code>file:line function</code> prefix (strace: requires <code>-k</code> stack trace)</li>
+<li><strong>Timing precision:</strong> Renacer uses 6 decimal places (strace: variable)</li>
+<li><strong>Statistics columns:</strong> Slightly different column widths</li>
+<li><strong>Multi-process:</strong> Renacer uses process tracking without PIDs in output (strace: adds <code>[pid XXXX]</code> prefix with <code>-f</code>)</li>
+</ul>
+<p><strong>Migration Tip:</strong> Most strace workflows work with Renacer text output:</p>
+<pre><code class="language-bash"># Works with both strace and renacer
+renacer -- ls | grep "openat.*ENOENT"
+</code></pre>
+<hr />
+<h2 id="filtering-and-processing"><a class="header" href="#filtering-and-processing">Filtering and Processing</a></h2>
+<h3 id="with-grep"><a class="header" href="#with-grep">With grep</a></h3>
+<pre><code class="language-bash"># Find file operations
+renacer -- ls | grep "openat"
+
+# Find errors
+renacer -- ls | grep "ENOENT"
+
+# Find specific files
+renacer -- ls | grep '"/etc/'
+</code></pre>
+<hr />
+<h3 id="with-awk"><a class="header" href="#with-awk">With awk</a></h3>
+<pre><code class="language-bash"># Extract syscall names
+renacer -- ls | awk -F'(' '{print $1}'
+
+# Filter by return value
+renacer -- ls | awk '/ = -1/'
+
+# Count syscalls
+renacer -- ls | awk -F'(' '{print $1}' | sort | uniq -c
+</code></pre>
+<hr />
+<h3 id="with-sed"><a class="header" href="#with-sed">With sed</a></h3>
+<pre><code class="language-bash"># Remove source location
+renacer --source -- ls | sed 's/^[^ ]* [^ ]* //'
+
+# Extract only successful calls
+renacer -- ls | sed -n '/ = [0-9]/p'
+</code></pre>
+<hr />
+<h2 id="performance-characteristics"><a class="header" href="#performance-characteristics">Performance Characteristics</a></h2>
+<h3 id="overhead"><a class="header" href="#overhead">Overhead</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>Feature</th><th>Overhead</th><th>Notes</th></tr></thead><tbody>
+<tr><td><strong>Basic tracing</strong></td><td>~0%</td><td>Direct stdout write</td></tr>
+<tr><td><strong>Source correlation</strong></td><td>+5-10%</td><td>DWARF lookup per syscall</td></tr>
+<tr><td><strong>Timing</strong></td><td>+2-3%</td><td>gettimeofday per syscall</td></tr>
+<tr><td><strong>Color</strong></td><td>+1%</td><td>ANSI escape insertion</td></tr>
+</tbody></table>
+</div>
+<p><strong>Recommendation:</strong> Text format has the <strong>lowest overhead</strong> of all output formats.</p>
+<hr />
+<h3 id="output-size"><a class="header" href="#output-size">Output Size</a></h3>
+<p><strong>Typical Sizes:</strong></p>
+<ul>
+<li><strong>Simple trace</strong> (100 syscalls): ~5-10 KB</li>
+<li><strong>With source</strong> (100 syscalls): ~8-15 KB</li>
+<li><strong>Statistics only</strong> (<code>-c</code>): ~1-2 KB (regardless of syscall count)</li>
+</ul>
+<p><strong>Comparison:</strong></p>
+<ul>
+<li><strong>Text:</strong> Smallest (baseline)</li>
+<li><strong>JSON:</strong> +50-100% (structured overhead)</li>
+<li><strong>CSV:</strong> +30-50% (delimiter overhead)</li>
+<li><strong>HTML:</strong> +200-400% (template overhead)</li>
+</ul>
+<hr />
+<h2 id="line-by-line-format-examples"><a class="header" href="#line-by-line-format-examples">Line-by-Line Format Examples</a></h2>
+<h3 id="basic-file-operations"><a class="header" href="#basic-file-operations">Basic File Operations</a></h3>
+<pre><code>openat(AT_FDCWD, "/tmp/test.txt", O_WRONLY|O_CREAT|O_TRUNC, 0644) = 3
+write(3, "hello world\n", 12) = 12
+fsync(3) = 0
+close(3) = 0
+</code></pre>
+<hr />
+<h3 id="error-handling"><a class="header" href="#error-handling">Error Handling</a></h3>
+<pre><code>openat(AT_FDCWD, "/nonexistent", O_RDONLY) = -1 ENOENT (No such file or directory)
+access("/etc/shadow", R_OK) = -1 EACCES (Permission denied)
+read(99, ..., 4096) = -1 EBADF (Bad file descriptor)
+</code></pre>
+<hr />
+<h3 id="network-operations"><a class="header" href="#network-operations">Network Operations</a></h3>
+<pre><code>socket(AF_INET, SOCK_STREAM, IPPROTO_TCP) = 3
+connect(3, {sa_family=AF_INET, sin_port=htons(443), sin_addr=inet_addr("93.184.216.34")}, 16) = 0
+send(3, "GET / HTTP/1.1\r\nHost: example.com\r\n\r\n", 38) = 38
+recv(3, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n"..., 4096) = 1256
+close(3) = 0
+</code></pre>
+<hr />
+<h3 id="memory-management"><a class="header" href="#memory-management">Memory Management</a></h3>
+<pre><code>brk(NULL) = 0x555555560000
+brk(0x555555581000) = 0x555555581000
+mmap(NULL, 4194304, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7ffff7a00000
+mprotect(0x7ffff7a00000, 4096, PROT_READ) = 0
+munmap(0x7ffff7a00000, 4194304) = 0
+</code></pre>
+<hr />
+<h3 id="multi-process-forkexec"><a class="header" href="#multi-process-forkexec">Multi-Process (Fork/Exec)</a></h3>
+<pre><code>clone(child_stack=NULL, flags=CLONE_CHILD_CLEARTID|CLONE_CHILD_SETTID|SIGCHLD) = 12345
+execve("/usr/bin/ls", ["ls", "-la"], ...) = 0
+wait4(12345, [{WIFEXITED(s) &amp;&amp; WEXITSTATUS(s) == 0}], 0, NULL) = 12345
+</code></pre>
+<p><strong>Note:</strong> Use <code>-f</code> flag to trace forked processes. See <a href="../examples/multi-process.html">Multi-Process Tracing</a>.</p>
+<hr />
+<h3 id="with-source-correlation"><a class="header" href="#with-source-correlation">With Source Correlation</a></h3>
+<pre><code>src/config.rs:127 load_config openat(AT_FDCWD, "/etc/myapp.conf", O_RDONLY) = 3
+src/config.rs:128 load_config fstat(3, {st_mode=S_IFREG|0644, st_size=256, ...}) = 0
+src/config.rs:129 load_config read(3, "debug=true\nport=8080\n", 256) = 21
+src/config.rs:130 load_config close(3) = 0
+src/main.rs:45 main write(1, "Config loaded\n", 14) = 14
+</code></pre>
+<hr />
+<h3 id="with-timing"><a class="header" href="#with-timing">With Timing</a></h3>
+<pre><code>openat(AT_FDCWD, "/etc/passwd", O_RDONLY) = 3 &lt;0.000145&gt;
+fstat(3, {...}) = 0 &lt;0.000023&gt;
+read(3, "root:x:0:0:root:/root:/bin/bash\n"..., 4096) = 1024 &lt;0.000067&gt;
+close(3) = 0 &lt;0.000009&gt;
+</code></pre>
+<hr />
+<h3 id="complete-example-all-features"><a class="header" href="#complete-example-all-features">Complete Example (All Features)</a></h3>
+<p><strong>Command:</strong></p>
+<pre><code class="language-bash">renacer --source --timing -- cat /etc/hostname
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>/usr/lib/x86_64-linux-gnu/ld-2.31.so:? _dl_start execve("/usr/bin/cat", ["cat", "/etc/hostname"], ...) = 0 &lt;0.000234&gt;
+/usr/lib/x86_64-linux-gnu/ld-2.31.so:? _dl_init brk(NULL) = 0x555555560000 &lt;0.000012&gt;
+/usr/lib/x86_64-linux-gnu/ld-2.31.so:? _dl_map_object access("/etc/ld.so.cache", R_OK) = 0 &lt;0.000034&gt;
+/usr/lib/x86_64-linux-gnu/ld-2.31.so:? _dl_map_object openat(AT_FDCWD, "/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 3 &lt;0.000056&gt;
+src/cat.c:234 main openat(AT_FDCWD, "/etc/hostname", O_RDONLY) = 3 &lt;0.000123&gt;
+src/cat.c:245 cat_file fstat(3, {st_mode=S_IFREG|0644, st_size=8, ...}) = 0 &lt;0.000045&gt;
+src/cat.c:267 cat_file read(3, "myhost\n", 131072) = 7 &lt;0.000078&gt;
+src/cat.c:271 cat_file write(1, "myhost\n", 7) = 7 &lt;0.000034&gt;
+src/cat.c:267 cat_file read(3, "", 131072) = 0 &lt;0.000012&gt;
+src/cat.c:285 cat_file close(3) = 0 &lt;0.000008&gt;
+src/cat.c:312 main close(1) = 0 &lt;0.000007&gt;
+src/cat.c:315 main exit_group(0) = ?
+</code></pre>
+<hr />
+<h2 id="edge-cases"><a class="header" href="#edge-cases">Edge Cases</a></h2>
+<h3 id="unknown-syscalls"><a class="header" href="#unknown-syscalls">Unknown Syscalls</a></h3>
+<p>For syscalls not in Renacer's syscall table:</p>
+<pre><code>syscall_999(0x1, 0x2, 0x3) = -1 ENOSYS (Function not implemented)
+</code></pre>
+<p><strong>Format:</strong> <code>syscall_&lt;number&gt;(args...) = result</code></p>
+<hr />
+<h3 id="incomplete-syscalls-process-death"><a class="header" href="#incomplete-syscalls-process-death">Incomplete Syscalls (Process Death)</a></h3>
+<pre><code>read(3, ...
+</code></pre>
+<p><strong>Meaning:</strong> Process terminated before syscall entry was complete (rare edge case).</p>
+<hr />
+<h3 id="very-long-arguments"><a class="header" href="#very-long-arguments">Very Long Arguments</a></h3>
+<pre><code>openat(AT_FDCWD, "/very/long/path/that/gets/truncated/because/it/exceeds/the/maximum/length"..., O_RDONLY) = 3
+</code></pre>
+<p><strong>Truncation Indicator:</strong> <code>...</code> (ellipsis)</p>
+<hr />
+<h3 id="non-printable-characters"><a class="header" href="#non-printable-characters">Non-Printable Characters</a></h3>
+<pre><code>write(1, "Hello\nWorld\t!\x00\x01\x02", 14) = 14
+</code></pre>
+<p><strong>Escaping:</strong></p>
+<ul>
+<li>Newline: <code>\n</code></li>
+<li>Tab: <code>\t</code></li>
+<li>Null: <code>\x00</code></li>
+<li>Other: <code>\xXX</code> (hex)</li>
+</ul>
+<hr />
+<h2 id="combining-with-other-flags"><a class="header" href="#combining-with-other-flags">Combining with Other Flags</a></h2>
+<h3 id="filtering--text"><a class="header" href="#filtering--text">Filtering + Text</a></h3>
+<pre><code class="language-bash"># Trace only file operations (text output is default)
+renacer -e trace=file -- ls
+</code></pre>
+<hr />
+<h3 id="statistics--timing"><a class="header" href="#statistics--timing">Statistics + Timing</a></h3>
+<pre><code class="language-bash"># Statistics summary with timing information
+renacer -c -T -- ./myapp
+</code></pre>
+<p><strong>Output includes <code>seconds</code> and <code>usecs/call</code> columns</strong></p>
+<hr />
+<h3 id="multi-process--source"><a class="header" href="#multi-process--source">Multi-Process + Source</a></h3>
+<pre><code class="language-bash"># Follow forks with source correlation
+renacer -f --source -- make
+</code></pre>
+<p><strong>All processes show source locations (if debug info available)</strong></p>
+<hr />
+<h3 id="function-profiling-sprint-13"><a class="header" href="#function-profiling-sprint-13">Function Profiling (Sprint 13)</a></h3>
+<pre><code class="language-bash"># Function-level profiling with text output
+renacer --function-time -- ./myapp
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>Function Profiling Report:
+==========================================
+Function                    | Time (μs) | Calls | Avg (μs)
+---------------------------------------------------------
+read_config                 |      234  |     1 |      234
+process_data                |     5678  |   100 |       56
+write_output                |      123  |     1 |      123
+</code></pre>
+<p><strong>See Also:</strong> <a href="../advanced/function-profiling.html">Function Profiling</a></p>
+<hr />
+<h2 id="related"><a class="header" href="#related">Related</a></h2>
+<ul>
+<li><a href="./output-formats.html">Output Formats Overview</a> - Format selection guide</li>
+<li><a href="./format-json.html">JSON Format</a> - Machine-parseable JSON output</li>
+<li><a href="./format-csv.html">CSV Format</a> - Spreadsheet-compatible output</li>
+<li><a href="./cli.html">CLI Reference</a> - Complete command-line options</li>
+<li><a href="../core-concepts/statistics.html">Statistics Mode</a> - Statistics mode details</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../reference/output-formats.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../reference/format-json.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../reference/output-formats.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../reference/format-json.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../ace.js"></script>
+        <script src="../editor.js"></script>
+        <script src="../mode-rust.js"></script>
+        <script src="../theme-dawn.js"></script>
+        <script src="../theme-tomorrow_night.js"></script>
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

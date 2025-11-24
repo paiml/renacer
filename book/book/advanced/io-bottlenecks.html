@@ -1,0 +1,731 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>I/O Bottleneck Detection - The Renacer Book - Pure Rust System Call Tracing</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="A comprehensive guide to renacer: syscall tracing, DWARF correlation, and performance analysis">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "rust";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The Renacer Book - Pure Rust System Call Tracing</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer/edit/main/book/src/advanced/io-bottlenecks.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="io-bottleneck-detection"><a class="header" href="#io-bottleneck-detection">I/O Bottleneck Detection</a></h1>
+<p>Renacer's function profiling automatically identifies slow I/O operations that may be causing performance bottlenecks in your application.</p>
+<blockquote>
+<p><strong>TDD-Verified:</strong> Bottleneck detection tested in <a href="../../../tests/"><code>tests/sprint13_function_profiling_tests.rs</code></a></p>
+</blockquote>
+<blockquote>
+<p><strong>Parent Chapter:</strong> See <a href="./function-profiling.html">Function Profiling</a> for overview and basic usage.</p>
+</blockquote>
+<h2 id="overview"><a class="header" href="#overview">Overview</a></h2>
+<p>I/O bottleneck detection helps you find syscalls that are taking unexpectedly long, which often indicates:</p>
+<ul>
+<li><strong>Disk I/O problems</strong> - Slow reads/writes, synchronous flushes</li>
+<li><strong>Network latency</strong> - Slow remote calls, timeouts</li>
+<li><strong>Resource contention</strong> - File locks, busy devices</li>
+<li><strong>Inefficient patterns</strong> - Too many small I/O operations</li>
+</ul>
+<h3 id="what-qualifies-as-a-bottleneck"><a class="header" href="#what-qualifies-as-a-bottleneck">What Qualifies as a Bottleneck?</a></h3>
+<p><strong>SLOW_IO_THRESHOLD_US = 1000</strong> (1 millisecond)</p>
+<p>Any I/O syscall taking longer than 1ms is flagged as a potential bottleneck. This threshold is based on:</p>
+<ul>
+<li>Modern SSDs: ~100-500μs typical access time</li>
+<li>Spinning disks: ~5-10ms seek time (well above threshold)</li>
+<li>Network calls: Local ~0.1ms, Remote ~10-100ms</li>
+<li>In-memory I/O: &lt;10μs typically</li>
+</ul>
+<p><strong>1ms is a pragmatic threshold</strong> - fast enough to catch real problems, high enough to avoid noise from normal disk I/O.</p>
+<h3 id="tracked-io-syscalls"><a class="header" href="#tracked-io-syscalls">Tracked I/O Syscalls</a></h3>
+<pre><code class="language-rust">// From src/function_profiler.rs:18-35
+const IO_SYSCALLS: &amp;[&amp;str] = &amp;[
+    // File I/O
+    "read", "write", "pread64", "pwrite64",
+    "readv", "writev",
+
+    // File operations
+    "openat", "open", "close",
+
+    // Synchronization (common bottlenecks!)
+    "fsync", "fdatasync", "sync",
+
+    // Advanced I/O
+    "sendfile", "splice", "tee", "vmsplice",
+];</code></pre>
+<p><strong>Why these syscalls?</strong> They all perform I/O that can block on:</p>
+<ul>
+<li>Disk access (mechanical latency)</li>
+<li>Network transmission (latency + bandwidth)</li>
+<li>Device operations (printer, USB, etc.)</li>
+</ul>
+<h2 id="enabling-bottleneck-detection"><a class="header" href="#enabling-bottleneck-detection">Enabling Bottleneck Detection</a></h2>
+<p>Bottleneck detection is <strong>automatically enabled</strong> with function profiling:</p>
+<pre><code class="language-bash">renacer --function-time -- ./my-app
+</code></pre>
+<p><strong>Output includes "Slow I/O" column:</strong></p>
+<pre><code>=== Function Profiling Summary ===
+Function                     Calls    Total Time    Avg Time    Slow I/O
+──────────────────────────────────────────────────────────────────────────
+src/db.rs:commit             10       12345 μs      1234 μs     8  ⚠️
+src/file.rs:read_chunk       500      5678 μs       11 μs       0
+</code></pre>
+<p><strong>Interpretation:</strong></p>
+<ul>
+<li><code>src/db.rs:commit</code> - 8 out of 10 calls were slow (&gt;1ms each)</li>
+<li><code>src/file.rs:read_chunk</code> - All 500 calls were fast (&lt;1ms each)</li>
+</ul>
+<p><strong>⚠️ Warning symbol</strong> appears when <code>Slow I/O &gt; 0</code>, highlighting functions needing attention.</p>
+<h2 id="reading-the-output"><a class="header" href="#reading-the-output">Reading the Output</a></h2>
+<h3 id="slow-io-column-explained"><a class="header" href="#slow-io-column-explained">Slow I/O Column Explained</a></h3>
+<p>The "Slow I/O" column shows:</p>
+<ul>
+<li><strong>Number of syscalls &gt;1ms</strong> from this function</li>
+<li><strong>Not the total count</strong> - Only slow operations</li>
+</ul>
+<p><strong>Example:</strong></p>
+<pre><code>Function                     Calls    Total Time    Avg Time    Slow I/O
+──────────────────────────────────────────────────────────────────────────
+src/db.rs:flush              100      150000 μs     1500 μs     95  ⚠️
+</code></pre>
+<p><strong>Analysis:</strong></p>
+<ul>
+<li>100 total <code>fsync</code> calls</li>
+<li>95 of them took &gt;1ms (95% slow!)</li>
+<li>Average time: 1500μs (1.5ms)</li>
+<li><strong>Action needed:</strong> This is a severe bottleneck</li>
+</ul>
+<h3 id="interpreting-percentages"><a class="header" href="#interpreting-percentages">Interpreting Percentages</a></h3>
+<p>Calculate slow I/O percentage: <code>Slow I/O / Calls * 100</code></p>
+<p><strong>Severity levels:</strong></p>
+<ul>
+<li><strong>0%</strong> - No bottleneck (all I/O &lt;1ms)</li>
+<li><strong>1-10%</strong> - Minor, occasional slow I/O (acceptable)</li>
+<li><strong>10-50%</strong> - Moderate bottleneck (investigate)</li>
+<li><strong>&gt;50%</strong> - Severe bottleneck (fix immediately!)</li>
+</ul>
+<p><strong>Example:</strong></p>
+<pre><code>Function                     Calls    Total Time    Avg Time    Slow I/O
+──────────────────────────────────────────────────────────────────────────
+read_config                  1        1234 μs       1234 μs     1  ⚠️       (100% - one-time startup, OK)
+process_batch                10       15000 μs      1500 μs     8  ⚠️       (80% - critical path, fix!)
+background_sync              100      120000 μs     1200 μs     55 ⚠️       (55% - background, low priority)
+</code></pre>
+<h3 id="combined-with-avg-time"><a class="header" href="#combined-with-avg-time">Combined with Avg Time</a></h3>
+<p>Use both metrics together:</p>
+<ul>
+<li><strong>High Avg Time + High Slow I/O</strong> = Consistent bottleneck (e.g., database commits)</li>
+<li><strong>Low Avg Time + Low Slow I/O</strong> = Fast operations (e.g., cached reads)</li>
+<li><strong>Low Avg Time + High Slow I/O</strong> = Occasional spikes (e.g., cache misses)</li>
+<li><strong>High Avg Time + Low Slow I/O</strong> = Many fast operations (e.g., small reads)</li>
+</ul>
+<h2 id="practical-examples"><a class="header" href="#practical-examples">Practical Examples</a></h2>
+<h3 id="example-1-database-bottleneck-fsync"><a class="header" href="#example-1-database-bottleneck-fsync">Example 1: Database Bottleneck (fsync)</a></h3>
+<p><strong>Scenario:</strong> PostgreSQL commit latency</p>
+<pre><code class="language-bash">$ renacer --function-time --source -e trace=fsync -- pgbench -c 10 -t 100
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>=== Function Profiling Summary ===
+Function                     Calls    Total Time    Avg Time    Slow I/O
+──────────────────────────────────────────────────────────────────────────
+src/wal.c:write_wal          1000     4567890 μs    4567 μs     998  ⚠️
+src/buffer.c:flush_dirty     500      1234567 μs    2469 μs     478  ⚠️
+</code></pre>
+<p><strong>Analysis:</strong></p>
+<ul>
+<li><code>write_wal</code>: 99.8% of fsync calls are slow (4.5ms average!)</li>
+<li><code>flush_dirty</code>: 95.6% of fsync calls are slow (2.5ms average)</li>
+</ul>
+<p><strong>Root Cause:</strong> Synchronous disk writes (fsync) on spinning disk</p>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li><strong>Use SSD</strong> - Reduces fsync from 5ms to 0.1ms (50x faster)</li>
+<li><strong>Group commits</strong> - Batch multiple transactions into one fsync</li>
+<li><strong>Async replication</strong> - Don't wait for fsync on replica</li>
+<li><strong>Tune <code>wal_sync_method</code></strong> - Try <code>fdatasync</code> or <code>open_datasync</code></li>
+</ol>
+<p><strong>Verify fix:</strong></p>
+<pre><code class="language-bash"># After switching to SSD
+$ renacer --function-time --source -e trace=fsync -- pgbench -c 10 -t 100
+</code></pre>
+<p><strong>Expected:</strong></p>
+<pre><code>Function                     Calls    Total Time    Avg Time    Slow I/O
+──────────────────────────────────────────────────────────────────────────
+src/wal.c:write_wal          1000     150000 μs     150 μs      0
+src/buffer.c:flush_dirty     500      75000 μs      150 μs      0
+</code></pre>
+<p><strong>Result:</strong> Slow I/O eliminated! ✅</p>
+<h3 id="example-2-web-server-latency-network"><a class="header" href="#example-2-web-server-latency-network">Example 2: Web Server Latency (Network)</a></h3>
+<p><strong>Scenario:</strong> HTTP server with slow backend calls</p>
+<pre><code class="language-bash">$ renacer --function-time --source -e trace=network -- ./http_server
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>=== Function Profiling Summary ===
+Function                     Calls    Total Time    Avg Time    Slow I/O
+──────────────────────────────────────────────────────────────────────────
+src/api.rs:fetch_user        450      67890 μs      150 μs      45  ⚠️
+src/api.rs:call_backend      200      890000 μs     4450 μs     198 ⚠️
+src/cache.rs:get_value       1000     5000 μs       5 μs        0
+</code></pre>
+<p><strong>Analysis:</strong></p>
+<ul>
+<li><code>call_backend</code>: 99% slow (4.5ms avg) - <strong>Critical bottleneck!</strong></li>
+<li><code>fetch_user</code>: 10% slow (150μs avg) - Occasional cache misses</li>
+<li><code>get_value</code>: 0% slow (5μs avg) - Fast cache hits</li>
+</ul>
+<p><strong>Root Cause:</strong> Backend API calls over network (no local cache)</p>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li><strong>Add caching layer</strong> - Redis/Memcached for frequently accessed data</li>
+<li><strong>Connection pooling</strong> - Reuse connections, avoid TCP handshake overhead</li>
+<li><strong>Batch requests</strong> - Combine multiple API calls into one</li>
+<li><strong>Async I/O</strong> - Use tokio/async-std for non-blocking network calls</li>
+</ol>
+<p><strong>Verify fix (after adding Redis cache):</strong></p>
+<pre><code>Function                     Calls    Total Time    Avg Time    Slow I/O
+──────────────────────────────────────────────────────────────────────────
+src/api.rs:call_backend      20       89000 μs      4450 μs     20  ⚠️       (90% cache hit rate!)
+src/cache.rs:get_value       1000     5000 μs       5 μs        0
+</code></pre>
+<p><strong>Result:</strong> 90% fewer backend calls, 10x throughput improvement! ✅</p>
+<h3 id="example-3-file-processing-many-small-reads"><a class="header" href="#example-3-file-processing-many-small-reads">Example 3: File Processing (Many Small Reads)</a></h3>
+<p><strong>Scenario:</strong> Processing CSV files line-by-line</p>
+<pre><code class="language-bash">$ renacer --function-time -c -e trace=read -- ./csv_parser data.csv
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>=== Function Profiling Summary ===
+Function                     Calls    Total Time    Avg Time    Slow I/O
+──────────────────────────────────────────────────────────────────────────
+src/parser.rs:read_line      10000    50000 μs      5 μs        0
+</code></pre>
+<p><strong>Analysis:</strong></p>
+<ul>
+<li>10,000 read calls, but average only 5μs (fast!)</li>
+<li>No slow I/O detected</li>
+<li><strong>But:</strong> 10,000 syscalls is expensive (context switching overhead)</li>
+</ul>
+<p><strong>Optimization:</strong> Use buffered I/O instead</p>
+<pre><code class="language-rust">// Before: Line-by-line (many syscalls)
+use std::fs::File;
+use std::io::{BufRead, BufReader};
+
+let file = File::open("data.csv")?;
+let reader = BufReader::new(file);  // Buffers reads (fewer syscalls)
+
+for line in reader.lines() {
+    // Process line
+}</code></pre>
+<p><strong>After optimization:</strong></p>
+<pre><code>Function                     Calls    Total Time    Avg Time    Slow I/O
+──────────────────────────────────────────────────────────────────────────
+src/parser.rs:read_chunk     20       1000 μs       50 μs       0           (500x fewer syscalls!)
+</code></pre>
+<p><strong>Result:</strong> Same total time, but 500x fewer syscalls = lower CPU overhead! ✅</p>
+<h3 id="example-4-build-system-bottleneck"><a class="header" href="#example-4-build-system-bottleneck">Example 4: Build System Bottleneck</a></h3>
+<p><strong>Scenario:</strong> Cargo build is slow</p>
+<pre><code class="language-bash">$ renacer --function-time -c -e trace=file -- cargo build
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>=== Function Profiling Summary ===
+Function                     Calls    Total Time    Avg Time    Slow I/O
+──────────────────────────────────────────────────────────────────────────
+rustc:link                   50       156789 μs     3135 μs     48  ⚠️
+rustc:compile                200      45678 μs      228 μs      0
+cargo:fetch_crate            10       123456 μs     12345 μs    10  ⚠️
+</code></pre>
+<p><strong>Analysis:</strong></p>
+<ul>
+<li><code>link</code>: 96% slow (3.1ms avg) - Linking is I/O-heavy</li>
+<li><code>fetch_crate</code>: 100% slow (12.3ms avg!) - Network downloads</li>
+<li><code>compile</code>: 0% slow - CPU-bound, no I/O bottleneck</li>
+</ul>
+<p><strong>Root Cause:</strong></p>
+<ul>
+<li>Linking writes large executables to disk (slow on HDD)</li>
+<li><code>cargo fetch</code> downloads crates over network</li>
+</ul>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li><strong>Use SSD</strong> - Faster linking (3ms → 0.5ms)</li>
+<li><strong>Pre-download deps</strong> - <code>cargo fetch</code> before build</li>
+<li><strong>Incremental builds</strong> - Avoid relinking unchanged code</li>
+<li><strong>Link-time optimization (LTO)</strong> - Use <code>lto = "thin"</code> instead of <code>"fat"</code></li>
+</ol>
+<h2 id="identifying-common-patterns"><a class="header" href="#identifying-common-patterns">Identifying Common Patterns</a></h2>
+<h3 id="pattern-1-synchronous-flush-bottleneck"><a class="header" href="#pattern-1-synchronous-flush-bottleneck">Pattern 1: Synchronous Flush Bottleneck</a></h3>
+<p><strong>Signature:</strong></p>
+<ul>
+<li>High slow I/O count on <code>fsync</code>, <code>fdatasync</code>, <code>sync</code></li>
+<li>Average time: 3-10ms (HDD) or 0.5-2ms (SSD)</li>
+</ul>
+<p><strong>Example:</strong></p>
+<pre><code>Function                     Calls    Total Time    Avg Time    Slow I/O
+──────────────────────────────────────────────────────────────────────────
+db_commit                    500      2500000 μs    5000 μs     500  ⚠️
+</code></pre>
+<p><strong>Fix:</strong> Batch commits, use async replication, or disable fsync (data loss risk!)</p>
+<h3 id="pattern-2-network-latency"><a class="header" href="#pattern-2-network-latency">Pattern 2: Network Latency</a></h3>
+<p><strong>Signature:</strong></p>
+<ul>
+<li>High slow I/O on <code>sendto</code>, <code>recvfrom</code>, <code>read</code>, <code>write</code> (network sockets)</li>
+<li>Average time: 10-100ms (remote), 0.1-1ms (local)</li>
+</ul>
+<p><strong>Example:</strong></p>
+<pre><code>Function                     Calls    Total Time    Avg Time    Slow I/O
+──────────────────────────────────────────────────────────────────────────
+http_request                 100      4500000 μs    45000 μs    100  ⚠️
+</code></pre>
+<p><strong>Fix:</strong> Add caching, use CDN, batch requests, or use async I/O</p>
+<h3 id="pattern-3-random-disk-access"><a class="header" href="#pattern-3-random-disk-access">Pattern 3: Random Disk Access</a></h3>
+<p><strong>Signature:</strong></p>
+<ul>
+<li>High slow I/O on <code>pread64</code>, <code>read</code> with varying offsets</li>
+<li>Average time: 5-15ms (HDD seek time)</li>
+</ul>
+<p><strong>Example:</strong></p>
+<pre><code>Function                     Calls    Total Time    Avg Time    Slow I/O
+──────────────────────────────────────────────────────────────────────────
+database_lookup              1000     8000000 μs    8000 μs     980  ⚠️
+</code></pre>
+<p><strong>Fix:</strong> Use SSD, add indexing, or improve query patterns for sequential access</p>
+<h3 id="pattern-4-small-writes-write-amplification"><a class="header" href="#pattern-4-small-writes-write-amplification">Pattern 4: Small Writes (Write Amplification)</a></h3>
+<p><strong>Signature:</strong></p>
+<ul>
+<li>Many small <code>write</code> calls with low slow I/O count</li>
+<li>Total time high despite low individual times</li>
+</ul>
+<p><strong>Example:</strong></p>
+<pre><code>Function                     Calls    Total Time    Avg Time    Slow I/O
+──────────────────────────────────────────────────────────────────────────
+log_message                  50000    250000 μs     5 μs        0
+</code></pre>
+<p><strong>Problem:</strong> Each write is fast, but 50,000 syscalls = high overhead</p>
+<p><strong>Fix:</strong> Buffer writes, batch logging, or use async logging framework</p>
+<h2 id="resolution-strategies"><a class="header" href="#resolution-strategies">Resolution Strategies</a></h2>
+<h3 id="strategy-1-hardware-upgrades"><a class="header" href="#strategy-1-hardware-upgrades">Strategy 1: Hardware Upgrades</a></h3>
+<p><strong>When:</strong> Consistent slow I/O across all functions</p>
+<p><strong>Solutions:</strong></p>
+<ul>
+<li><strong>SSD upgrade</strong> - 50-100x faster random access (HDD: 10ms → SSD: 0.1ms)</li>
+<li><strong>NVMe</strong> - 5x faster than SATA SSD (SATA: 500MB/s → NVMe: 3500MB/s)</li>
+<li><strong>More RAM</strong> - Increases OS page cache, fewer disk reads</li>
+</ul>
+<p><strong>ROI:</strong> High - Often the fastest path to performance improvement</p>
+<h3 id="strategy-2-caching"><a class="header" href="#strategy-2-caching">Strategy 2: Caching</a></h3>
+<p><strong>When:</strong> Slow I/O concentrated in specific read-heavy functions</p>
+<p><strong>Solutions:</strong></p>
+<ul>
+<li><strong>Application-level cache</strong> - Redis, Memcached</li>
+<li><strong>HTTP cache</strong> - Varnish, Cloudflare CDN</li>
+<li><strong>Database query cache</strong> - MySQL query cache, PostgreSQL shared buffers</li>
+</ul>
+<p><strong>Example:</strong></p>
+<pre><code class="language-rust">// Add simple LRU cache
+use lru::LruCache;
+
+let mut cache = LruCache::new(1000);
+
+fn get_user(id: u64) -&gt; User {
+    if let Some(user) = cache.get(&amp;id) {
+        return user.clone();  // Cache hit - no slow I/O!
+    }
+
+    let user = db.query_user(id);  // Slow I/O here
+    cache.put(id, user.clone());
+    user
+}</code></pre>
+<h3 id="strategy-3-batching"><a class="header" href="#strategy-3-batching">Strategy 3: Batching</a></h3>
+<p><strong>When:</strong> Many small I/O operations to the same resource</p>
+<p><strong>Solutions:</strong></p>
+<ul>
+<li><strong>Batch database inserts</strong> - <code>INSERT INTO ... VALUES (...), (...), (...)</code></li>
+<li><strong>Batch API calls</strong> - GraphQL, gRPC batch requests</li>
+<li><strong>Buffer writes</strong> - Accumulate data, flush periodically</li>
+</ul>
+<p><strong>Example:</strong></p>
+<pre><code class="language-rust">// Before: 1000 individual inserts (1000 slow I/O operations)
+for record in records {
+    db.execute("INSERT INTO users VALUES (?)", record)?;  // fsync per insert!
+}
+
+// After: Batch insert (1 slow I/O operation)
+db.transaction(|tx| {
+    for record in records {
+        tx.execute("INSERT INTO users VALUES (?)", record)?;  // No fsync yet
+    }
+    Ok(())  // Single fsync on commit
+})?;</code></pre>
+<p><strong>Result:</strong> 1000x fewer fsync calls!</p>
+<h3 id="strategy-4-async-io"><a class="header" href="#strategy-4-async-io">Strategy 4: Async I/O</a></h3>
+<p><strong>When:</strong> I/O-bound workload with many concurrent operations</p>
+<p><strong>Solutions:</strong></p>
+<ul>
+<li><strong>Tokio/async-std</strong> - Async runtime for Rust</li>
+<li><strong>io_uring</strong> - Linux kernel async I/O (ultra-low latency)</li>
+<li><strong>Thread pool</strong> - Offload blocking I/O to separate threads</li>
+</ul>
+<p><strong>Example:</strong></p>
+<pre><code class="language-rust">// Before: Blocking I/O (waits for each request)
+for url in urls {
+    let response = reqwest::blocking::get(url)?;  // Blocks until complete
+    process(response);
+}
+
+// After: Async I/O (concurrent requests)
+let futures: Vec&lt;_&gt; = urls.iter()
+    .map(|url| reqwest::get(url))
+    .collect();
+
+let responses = futures::future::join_all(futures).await;
+for response in responses {
+    process(response);
+}</code></pre>
+<p><strong>Result:</strong> N concurrent requests instead of sequential = N× throughput!</p>
+<h3 id="strategy-5-algorithmic-improvements"><a class="header" href="#strategy-5-algorithmic-improvements">Strategy 5: Algorithmic Improvements</a></h3>
+<p><strong>When:</strong> Inherently inefficient I/O patterns</p>
+<p><strong>Solutions:</strong></p>
+<ul>
+<li><strong>Sequential access</strong> - Prefetch data to avoid random seeks</li>
+<li><strong>Reduce I/O</strong> - Compute instead of fetch (e.g., hash instead of lookup)</li>
+<li><strong>Lazy loading</strong> - Defer I/O until actually needed</li>
+</ul>
+<p><strong>Example:</strong></p>
+<pre><code class="language-rust">// Before: Random access (many seeks)
+for id in user_ids {
+    let user = db.query_by_id(id)?;  // Random disk seek per query
+    process(user);
+}
+
+// After: Sequential access (sorted by storage order)
+user_ids.sort();  // Sort to match storage order
+for id in user_ids {
+    let user = db.query_by_id(id)?;  // Sequential read (10x faster!)
+    process(user);
+}</code></pre>
+<h2 id="advanced-usage"><a class="header" href="#advanced-usage">Advanced Usage</a></h2>
+<h3 id="with-filtering--e"><a class="header" href="#with-filtering--e">With Filtering (-e)</a></h3>
+<p>Focus on specific I/O syscalls:</p>
+<pre><code class="language-bash">$ renacer --function-time -e trace=fsync -- ./database-app
+</code></pre>
+<p><strong>Shows:</strong></p>
+<ul>
+<li>Only <code>fsync</code> operations</li>
+<li>Slow I/O count for fsync only</li>
+<li>Easier to identify synchronous flush bottlenecks</li>
+</ul>
+<p><strong>Use case:</strong> Database tuning, isolate write amplification</p>
+<h3 id="with-statistics-mode--c"><a class="header" href="#with-statistics-mode--c">With Statistics Mode (-c)</a></h3>
+<p>Combine bottleneck detection with overall statistics:</p>
+<pre><code class="language-bash">$ renacer --function-time -c -- ./my-app
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>[Syscall statistics - stderr]
+% time     seconds  usecs/call     calls    errors syscall
+------ ----------- ----------- --------- --------- ----------------
+ 85.23    4.567890        4567      1000         0 fsync
+ 10.45    0.567123         283      2000         0 write
+  4.32    0.234567         234      1000         0 read
+100.00    5.369580                  4000         0 total
+
+[Function profiling - stderr]
+=== Function Profiling Summary ===
+Function                     Calls    Total Time    Avg Time    Slow I/O
+──────────────────────────────────────────────────────────────────────────
+db_commit                    1000     4567890 μs    4567 μs     998  ⚠️
+</code></pre>
+<p><strong>Insight:</strong> <code>fsync</code> is 85% of total time + 99.8% slow I/O → <strong>Priority #1 for optimization!</strong></p>
+<h3 id="with-multi-process-tracing--f"><a class="header" href="#with-multi-process-tracing--f">With Multi-Process Tracing (-f)</a></h3>
+<p>Track bottlenecks across process tree:</p>
+<pre><code class="language-bash">$ renacer -f --function-time -- make -j8
+</code></pre>
+<p><strong>Aggregates:</strong></p>
+<ul>
+<li>Parent + child process bottlenecks</li>
+<li>Identify which subprocess has slow I/O</li>
+<li>Useful for build systems, test runners</li>
+</ul>
+<h3 id="export-for-analysis"><a class="header" href="#export-for-analysis">Export for Analysis</a></h3>
+<p>Export to JSON/CSV for deeper analysis:</p>
+<pre><code class="language-bash">$ renacer --function-time --format json -- ./my-app &gt; profile.json
+</code></pre>
+<p><strong>Analyze with jq:</strong></p>
+<pre><code class="language-bash"># Find all functions with &gt;50% slow I/O
+$ jq '.function_profile[] | select(.slow_io_count / .calls &gt; 0.5)' profile.json
+
+# Sort by average time (descending)
+$ jq '.function_profile | sort_by(-.avg_time_us)' profile.json
+</code></pre>
+<h2 id="troubleshooting"><a class="header" href="#troubleshooting">Troubleshooting</a></h2>
+<h3 id="false-positives-startup-io"><a class="header" href="#false-positives-startup-io">False Positives: Startup I/O</a></h3>
+<p><strong>Problem:</strong> One-time startup I/O flagged as slow</p>
+<p><strong>Example:</strong></p>
+<pre><code>Function                     Calls    Total Time    Avg Time    Slow I/O
+──────────────────────────────────────────────────────────────────────────
+load_config                  1        5678 μs       5678 μs     1  ⚠️
+</code></pre>
+<p><strong>Analysis:</strong> 100% slow I/O, but it's one-time startup (acceptable)</p>
+<p><strong>Solution:</strong> Ignore startup functions, focus on hot path (frequently called functions)</p>
+<h3 id="false-negatives-cumulative-effect"><a class="header" href="#false-negatives-cumulative-effect">False Negatives: Cumulative Effect</a></h3>
+<p><strong>Problem:</strong> Many fast I/O operations that add up to slow total time</p>
+<p><strong>Example:</strong></p>
+<pre><code>Function                     Calls    Total Time    Avg Time    Slow I/O
+──────────────────────────────────────────────────────────────────────────
+log_debug                    100000   500000 μs     5 μs        0
+</code></pre>
+<p><strong>Analysis:</strong> 0 slow I/O, but 500ms total time (significant!)</p>
+<p><strong>Solution:</strong> Look at <strong>Total Time</strong> in addition to Slow I/O. High call count × low avg time = cumulative bottleneck.</p>
+<h3 id="variability-inconsistent-results"><a class="header" href="#variability-inconsistent-results">Variability: Inconsistent Results</a></h3>
+<p><strong>Problem:</strong> Slow I/O count changes between runs</p>
+<p><strong>Cause:</strong> External factors (disk cache, network congestion, CPU load)</p>
+<p><strong>Solution:</strong></p>
+<ol>
+<li><strong>Run multiple times</strong> - Average results across 3-5 runs</li>
+<li><strong>Isolate environment</strong> - Disable background processes</li>
+<li><strong>Use synthetic load</strong> - Controlled benchmarks instead of production traffic</li>
+</ol>
+<p><strong>Example:</strong></p>
+<pre><code class="language-bash"># Run 5 times, average results
+for i in {1..5}; do
+    renacer --function-time -c -- ./my-app 2&gt;&amp;1 | tee run$i.log
+done
+
+# Extract slow I/O counts
+grep "Slow I/O" run*.log
+</code></pre>
+<h3 id="missing-functions-no-profiling-data"><a class="header" href="#missing-functions-no-profiling-data">Missing Functions: No Profiling Data</a></h3>
+<p><strong>Problem:</strong> "No function profiling data collected"</p>
+<p><strong>Cause:</strong> Binary lacks DWARF debug information</p>
+<p><strong>Solution:</strong> See <a href="./function-profiling.html#troubleshooting">Function Profiling - Troubleshooting</a></p>
+<h2 id="performance-impact"><a class="header" href="#performance-impact">Performance Impact</a></h2>
+<p><strong>Overhead of bottleneck detection:</strong></p>
+<ul>
+<li><strong>Counting slow I/O:</strong> ~1-2% (simple comparison: <code>duration &gt; 1ms</code>)</li>
+<li><strong>Function profiling:</strong> ~10-30% (includes stack unwinding + DWARF lookups)</li>
+</ul>
+<p><strong>Total overhead:</strong> ~12-32% when enabled</p>
+<p><strong>Mitigation:</strong></p>
+<ul>
+<li>Use filtering (<code>-e trace=fsync</code>) to reduce syscall count</li>
+<li>Disable when not needed (zero overhead when not enabled)</li>
+</ul>
+<h2 id="summary"><a class="header" href="#summary">Summary</a></h2>
+<p>I/O bottleneck detection provides:</p>
+<ul>
+<li>✅ <strong>Automatic detection</strong> of slow I/O (&gt;1ms threshold)</li>
+<li>✅ <strong>Function-level attribution</strong> - Know which code is slow</li>
+<li>✅ <strong>Severity metrics</strong> - Slow I/O count + percentage</li>
+<li>✅ <strong>Actionable insights</strong> - Identify fsync, network, disk bottlenecks</li>
+<li>✅ <strong>Integration</strong> with filtering, statistics, multi-process tracing</li>
+</ul>
+<p><strong>All examples tested in:</strong> <a href="../../../tests/"><code>tests/sprint13_function_profiling_tests.rs</code></a></p>
+<h2 id="related"><a class="header" href="#related">Related</a></h2>
+<ul>
+<li><a href="./function-profiling.html">Function Profiling</a> - Parent chapter with basic usage</li>
+<li><a href="./call-graphs.html">Call Graph Analysis</a> - Understand function call relationships</li>
+<li><a href="../core-concepts/statistics.html">Statistics Mode</a> - Aggregate timing data</li>
+<li><a href="../core-concepts/filtering.html">Filtering Syscalls</a> - Focus on specific I/O types</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../advanced/function-profiling.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../advanced/call-graphs.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../advanced/function-profiling.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../advanced/call-graphs.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../ace.js"></script>
+        <script src="../editor.js"></script>
+        <script src="../mode-rust.js"></script>
+        <script src="../theme-dawn.js"></script>
+        <script src="../theme-tomorrow_night.js"></script>
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

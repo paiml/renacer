@@ -1,0 +1,671 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>FAQ - The Renacer Book - Pure Rust System Call Tracing</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="A comprehensive guide to renacer: syscall tracing, DWARF correlation, and performance analysis">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "rust";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The Renacer Book - Pure Rust System Call Tracing</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer/edit/main/book/src/appendix/faq.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="frequently-asked-questions"><a class="header" href="#frequently-asked-questions">Frequently Asked Questions</a></h1>
+<p>Common questions about Renacer usage, features, and troubleshooting.</p>
+<h2 id="getting-started"><a class="header" href="#getting-started">Getting Started</a></h2>
+<h3 id="how-is-renacer-different-from-strace"><a class="header" href="#how-is-renacer-different-from-strace">How is Renacer different from strace?</a></h3>
+<p>Renacer is a pure Rust reimplementation of strace with several enhancements:</p>
+<ul>
+<li><strong>DWARF source correlation</strong> - Map syscalls to source code locations</li>
+<li><strong>Function profiling</strong> - Attribute syscall time to specific functions</li>
+<li><strong>Advanced filtering</strong> - Regex patterns, negation, syscall classes</li>
+<li><strong>Statistical analysis</strong> - Percentiles, anomaly detection, HPU acceleration</li>
+<li><strong>Modern output</strong> - JSON, CSV, HTML formats with interactive visualizations</li>
+<li><strong>Performance</strong> - Comparable overhead to strace (~1.5-2.5× slowdown)</li>
+</ul>
+<p><strong>When to use Renacer:</strong></p>
+<ul>
+<li>Need source-level debugging (file:line correlation)</li>
+<li>Performance analysis with percentiles</li>
+<li>Structured output (JSON/CSV) for post-processing</li>
+<li>Advanced filtering (regex, negation, classes)</li>
+</ul>
+<p><strong>When to use strace:</strong></p>
+<ul>
+<li>Simple syscall tracing without DWARF</li>
+<li>Maximum compatibility (no Rust toolchain needed)</li>
+<li>Minimal dependencies</li>
+</ul>
+<h3 id="do-i-need-rootsudo-to-use-renacer"><a class="header" href="#do-i-need-rootsudo-to-use-renacer">Do I need root/sudo to use Renacer?</a></h3>
+<p><strong>No</strong> - Renacer works without root privileges for processes you own:</p>
+<pre><code class="language-bash"># Trace your own process
+renacer -- ls -la
+
+# Attach to your own running process
+renacer -p $(pgrep myapp)
+</code></pre>
+<p><strong>Yes</strong> - Root required for:</p>
+<ul>
+<li>Tracing processes owned by other users</li>
+<li>Attaching to system processes</li>
+<li>Setting ptrace restrictions (<code>/proc/sys/kernel/yama/ptrace_scope</code>)</li>
+</ul>
+<p><strong>Tip:</strong> If <code>ptrace_scope=1</code> prevents attaching, temporarily allow it:</p>
+<pre><code class="language-bash">sudo sysctl -w kernel.yama.ptrace_scope=0  # Allow ptrace
+renacer -p 1234                            # Attach to process
+sudo sysctl -w kernel.yama.ptrace_scope=1  # Restore security
+</code></pre>
+<h3 id="why-do-i-need-debug-symbols--g-flag"><a class="header" href="#why-do-i-need-debug-symbols--g-flag">Why do I need debug symbols (-g flag)?</a></h3>
+<p>Debug symbols are <strong>required</strong> for DWARF features:</p>
+<div class="table-wrapper"><table><thead><tr><th>Feature</th><th>Requires -g</th><th>Flag</th></tr></thead><tbody>
+<tr><td>Basic syscall tracing</td><td>❌ No</td><td>(default)</td></tr>
+<tr><td>Source code correlation</td><td>✅ Yes</td><td><code>--source</code></td></tr>
+<tr><td>Function profiling</td><td>✅ Yes</td><td><code>--function-time</code></td></tr>
+<tr><td>Stack unwinding</td><td>✅ Yes</td><td><code>--source</code></td></tr>
+</tbody></table>
+</div>
+<p><strong>How to compile with debug symbols:</strong></p>
+<pre><code class="language-bash"># C/C++
+gcc -g -fno-omit-frame-pointer myapp.c -o myapp
+
+# Rust (debug builds have symbols by default)
+cargo build  # Already has -g
+
+# Rust release build with symbols
+cargo build --release
+# Then strip separately if needed
+</code></pre>
+<p><strong>Without debug symbols:</strong></p>
+<pre><code>renacer --source -- ./myapp
+# Warning: No DWARF debug info found in ./myapp
+# Source correlation disabled
+</code></pre>
+<h2 id="features"><a class="header" href="#features">Features</a></h2>
+<h3 id="how-do-i-filter-specific-syscalls"><a class="header" href="#how-do-i-filter-specific-syscalls">How do I filter specific syscalls?</a></h3>
+<p>Renacer supports multiple filtering methods:</p>
+<p><strong>1. Literal syscall names:</strong></p>
+<pre><code class="language-bash">renacer -e trace=open,read,write -- ls
+</code></pre>
+<p><strong>2. Syscall classes (Sprint 14):</strong></p>
+<pre><code class="language-bash">renacer -e trace=file -- ls        # All file operations
+renacer -e trace=network -- curl   # Network syscalls
+</code></pre>
+<p><strong>3. Negation operator (Sprint 15):</strong></p>
+<pre><code class="language-bash">renacer -e trace=file,!openat -- ls  # File ops except openat
+renacer -e trace=!read,!write -- app # Everything except read/write
+</code></pre>
+<p><strong>4. Regex patterns (Sprint 16):</strong></p>
+<pre><code class="language-bash">renacer -e trace=/^open.*/ -- ls     # Syscalls starting with "open"
+renacer -e trace=/.*at$/ -- ls       # Syscalls ending with "at"
+renacer -e trace=/read|write/ -- app # read OR write
+</code></pre>
+<p><strong>Mix and match:</strong></p>
+<pre><code class="language-bash"># Class + negation + regex
+renacer -e trace=file,!openat,/^fstat/ -- ls
+</code></pre>
+<p>See <a href="../core-concepts/filtering.html">Filtering Syscalls</a> for complete reference.</p>
+<h3 id="what-output-formats-are-supported"><a class="header" href="#what-output-formats-are-supported">What output formats are supported?</a></h3>
+<p>Renacer supports 4 output formats:</p>
+<div class="table-wrapper"><table><thead><tr><th>Format</th><th>Flag</th><th>Use Case</th></tr></thead><tbody>
+<tr><td><strong>Text</strong></td><td>(default)</td><td>Human-readable strace-like output</td></tr>
+<tr><td><strong>JSON</strong></td><td><code>--format json</code></td><td>Machine parsing, jq, Python pandas</td></tr>
+<tr><td><strong>CSV</strong></td><td><code>--format csv</code></td><td>Spreadsheets (Excel), R, statistical tools</td></tr>
+<tr><td><strong>HTML</strong></td><td><code>--format html</code></td><td>Interactive reports with charts (Sprint 22)</td></tr>
+</tbody></table>
+</div>
+<p><strong>Examples:</strong></p>
+<pre><code class="language-bash"># Text (default)
+renacer -- ls
+# openat(AT_FDCWD, "/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 3
+
+# JSON
+renacer --format json -- ls | jq '.syscalls[] | select(.name == "openat")'
+
+# CSV
+renacer --format csv -- ls &gt; trace.csv
+# Open in Excel/LibreOffice
+
+# HTML
+renacer --format html -- ls &gt; report.html
+# Open in browser
+</code></pre>
+<p>See <a href="../core-concepts/output-formats.html">Output Formats</a>.</p>
+<h3 id="can-i-trace-multiple-processes-forkexec"><a class="header" href="#can-i-trace-multiple-processes-forkexec">Can I trace multiple processes (fork/exec)?</a></h3>
+<p><strong>Yes</strong> - Use the <code>-f</code> flag (Sprint 18):</p>
+<pre><code class="language-bash"># Trace parent + all children
+renacer -f -- make
+
+# Trace shell script + subprocesses
+renacer -f -- ./build.sh
+</code></pre>
+<p><strong>Output shows PID:</strong></p>
+<pre><code>[12345] openat(AT_FDCWD, "file", O_RDONLY) = 3
+[12346] execve("/bin/gcc", ...) = 0       ← child process
+[12345] waitpid(12346, ...) = 12346
+</code></pre>
+<p><strong>Statistics mode with -f:</strong></p>
+<pre><code class="language-bash"># Per-process statistics
+renacer -f -c -- make
+</code></pre>
+<p>See <a href="../examples/multi-process.html">Multi-Process Tracing</a>.</p>
+<h2 id="technical"><a class="header" href="#technical">Technical</a></h2>
+<h3 id="whats-dwarf-and-why-do-i-need-it"><a class="header" href="#whats-dwarf-and-why-do-i-need-it">What's DWARF and why do I need it?</a></h3>
+<p><strong>DWARF</strong> (Debugging With Attributed Record Formats) is a standardized debugging data format embedded in binaries by compilers (gcc, clang, rustc).</p>
+<p><strong>Contains:</strong></p>
+<ul>
+<li>File names and line numbers</li>
+<li>Function names and boundaries</li>
+<li>Variable names and types</li>
+<li>Stack frame information</li>
+</ul>
+<p><strong>Why Renacer uses DWARF:</strong></p>
+<ol>
+<li><strong>Source correlation</strong> - Map syscall to exact source line (<code>main.c:42</code>)</li>
+<li><strong>Function profiling</strong> - Attribute syscall time to specific functions</li>
+<li><strong>Stack unwinding</strong> - Walk call stack using frame pointers</li>
+</ol>
+<p><strong>How to check if binary has DWARF:</strong></p>
+<pre><code class="language-bash">readelf --debug-dump=info myapp | head
+# If empty: no DWARF info
+</code></pre>
+<p>See <a href="../core-concepts/dwarf-correlation.html">DWARF Source Correlation</a>.</p>
+<h3 id="how-does-stack-unwinding-work"><a class="header" href="#how-does-stack-unwinding-work">How does stack unwinding work?</a></h3>
+<p>Renacer uses <strong>frame pointer chain walking</strong> (max 64 frames):</p>
+<ol>
+<li>Read <code>rbp</code> register (frame pointer on x86_64)</li>
+<li>Follow chain: <code>rbp → previous rbp → ... → main()</code></li>
+<li>For each frame, read return address</li>
+<li>Lookup address in DWARF debug info to get function name</li>
+</ol>
+<p><strong>Requirements:</strong></p>
+<ul>
+<li>Debug symbols (<code>-g</code> flag)</li>
+<li>Frame pointers enabled (<code>-fno-omit-frame-pointer</code>)</li>
+</ul>
+<p><strong>Without frame pointers:</strong></p>
+<pre><code class="language-bash">gcc -O2 myapp.c -o myapp  # -O2 omits frame pointers
+renacer --source -- ./myapp
+# Warning: Cannot unwind stack (frame pointers omitted)
+</code></pre>
+<p><strong>With frame pointers:</strong></p>
+<pre><code class="language-bash">gcc -O2 -fno-omit-frame-pointer myapp.c -o myapp
+renacer --source -- ./myapp
+# ✅ Stack unwinding works
+</code></pre>
+<h3 id="whats-the-performance-overhead"><a class="header" href="#whats-the-performance-overhead">What's the performance overhead?</a></h3>
+<p>Benchmarked against strace (see <a href="../reference/benchmarks.html">Benchmarks</a>):</p>
+<div class="table-wrapper"><table><thead><tr><th>Workload</th><th>strace overhead</th><th>Renacer overhead</th></tr></thead><tbody>
+<tr><td>File I/O (1000 read/write)</td><td>1.8×</td><td>2.1×</td></tr>
+<tr><td>Syscall-heavy (10000 calls)</td><td>2.2×</td><td>2.5×</td></tr>
+<tr><td>CPU-bound (minimal syscalls)</td><td>1.05×</td><td>1.08×</td></tr>
+</tbody></table>
+</div>
+<p><strong>Factors affecting overhead:</strong></p>
+<ul>
+<li><strong>Number of syscalls</strong> - More syscalls = higher overhead</li>
+<li><strong>DWARF correlation</strong> - <code>--source</code> adds ~10-15% overhead</li>
+<li><strong>Statistics mode</strong> - <code>-c</code> adds minimal overhead (&lt;5%)</li>
+<li><strong>Fork following</strong> - <code>-f</code> adds per-process overhead</li>
+</ul>
+<p><strong>Recommendation:</strong> Acceptable for development/debugging. For production profiling, use sampling profilers (perf, flamegraph).</p>
+<h2 id="troubleshooting"><a class="header" href="#troubleshooting">Troubleshooting</a></h2>
+<h3 id="no-dwarf-debug-info-found-warning"><a class="header" href="#no-dwarf-debug-info-found-warning">"No DWARF debug info found" warning</a></h3>
+<p><strong>Cause:</strong> Binary compiled without debug symbols.</p>
+<p><strong>Solution:</strong></p>
+<ol>
+<li>
+<p><strong>Recompile with -g:</strong></p>
+<pre><code class="language-bash">gcc -g myapp.c -o myapp
+cargo build  # Rust debug builds have -g by default
+</code></pre>
+</li>
+<li>
+<p><strong>Check for stripped binaries:</strong></p>
+<pre><code class="language-bash">file myapp
+# If "stripped": debug symbols removed
+</code></pre>
+</li>
+<li>
+<p><strong>Separate debug files:</strong></p>
+<pre><code class="language-bash"># Extract debug symbols
+objcopy --only-keep-debug myapp myapp.debug
+# Link them
+objcopy --add-gnu-debuglink=myapp.debug myapp
+</code></pre>
+</li>
+</ol>
+<h3 id="cannot-attach-to-process-operation-not-permitted"><a class="header" href="#cannot-attach-to-process-operation-not-permitted">"Cannot attach to process: Operation not permitted"</a></h3>
+<p><strong>Cause:</strong> <code>ptrace_scope</code> security restriction or permission issue.</p>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li>
+<p><strong>Check ptrace_scope:</strong></p>
+<pre><code class="language-bash">cat /proc/sys/kernel/yama/ptrace_scope
+# 0 = unrestricted, 1 = restricted, 2 = admin-only
+</code></pre>
+</li>
+<li>
+<p><strong>Temporarily allow ptrace (requires root):</strong></p>
+<pre><code class="language-bash">sudo sysctl -w kernel.yama.ptrace_scope=0
+renacer -p 1234
+sudo sysctl -w kernel.yama.ptrace_scope=1  # Restore
+</code></pre>
+</li>
+<li>
+<p><strong>Use sudo (if tracing root process):</strong></p>
+<pre><code class="language-bash">sudo renacer -p $(pgrep nginx)
+</code></pre>
+</li>
+</ol>
+<h3 id="invalid-regex-pattern-error"><a class="header" href="#invalid-regex-pattern-error">"Invalid regex pattern" error</a></h3>
+<p><strong>Cause:</strong> Malformed regex in <code>-e trace=/pattern/</code>.</p>
+<p><strong>Solutions:</strong></p>
+<pre><code class="language-bash"># ❌ Invalid: unescaped special chars
+renacer -e 'trace=/open(/' -- ls
+
+# ✅ Valid: escape special chars
+renacer -e 'trace=/open\(/' -- ls
+
+# ✅ Valid: use character classes
+renacer -e 'trace=/open[a-z]+/' -- ls
+</code></pre>
+<p><strong>Test regex separately:</strong></p>
+<pre><code class="language-bash"># Test with grep
+echo -e "openat\nopen\nclose" | grep -E '^open.*'
+</code></pre>
+<p>See <a href="../core-concepts/filtering-regex.html">Regex Patterns</a>.</p>
+<h3 id="statistics-show-zeros-or-nan"><a class="header" href="#statistics-show-zeros-or-nan">Statistics show zeros or NaN</a></h3>
+<p><strong>Cause:</strong> No matching syscalls traced, or filter too restrictive.</p>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li>
+<p><strong>Check filter:</strong></p>
+<pre><code class="language-bash"># Too restrictive - no matches
+renacer -c -e trace=nonexistent -- ls
+
+# Fix: use correct syscall names
+renacer -c -e trace=openat,read -- ls
+</code></pre>
+</li>
+<li>
+<p><strong>Run without filter first:</strong></p>
+<pre><code class="language-bash"># See what syscalls actually occur
+renacer -- ls
+# Then add filter based on output
+</code></pre>
+</li>
+<li>
+<p><strong>Check for empty trace:</strong></p>
+<pre><code class="language-bash"># Program exits immediately
+renacer -c -- /bin/true
+# Very few syscalls - use longer-running program
+</code></pre>
+</li>
+</ol>
+<h2 id="advanced-usage"><a class="header" href="#advanced-usage">Advanced Usage</a></h2>
+<h3 id="can-i-export-data-for-analysis-in-pythonr"><a class="header" href="#can-i-export-data-for-analysis-in-pythonr">Can I export data for analysis in Python/R?</a></h3>
+<p><strong>Yes</strong> - Use JSON or CSV output:</p>
+<p><strong>Python (pandas):</strong></p>
+<pre><code class="language-python">import pandas as pd
+import json
+
+# Load JSON
+with open('trace.json') as f:
+    data = json.load(f)
+df = pd.DataFrame(data['syscalls'])
+
+# Analyze
+print(df['duration_ns'].describe())
+print(df.groupby('name')['duration_ns'].mean())
+
+# Or load CSV directly
+df = pd.read_csv('trace.csv')
+</code></pre>
+<p><strong>R:</strong></p>
+<pre><code class="language-r"># Load CSV
+data &lt;- read.csv('trace.csv')
+
+# Analyze
+summary(data$duration_ns)
+aggregate(duration_ns ~ name, data, mean)
+
+# Plot
+library(ggplot2)
+ggplot(data, aes(x=name, y=duration_ns)) + geom_boxplot()
+</code></pre>
+<p>See <a href="../examples/export-data.html">Export to JSON/CSV</a>.</p>
+<h3 id="how-do-i-identify-io-bottlenecks"><a class="header" href="#how-do-i-identify-io-bottlenecks">How do I identify I/O bottlenecks?</a></h3>
+<p>Use <strong>function profiling</strong> with DWARF correlation (Sprint 13):</p>
+<pre><code class="language-bash"># Profile syscall time by function
+renacer --function-time -- ./myapp
+</code></pre>
+<p><strong>Output shows:</strong></p>
+<pre><code>Function: read_config (config.c:42)
+  openat: 2.3ms
+  read: 45.8ms       ← Bottleneck!
+  close: 0.1ms
+  Total: 48.2ms
+
+Function: process_data (main.c:78)
+  write: 123.4ms     ← Bottleneck!
+  fsync: 234.5ms     ← Bottleneck!
+  Total: 357.9ms
+</code></pre>
+<p><strong>Identify slow operations (&gt;1ms threshold):</strong></p>
+<ul>
+<li>High <code>read/write</code> times → Disk I/O bottleneck</li>
+<li>High <code>fsync/fdatasync</code> → Synchronous I/O overhead</li>
+<li>High <code>openat</code> → Too many file opens</li>
+</ul>
+<p>See <a href="../advanced/io-bottlenecks.html">I/O Bottleneck Detection</a>.</p>
+<h3 id="can-i-use-renacer-in-production"><a class="header" href="#can-i-use-renacer-in-production">Can I use Renacer in production?</a></h3>
+<p><strong>Development/Staging:</strong> ✅ Yes - overhead is acceptable (1.5-2.5×)</p>
+<p><strong>Production:</strong> ⚠️ Caution required:</p>
+<ul>
+<li><strong>Overhead</strong> - 1.5-2.5× slowdown for syscall-heavy workloads</li>
+<li><strong>ptrace security</strong> - Allows reading process memory</li>
+<li><strong>Process pausing</strong> - Each syscall pauses tracee briefly</li>
+</ul>
+<p><strong>Better alternatives for production:</strong></p>
+<ul>
+<li><strong>eBPF-based tools</strong> - bpftrace, bcc-tools (lower overhead)</li>
+<li><strong>Sampling profilers</strong> - perf, flamegraph (statistical sampling)</li>
+<li><strong>APM tools</strong> - DataDog, New Relic (purpose-built for production)</li>
+</ul>
+<p><strong>If using Renacer in production:</strong></p>
+<pre><code class="language-bash"># 1. Trace only specific syscalls
+renacer -e trace=file -- myapp
+
+# 2. Limit to short duration
+timeout 30s renacer -c -- myapp
+
+# 3. Avoid fork following (-f) in high-concurrency environments
+</code></pre>
+<h3 id="how-do-percentiles-p50p95p99-work"><a class="header" href="#how-do-percentiles-p50p95p99-work">How do percentiles (p50/p95/p99) work?</a></h3>
+<p><strong>Percentile</strong> = value below which X% of observations fall.</p>
+<p><strong>Example:</strong> 1000 <code>read()</code> syscalls with durations 100ns - 10ms:</p>
+<ul>
+<li><strong>p50 (median)</strong> = 1.2ms → 50% of reads complete within 1.2ms</li>
+<li><strong>p95</strong> = 3.4ms → 95% of reads complete within 3.4ms (5% are slower)</li>
+<li><strong>p99</strong> = 8.7ms → 99% of reads complete within 8.7ms (1% are outliers)</li>
+</ul>
+<p><strong>Why percentiles matter:</strong></p>
+<ul>
+<li><strong>Averages hide outliers</strong> - Mean might be 1ms, but p99 could be 100ms</li>
+<li><strong>Tail latency</strong> - p99/p99.9 reveal worst-case performance</li>
+<li><strong>SLA compliance</strong> - "99% of requests &lt; 100ms"</li>
+</ul>
+<p><strong>Enable with <code>-c</code> flag (Sprint 19):</strong></p>
+<pre><code class="language-bash">renacer -c -- ./myapp
+
+# Output shows:
+# read: p50=1.2ms, p95=3.4ms, p99=8.7ms
+</code></pre>
+<p>See <a href="../advanced/percentiles.html">Percentile Analysis</a>.</p>
+<h3 id="what-is-hpu-acceleration"><a class="header" href="#what-is-hpu-acceleration">What is HPU acceleration?</a></h3>
+<p><strong>HPU</strong> (Hardware Processing Unit) = GPU/TPU acceleration for statistical analysis (Sprint 21).</p>
+<p><strong>Accelerated operations:</strong></p>
+<ul>
+<li>Correlation matrix computation (NumPy + BLAS/LAPACK)</li>
+<li>K-means clustering (scikit-learn + AVX2)</li>
+<li>Large-scale percentile calculations (SIMD vectorization)</li>
+</ul>
+<p><strong>Requirements:</strong></p>
+<ul>
+<li>Export trace to JSON</li>
+<li>Python 3 with NumPy, SciPy, scikit-learn</li>
+</ul>
+<p><strong>Example:</strong></p>
+<pre><code class="language-bash"># 1. Trace to JSON
+renacer --format json -- ./myapp &gt; trace.json
+
+# 2. Analyze with Python (HPU-accelerated)
+python3 analyze.py trace.json
+</code></pre>
+<p><strong>When to use HPU:</strong></p>
+<ul>
+<li><strong>Large traces</strong> - 100K+ syscalls</li>
+<li><strong>Matrix operations</strong> - Correlation analysis</li>
+<li><strong>ML workloads</strong> - K-means clustering, anomaly detection</li>
+</ul>
+<p>See <a href="../advanced/hpu-acceleration.html">HPU Acceleration</a>.</p>
+<h2 id="contributing"><a class="header" href="#contributing">Contributing</a></h2>
+<h3 id="how-can-i-contribute"><a class="header" href="#how-can-i-contribute">How can I contribute?</a></h3>
+<p>See <a href="../contributing/setup.html">Development Setup</a> and <a href="../contributing/extreme-tdd.html">EXTREME TDD</a>.</p>
+<p><strong>Quality requirements:</strong></p>
+<ul>
+<li>✅ RED-GREEN-REFACTOR cycle</li>
+<li>✅ 85%+ test coverage</li>
+<li>✅ Property-based testing (proptest)</li>
+<li>✅ Mutation testing (cargo-mutants)</li>
+<li>✅ Zero clippy warnings</li>
+<li>✅ Complexity ≤10 per function</li>
+</ul>
+<h3 id="how-do-i-run-the-test-suite"><a class="header" href="#how-do-i-run-the-test-suite">How do I run the test suite?</a></h3>
+<pre><code class="language-bash"># Fast tests (&lt;5s)
+make tier1
+
+# Integration tests (&lt;30s)
+make tier2
+
+# Full validation (&lt;5m)
+make tier3
+
+# Coverage report
+make coverage
+
+# Mutation testing
+make mutants-quick
+</code></pre>
+<p>See <a href="../contributing/quality-gates.html">Quality Gates</a>.</p>
+<h2 id="related"><a class="header" href="#related">Related</a></h2>
+<ul>
+<li><a href="./glossary.html">Glossary</a> - Technical terms and definitions</li>
+<li><a href="./changelog.html">CHANGELOG</a> - Sprint history and release notes</li>
+<li><a href="./performance-tables.html">Performance Tables</a> - Detailed benchmark data</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../appendix/glossary.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../appendix/changelog.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../appendix/glossary.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../appendix/changelog.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../ace.js"></script>
+        <script src="../editor.js"></script>
+        <script src="../mode-rust.js"></script>
+        <script src="../theme-dawn.js"></script>
+        <script src="../theme-tomorrow_night.js"></script>
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

@@ -1,0 +1,355 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Percentile Analysis - The Renacer Book - Pure Rust System Call Tracing</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="A comprehensive guide to renacer: syscall tracing, DWARF correlation, and performance analysis">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "rust";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The Renacer Book - Pure Rust System Call Tracing</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer/edit/main/book/src/advanced/percentiles.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="percentile-analysis"><a class="header" href="#percentile-analysis">Percentile Analysis</a></h1>
+<p>Percentile analysis provides statistical insights into syscall duration distribution, helping identify outliers and performance variability beyond simple averages.</p>
+<blockquote>
+<p><strong>TDD-Verified:</strong> Percentile calculations tested in <a href="../../../tests/"><code>tests/sprint19_enhanced_stats_tests.rs</code></a></p>
+</blockquote>
+<blockquote>
+<p><strong>Parent Chapter:</strong> See <a href="./statistical-analysis.html">Statistical Analysis</a> for overview</p>
+</blockquote>
+<h2 id="overview"><a class="header" href="#overview">Overview</a></h2>
+<p><strong>Percentiles</strong> answer the question: "What percentage of syscalls complete within X microseconds?"</p>
+<ul>
+<li><strong>p50 (median)</strong> - 50% of syscalls complete faster than this</li>
+<li><strong>p95</strong> - 95% of syscalls complete faster than this (95th percentile)</li>
+<li><strong>p99</strong> - 99% of syscalls complete faster than this (outlier threshold)</li>
+<li><strong>p99.9</strong> - 99.9% complete faster (rare outliers)</li>
+</ul>
+<p><strong>Why percentiles matter:</strong></p>
+<ul>
+<li><strong>Averages hide outliers</strong> - p99 reveals tail latency</li>
+<li><strong>SLO/SLA compliance</strong> - "99% of requests &lt;100ms"</li>
+<li><strong>Performance regression detection</strong> - p99 degradation indicates problems</li>
+</ul>
+<h2 id="calculating-percentiles"><a class="header" href="#calculating-percentiles">Calculating Percentiles</a></h2>
+<p>Renacer's statistics mode (<code>-c</code>) provides percentile analysis via external post-processing:</p>
+<pre><code class="language-bash">$ renacer -c --format json -- ./myapp &gt; stats.json
+</code></pre>
+<p><strong>Then calculate percentiles with jq:</strong></p>
+<pre><code class="language-bash">#!/bin/bash
+# Extract syscall durations, calculate p50/p95/p99
+
+jq -r '.syscalls[] | .duration_ns' stats.json | \
+  sort -n | \
+  awk '
+    {durations[NR] = $1}
+    END {
+      p50 = durations[int(NR * 0.50)]
+      p95 = durations[int(NR * 0.95)]
+      p99 = durations[int(NR * 0.99)]
+      printf "p50: %d ns\np95: %d ns\np99: %d ns\n", p50, p95, p99
+    }
+  '
+</code></pre>
+<p><strong>Example Output:</strong></p>
+<pre><code>p50: 1234 ns
+p95: 5678 ns
+p99: 12345 ns
+</code></pre>
+<p><strong>Tested by:</strong> Sprint 19 enhanced statistics tests</p>
+<h2 id="practical-examples"><a class="header" href="#practical-examples">Practical Examples</a></h2>
+<h3 id="example-1-database-query-latency"><a class="header" href="#example-1-database-query-latency">Example 1: Database Query Latency</a></h3>
+<pre><code class="language-bash">$ renacer -c --format json -e trace=network -- ./db-app &gt; db-stats.json
+</code></pre>
+<p><strong>Calculate percentiles:</strong></p>
+<pre><code>p50: 2000 μs (median - typical query)
+p95: 8000 μs (95% complete within 8ms)
+p99: 25000 μs (99% complete within 25ms)
+</code></pre>
+<p><strong>Analysis:</strong></p>
+<ul>
+<li>Median (p50) is fast (2ms)</li>
+<li>p99 is 12.5× slower than median → high variability!</li>
+<li><strong>Action:</strong> Investigate p99 outliers (cache misses, slow queries)</li>
+</ul>
+<h3 id="example-2-identifying-tail-latency"><a class="header" href="#example-2-identifying-tail-latency">Example 2: Identifying Tail Latency</a></h3>
+<p><strong>Before optimization:</strong></p>
+<pre><code>p50: 100 μs
+p95: 500 μs (5× median)
+p99: 5000 μs (50× median!) ← High tail latency
+</code></pre>
+<p><strong>After adding caching:</strong></p>
+<pre><code>p50: 95 μs (5% faster)
+p95: 450 μs (10% faster)
+p99: 800 μs (6.25× faster!) ← Tail latency improved!
+</code></pre>
+<p><strong>Result:</strong> p99 improvement shows caching eliminated outliers ✅</p>
+<h2 id="advanced-workflows"><a class="header" href="#advanced-workflows">Advanced Workflows</a></h2>
+<h3 id="percentile-heatmaps"><a class="header" href="#percentile-heatmaps">Percentile Heatmaps</a></h3>
+<p>Generate percentile distributions over time:</p>
+<pre><code class="language-python">#!/usr/bin/env python3
+import json
+import sys
+from collections import defaultdict
+
+with open(sys.argv[1]) as f:
+    data = json.load(f)
+
+# Group by syscall type
+by_syscall = defaultdict(list)
+for sc in data['syscalls']:
+    by_syscall[sc['name']].append(sc['duration_ns'])
+
+# Calculate percentiles per syscall
+for name, durations in sorted(by_syscall.items()):
+    durations.sort()
+    n = len(durations)
+    p50 = durations[int(n * 0.50)] if n &gt; 0 else 0
+    p95 = durations[int(n * 0.95)] if n &gt; 0 else 0
+    p99 = durations[int(n * 0.99)] if n &gt; 0 else 0
+
+    print(f"{name:15s} p50:{p50:6d} p95:{p95:6d} p99:{p99:6d} ns")
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>read            p50:  1234 p95:  5678 p99: 12345 ns
+write           p50:   890 p95:  4567 p99:  9876 ns
+openat          p50:  2345 p95:  6789 p99: 23456 ns
+</code></pre>
+<h3 id="slo-compliance-checking"><a class="header" href="#slo-compliance-checking">SLO Compliance Checking</a></h3>
+<p>Check if p99 latency meets SLO (e.g., &lt;10ms):</p>
+<pre><code class="language-bash">$ jq -r '.syscalls[] | .duration_ns' stats.json | \
+  sort -n | awk '
+    END {
+      p99 = $0  # Last value after sort
+      slo_ns = 10000000  # 10ms in nanoseconds
+      if (p99 &gt; slo_ns) {
+        printf "❌ SLO violation: p99 = %.2f ms (limit: 10 ms)\n", p99/1000000
+        exit 1
+      } else {
+        printf "✅ SLO met: p99 = %.2f ms\n", p99/1000000
+      }
+    }
+  '
+</code></pre>
+<h2 id="summary"><a class="header" href="#summary">Summary</a></h2>
+<p>Percentile analysis provides:</p>
+<ul>
+<li>✅ <strong>Tail latency visibility</strong> (p95, p99, p99.9)</li>
+<li>✅ <strong>SLO/SLA compliance</strong> validation</li>
+<li>✅ <strong>Outlier detection</strong> beyond averages</li>
+<li>✅ <strong>Performance regression</strong> early warning</li>
+</ul>
+<p><strong>Workflow:</strong> Export JSON → Calculate percentiles with jq/awk/Python</p>
+<p><strong>All statistics tested in:</strong> <a href="../../../tests/"><code>tests/sprint19_enhanced_stats_tests.rs</code></a></p>
+<h2 id="related"><a class="header" href="#related">Related</a></h2>
+<ul>
+<li><a href="./statistical-analysis.html">Statistical Analysis</a> - Parent chapter</li>
+<li><a href="./simd-acceleration.html">SIMD Acceleration</a> - Fast percentile calculations</li>
+<li><a href="../examples/export-data.html">Export to JSON/CSV</a> - Data export workflows</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../advanced/statistical-analysis.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../advanced/simd-acceleration.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../advanced/statistical-analysis.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../advanced/simd-acceleration.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../ace.js"></script>
+        <script src="../editor.js"></script>
+        <script src="../mode-rust.js"></script>
+        <script src="../theme-dawn.js"></script>
+        <script src="../theme-tomorrow_night.js"></script>
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

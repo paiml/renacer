@@ -1,0 +1,520 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Distributed Tracing - The Renacer Book - Pure Rust System Call Tracing</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="A comprehensive guide to renacer: syscall tracing, DWARF correlation, and performance analysis">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "rust";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The Renacer Book - Pure Rust System Call Tracing</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer/edit/main/book/src/advanced/distributed-tracing.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="distributed-tracing"><a class="header" href="#distributed-tracing">Distributed Tracing</a></h1>
+<p>Renacer supports W3C Trace Context propagation, enabling distributed tracing across service boundaries. Link your syscall traces with application traces to build complete end-to-end observability.</p>
+<h2 id="overview"><a class="header" href="#overview">Overview</a></h2>
+<p>Distributed tracing allows you to:</p>
+<ul>
+<li>Connect Renacer traces with upstream/downstream services</li>
+<li>Track requests across multiple processes and hosts</li>
+<li>Correlate system-level behavior with application logic</li>
+<li>Build complete request flow visualizations</li>
+</ul>
+<h2 id="w3c-trace-context"><a class="header" href="#w3c-trace-context">W3C Trace Context</a></h2>
+<p>Renacer implements the <a href="https://www.w3.org/TR/trace-context/">W3C Trace Context</a> standard:</p>
+<pre><code>traceparent: 00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01
+</code></pre>
+<h3 id="format"><a class="header" href="#format">Format</a></h3>
+<pre><code>version-trace_id-parent_id-trace_flags
+</code></pre>
+<ul>
+<li><strong>version:</strong> <code>00</code> (current spec version)</li>
+<li><strong>trace_id:</strong> 32 hex chars (128-bit globally unique ID)</li>
+<li><strong>parent_id:</strong> 16 hex chars (64-bit span ID)</li>
+<li><strong>trace_flags:</strong> 2 hex chars (sampling, etc.)</li>
+</ul>
+<h2 id="propagation-methods"><a class="header" href="#propagation-methods">Propagation Methods</a></h2>
+<h3 id="1-environment-variable-recommended"><a class="header" href="#1-environment-variable-recommended">1. Environment Variable (Recommended)</a></h3>
+<p>Pass trace context via environment variable:</p>
+<pre><code class="language-bash"># Parent service exports context
+export TRACEPARENT="00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"
+
+# Renacer automatically inherits it
+renacer --otlp-endpoint http://localhost:4317 -- ./downstream-service
+</code></pre>
+<p>Renacer automatically:</p>
+<ul>
+<li>Reads <code>TRACEPARENT</code> environment variable</li>
+<li>Uses trace_id from parent</li>
+<li>Generates new span_id for its root span</li>
+<li>Preserves trace_flags</li>
+</ul>
+<h3 id="2-command-line-flag"><a class="header" href="#2-command-line-flag">2. Command-Line Flag</a></h3>
+<p>Explicitly provide trace context:</p>
+<pre><code class="language-bash">renacer \
+  --trace-parent "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01" \
+  --otlp-endpoint http://localhost:4317 \
+  -- ./service
+</code></pre>
+<h3 id="3-automatic-detection"><a class="header" href="#3-automatic-detection">3. Automatic Detection</a></h3>
+<p>When neither is provided, Renacer generates a new trace:</p>
+<pre><code class="language-bash"># New trace_id generated
+renacer --otlp-endpoint http://localhost:4317 -- ./service
+</code></pre>
+<h2 id="end-to-end-example"><a class="header" href="#end-to-end-example">End-to-End Example</a></h2>
+<h3 id="scenario-web-request--api--database"><a class="header" href="#scenario-web-request--api--database">Scenario: Web Request → API → Database</a></h3>
+<pre><code>Browser → Nginx → API Server → Renacer → Database
+</code></pre>
+<h3 id="1-browser-initiates-request"><a class="header" href="#1-browser-initiates-request">1. Browser Initiates Request</a></h3>
+<pre><code>traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
+</code></pre>
+<h3 id="2-nginx-forwards-with-context"><a class="header" href="#2-nginx-forwards-with-context">2. Nginx Forwards with Context</a></h3>
+<pre><code class="language-bash"># Nginx propagates traceparent header to API
+</code></pre>
+<h3 id="3-api-server-launches-renacer"><a class="header" href="#3-api-server-launches-renacer">3. API Server Launches Renacer</a></h3>
+<pre><code class="language-python"># Python API server
+import os
+import subprocess
+
+def handle_request(request):
+    # Extract trace context from request
+    traceparent = request.headers.get('traceparent')
+
+    # Pass to Renacer via environment
+    env = os.environ.copy()
+    env['TRACEPARENT'] = traceparent
+
+    # Trace database query
+    subprocess.run(
+        ['renacer', '--otlp-endpoint', 'http://localhost:4317',
+         '--', './db-query'],
+        env=env
+    )
+</code></pre>
+<h3 id="4-view-complete-trace"><a class="header" href="#4-view-complete-trace">4. View Complete Trace</a></h3>
+<p>In Jaeger/Tempo, you see:</p>
+<pre><code>Trace: 4bf92f3577b34da6a3ce929d0e0e4736
+├─ Span: Browser Request (00f067aa0ba902b7)
+│  └─ Span: Nginx Proxy (9db3e2b1c5a4f8e3)
+│     └─ Span: API Handler (7d8e9f1a2b3c4d5e)
+│        └─ Span: Renacer Root (a1b2c3d4e5f6g7h8)  ← Your trace!
+│           ├─ Span: connect() syscall
+│           ├─ Span: write() syscall
+│           └─ Span: read() syscall
+</code></pre>
+<h2 id="multi-service-correlation"><a class="header" href="#multi-service-correlation">Multi-Service Correlation</a></h2>
+<h3 id="service-mesh-integration"><a class="header" href="#service-mesh-integration">Service Mesh Integration</a></h3>
+<p>Renacer works with service meshes like Istio, Linkerd:</p>
+<pre><code class="language-bash"># Service mesh injects traceparent via envoy
+# Renacer automatically picks it up
+renacer --otlp-endpoint http://tempo:4317 -- ./app
+</code></pre>
+<h3 id="kubernetes-deployment"><a class="header" href="#kubernetes-deployment">Kubernetes Deployment</a></h3>
+<pre><code class="language-yaml">apiVersion: v1
+kind: Pod
+metadata:
+  name: my-service
+spec:
+  containers:
+  - name: app
+    image: my-app:latest
+    env:
+    # Trace context injected by orchestrator or parent span
+    - name: TRACEPARENT
+      value: "00-trace_id_here-parent_id_here-01"
+  - name: tracer
+    image: renacer:latest
+    command:
+      - renacer
+      - --otlp-endpoint
+      - http://tempo.observability:4317
+      - -p
+      - "$(APP_PID)"
+    env:
+    # Inherits TRACEPARENT from pod environment
+    - name: TRACEPARENT
+      value: "00-trace_id_here-parent_id_here-01"
+</code></pre>
+<h2 id="trace-state-advanced"><a class="header" href="#trace-state-advanced">Trace State (Advanced)</a></h2>
+<p>W3C Trace Context also supports <code>tracestate</code> for vendor-specific data:</p>
+<pre><code class="language-bash">export TRACESTATE="renacer=session:123,vendor=key:value"
+renacer --otlp-endpoint http://localhost:4317 -- ./app
+</code></pre>
+<p>Renacer preserves tracestate and includes it in exported spans.</p>
+<h2 id="sampling"><a class="header" href="#sampling">Sampling</a></h2>
+<p>Control sampling via trace flags:</p>
+<pre><code class="language-bash"># Sampled (01 = sampled)
+export TRACEPARENT="00-trace_id-parent_id-01"
+
+# Not sampled (00 = not sampled)
+export TRACEPARENT="00-trace_id-parent_id-00"
+
+# Renacer respects sampling decision
+renacer --otlp-endpoint http://localhost:4317 -- ./app
+</code></pre>
+<p>When not sampled, Renacer:</p>
+<ul>
+<li>Still traces locally (unless <code>--no-trace-when-unsampled</code>)</li>
+<li>Skips OTLP export to reduce backend load</li>
+</ul>
+<h2 id="integration-with-application-traces"><a class="header" href="#integration-with-application-traces">Integration with Application Traces</a></h2>
+<h3 id="opentelemetry-sdk-integration"><a class="header" href="#opentelemetry-sdk-integration">OpenTelemetry SDK Integration</a></h3>
+<pre><code class="language-rust">// Rust application using opentelemetry crate
+use opentelemetry::trace::{TraceContextExt, Tracer};
+
+fn process_request() {
+    let tracer = opentelemetry::global::tracer("my-app");
+
+    // Create application span
+    let span = tracer
+        .span_builder("process_data")
+        .start(&amp;tracer);
+
+    let cx = opentelemetry::Context::current_with_span(span);
+
+    // Export trace context for Renacer
+    let traceparent = format!(
+        "00-{:032x}-{:016x}-{:02x}",
+        cx.span().span_context().trace_id(),
+        cx.span().span_context().span_id(),
+        cx.span().span_context().trace_flags()
+    );
+
+    std::env::set_var("TRACEPARENT", traceparent);
+
+    // Launch traced subprocess
+    std::process::Command::new("renacer")
+        .args(&amp;["--otlp-endpoint", "http://localhost:4317", "--", "./worker"])
+        .env("TRACEPARENT", traceparent)
+        .spawn()
+        .unwrap();
+}</code></pre>
+<h3 id="python-application-integration"><a class="header" href="#python-application-integration">Python Application Integration</a></h3>
+<pre><code class="language-python">from opentelemetry import trace
+import subprocess
+import os
+
+def process_with_tracing():
+    tracer = trace.get_tracer(__name__)
+
+    with tracer.start_as_current_span("database_query") as span:
+        # Get current trace context
+        ctx = span.get_span_context()
+        traceparent = f"00-{ctx.trace_id:032x}-{ctx.span_id:016x}-{ctx.trace_flags:02x}"
+
+        # Pass to Renacer
+        env = os.environ.copy()
+        env['TRACEPARENT'] = traceparent
+
+        subprocess.run(
+            ['renacer', '--otlp-endpoint', 'http://localhost:4317',
+             '--', './db-client'],
+            env=env
+        )
+</code></pre>
+<h2 id="visualizing-distributed-traces"><a class="header" href="#visualizing-distributed-traces">Visualizing Distributed Traces</a></h2>
+<h3 id="jaeger"><a class="header" href="#jaeger">Jaeger</a></h3>
+<ol>
+<li><strong>Trace Timeline:</strong> See all services in chronological order</li>
+<li><strong>Span Details:</strong> Click Renacer spans to see syscall details</li>
+<li><strong>Dependencies:</strong> Visualize service call graph</li>
+<li><strong>Search:</strong> Find traces by trace_id, service, duration, tags</li>
+</ol>
+<h3 id="grafana-tempo"><a class="header" href="#grafana-tempo">Grafana Tempo</a></h3>
+<ol>
+<li><strong>Trace Search:</strong> Query by service, tags, duration</li>
+<li><strong>Service Graph:</strong> Automatic service dependency map</li>
+<li><strong>Metrics:</strong> RED metrics (Rate, Errors, Duration) per service</li>
+<li><strong>Logs Correlation:</strong> Link traces with Loki logs</li>
+</ol>
+<h3 id="elastic-apm"><a class="header" href="#elastic-apm">Elastic APM</a></h3>
+<ol>
+<li><strong>Service Map:</strong> Visual dependency graph</li>
+<li><strong>Transaction Details:</strong> Drill down to Renacer syscalls</li>
+<li><strong>Error Tracking:</strong> Correlate failed syscalls with errors</li>
+<li><strong>Infrastructure:</strong> Link with host metrics</li>
+</ol>
+<h2 id="best-practices"><a class="header" href="#best-practices">Best Practices</a></h2>
+<h3 id="1-always-propagate-context"><a class="header" href="#1-always-propagate-context">1. Always Propagate Context</a></h3>
+<pre><code class="language-bash"># ✅ Good: Propagate from parent
+export TRACEPARENT="$PARENT_TRACEPARENT"
+renacer --otlp-endpoint http://tempo:4317 -- ./app
+
+# ❌ Bad: Generate new trace (loses context)
+renacer --otlp-endpoint http://tempo:4317 -- ./app
+</code></pre>
+<h3 id="2-use-consistent-service-names"><a class="header" href="#2-use-consistent-service-names">2. Use Consistent Service Names</a></h3>
+<pre><code class="language-bash"># All instances of service should use same name
+renacer --otlp-service-name "database-worker" -- ./app
+</code></pre>
+<h3 id="3-include-span-attributes"><a class="header" href="#3-include-span-attributes">3. Include Span Attributes</a></h3>
+<pre><code class="language-bash"># Rich source correlation
+renacer --source --otlp-endpoint http://tempo:4317 -- ./app
+</code></pre>
+<h3 id="4-handle-sampling-correctly"><a class="header" href="#4-handle-sampling-correctly">4. Handle Sampling Correctly</a></h3>
+<pre><code class="language-bash"># Respect parent sampling decision
+# Renacer automatically does this when TRACEPARENT is set
+</code></pre>
+<h3 id="5-set-trace-timeouts"><a class="header" href="#5-set-trace-timeouts">5. Set Trace Timeouts</a></h3>
+<pre><code class="language-bash"># Ensure traces complete
+# Renacer flushes spans on process exit
+</code></pre>
+<h2 id="troubleshooting"><a class="header" href="#troubleshooting">Troubleshooting</a></h2>
+<h3 id="missing-links-between-services"><a class="header" href="#missing-links-between-services">Missing Links Between Services</a></h3>
+<p><strong>Problem:</strong> Renacer traces don't connect to parent spans</p>
+<p><strong>Solution:</strong></p>
+<ol>
+<li>Verify <code>TRACEPARENT</code> is set: <code>echo $TRACEPARENT</code></li>
+<li>Check trace_id matches parent: View in Jaeger</li>
+<li>Ensure OTLP endpoint is same across services</li>
+<li>Verify clocks are synchronized (NTP)</li>
+</ol>
+<h3 id="trace-id-mismatch"><a class="header" href="#trace-id-mismatch">Trace ID Mismatch</a></h3>
+<p><strong>Problem:</strong> Different trace_id than expected</p>
+<p><strong>Solution:</strong></p>
+<pre><code class="language-bash"># Explicitly verify trace context
+renacer --trace-parent "00-EXPECTED_TRACE_ID-parent_id-01" --otlp-endpoint http://localhost:4317 -- ./app
+</code></pre>
+<h3 id="spans-not-connected"><a class="header" href="#spans-not-connected">Spans Not Connected</a></h3>
+<p><strong>Problem:</strong> Spans appear as separate traces</p>
+<p><strong>Solution:</strong></p>
+<ul>
+<li>Ensure parent_id is correctly set</li>
+<li>Check span timestamps (out-of-order spans may appear disconnected)</li>
+<li>Verify OTLP endpoint is receiving all spans</li>
+</ul>
+<h2 id="advanced-ruchy-runtime-integration"><a class="header" href="#advanced-ruchy-runtime-integration">Advanced: Ruchy Runtime Integration</a></h2>
+<p>Renacer integrates with Ruchy Runtime to link transpiler decisions:</p>
+<pre><code class="language-bash"># Trace Python→Rust transpiled code with decision tracking
+renacer \
+  --source \
+  --transpiler-map ./output.map.json \
+  --otlp-endpoint http://localhost:4317 \
+  -- ./transpiled-binary
+</code></pre>
+<p>Spans include transpiler attributes:</p>
+<ul>
+<li><code>transpiler.source_language</code>: Python</li>
+<li><code>transpiler.decision_id</code>: Optimization decision ID</li>
+<li><code>transpiler.original_function</code>: Python function name</li>
+</ul>
+<p>See <a href="./transpiler-integration.html">Transpiler Integration</a> for details.</p>
+<h2 id="performance-impact"><a class="header" href="#performance-impact">Performance Impact</a></h2>
+<p>Distributed tracing overhead (Sprint 36):</p>
+<ul>
+<li><strong>Context propagation:</strong> &lt;1% overhead (just reading env var)</li>
+<li><strong>Span linking:</strong> Zero overhead (same as regular OTLP)</li>
+<li><strong>Total overhead:</strong> &lt;10% for full stack</li>
+</ul>
+<p>See <a href="./performance-optimization.html">Performance Optimization</a> for benchmarks.</p>
+<h2 id="next-steps"><a class="header" href="#next-steps">Next Steps</a></h2>
+<ul>
+<li><a href="./opentelemetry.html">OpenTelemetry Integration</a> - OTLP export basics</li>
+<li><a href="./transpiler-integration.html">Transpiler Integration</a> - Trace transpiled code</li>
+<li><a href="./performance-optimization.html">Performance Optimization</a> - Minimize overhead</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../advanced/opentelemetry.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../advanced/transpiler-integration.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../advanced/opentelemetry.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../advanced/transpiler-integration.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../ace.js"></script>
+        <script src="../editor.js"></script>
+        <script src="../mode-rust.js"></script>
+        <script src="../theme-dawn.js"></script>
+        <script src="../theme-tomorrow_night.js"></script>
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

@@ -1,0 +1,386 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Single-Shot Compile Tooling - The Renacer Book - Pure Rust System Call Tracing</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="A comprehensive guide to renacer: syscall tracing, DWARF correlation, and performance analysis">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "rust";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The Renacer Book - Pure Rust System Call Tracing</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer/edit/main/book/src/advanced/single-shot-compile.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="single-shot-compile-tooling"><a class="header" href="#single-shot-compile-tooling">Single-Shot Compile Tooling</a></h1>
+<p>High-level performance and bug detection for transpilers and single-shot compile workflows.</p>
+<h2 id="overview"><a class="header" href="#overview">Overview</a></h2>
+<p>Renacer's Single-Shot Compile Tooling provides automated analysis for transpilers and compilers that run once per input file. This hybrid analysis combines <strong>critical path tracing</strong> (performance) with <strong>semantic diff</strong> (bug detection) to provide actionable, high-level insights.</p>
+<h2 id="key-features"><a class="header" href="#key-features">Key Features</a></h2>
+<h3 id="-hotspot-identification"><a class="header" href="#-hotspot-identification">🔥 Hotspot Identification</a></h3>
+<p>Automatically identifies performance bottlenecks using time-weighted attribution. Instead of showing raw syscall counts, Renacer highlights <strong>where time is actually spent</strong>.</p>
+<h3 id="-behavioral-change-detection"><a class="header" href="#-behavioral-change-detection">🔍 Behavioral Change Detection</a></h3>
+<p>Detects unexpected syscall patterns using N-gram sequence mining. Catches subtle bugs like:</p>
+<ul>
+<li>Accidental async runtime initialization</li>
+<li>Telemetry library leaks</li>
+<li>Process control anomalies</li>
+</ul>
+<h3 id="-statistical-regression-detection"><a class="header" href="#-statistical-regression-detection">📊 Statistical Regression Detection</a></h3>
+<p>Uses hypothesis testing (t-tests) to detect real performance regressions while filtering noise. No magic "5%" thresholds - adapts to your project's natural variance.</p>
+<h3 id="-semantic-equivalence-validation"><a class="header" href="#-semantic-equivalence-validation">✅ Semantic Equivalence Validation</a></h3>
+<p>Validates that optimizations preserve observable behavior using state-based comparison.</p>
+<h2 id="architecture"><a class="header" href="#architecture">Architecture</a></h2>
+<pre><code class="language-text">┌─────────────────────────────────────────────────────────────┐
+│ BASELINE TRACE                                              │
+│   Golden execution (known-good)                              │
+└─────────────────────────────────────────────────────────────┘
+                           │
+                           │ Compare
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│ CURRENT TRACE                                               │
+│   New version / optimization                                 │
+└─────────────────────────────────────────────────────────────┘
+                           │
+                           │ Analyze
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│ HYBRID ANALYSIS                                             │
+│  1. Syscall Clustering (TOML-based, Open-Closed)           │
+│  2. Sequence Mining (N-gram grammar detection)              │
+│  3. Time-Weighted Attribution (wall-clock hotspots)         │
+│  4. Semantic Equivalence (state-based comparison)           │
+│  5. Regression Detection (statistical hypothesis testing)   │
+└─────────────────────────────────────────────────────────────┘
+                           │
+                           │ Report
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│ ACTIONABLE OUTPUT                                           │
+│  • Performance hotspots with explanations                   │
+│  • Behavioral anomalies with context                        │
+│  • Regression detection with confidence levels              │
+│  • Optimization validation (semantic equivalence)           │
+└─────────────────────────────────────────────────────────────┘
+</code></pre>
+<h2 id="target-codebases"><a class="header" href="#target-codebases">Target Codebases</a></h2>
+<p>This tooling is designed for:</p>
+<ul>
+<li><strong>Transpilers</strong> (Python→Rust, C→Rust, etc.)</li>
+<li><strong>Single-shot compilers</strong> (one input file → one output)</li>
+<li><strong>Build tools</strong> (incremental compilation disabled)</li>
+<li><strong>Code generators</strong> (template expansion, macros)</li>
+</ul>
+<h2 id="toyota-way-integration"><a class="header" href="#toyota-way-integration">Toyota Way Integration</a></h2>
+<p>The implementation follows Toyota Production System principles:</p>
+<ul>
+<li><strong>Andon</strong> (Stop the Line): Build-time assertions fail CI on regressions</li>
+<li><strong>Kaizen</strong> (Continuous Improvement): Statistical tracking enables incremental optimization</li>
+<li><strong>Genchi Genbutsu</strong> (Go and See): Real syscall traces, not synthetic benchmarks</li>
+<li><strong>Jidoka</strong> (Automation with Human Touch): Automated analysis with actionable explanations</li>
+<li><strong>Poka-Yoke</strong> (Error-proofing): Statistical tests prevent false positives</li>
+</ul>
+<h2 id="quick-start"><a class="header" href="#quick-start">Quick Start</a></h2>
+<h3 id="1-collect-baseline-golden-trace"><a class="header" href="#1-collect-baseline-golden-trace">1. Collect Baseline Golden Trace</a></h3>
+<pre><code class="language-bash"># Known-good version
+renacer trace ./transpiler input.py --output baseline.trace
+</code></pre>
+<h3 id="2-collect-current-trace"><a class="header" href="#2-collect-current-trace">2. Collect Current Trace</a></h3>
+<pre><code class="language-bash"># New version to test
+renacer trace ./transpiler input.py --output current.trace
+</code></pre>
+<h3 id="3-run-hybrid-analysis"><a class="header" href="#3-run-hybrid-analysis">3. Run Hybrid Analysis</a></h3>
+<pre><code class="language-bash">renacer analyze --baseline baseline.trace --current current.trace
+</code></pre>
+<h3 id="example-output"><a class="header" href="#example-output">Example Output</a></h3>
+<pre><code class="language-text"># Single-Shot Compile Analysis Report
+
+## 1. Performance Summary
+- Total Time: 156ms (baseline: 123ms, +26.8%)
+- Hotspots: 2 identified
+- Anomalies: 1 detected
+
+## 2. Hotspot Analysis (Critical Path Tracer)
+
+### 🔥 Hotspot 1: Memory Allocation (81.2ms, +81% vs baseline)
+- mmap: 42 calls (+35 calls, +500%)
+- brk: 18 calls (+12 calls, +200%)
+- munmap: 35 calls (+28 calls, +400%)
+
+Explanation: Memory allocation dominates execution. This is UNEXPECTED for
+transpilers (typical: &lt;20%). Investigation needed.
+
+Recommendation: Profile allocator with --flamegraph
+
+### 🔥 Hotspot 2: Process Control (24.3ms, NEW)
+- fork: 24 calls (NEW)
+- execve: 24 calls (NEW)
+- waitpid: 24 calls (NEW)
+
+Explanation: Process control syscalls detected. This is UNEXPECTED for
+transpilers. Possible causes:
+- Accidental subprocess spawning
+- Shell command execution
+- Build system integration
+
+## 3. Behavioral Changes (Semantic Diff)
+
+### Memory Allocation Cluster: +35 calls (+81% time)
+Grammar violation: NEW pattern detected
+- Baseline: open → read → write → close
+- Current:   open → read → **mmap × 35** → write → close
+
+### Process Control Cluster: +24 calls (NEW)
+Grammar violation: Process control not expected
+- Pattern: fork → execve → waitpid (repeated 24×)
+
+## 4. Verdict
+⚠️ REGRESSION DETECTED
+
+Statistical significance: p &lt; 0.001 (99.9% confidence)
+- Memory allocation: statistically significant increase
+- Process control: new unexpected behavior
+
+## 5. Recommendations
+1. Investigate memory allocation spike (81% of runtime)
+2. Remove accidental subprocess spawning (24 processes)
+3. Run with --flamegraph for allocation profiling
+4. Consider memory pooling / arena allocation
+</code></pre>
+<h2 id="components"><a class="header" href="#components">Components</a></h2>
+<ul>
+<li><strong><a href="./syscall-clustering.html">Syscall Clustering</a></strong> - TOML-based configuration for semantic grouping</li>
+<li><strong><a href="./sequence-mining.html">Sequence Mining</a></strong> - N-gram grammar detection for anomalies</li>
+<li><strong><a href="./time-attribution.html">Time-Weighted Attribution</a></strong> - Wall-clock hotspot identification</li>
+<li><strong><a href="./semantic-equivalence.html">Semantic Equivalence</a></strong> - State-based optimization validation</li>
+<li><strong><a href="./regression-detection.html">Regression Detection</a></strong> - Statistical hypothesis testing</li>
+</ul>
+<h2 id="peer-reviewed-foundation"><a class="header" href="#peer-reviewed-foundation">Peer-Reviewed Foundation</a></h2>
+<p>This implementation is based on 19 peer-reviewed papers:</p>
+<ul>
+<li><strong>Zeller (2002)</strong>: Delta Debugging for noise filtering</li>
+<li><strong>Heger et al. (2013)</strong>: Statistical regression detection (ICPE)</li>
+<li><strong>Forrest et al. (1996)</strong>: N-gram anomaly detection (IEEE S&amp;P)</li>
+<li><strong>Mestel et al. (2022)</strong>: Google-scale profiling (Usenix ATC)</li>
+<li>And 15 more...</li>
+</ul>
+<p>See <a href="../../docs/specifications/single-shot-compile-tooling-spec.html">Single-Shot Compile Tooling Specification</a> for complete citations.</p>
+<h2 id="implementation-statistics"><a class="header" href="#implementation-statistics">Implementation Statistics</a></h2>
+<ul>
+<li><strong>Total Lines</strong>: ~2,400 lines of production code</li>
+<li><strong>Test Coverage</strong>: 471 passing tests (100% success rate)</li>
+<li><strong>Zero Defects</strong>: All tests passing, no clippy warnings</li>
+<li><strong>Dependencies</strong>: Uses aprender/trueno for statistics (no custom implementations)</li>
+</ul>
+<h2 id="next-steps"><a class="header" href="#next-steps">Next Steps</a></h2>
+<ol>
+<li>Learn about <a href="./syscall-clustering.html">Syscall Clustering</a> configuration</li>
+<li>Understand <a href="./sequence-mining.html">Sequence Mining</a> for anomaly detection</li>
+<li>Use <a href="./time-attribution.html">Time-Weighted Attribution</a> for performance analysis</li>
+<li>Validate optimizations with <a href="./semantic-equivalence.html">Semantic Equivalence</a></li>
+<li>Detect regressions with <a href="./regression-detection.html">Statistical Testing</a></li>
+</ol>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../advanced/performance-optimization.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../advanced/syscall-clustering.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../advanced/performance-optimization.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../advanced/syscall-clustering.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../ace.js"></script>
+        <script src="../editor.js"></script>
+        <script src="../mode-rust.js"></script>
+        <script src="../theme-dawn.js"></script>
+        <script src="../theme-tomorrow_night.js"></script>
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

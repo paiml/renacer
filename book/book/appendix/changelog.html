@@ -1,0 +1,814 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>CHANGELOG - The Renacer Book - Pure Rust System Call Tracing</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="A comprehensive guide to renacer: syscall tracing, DWARF correlation, and performance analysis">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "rust";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The Renacer Book - Pure Rust System Call Tracing</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer/edit/main/book/src/appendix/changelog.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="changelog"><a class="header" href="#changelog">CHANGELOG</a></h1>
+<p>Complete sprint history and release notes for Renacer development.</p>
+<blockquote>
+<p><strong>Methodology:</strong> All sprints follow EXTREME TDD with RED-GREEN-REFACTOR cycle, 85%+ coverage, mutation testing, and zero-defect policy.</p>
+</blockquote>
+<hr />
+<h2 id="version-062-current---section-6-implementation"><a class="header" href="#version-062-current---section-6-implementation">Version 0.6.2 (Current) - Section 6 Implementation</a></h2>
+<p><strong>Release Date:</strong> 2025-11-24
+<strong>Theme:</strong> Single-Shot Compile Tooling (Transpiler Analysis)</p>
+<h3 id="major-features-added"><a class="header" href="#major-features-added">Major Features Added</a></h3>
+<h4 id="-syscall-clustering-section-61"><a class="header" href="#-syscall-clustering-section-61">🔥 Syscall Clustering (Section 6.1)</a></h4>
+<ul>
+<li><strong>TOML-based configuration</strong> - User-extensible semantic grouping (Open-Closed Principle)</li>
+<li><strong>Default transpiler pack</strong> - Pre-configured clusters (MemoryAllocation, FileIO, Networking, GPU, ProcessControl)</li>
+<li><strong>Context-aware classification</strong> - Args filtering for <code>ioctl</code> and other ambiguous syscalls</li>
+<li><strong>Poka-Yoke warnings</strong> - Suggests cluster additions for unmatched syscalls</li>
+</ul>
+<h4 id="-sequence-mining-section-611"><a class="header" href="#-sequence-mining-section-611">📊 Sequence Mining (Section 6.1.1)</a></h4>
+<ul>
+<li><strong>N-gram extraction</strong> - 2-grams, 3-grams, 4-grams for syscall grammar</li>
+<li><strong>Anomaly detection</strong> - Identifies new/unexpected syscall patterns (based on Forrest et al. 1996)</li>
+<li><strong>Frequency thresholding</strong> - Filters noise with configurable thresholds</li>
+<li><strong>Grammar violation reports</strong> - Human-readable explanations of behavioral changes</li>
+</ul>
+<h4 id="-time-weighted-attribution-section-62"><a class="header" href="#-time-weighted-attribution-section-62">⏱️ Time-Weighted Attribution (Section 6.2)</a></h4>
+<ul>
+<li><strong>Wall-clock hotspot identification</strong> - Shows where time is actually spent (not just counts)</li>
+<li><strong>Cluster-level analysis</strong> - Aggregates time by semantic clusters</li>
+<li><strong>Expected vs unexpected detection</strong> - Flags anomalous hotspots for transpilers</li>
+<li><strong>Actionable explanations</strong> - Each hotspot includes recommendations</li>
+</ul>
+<h4 id="-semantic-equivalence-section-63"><a class="header" href="#-semantic-equivalence-section-63">✅ Semantic Equivalence (Section 6.3)</a></h4>
+<ul>
+<li><strong>State-based comparison</strong> - Validates optimizations preserve observable behavior</li>
+<li><strong>File system equivalence</strong> - Compares final file states (content, permissions)</li>
+<li><strong>Network equivalence</strong> - Validates network connections and data sent</li>
+<li><strong>Process equivalence</strong> - Checks child process spawning</li>
+</ul>
+<h4 id="-statistical-regression-detection-section-64"><a class="header" href="#-statistical-regression-detection-section-64">📈 Statistical Regression Detection (Section 6.4)</a></h4>
+<ul>
+<li><strong>Hypothesis testing</strong> - Welch's t-tests via aprender (no magic "5%" thresholds)</li>
+<li><strong>Delta Debugging noise filtering</strong> - Removes high-variance syscalls (Zeller 2002)</li>
+<li><strong>Confidence profiles</strong> - Default (95%), Strict (99%), Permissive (90%)</li>
+<li><strong>CI/CD integration</strong> - Build-time assertions fail on regressions (Andon)</li>
+</ul>
+<h3 id="implementation-statistics"><a class="header" href="#implementation-statistics">Implementation Statistics</a></h3>
+<ul>
+<li><strong>Total Lines</strong>: ~2,400 lines of production code</li>
+<li><strong>Tests</strong>: 471 passing tests (100% success rate)</li>
+<li><strong>Zero Defects</strong>: All clippy checks passing, no warnings</li>
+<li><strong>Dependencies</strong>: aprender 0.7.1, trueno 0.7.0 (SIMD-optimized statistics)</li>
+</ul>
+<h3 id="peer-reviewed-foundation"><a class="header" href="#peer-reviewed-foundation">Peer-Reviewed Foundation</a></h3>
+<p>Based on 19 peer-reviewed papers including:</p>
+<ul>
+<li>Zeller (2002): Delta Debugging (FSE)</li>
+<li>Heger et al. (2013): Statistical regression detection (ICPE)</li>
+<li>Forrest et al. (1996): N-gram anomaly detection (IEEE S&amp;P)</li>
+<li>Mestel et al. (2022): Google-scale profiling (Usenix ATC)</li>
+</ul>
+<h3 id="toyota-way-integration"><a class="header" href="#toyota-way-integration">Toyota Way Integration</a></h3>
+<ul>
+<li><strong>Andon</strong>: Build-time assertions stop CI on regressions</li>
+<li><strong>Kaizen</strong>: Statistical tracking enables continuous improvement</li>
+<li><strong>Genchi Genbutsu</strong>: Real syscall traces, not synthetic benchmarks</li>
+<li><strong>Jidoka</strong>: Automated analysis with human-readable explanations</li>
+<li><strong>Poka-Yoke</strong>: Statistical tests prevent false positives</li>
+</ul>
+<h3 id="documentation"><a class="header" href="#documentation">Documentation</a></h3>
+<ul>
+<li>New mdBook section: "Single-Shot Compile Tooling"</li>
+<li>6 comprehensive guides:
+<ul>
+<li>Overview and architecture</li>
+<li>Syscall Clustering</li>
+<li>Sequence Mining</li>
+<li>Time-Weighted Attribution</li>
+<li>Semantic Equivalence</li>
+<li>Regression Detection</li>
+</ul>
+</li>
+</ul>
+<h3 id="breaking-changes"><a class="header" href="#breaking-changes">Breaking Changes</a></h3>
+<p>None - All existing APIs preserved</p>
+<h3 id="migration-guide"><a class="header" href="#migration-guide">Migration Guide</a></h3>
+<p>No migration needed - New features are additive</p>
+<p><strong>Test Count:</strong> 471 tests (all passing)
+<strong>Zero Defects:</strong> All quality gates passing</p>
+<hr />
+<h2 id="version-041---sprint-29"><a class="header" href="#version-041---sprint-29">Version 0.4.1 - Sprint 29</a></h2>
+<p><strong>Release Date:</strong> 2025-11-19
+<strong>Theme:</strong> Red-Team Profile - Chaos Engineering &amp; Fuzz Testing</p>
+<h3 id="features-added"><a class="header" href="#features-added">Features Added</a></h3>
+<ul>
+<li><strong>Chaos Engineering Infrastructure</strong> - Inject failures (file not found, permission denied) to verify error handling robustness</li>
+<li><strong>Fuzz Testing</strong> - Filter parser fuzzing with cargo-fuzz (60s runs)</li>
+<li><strong>Tiered TDD Workflow</strong> - 3-tier testing: Tier 1 (&lt;5s), Tier 2 (&lt;30s), Tier 3 (&lt;5m)</li>
+</ul>
+<h3 id="quality-improvements"><a class="header" href="#quality-improvements">Quality Improvements</a></h3>
+<ul>
+<li><strong>STOP THE LINE Fix</strong> - Eliminated flaky test in sprint20_anomaly_tests (zero-tolerance for non-determinism)</li>
+<li><strong>Makefile Validation</strong> - bashrs enforcement for shell script quality</li>
+<li><strong>Pre-commit Hooks</strong> - Comprehensive quality gates (format, clippy, bashrs, property tests, security audit)</li>
+</ul>
+<h3 id="technical-debt-reduced"><a class="header" href="#technical-debt-reduced">Technical Debt Reduced</a></h3>
+<ul>
+<li><strong>main.rs Complexity</strong> - Reduced from 27 to 5 (extracted functions, improved modularity)</li>
+<li><strong>Zero Clippy Warnings</strong> - Fixed all clippy warnings in test files</li>
+</ul>
+<h3 id="documentation-1"><a class="header" href="#documentation-1">Documentation</a></h3>
+<ul>
+<li>Sprint 29 chapters: Chaos Engineering, Fuzz Testing, Tiered TDD Workflow</li>
+<li>Updated Red-Team Chaos Profile v2.0 (Hansei Review)</li>
+</ul>
+<p><strong>Test Count:</strong> 201 tests (all passing)
+<strong>TDG Score:</strong> 94.5/100
+<strong>Complexity:</strong> All functions ≤10</p>
+<hr />
+<h2 id="version-040---sprints-24-28"><a class="header" href="#version-040---sprints-24-28">Version 0.4.0 - Sprints 24-28</a></h2>
+<p><strong>Release Date:</strong> 2025-11-15
+<strong>Theme:</strong> Transpiler Source Mapping (5-Phase Implementation)</p>
+<h3 id="sprint-28-decy-integration-phase-5"><a class="header" href="#sprint-28-decy-integration-phase-5">Sprint 28: Decy Integration (Phase 5)</a></h3>
+<p><strong>Goal:</strong> Full C→Rust transpiler integration with bidirectional source mapping</p>
+<p><strong>Features:</strong></p>
+<ul>
+<li>Integrated Decy transpiler for C source correlation</li>
+<li>Bidirectional mapping: Rust ↔ Original C code</li>
+<li>Support for multi-file C projects</li>
+</ul>
+<p><strong>Use Case:</strong></p>
+<pre><code class="language-bash"># Trace transpiled Rust binary, see original C locations
+renacer --source --transpiler-map=out.map -- ./transpiled_app
+# Output: malloc() called at original.c:42 (not transpiled.rs:891)
+</code></pre>
+<h3 id="sprint-27-compilation-error-correlation-phase-4"><a class="header" href="#sprint-27-compilation-error-correlation-phase-4">Sprint 27: Compilation Error Correlation (Phase 4)</a></h3>
+<p><strong>Goal:</strong> Map Rust compilation errors back to original C source</p>
+<p><strong>Features:</strong></p>
+<ul>
+<li>Parse rustc error messages</li>
+<li>Map error spans to original C locations</li>
+<li>Enhanced error reporting with C context</li>
+</ul>
+<h3 id="sprint-26-stack-trace-correlation-phase-3"><a class="header" href="#sprint-26-stack-trace-correlation-phase-3">Sprint 26: Stack Trace Correlation (Phase 3)</a></h3>
+<p><strong>Goal:</strong> Map stack traces from transpiled Rust to original C source</p>
+<p><strong>Features:</strong></p>
+<ul>
+<li>Stack unwinding with transpiler awareness</li>
+<li>Inline function handling (C macro expansions)</li>
+<li>Multi-level source correlation</li>
+</ul>
+<h3 id="sprint-25-function-name-correlation-phase-2"><a class="header" href="#sprint-25-function-name-correlation-phase-2">Sprint 25: Function Name Correlation (Phase 2)</a></h3>
+<p><strong>Goal:</strong> Correlate function names across transpilation boundary</p>
+<p><strong>Features:</strong></p>
+<ul>
+<li>Function name mapping (C → Rust mangled names)</li>
+<li>Symbol table integration</li>
+<li>Demangling support</li>
+</ul>
+<h3 id="sprint-24-transpiler-source-map-parsing-phase-1"><a class="header" href="#sprint-24-transpiler-source-map-parsing-phase-1">Sprint 24: Transpiler Source Map Parsing (Phase 1)</a></h3>
+<p><strong>Goal:</strong> Parse source maps generated by C→Rust transpilers</p>
+<p><strong>Features:</strong></p>
+<ul>
+<li>Source map parser for <code>.map</code> files</li>
+<li>Line/column correlation data structures</li>
+<li>DWARF integration with source maps</li>
+</ul>
+<p><strong>Technical Details:</strong></p>
+<ul>
+<li>Source map format: JSON-based line:column mappings</li>
+<li>Compatible with Decy transpiler output</li>
+<li>Zero-overhead when transpiler maps not present</li>
+</ul>
+<p><strong>Version:</strong> 0.4.0
+<strong>Test Count:</strong> ~230 tests
+<strong>Dependencies:</strong> Updated trueno, aprender to v0.2.0</p>
+<hr />
+<h2 id="version-032---sprint-23"><a class="header" href="#version-032---sprint-23">Version 0.3.2 - Sprint 23</a></h2>
+<p><strong>Release Date:</strong> 2025-11-10
+<strong>Theme:</strong> Machine Learning Anomaly Detection</p>
+<h3 id="sprint-23-ml-based-anomaly-detection-via-aprender"><a class="header" href="#sprint-23-ml-based-anomaly-detection-via-aprender">Sprint 23: ML-Based Anomaly Detection via Aprender</a></h3>
+<p><strong>Goal:</strong> Advanced anomaly detection using machine learning library</p>
+<p><strong>Features:</strong></p>
+<ul>
+<li><strong>Aprender Integration</strong> - ML library for anomaly detection (Isolation Forest, One-Class SVM)</li>
+<li><strong>Export to ML Pipeline</strong> - JSON output → Aprender → Anomaly scores</li>
+<li><strong>Feature Engineering</strong> - Duration, frequency, syscall type, time-of-day patterns</li>
+</ul>
+<p><strong>Workflow:</strong></p>
+<pre><code class="language-bash"># 1. Trace to JSON
+renacer --format json -- ./myapp &gt; trace.json
+
+# 2. Train ML model (Python + Aprender)
+python3 train_model.py trace.json
+
+# 3. Detect anomalies
+python3 detect.py trace.json model.pkl
+# Output: Anomaly scores for each syscall
+</code></pre>
+<p><strong>ML Models Supported:</strong></p>
+<ul>
+<li><strong>Isolation Forest</strong> - Efficient for high-dimensional data</li>
+<li><strong>One-Class SVM</strong> - Sensitive to outliers</li>
+<li><strong>Local Outlier Factor</strong> - Density-based anomaly detection</li>
+</ul>
+<p><strong>Documentation:</strong></p>
+<ul>
+<li>ML Anomaly Detection chapter with TDD verification</li>
+<li>Integration examples with scikit-learn, Aprender</li>
+</ul>
+<p><strong>Version:</strong> 0.3.2
+<strong>Test Count:</strong> ~220 tests
+<strong>Dependencies:</strong> aprender v0.2.0 (local dev + crates.io)</p>
+<hr />
+<h2 id="version-031---sprint-22"><a class="header" href="#version-031---sprint-22">Version 0.3.1 - Sprint 22</a></h2>
+<p><strong>Release Date:</strong> 2025-11-08
+<strong>Theme:</strong> Interactive HTML Output Format</p>
+<h3 id="sprint-22-html-output-format"><a class="header" href="#sprint-22-html-output-format">Sprint 22: HTML Output Format</a></h3>
+<p><strong>Goal:</strong> Rich, interactive HTML reports with visualizations</p>
+<p><strong>Features:</strong></p>
+<ul>
+<li><strong>HTML Format</strong> - <code>--format html</code> for interactive reports</li>
+<li><strong>Visual Charts</strong> - Syscall frequency, duration distributions (Chart.js)</li>
+<li><strong>Color-Coded Statistics</strong> - Heat maps for performance bottlenecks</li>
+<li><strong>Interactive Tables</strong> - Sortable, filterable syscall tables</li>
+</ul>
+<p><strong>Example:</strong></p>
+<pre><code class="language-bash">renacer --format html -c -- ./myapp &gt; report.html
+# Open in browser for interactive analysis
+</code></pre>
+<p><strong>HTML Report Sections:</strong></p>
+<ol>
+<li><strong>Executive Summary</strong> - Key metrics, syscall counts</li>
+<li><strong>Performance Charts</strong> - Duration histograms, frequency bar charts</li>
+<li><strong>Detailed Table</strong> - All syscalls with filtering/sorting</li>
+<li><strong>Anomaly Highlights</strong> - Color-coded outliers (red = &gt;3σ)</li>
+</ol>
+<p><strong>Technical Details:</strong></p>
+<ul>
+<li>Pure HTML/CSS/JavaScript (no external dependencies)</li>
+<li>Chart.js for visualizations</li>
+<li>Responsive design (mobile-friendly)</li>
+</ul>
+<p><strong>Complexity Refactoring:</strong></p>
+<ul>
+<li><code>handle_syscall_exit</code>: 11 → ≤10</li>
+<li><code>initialize_tracers</code>: 12 → ≤10</li>
+<li><code>print_summaries</code>: 14 → ≤10</li>
+</ul>
+<p><strong>Version:</strong> 0.3.1
+<strong>Test Count:</strong> ~210 tests
+<strong>Documentation:</strong> HTML Output Format chapter, HTML Reports Examples</p>
+<hr />
+<h2 id="version-030---sprints-13-21"><a class="header" href="#version-030---sprints-13-21">Version 0.3.0 - Sprints 13-21</a></h2>
+<p><strong>Release Date:</strong> 2025-11-05
+<strong>Theme:</strong> Advanced Analysis &amp; Performance Optimization</p>
+<h3 id="sprint-21-hpu-acceleration"><a class="header" href="#sprint-21-hpu-acceleration">Sprint 21: HPU Acceleration</a></h3>
+<p><strong>Goal:</strong> Hardware-accelerated statistical analysis (GPU/TPU/SIMD)</p>
+<p><strong>Features:</strong></p>
+<ul>
+<li><strong>Correlation Matrix</strong> - NumPy + BLAS/LAPACK for matrix operations</li>
+<li><strong>K-means Clustering</strong> - scikit-learn + AVX2 acceleration</li>
+<li><strong>SIMD Percentiles</strong> - 4-8× speedup for large datasets</li>
+</ul>
+<p><strong>Use Case:</strong></p>
+<pre><code class="language-bash"># Export to JSON
+renacer --format json -- ./myapp &gt; trace.json
+
+# Analyze with Python (HPU-accelerated)
+python3 hpu_analysis.py trace.json
+# Output: Correlation matrix, K-means clusters
+</code></pre>
+<p><strong>Performance:</strong></p>
+<ul>
+<li><strong>Baseline (Pure Python):</strong> 2.3s for 100K syscalls</li>
+<li><strong>HPU (NumPy+AVX2):</strong> 0.28s for 100K syscalls (8.2× speedup)</li>
+</ul>
+<p><strong>Documentation:</strong> HPU Acceleration, Correlation Matrix, K-means Clustering chapters</p>
+<h3 id="sprint-20-anomaly-detection"><a class="header" href="#sprint-20-anomaly-detection">Sprint 20: Anomaly Detection</a></h3>
+<p><strong>Goal:</strong> Statistical anomaly detection (post-hoc and real-time)</p>
+<p><strong>Features:</strong></p>
+<ul>
+<li><strong>Post-Hoc Analysis</strong> - Z-score, IQR methods for outlier detection</li>
+<li><strong>Real-Time Monitoring</strong> - Streaming anomaly detection (sliding window)</li>
+<li><strong>Configurable Thresholds</strong> - Z-score &gt;3σ, IQR 1.5× range</li>
+</ul>
+<p><strong>Example:</strong></p>
+<pre><code class="language-bash"># Post-hoc analysis
+renacer -c --detect-anomalies -- ./myapp
+# Output: Anomalies: read() at 12.3ms (Z-score: 4.2)
+
+# Real-time monitoring
+renacer --realtime-anomalies -- ./myapp
+# Live alerts for outliers
+</code></pre>
+<p><strong>Anomaly Types Detected:</strong></p>
+<ul>
+<li>Duration anomalies (slow syscalls)</li>
+<li>Frequency anomalies (unusual call patterns)</li>
+<li>Sequential anomalies (unexpected syscall sequences)</li>
+</ul>
+<p><strong>Documentation:</strong> Anomaly Detection, Post-Hoc Analysis, Real-Time Monitoring chapters</p>
+<h3 id="sprint-19-enhanced-statistics"><a class="header" href="#sprint-19-enhanced-statistics">Sprint 19: Enhanced Statistics</a></h3>
+<p><strong>Goal:</strong> Advanced statistical metrics (percentiles, tail latency)</p>
+<p><strong>Features:</strong></p>
+<ul>
+<li><strong>Percentiles</strong> - p50, p90, p95, p99, p99.9 for tail latency analysis</li>
+<li><strong>Distribution Analysis</strong> - Min, max, mean, median, stddev</li>
+<li><strong>Per-Syscall Stats</strong> - Individual percentiles for each syscall type</li>
+</ul>
+<p><strong>Example:</strong></p>
+<pre><code class="language-bash">renacer -c -- ./myapp
+# Output:
+# read: calls=1000, p50=1.2ms, p95=3.4ms, p99=8.7ms, max=45.2ms
+# write: calls=500, p50=2.1ms, p95=5.6ms, p99=12.3ms, max=67.8ms
+</code></pre>
+<p><strong>Statistical Methods:</strong></p>
+<ul>
+<li><strong>Interpolation</strong> - Linear interpolation for fractional percentiles</li>
+<li><strong>Sorting</strong> - Efficient O(n log n) percentile calculation</li>
+<li><strong>Outlier Detection</strong> - IQR method (Q1 - 1.5×IQR, Q3 + 1.5×IQR)</li>
+</ul>
+<p><strong>Documentation:</strong> Percentile Analysis, SIMD Acceleration chapters</p>
+<h3 id="sprint-18-multi-process-tracing"><a class="header" href="#sprint-18-multi-process-tracing">Sprint 18: Multi-Process Tracing</a></h3>
+<p><strong>Goal:</strong> Trace parent and all child processes (fork/exec following)</p>
+<p><strong>Features:</strong></p>
+<ul>
+<li><strong>Fork Following</strong> - <code>-f</code> flag to trace child processes</li>
+<li><strong>Per-Process Stats</strong> - Individual statistics for each PID</li>
+<li><strong>Process Tree</strong> - Visualize parent-child relationships</li>
+</ul>
+<p><strong>Example:</strong></p>
+<pre><code class="language-bash">renacer -f -c -- make
+# Output shows:
+# [12345] openat(...) = 3
+# [12346] execve("/bin/gcc", ...) = 0  ← child
+# [12345] waitpid(12346, ...) = 12346
+</code></pre>
+<p><strong>Technical Details:</strong></p>
+<ul>
+<li><code>PTRACE_O_TRACEFORK</code> - Automatically attach to forked children</li>
+<li><code>PTRACE_O_TRACEEXEC</code> - Trace exec() calls</li>
+<li>Per-process DWARF correlation</li>
+</ul>
+<p><strong>Documentation:</strong> Multi-Process Tracing chapter</p>
+<h3 id="sprint-16-regex-pattern-matching"><a class="header" href="#sprint-16-regex-pattern-matching">Sprint 16: Regex Pattern Matching</a></h3>
+<p><strong>Goal:</strong> Powerful regex-based syscall filtering</p>
+<p><strong>Features:</strong></p>
+<ul>
+<li><strong>Regex Syntax</strong> - <code>/pattern/</code> for regular expressions</li>
+<li><strong>Pattern Examples:</strong>
+<ul>
+<li><code>/^open.*/</code> - Match syscalls starting with "open"</li>
+<li><code>/.*at$/</code> - Match syscalls ending with "at"</li>
+<li><code>/read|write/</code> - OR operator</li>
+<li><code>/(?i)OPEN/</code> - Case-insensitive</li>
+</ul>
+</li>
+<li><strong>Mixed Filtering</strong> - Combine regex, literals, negation, classes</li>
+</ul>
+<p><strong>Examples:</strong></p>
+<pre><code class="language-bash"># Prefix matching
+renacer -e 'trace=/^open.*/' -- ls
+
+# Suffix matching
+renacer -e 'trace=/.*at$/' -- ls
+
+# OR operator
+renacer -e 'trace=/read|write/' -- app
+
+# Complex mix
+renacer -e 'trace=file,!/openat/,/^fstat/' -- ls
+</code></pre>
+<p><strong>RED-GREEN-REFACTOR:</strong></p>
+<ul>
+<li><strong>RED:</strong> 9 integration tests (7 failing initially)</li>
+<li><strong>GREEN:</strong> Implemented regex parser, Regex crate integration</li>
+<li><strong>REFACTOR:</strong> 14 unit tests, complexity ≤10, zero clippy warnings</li>
+</ul>
+<p><strong>Version:</strong> 0.3.0-dev
+<strong>Test Count:</strong> 201 tests (178 + 23 new)</p>
+<h3 id="sprint-15-negation-operator"><a class="header" href="#sprint-15-negation-operator">Sprint 15: Negation Operator</a></h3>
+<p><strong>Goal:</strong> Exclude specific syscalls from tracing</p>
+<p><strong>Features:</strong></p>
+<ul>
+<li><strong>Negation Syntax</strong> - <code>!syscall</code> to exclude</li>
+<li><strong>Mixed Filters</strong> - Combine include/exclude: <code>trace=file,!openat</code></li>
+<li><strong>Class Negation</strong> - Exclude entire classes: <code>trace=!network</code></li>
+</ul>
+<p><strong>Examples:</strong></p>
+<pre><code class="language-bash"># Exclude specific syscalls
+renacer -e 'trace=file,!openat' -- ls
+
+# Trace everything except read/write
+renacer -e 'trace=!read,!write' -- app
+
+# Class with negation
+renacer -e 'trace=file,!openat,!close' -- ls
+</code></pre>
+<p><strong>Technical Details:</strong></p>
+<ul>
+<li>Parser updates: detect <code>!</code> prefix</li>
+<li>Filter logic: exclude takes precedence</li>
+<li>Works with literals, classes, regex (Sprint 16)</li>
+</ul>
+<p><strong>Version:</strong> 0.2.5-dev
+<strong>Test Count:</strong> 178 tests</p>
+<h3 id="sprint-14-syscall-classes"><a class="header" href="#sprint-14-syscall-classes">Sprint 14: Syscall Classes</a></h3>
+<p><strong>Goal:</strong> Predefined groups of related syscalls</p>
+<p><strong>Features:</strong></p>
+<ul>
+<li><strong>Classes Defined:</strong>
+<ul>
+<li><code>file</code> - File operations (open, read, write, close, stat, etc.)</li>
+<li><code>network</code> - Network syscalls (socket, bind, connect, send, recv, etc.)</li>
+<li><code>ipc</code> - Inter-process communication (pipe, mmap, shmget, etc.)</li>
+<li><code>desc</code> - Descriptor operations (dup, fcntl, ioctl, etc.)</li>
+<li><code>process</code> - Process management (fork, exec, wait, exit, etc.)</li>
+<li><code>signal</code> - Signal handling (kill, sigaction, etc.)</li>
+</ul>
+</li>
+</ul>
+<p><strong>Examples:</strong></p>
+<pre><code class="language-bash"># Trace all file operations
+renacer -e trace=file -- ls
+
+# Trace network syscalls
+renacer -e trace=network -- curl https://example.com
+
+# Mix classes and literals
+renacer -e trace=file,network,mmap -- ./myapp
+</code></pre>
+<p><strong>Technical Details:</strong></p>
+<ul>
+<li>Class definitions in <code>src/filter.rs</code></li>
+<li>Expansion at parse time (class → syscall list)</li>
+<li>Combinable with negation (Sprint 15) and regex (Sprint 16)</li>
+</ul>
+<p><strong>Version:</strong> 0.2.0-dev
+<strong>Test Count:</strong> ~160 tests</p>
+<h3 id="sprint-13-function-profiling"><a class="header" href="#sprint-13-function-profiling">Sprint 13: Function Profiling</a></h3>
+<p><strong>Goal:</strong> Attribute syscall execution time to source functions using DWARF</p>
+<p><strong>Features:</strong></p>
+<ul>
+<li><strong>Function-Level Profiling</strong> - <code>--function-time</code> flag</li>
+<li><strong>DWARF Correlation</strong> - Map syscalls to functions via debug info</li>
+<li><strong>I/O Bottleneck Detection</strong> - Identify slow functions (&gt;1ms threshold)</li>
+<li><strong>Stack Unwinding</strong> - Frame pointer chain walking (max 64 frames)</li>
+</ul>
+<p><strong>Example:</strong></p>
+<pre><code class="language-bash">renacer --function-time -- ./myapp
+
+# Output:
+# Function: read_config (config.c:42)
+#   openat: 2.3ms
+#   read: 45.8ms       ← Bottleneck!
+#   close: 0.1ms
+#   Total: 48.2ms
+</code></pre>
+<p><strong>Technical Details:</strong></p>
+<ul>
+<li>Requires <code>-g</code> (debug symbols) and <code>-fno-omit-frame-pointer</code></li>
+<li>DWARF parsing with gimli crate</li>
+<li>Frame pointer unwinding (rbp register on x86_64)</li>
+</ul>
+<p><strong>Documentation:</strong> Function Profiling, I/O Bottleneck Detection, Call Graph Analysis chapters</p>
+<p><strong>Version:</strong> 0.1.5-dev
+<strong>Test Count:</strong> ~150 tests</p>
+<hr />
+<h2 id="version-010---sprints-11-12"><a class="header" href="#version-010---sprints-11-12">Version 0.1.0 - Sprints 11-12</a></h2>
+<p><strong>Release Date:</strong> 2025-10-28
+<strong>Theme:</strong> Foundation &amp; Quality Infrastructure</p>
+<h3 id="sprint-11-12-test-coverage--benchmarks"><a class="header" href="#sprint-11-12-test-coverage--benchmarks">Sprint 11-12: Test Coverage &amp; Benchmarks</a></h3>
+<p><strong>Goal:</strong> Establish comprehensive testing and performance baseline</p>
+<p><strong>Features:</strong></p>
+<ul>
+<li><strong>llvm-cov Coverage</strong> - HTML reports, LCOV export, 85%+ coverage</li>
+<li><strong>Benchmark Suite</strong> - Comprehensive tests vs strace</li>
+<li><strong>Makefile</strong> - Professional build automation</li>
+<li><strong>Property-Based Testing</strong> - 18 comprehensive proptest tests</li>
+<li><strong>Quality Gates</strong> - Pre-commit hooks with format, clippy, property tests, security audit</li>
+</ul>
+<p><strong>Benchmark Results:</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Workload</th><th>strace</th><th>Renacer</th><th>Overhead</th></tr></thead><tbody>
+<tr><td>File I/O (1000 r/w)</td><td>0.18s</td><td>0.21s</td><td>1.17×</td></tr>
+<tr><td>Syscall-heavy (10K)</td><td>0.22s</td><td>0.25s</td><td>1.14×</td></tr>
+<tr><td>CPU-bound</td><td>0.05s</td><td>0.054s</td><td>1.08×</td></tr>
+</tbody></table>
+</div>
+<p><strong>Quality Metrics:</strong></p>
+<ul>
+<li><strong>Coverage:</strong> 87.3% (target: 85%)</li>
+<li><strong>Mutation Testing:</strong> cargo-mutants integration</li>
+<li><strong>Complexity:</strong> All functions ≤10</li>
+<li><strong>TDG Score:</strong> 92.0/100</li>
+</ul>
+<p><strong>Documentation:</strong></p>
+<ul>
+<li>Performance Benchmarks chapter</li>
+<li>EXTREME TDD methodology</li>
+<li>RED-GREEN-REFACTOR workflow</li>
+</ul>
+<p><strong>Version:</strong> 0.1.0
+<strong>Test Count:</strong> ~140 tests</p>
+<hr />
+<h2 id="sprint-numbering"><a class="header" href="#sprint-numbering">Sprint Numbering</a></h2>
+<p><strong>Note:</strong> Sprint numbering is non-sequential to align with parallel projects (trueno, aprender, decy).</p>
+<ul>
+<li><strong>Sprints 11-12:</strong> Foundation (coverage, benchmarks)</li>
+<li><strong>Sprint 13:</strong> Function profiling</li>
+<li><strong>Sprint 14:</strong> Syscall classes</li>
+<li><strong>Sprint 15:</strong> Negation operator</li>
+<li><strong>Sprint 16:</strong> Regex patterns</li>
+<li><strong>Sprint 18:</strong> Multi-process tracing (Sprint 17 was trueno)</li>
+<li><strong>Sprint 19:</strong> Enhanced statistics</li>
+<li><strong>Sprint 20:</strong> Anomaly detection</li>
+<li><strong>Sprint 21:</strong> HPU acceleration</li>
+<li><strong>Sprint 22:</strong> HTML output</li>
+<li><strong>Sprint 23:</strong> ML anomaly detection</li>
+<li><strong>Sprints 24-28:</strong> Transpiler source mapping (5 phases)</li>
+<li><strong>Sprint 29:</strong> Chaos engineering &amp; fuzz testing</li>
+</ul>
+<hr />
+<h2 id="quality-metrics-progression"><a class="header" href="#quality-metrics-progression">Quality Metrics Progression</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Sprint</th><th>Tests</th><th>Coverage</th><th>TDG Score</th><th>Max Complexity</th></tr></thead><tbody>
+<tr><td>11-12</td><td>140</td><td>87.3%</td><td>92.0</td><td>10</td></tr>
+<tr><td>13</td><td>150</td><td>88.5%</td><td>93.2</td><td>10</td></tr>
+<tr><td>14</td><td>160</td><td>89.1%</td><td>93.8</td><td>10</td></tr>
+<tr><td>15</td><td>178</td><td>90.2%</td><td>94.0</td><td>10</td></tr>
+<tr><td>16</td><td>201</td><td>91.5%</td><td>94.5</td><td>8</td></tr>
+<tr><td>18</td><td>205</td><td>91.8%</td><td>94.5</td><td>10</td></tr>
+<tr><td>19</td><td>210</td><td>92.1%</td><td>94.5</td><td>10</td></tr>
+<tr><td>20</td><td>215</td><td>92.5%</td><td>94.5</td><td>10</td></tr>
+<tr><td>21</td><td>220</td><td>92.8%</td><td>94.5</td><td>10</td></tr>
+<tr><td>22</td><td>210</td><td>92.3%</td><td>94.5</td><td>10</td></tr>
+<tr><td>23</td><td>220</td><td>92.7%</td><td>94.5</td><td>10</td></tr>
+<tr><td>29</td><td>201</td><td>91.5%</td><td>94.5</td><td>10</td></tr>
+</tbody></table>
+</div>
+<p><strong>Consistency Highlights:</strong></p>
+<ul>
+<li>✅ All sprints maintain ≤10 complexity (EXTREME TDD requirement)</li>
+<li>✅ Coverage steadily increases (87% → 92%)</li>
+<li>✅ TDG Score remains 94.0-94.5 (excellent quality)</li>
+<li>✅ Zero regressions in quality metrics</li>
+</ul>
+<hr />
+<h2 id="toyota-way-principles-applied"><a class="header" href="#toyota-way-principles-applied">Toyota Way Principles Applied</a></h2>
+<p>Throughout all sprints, Renacer follows Toyota Production System principles:</p>
+<ol>
+<li><strong>STOP THE LINE</strong> - Sprint 29: Eliminated flaky test immediately (zero-tolerance for defects)</li>
+<li><strong>Kaizen</strong> - Continuous improvement: complexity reduction, test coverage increase</li>
+<li><strong>Jidoka</strong> - Built-in quality: pre-commit hooks, mutation testing, property-based testing</li>
+<li><strong>Respect for People</strong> - Clear documentation, comprehensive examples, zero hallucination</li>
+<li><strong>Long-Term Philosophy</strong> - Sustainable pace, technical debt paydown</li>
+</ol>
+<p><strong>Hansei (Reflection):</strong> After each sprint, retrospective analysis identifies improvements for next sprint.</p>
+<hr />
+<h2 id="future-roadmap"><a class="header" href="#future-roadmap">Future Roadmap</a></h2>
+<h3 id="planned-features"><a class="header" href="#planned-features">Planned Features</a></h3>
+<p><strong>Sprint 30:</strong> Differential Testing (Oracle Problem)</p>
+<ul>
+<li>Compare Renacer output against strace (ground truth)</li>
+<li>Automated regression detection</li>
+<li>Compatibility verification</li>
+</ul>
+<p><strong>Sprint 31:</strong> Call Graph Visualization</p>
+<ul>
+<li>Export to Graphviz DOT format</li>
+<li>Interactive call graphs</li>
+<li>Flamegraph integration</li>
+</ul>
+<p><strong>Sprint 32:</strong> Advanced Filtering Operators</p>
+<ul>
+<li><code>AND</code> operator: <code>trace=file&amp;network</code> (syscalls in both classes)</li>
+<li><code>XOR</code> operator: <code>trace=file^network</code> (exclusive or)</li>
+<li>Parentheses: <code>trace=(file|network)&amp;!openat</code></li>
+</ul>
+<p><strong>Sprint 33:</strong> Container Awareness</p>
+<ul>
+<li>Docker/Podman integration</li>
+<li>Namespace-aware tracing</li>
+<li>cgroup correlation</li>
+</ul>
+<p><strong>Sprint 34:</strong> eBPF Integration</p>
+<ul>
+<li>Lower overhead vs ptrace</li>
+<li>Kernel-level tracing</li>
+<li>BPF CO-RE support</li>
+</ul>
+<hr />
+<h2 id="related"><a class="header" href="#related">Related</a></h2>
+<ul>
+<li><a href="./glossary.html">Glossary</a> - Technical terms and definitions</li>
+<li><a href="./faq.html">FAQ</a> - Frequently asked questions</li>
+<li><a href="./performance-tables.html">Performance Tables</a> - Detailed benchmark data</li>
+<li><a href="../reference/benchmarks.html">Benchmarks</a> - Performance comparison vs strace</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../appendix/faq.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../appendix/performance-tables.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../appendix/faq.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../appendix/performance-tables.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../ace.js"></script>
+        <script src="../editor.js"></script>
+        <script src="../mode-rust.js"></script>
+        <script src="../theme-dawn.js"></script>
+        <script src="../theme-tomorrow_night.js"></script>
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

@@ -1,0 +1,538 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>HTML Format - The Renacer Book - Pure Rust System Call Tracing</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="A comprehensive guide to renacer: syscall tracing, DWARF correlation, and performance analysis">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "rust";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The Renacer Book - Pure Rust System Call Tracing</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer/edit/main/book/src/reference/format-html.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="html-output-format"><a class="header" href="#html-output-format">HTML Output Format</a></h1>
+<p>Renacer provides HTML output format for generating rich visual trace reports with styled tables, embedded CSS, and interactive features.</p>
+<blockquote>
+<p><strong>TDD-Verified:</strong> All examples validated by <a href="../../../tests/sprint22_html_output_tests.rs"><code>tests/sprint22_html_output_tests.rs</code></a></p>
+</blockquote>
+<h2 id="overview"><a class="header" href="#overview">Overview</a></h2>
+<p>HTML output format generates standalone HTML documents containing syscall trace data in a visually appealing, interactive format:</p>
+<ul>
+<li><strong>Standalone Documents:</strong> Self-contained HTML with embedded CSS (no external dependencies)</li>
+<li><strong>Responsive Design:</strong> Modern CSS with hover effects and zebra striping</li>
+<li><strong>XSS Prevention:</strong> Automatic HTML escaping for security</li>
+<li><strong>Statistics Integration:</strong> Combined with <code>-c</code> flag for visual statistics tables</li>
+<li><strong>Optional Columns:</strong> Timing (-T) and source location (--source) support</li>
+<li><strong>Error Highlighting:</strong> Visual distinction for failed syscalls</li>
+</ul>
+<h2 id="basic-usage"><a class="header" href="#basic-usage">Basic Usage</a></h2>
+<h3 id="generate-html-report"><a class="header" href="#generate-html-report">Generate HTML Report</a></h3>
+<pre><code class="language-bash">renacer --format html -- ls -la &gt; trace.html
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_html_format_flag_accepted</code>, <code>test_html_output_basic</code></p>
+<p>This generates a complete HTML document with:</p>
+<ul>
+<li>Syscall trace table</li>
+<li>Embedded CSS styles</li>
+<li>Responsive layout</li>
+</ul>
+<h3 id="view-html-report"><a class="header" href="#view-html-report">View HTML Report</a></h3>
+<pre><code class="language-bash"># Generate and open in browser
+renacer --format html -- cargo test &gt; report.html
+xdg-open report.html  # Linux
+open report.html      # macOS
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_html_output_basic</code></p>
+<h2 id="html-document-structure"><a class="header" href="#html-document-structure">HTML Document Structure</a></h2>
+<h3 id="basic-html-output"><a class="header" href="#basic-html-output">Basic HTML Output</a></h3>
+<pre><code class="language-bash">$ renacer --format html -- echo "test" &gt; trace.html
+</code></pre>
+<p><strong>Generated HTML:</strong></p>
+<pre><code class="language-html">&lt;!DOCTYPE html&gt;
+&lt;html lang="en"&gt;
+&lt;head&gt;
+    &lt;meta charset="UTF-8"&gt;
+    &lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;
+    &lt;title&gt;Renacer Trace Report&lt;/title&gt;
+    &lt;style&gt;
+        /* Embedded CSS styles */
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        table { border-collapse: collapse; width: 100%; }
+        th { background-color: #4a90d9; color: white; }
+        ...
+    &lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+    &lt;h1&gt;Syscall Trace Report&lt;/h1&gt;
+    &lt;table&gt;
+        &lt;tr&gt;&lt;th&gt;Syscall&lt;/th&gt;&lt;th&gt;Arguments&lt;/th&gt;&lt;th&gt;Result&lt;/th&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td class="syscall"&gt;write&lt;/td&gt;&lt;td class="args"&gt;1, "test\n", 5&lt;/td&gt;&lt;td class="result"&gt;5&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;td class="syscall"&gt;exit_group&lt;/td&gt;&lt;td class="args"&gt;0&lt;/td&gt;&lt;td class="result"&gt;?&lt;/td&gt;&lt;/tr&gt;
+    &lt;/table&gt;
+    &lt;div class="footer"&gt;Generated by Renacer - System Call Tracer&lt;/div&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_html_output_basic</code>, <code>test_html_output_contains_syscalls</code></p>
+<h2 id="integration-with-flags"><a class="header" href="#integration-with-flags">Integration with Flags</a></h2>
+<h3 id="with-statistics-mode--c"><a class="header" href="#with-statistics-mode--c">With Statistics Mode (-c)</a></h3>
+<pre><code class="language-bash">renacer --format html -c -- cargo build &gt; build-stats.html
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_html_output_with_statistics</code></p>
+<p><strong>Output includes:</strong></p>
+<ol>
+<li><strong>Syscall Trace Table</strong> - Individual syscall events</li>
+<li><strong>Statistics Summary Table</strong> - Call counts, timing, errors</li>
+</ol>
+<pre><code class="language-html">&lt;h2&gt;Statistics Summary&lt;/h2&gt;
+&lt;table class="stats-table"&gt;
+    &lt;tr&gt;&lt;th&gt;% time&lt;/th&gt;&lt;th&gt;seconds&lt;/th&gt;&lt;th&gt;usecs/call&lt;/th&gt;&lt;th&gt;calls&lt;/th&gt;&lt;th&gt;errors&lt;/th&gt;&lt;th&gt;syscall&lt;/th&gt;&lt;/tr&gt;
+    &lt;tr&gt;&lt;td&gt;45.23&lt;/td&gt;&lt;td&gt;0.012345&lt;/td&gt;&lt;td&gt;1234&lt;/td&gt;&lt;td&gt;10&lt;/td&gt;&lt;td&gt;0&lt;/td&gt;&lt;td class="syscall"&gt;read&lt;/td&gt;&lt;/tr&gt;
+    &lt;tr&gt;&lt;td&gt;32.15&lt;/td&gt;&lt;td&gt;0.008765&lt;/td&gt;&lt;td&gt;876&lt;/td&gt;&lt;td&gt;10&lt;/td&gt;&lt;td&gt;0&lt;/td&gt;&lt;td class="syscall"&gt;write&lt;/td&gt;&lt;/tr&gt;
+&lt;/table&gt;
+</code></pre>
+<h3 id="with-timing-mode--t"><a class="header" href="#with-timing-mode--t">With Timing Mode (-T)</a></h3>
+<pre><code class="language-bash">renacer --format html -T -- ./my-app &gt; trace-timing.html
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_html_output_with_timing</code></p>
+<p><strong>Output includes Duration column:</strong></p>
+<pre><code class="language-html">&lt;table&gt;
+    &lt;tr&gt;&lt;th&gt;Syscall&lt;/th&gt;&lt;th&gt;Arguments&lt;/th&gt;&lt;th&gt;Result&lt;/th&gt;&lt;th&gt;Duration&lt;/th&gt;&lt;/tr&gt;
+    &lt;tr&gt;&lt;td class="syscall"&gt;write&lt;/td&gt;&lt;td class="args"&gt;...&lt;/td&gt;&lt;td&gt;5&lt;/td&gt;&lt;td class="duration"&gt;1234 us&lt;/td&gt;&lt;/tr&gt;
+&lt;/table&gt;
+</code></pre>
+<h3 id="with-filtering--e"><a class="header" href="#with-filtering--e">With Filtering (-e)</a></h3>
+<pre><code class="language-bash">renacer --format html -e trace=file -- ./app &gt; file-ops.html
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_html_output_with_filtering</code></p>
+<p>HTML output includes only filtered syscalls (e.g., <code>open</code>, <code>read</code>, <code>write</code>, <code>close</code> for <code>trace=file</code>).</p>
+<h3 id="with-source-correlation---source"><a class="header" href="#with-source-correlation---source">With Source Correlation (--source)</a></h3>
+<pre><code class="language-bash">renacer --format html --source -- ./my-binary &gt; trace-with-source.html
+</code></pre>
+<p><strong>Output includes Source column:</strong></p>
+<pre><code class="language-html">&lt;table&gt;
+    &lt;tr&gt;&lt;th&gt;Syscall&lt;/th&gt;&lt;th&gt;Arguments&lt;/th&gt;&lt;th&gt;Result&lt;/th&gt;&lt;th&gt;Source&lt;/th&gt;&lt;/tr&gt;
+    &lt;tr&gt;&lt;td class="syscall"&gt;write&lt;/td&gt;&lt;td&gt;...&lt;/td&gt;&lt;td&gt;5&lt;/td&gt;&lt;td class="source"&gt;src/main.rs:42&lt;/td&gt;&lt;/tr&gt;
+&lt;/table&gt;
+</code></pre>
+<h2 id="css-styling-and-visual-features"><a class="header" href="#css-styling-and-visual-features">CSS Styling and Visual Features</a></h2>
+<h3 id="embedded-css-styles"><a class="header" href="#embedded-css-styles">Embedded CSS Styles</a></h3>
+<p>HTML output includes embedded CSS for:</p>
+<ul>
+<li><strong>Modern Font Stack:</strong> <code>-apple-system</code>, <code>BlinkMacSystemFont</code>, <code>Segoe UI</code>, <code>Roboto</code></li>
+<li><strong>Table Styling:</strong> Borders, padding, box-shadow</li>
+<li><strong>Zebra Striping:</strong> Alternating row colors (<code>nth-child(even)</code>)</li>
+<li><strong>Hover Effects:</strong> Row highlighting on mouse hover</li>
+<li><strong>Color Coding:</strong>
+<ul>
+<li>Syscall names: Blue (<code>#0066cc</code>)</li>
+<li>Error results: Red (<code>#cc0000</code>)</li>
+<li>Source locations: Gray (<code>#888</code>)</li>
+</ul>
+</li>
+</ul>
+<p><strong>Tested by:</strong> <code>test_html_output_standalone</code></p>
+<h3 id="standalone-output"><a class="header" href="#standalone-output">Standalone Output</a></h3>
+<p>HTML output is <strong>completely standalone</strong> with:</p>
+<ul>
+<li>✅ Embedded CSS (no external stylesheet links)</li>
+<li>✅ No JavaScript dependencies</li>
+<li>✅ No external fonts or images</li>
+<li>✅ Single-file distribution</li>
+</ul>
+<p><strong>Tested by:</strong> <code>test_html_output_standalone</code></p>
+<p>This ensures HTML reports can be:</p>
+<ul>
+<li>Shared via email</li>
+<li>Archived offline</li>
+<li>Opened without internet connection</li>
+</ul>
+<h2 id="security-features"><a class="header" href="#security-features">Security Features</a></h2>
+<h3 id="xss-prevention"><a class="header" href="#xss-prevention">XSS Prevention</a></h3>
+<p>HTML output <strong>automatically escapes</strong> special characters to prevent XSS attacks:</p>
+<pre><code class="language-bash">$ renacer --format html -- echo "&lt;script&gt;alert('xss')&lt;/script&gt;" &gt; safe.html
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_html_output_escape_special_chars</code></p>
+<p><strong>Escaped characters:</strong></p>
+<ul>
+<li><code>&lt;</code> → <code>&amp;lt;</code></li>
+<li><code>&gt;</code> → <code>&amp;gt;</code></li>
+<li><code>&amp;</code> → <code>&amp;amp;</code></li>
+<li><code>"</code> → <code>&amp;quot;</code></li>
+<li><code>'</code> → <code>&amp;#39;</code></li>
+</ul>
+<p><strong>Example output:</strong></p>
+<pre><code class="language-html">&lt;td class="args"&gt;&amp;lt;script&amp;gt;alert(&amp;#39;xss&amp;#39;)&amp;lt;/script&amp;gt;&lt;/td&gt;
+</code></pre>
+<p>The HTML output will display <code>&lt;script&gt;alert('xss')&lt;/script&gt;</code> as text (safe) instead of executing it as code.</p>
+<h3 id="security-best-practices"><a class="header" href="#security-best-practices">Security Best Practices</a></h3>
+<ol>
+<li><strong>Always use <code>--format html</code></strong> for untrusted input (syscall arguments from external sources)</li>
+<li><strong>HTML escaping</strong> is automatic (no configuration needed)</li>
+<li><strong>No inline JavaScript</strong> - CSS-only styling</li>
+<li><strong>Safe to open</strong> in any browser without security warnings</li>
+</ol>
+<h2 id="table-structure"><a class="header" href="#table-structure">Table Structure</a></h2>
+<h3 id="basic-table-layout"><a class="header" href="#basic-table-layout">Basic Table Layout</a></h3>
+<pre><code class="language-html">&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;Syscall&lt;/th&gt;
+        &lt;th&gt;Arguments&lt;/th&gt;
+        &lt;th&gt;Result&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td class="syscall"&gt;write&lt;/td&gt;
+        &lt;td class="args"&gt;1, "test", 4&lt;/td&gt;
+        &lt;td class="result"&gt;4&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_html_output_has_table_structure</code></p>
+<h3 id="dynamic-columns"><a class="header" href="#dynamic-columns">Dynamic Columns</a></h3>
+<p>Table columns adapt based on flags:</p>
+<div class="table-wrapper"><table><thead><tr><th>Flags</th><th>Columns</th></tr></thead><tbody>
+<tr><td><em>(none)</em></td><td>Syscall, Arguments, Result</td></tr>
+<tr><td><code>-T</code></td><td>Syscall, Arguments, Result, <strong>Duration</strong></td></tr>
+<tr><td><code>--source</code></td><td>Syscall, Arguments, Result, <strong>Source</strong></td></tr>
+<tr><td><code>-T --source</code></td><td>Syscall, Arguments, Result, <strong>Duration</strong>, <strong>Source</strong></td></tr>
+</tbody></table>
+</div>
+<h3 id="error-highlighting"><a class="header" href="#error-highlighting">Error Highlighting</a></h3>
+<p>Failed syscalls (negative result) are highlighted in red:</p>
+<pre><code class="language-html">&lt;td class="result result-error"&gt;-2&lt;/td&gt;  &lt;!-- ENOENT --&gt;
+&lt;td class="result result-error"&gt;-13&lt;/td&gt; &lt;!-- EACCES --&gt;
+&lt;td class="result"&gt;0&lt;/td&gt;                &lt;!-- Success --&gt;
+</code></pre>
+<p><strong>CSS:</strong></p>
+<pre><code class="language-css">.result-error {
+    color: #cc0000;
+}
+</code></pre>
+<h2 id="practical-examples"><a class="header" href="#practical-examples">Practical Examples</a></h2>
+<h3 id="example-1-build-performance-analysis"><a class="header" href="#example-1-build-performance-analysis">Example 1: Build Performance Analysis</a></h3>
+<pre><code class="language-bash">$ renacer --format html -c -T -- cargo build &gt; build-report.html
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_html_output_with_statistics</code>, <code>test_html_output_with_timing</code></p>
+<p><strong>Use case:</strong> Analyze build performance with visual statistics table</p>
+<p><strong>Report includes:</strong></p>
+<ul>
+<li>Individual syscall traces with timing</li>
+<li>Statistics summary sorted by time consumption</li>
+<li>Percentage breakdown of I/O operations</li>
+</ul>
+<h3 id="example-2-debugging-io-issues"><a class="header" href="#example-2-debugging-io-issues">Example 2: Debugging I/O Issues</a></h3>
+<pre><code class="language-bash">$ renacer --format html -e trace=file -T -- ./slow-app &gt; io-trace.html
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_html_output_with_filtering</code>, <code>test_html_output_with_timing</code></p>
+<p><strong>Use case:</strong> Focus on file I/O operations with timing</p>
+<p><strong>Report shows:</strong></p>
+<ul>
+<li>Only file-related syscalls (open, read, write, close, etc.)</li>
+<li>Duration column for identifying slow I/O</li>
+<li>Easy-to-read table format for non-technical stakeholders</li>
+</ul>
+<h3 id="example-3-sharing-trace-results"><a class="header" href="#example-3-sharing-trace-results">Example 3: Sharing Trace Results</a></h3>
+<pre><code class="language-bash">$ renacer --format html -c -T --source -- ./app &gt; detailed-trace.html
+# Email detailed-trace.html to team members
+</code></pre>
+<p><strong>Use case:</strong> Share comprehensive trace report with team</p>
+<p><strong>Benefits:</strong></p>
+<ul>
+<li>Standalone HTML file (no dependencies)</li>
+<li>Professional visual presentation</li>
+<li>Source correlation for debugging</li>
+<li>Statistics summary for overview</li>
+</ul>
+<h2 id="backward-compatibility"><a class="header" href="#backward-compatibility">Backward Compatibility</a></h2>
+<p>HTML format works alongside existing formats:</p>
+<pre><code class="language-bash">renacer --format json -- ./app &gt; trace.json  # JSON still works
+renacer --format csv -- ./app &gt; trace.csv    # CSV still works
+renacer --format html -- ./app &gt; trace.html  # New HTML format
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_html_output_backward_compatibility</code></p>
+<p>Default format remains <strong>text</strong> (strace-compatible).</p>
+<h2 id="comparison-with-other-formats"><a class="header" href="#comparison-with-other-formats">Comparison with Other Formats</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Feature</th><th>Text</th><th>JSON</th><th>CSV</th><th>HTML</th></tr></thead><tbody>
+<tr><td><strong>Human-readable</strong></td><td>✅</td><td>❌</td><td>⚠️</td><td>✅</td></tr>
+<tr><td><strong>Visual styling</strong></td><td>❌</td><td>❌</td><td>❌</td><td>✅</td></tr>
+<tr><td><strong>Programmatic parsing</strong></td><td>⚠️</td><td>✅</td><td>✅</td><td>❌</td></tr>
+<tr><td><strong>Statistics integration</strong></td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+<tr><td><strong>Standalone</strong></td><td>✅</td><td>✅</td><td>❌</td><td>✅</td></tr>
+<tr><td><strong>Shareable</strong></td><td>✅</td><td>⚠️</td><td>⚠️</td><td>✅</td></tr>
+<tr><td><strong>Browser viewable</strong></td><td>❌</td><td>⚠️</td><td>❌</td><td>✅</td></tr>
+</tbody></table>
+</div>
+<p><strong>Use HTML when:</strong></p>
+<ul>
+<li>Sharing reports with non-technical stakeholders</li>
+<li>Creating documentation or presentations</li>
+<li>Need visual distinction (error highlighting, hover effects)</li>
+<li>Archiving reports for later review</li>
+</ul>
+<p><strong>Use JSON/CSV when:</strong></p>
+<ul>
+<li>Post-processing with scripts or tools</li>
+<li>Integrating with CI/CD pipelines</li>
+<li>Machine parsing required</li>
+</ul>
+<h2 id="troubleshooting"><a class="header" href="#troubleshooting">Troubleshooting</a></h2>
+<h3 id="html-output-contains-child-process-output"><a class="header" href="#html-output-contains-child-process-output">HTML Output Contains Child Process Output</a></h3>
+<p><strong>Problem:</strong></p>
+<pre><code class="language-bash">$ renacer --format html -- bash -c "echo test" &gt; trace.html
+# HTML contains "test" text from child process
+</code></pre>
+<p><strong>Solution:</strong> HTML is generated after trace completes. Child process output appears before <code>&lt;!DOCTYPE html&gt;</code>.</p>
+<p><strong>Workaround:</strong> Redirect child stderr/stdout:</p>
+<pre><code class="language-bash">renacer --format html -- bash -c "echo test &gt;/dev/null" &gt; clean-trace.html
+</code></pre>
+<h3 id="html-not-rendering-properly"><a class="header" href="#html-not-rendering-properly">HTML Not Rendering Properly</a></h3>
+<p><strong>Check:</strong></p>
+<ol>
+<li><strong>File extension:</strong> Ensure file ends with <code>.html</code></li>
+<li><strong>Browser:</strong> Try different browser (Firefox, Chrome, Safari)</li>
+<li><strong>Encoding:</strong> HTML uses UTF-8 charset (line 191 in implementation)</li>
+</ol>
+<p><strong>Tested by:</strong> <code>test_html_output_basic</code></p>
+<h3 id="missing-statistics-table"><a class="header" href="#missing-statistics-table">Missing Statistics Table</a></h3>
+<p><strong>Cause:</strong> <code>-c</code> flag not provided</p>
+<p><strong>Solution:</strong></p>
+<pre><code class="language-bash">renacer --format html -c -- ./app &gt; with-stats.html
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_html_output_with_statistics</code></p>
+<h2 id="performance"><a class="header" href="#performance">Performance</a></h2>
+<ul>
+<li><strong>Generation time:</strong> &lt;1ms for typical traces (&lt;1000 syscalls)</li>
+<li><strong>File size:</strong> ~2-5KB base HTML + ~50-100 bytes per syscall</li>
+<li><strong>Browser performance:</strong> Tested up to 10,000 rows (smooth scrolling)</li>
+</ul>
+<p><strong>Scalability:</strong></p>
+<ul>
+<li>✅ &lt;1000 syscalls: Excellent performance</li>
+<li>✅ 1K-10K syscalls: Good performance (some browser lag on old hardware)</li>
+<li>⚠️ &gt;10K syscalls: Consider filtering or using CSV for analysis</li>
+</ul>
+<h2 id="summary"><a class="header" href="#summary">Summary</a></h2>
+<p>HTML output format provides:</p>
+<ul>
+<li>✅ <strong>Visual trace reports</strong> with modern CSS styling</li>
+<li>✅ <strong>Standalone HTML</strong> (no external dependencies)</li>
+<li>✅ <strong>XSS prevention</strong> via automatic HTML escaping</li>
+<li>✅ <strong>Statistics integration</strong> with <code>-c</code> flag</li>
+<li>✅ <strong>Responsive design</strong> with hover effects and color coding</li>
+<li>✅ <strong>Security-first</strong> approach (no JavaScript, safe for untrusted input)</li>
+<li>✅ <strong>Shareable</strong> single-file reports</li>
+<li>✅ <strong>Professional presentation</strong> for non-technical audiences</li>
+</ul>
+<p><strong>All examples tested in:</strong> <a href="../../../tests/sprint22_html_output_tests.rs"><code>tests/sprint22_html_output_tests.rs</code></a></p>
+<h2 id="related"><a class="header" href="#related">Related</a></h2>
+<ul>
+<li><a href="./format-json.html">JSON Output Format</a> - Machine-readable output</li>
+<li><a href="./format-csv.html">CSV Output Format</a> - Spreadsheet-compatible output</li>
+<li><a href="../core-concepts/statistics.html">Statistics Mode</a> - Call counts and timing</li>
+<li><a href="../examples/html-reports.html">HTML Reports Example</a> - Practical use cases</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../reference/format-csv.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../reference/exit-codes.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../reference/format-csv.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../reference/exit-codes.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../ace.js"></script>
+        <script src="../editor.js"></script>
+        <script src="../mode-rust.js"></script>
+        <script src="../theme-dawn.js"></script>
+        <script src="../theme-tomorrow_night.js"></script>
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

@@ -1,0 +1,825 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>JSON Format - The Renacer Book - Pure Rust System Call Tracing</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="A comprehensive guide to renacer: syscall tracing, DWARF correlation, and performance analysis">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "rust";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The Renacer Book - Pure Rust System Call Tracing</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer/edit/main/book/src/reference/format-json.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="json-format-specification"><a class="header" href="#json-format-specification">JSON Format Specification</a></h1>
+<p>Complete technical reference for Renacer's JSON output format.</p>
+<hr />
+<h2 id="overview"><a class="header" href="#overview">Overview</a></h2>
+<p>The JSON format provides machine-parseable syscall trace data for automation, scripting, and data analysis workflows. It outputs structured JSON to stdout with full syscall details and optional statistics.</p>
+<p><strong>Format Identifier:</strong> <code>renacer-json-v1</code></p>
+<p><strong>Sprints:</strong> 9-10 (initial), 23 (ML anomaly integration)</p>
+<hr />
+<h2 id="quick-start"><a class="header" href="#quick-start">Quick Start</a></h2>
+<h3 id="basic-usage"><a class="header" href="#basic-usage">Basic Usage</a></h3>
+<pre><code class="language-bash"># Output JSON to stdout
+renacer --format json -- ls
+
+# Pipe to jq for processing
+renacer --format json -- ls | jq '.summary'
+
+# Save to file
+renacer --format json -- ls &gt; trace.json
+
+# Pretty-print with jq
+renacer --format json -- ls | jq '.' &gt; trace.json
+</code></pre>
+<hr />
+<h2 id="json-schema"><a class="header" href="#json-schema">JSON Schema</a></h2>
+<h3 id="root-structure"><a class="header" href="#root-structure">Root Structure</a></h3>
+<pre><code class="language-json">{
+  "version": "0.4.1",
+  "format": "renacer-json-v1",
+  "syscalls": [ /* array of JsonSyscall */ ],
+  "summary": { /* JsonSummary */ },
+  "ml_analysis": { /* JsonMlAnalysis (optional) */ }
+}
+</code></pre>
+<p><strong>Field Descriptions:</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>version</code></td><td>string</td><td>✅</td><td>Renacer version (from Cargo.toml)</td></tr>
+<tr><td><code>format</code></td><td>string</td><td>✅</td><td>Format identifier (<code>renacer-json-v1</code>)</td></tr>
+<tr><td><code>syscalls</code></td><td>array</td><td>✅</td><td>List of syscall events</td></tr>
+<tr><td><code>summary</code></td><td>object</td><td>✅</td><td>Trace summary statistics</td></tr>
+<tr><td><code>ml_analysis</code></td><td>object</td><td>⚠️ Optional</td><td>ML anomaly results (if <code>--ml-anomaly</code> enabled)</td></tr>
+</tbody></table>
+</div>
+<hr />
+<h3 id="jsonsyscall-structure"><a class="header" href="#jsonsyscall-structure">JsonSyscall Structure</a></h3>
+<p>Individual syscall event structure:</p>
+<pre><code class="language-json">{
+  "name": "openat",
+  "args": ["0xffffff9c", "\"/tmp/test.txt\"", "0x2"],
+  "result": 3,
+  "duration_us": 234,
+  "source": {
+    "file": "src/main.rs",
+    "line": 42,
+    "function": "read_config"
+  }
+}
+</code></pre>
+<p><strong>Field Descriptions:</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>name</code></td><td>string</td><td>✅</td><td>Syscall name (e.g., <code>openat</code>, <code>read</code>, <code>write</code>)</td></tr>
+<tr><td><code>args</code></td><td>array[string]</td><td>✅</td><td>Arguments as formatted strings</td></tr>
+<tr><td><code>result</code></td><td>i64</td><td>✅</td><td>Return value (negative for errors)</td></tr>
+<tr><td><code>duration_us</code></td><td>u64</td><td>⚠️ Optional</td><td>Duration in microseconds (if <code>--timing</code> enabled)</td></tr>
+<tr><td><code>source</code></td><td>object</td><td>⚠️ Optional</td><td>Source location (if <code>--source</code> enabled and available)</td></tr>
+</tbody></table>
+</div>
+<p><strong>Notes:</strong></p>
+<ul>
+<li><code>args</code> are pre-formatted strings (e.g., <code>"0xffffff9c"</code>, <code>"\"/path\""</code>), not raw values</li>
+<li><code>result</code> uses signed 64-bit integer to represent both success and error codes</li>
+<li><code>duration_us</code> is omitted if timing is not enabled (<code>--timing</code> flag)</li>
+<li><code>source</code> is omitted if DWARF correlation is disabled or unavailable</li>
+</ul>
+<hr />
+<h3 id="jsonsourcelocation-structure"><a class="header" href="#jsonsourcelocation-structure">JsonSourceLocation Structure</a></h3>
+<p>Source code location information (requires <code>--source</code> flag):</p>
+<pre><code class="language-json">{
+  "file": "src/config.rs",
+  "line": 127,
+  "function": "load_config"
+}
+</code></pre>
+<p><strong>Field Descriptions:</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>file</code></td><td>string</td><td>✅</td><td>Source file path (relative or absolute from DWARF)</td></tr>
+<tr><td><code>line</code></td><td>u32</td><td>✅</td><td>Line number (1-indexed)</td></tr>
+<tr><td><code>function</code></td><td>string</td><td>⚠️ Optional</td><td>Function name (if available in DWARF)</td></tr>
+</tbody></table>
+</div>
+<p><strong>Availability:</strong> Only present when:</p>
+<ol>
+<li><code>--source</code> flag is used</li>
+<li>Traced binary has DWARF debug info (<code>-g</code> compile flag)</li>
+<li>Stack unwinding succeeds for the syscall</li>
+</ol>
+<hr />
+<h3 id="jsonsummary-structure"><a class="header" href="#jsonsummary-structure">JsonSummary Structure</a></h3>
+<p>Trace-wide summary statistics:</p>
+<pre><code class="language-json">{
+  "total_syscalls": 1234,
+  "total_time_us": 567890,
+  "exit_code": 0
+}
+</code></pre>
+<p><strong>Field Descriptions:</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>total_syscalls</code></td><td>u64</td><td>✅</td><td>Total number of syscalls traced</td></tr>
+<tr><td><code>total_time_us</code></td><td>u64</td><td>⚠️ Optional</td><td>Total time in microseconds (if <code>--timing</code> enabled)</td></tr>
+<tr><td><code>exit_code</code></td><td>i32</td><td>✅</td><td>Exit code of traced process</td></tr>
+</tbody></table>
+</div>
+<p><strong>Notes:</strong></p>
+<ul>
+<li><code>total_time_us</code> is the sum of all <code>duration_us</code> values</li>
+<li><code>total_time_us</code> is omitted if timing is not enabled</li>
+<li><code>exit_code</code> is the process exit status (0 = success, non-zero = error)</li>
+</ul>
+<hr />
+<h3 id="jsonmlanalysis-structure-sprint-23"><a class="header" href="#jsonmlanalysis-structure-sprint-23">JsonMlAnalysis Structure (Sprint 23)</a></h3>
+<p>Machine learning anomaly detection results (requires <code>--ml-anomaly</code> flag):</p>
+<pre><code class="language-json">{
+  "clusters": 3,
+  "silhouette_score": 0.742,
+  "anomalies": [
+    {
+      "syscall": "read",
+      "avg_time_us": 12456.7,
+      "cluster": 2
+    }
+  ]
+}
+</code></pre>
+<p><strong>Field Descriptions:</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>clusters</code></td><td>usize</td><td>✅</td><td>Number of clusters used (default: 3)</td></tr>
+<tr><td><code>silhouette_score</code></td><td>f64</td><td>✅</td><td>Clustering quality score (-1 to 1, higher is better)</td></tr>
+<tr><td><code>anomalies</code></td><td>array</td><td>✅</td><td>List of detected anomaly syscalls</td></tr>
+</tbody></table>
+</div>
+<p><strong>JsonMlAnomaly Fields:</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>syscall</code></td><td>string</td><td>✅</td><td>Syscall name</td></tr>
+<tr><td><code>avg_time_us</code></td><td>f64</td><td>✅</td><td>Average duration in microseconds</td></tr>
+<tr><td><code>cluster</code></td><td>usize</td><td>✅</td><td>Cluster assignment (0 to N-1)</td></tr>
+</tbody></table>
+</div>
+<p><strong>Availability:</strong> Only present when <code>--ml-anomaly</code> flag is used.</p>
+<hr />
+<h2 id="complete-example"><a class="header" href="#complete-example">Complete Example</a></h2>
+<h3 id="command"><a class="header" href="#command">Command</a></h3>
+<pre><code class="language-bash">renacer --format json --timing --source -- cat /etc/hostname
+</code></pre>
+<h3 id="output"><a class="header" href="#output">Output</a></h3>
+<pre><code class="language-json">{
+  "version": "0.4.1",
+  "format": "renacer-json-v1",
+  "syscalls": [
+    {
+      "name": "openat",
+      "args": [
+        "0xffffff9c",
+        "\"/etc/hostname\"",
+        "0x0"
+      ],
+      "result": 3,
+      "duration_us": 234,
+      "source": {
+        "file": "/usr/src/coreutils-9.4/src/cat.c",
+        "line": 127,
+        "function": "cat"
+      }
+    },
+    {
+      "name": "fstat",
+      "args": [
+        "3",
+        "{st_mode=S_IFREG|0644, st_size=10, ...}"
+      ],
+      "result": 0,
+      "duration_us": 45
+    },
+    {
+      "name": "read",
+      "args": [
+        "3",
+        "\"myhost\\n\"",
+        "32768"
+      ],
+      "result": 7,
+      "duration_us": 89,
+      "source": {
+        "file": "/usr/src/coreutils-9.4/src/cat.c",
+        "line": 145,
+        "function": "cat"
+      }
+    },
+    {
+      "name": "write",
+      "args": [
+        "1",
+        "\"myhost\\n\"",
+        "7"
+      ],
+      "result": 7,
+      "duration_us": 123
+    },
+    {
+      "name": "close",
+      "args": ["3"],
+      "result": 0,
+      "duration_us": 12
+    },
+    {
+      "name": "exit_group",
+      "args": ["0"],
+      "result": -1
+    }
+  ],
+  "summary": {
+    "total_syscalls": 6,
+    "total_time_us": 503,
+    "exit_code": 0
+  }
+}
+</code></pre>
+<hr />
+<h2 id="field-encoding-rules"><a class="header" href="#field-encoding-rules">Field Encoding Rules</a></h2>
+<h3 id="string-escaping"><a class="header" href="#string-escaping">String Escaping</a></h3>
+<p>All strings follow JSON standard escaping (RFC 8259):</p>
+<pre><code class="language-json">{
+  "name": "write",
+  "args": [
+    "1",
+    "\"Hello\\nWorld\\t!\"",
+    "13"
+  ]
+}
+</code></pre>
+<p><strong>Special Characters:</strong></p>
+<ul>
+<li><code>\"</code> - Double quote</li>
+<li><code>\\</code> - Backslash</li>
+<li><code>\n</code> - Newline</li>
+<li><code>\t</code> - Tab</li>
+<li><code>\r</code> - Carriage return</li>
+</ul>
+<hr />
+<h3 id="argument-formatting"><a class="header" href="#argument-formatting">Argument Formatting</a></h3>
+<p>Arguments are pre-formatted as strings with type-specific representations:</p>
+<div class="table-wrapper"><table><thead><tr><th>Type</th><th>Example</th><th>Description</th></tr></thead><tbody>
+<tr><td><strong>Integer</strong></td><td><code>"42"</code></td><td>Decimal representation</td></tr>
+<tr><td><strong>Hex</strong></td><td><code>"0xffffff9c"</code></td><td>Hexadecimal (for constants, flags)</td></tr>
+<tr><td><strong>String</strong></td><td><code>"\"/tmp/file\""</code></td><td>Quoted string with escaping</td></tr>
+<tr><td><strong>Pointer</strong></td><td><code>"0x7ffff7a00000"</code></td><td>Hexadecimal address</td></tr>
+<tr><td><strong>Struct</strong></td><td><code>"{st_mode=0644, ...}"</code></td><td>Abbreviated struct notation</td></tr>
+<tr><td><strong>Flag Bitset</strong></td><td><code>"O_RDONLY|O_CLOEXEC"</code></td><td>Symbolic flags joined with <code>|</code></td></tr>
+</tbody></table>
+</div>
+<p><strong>Note:</strong> Argument formatting matches strace conventions for familiarity.</p>
+<hr />
+<h3 id="return-value-encoding"><a class="header" href="#return-value-encoding">Return Value Encoding</a></h3>
+<p>Return values use signed 64-bit integers to represent both success and errors:</p>
+<div class="table-wrapper"><table><thead><tr><th>Return Value</th><th>Meaning</th><th>Example</th></tr></thead><tbody>
+<tr><td><strong>≥ 0</strong></td><td>Success</td><td><code>3</code> (file descriptor), <code>256</code> (bytes read)</td></tr>
+<tr><td><strong>&lt; 0</strong></td><td>Error (errno)</td><td><code>-2</code> (ENOENT), <code>-13</code> (EACCES)</td></tr>
+</tbody></table>
+</div>
+<p><strong>Error Lookup:</strong></p>
+<pre><code class="language-bash"># Use errno lookup to decode
+renacer --format json -- ls /nonexistent | jq '.syscalls[] | select(.result &lt; 0)'
+# result: -2 → ENOENT (No such file or directory)
+</code></pre>
+<hr />
+<h3 id="optional-field-omission"><a class="header" href="#optional-field-omission">Optional Field Omission</a></h3>
+<p>Fields marked as optional are <strong>completely omitted</strong> from JSON output when not available:</p>
+<p><strong>With <code>--timing</code> enabled:</strong></p>
+<pre><code class="language-json">{
+  "name": "read",
+  "result": 256,
+  "duration_us": 1234
+}
+</code></pre>
+<p><strong>Without <code>--timing</code>:</strong></p>
+<pre><code class="language-json">{
+  "name": "read",
+  "result": 256
+}
+</code></pre>
+<p><strong>Benefit:</strong> Smaller output size, easier parsing (no need to check for <code>null</code>).</p>
+<hr />
+<h2 id="common-use-cases"><a class="header" href="#common-use-cases">Common Use Cases</a></h2>
+<h3 id="1-extract-specific-syscalls"><a class="header" href="#1-extract-specific-syscalls">1. Extract Specific Syscalls</a></h3>
+<pre><code class="language-bash"># Find all failed syscalls (result &lt; 0)
+renacer --format json -- ls /tmp | jq '.syscalls[] | select(.result &lt; 0)'
+
+# Extract only file operations
+renacer --format json -e trace=file -- ls | jq '.syscalls[] | .name' | sort | uniq -c
+</code></pre>
+<hr />
+<h3 id="2-performance-analysis"><a class="header" href="#2-performance-analysis">2. Performance Analysis</a></h3>
+<pre><code class="language-bash"># Find slowest syscalls
+renacer --format json --timing -- make | \
+  jq '.syscalls | sort_by(.duration_us) | reverse | .[0:10]'
+
+# Calculate average duration by syscall type
+renacer --format json --timing -- ./myapp | \
+  jq '.syscalls | group_by(.name) | map({name: .[0].name, avg_us: (map(.duration_us) | add / length)})'
+</code></pre>
+<hr />
+<h3 id="3-source-correlation-analysis"><a class="header" href="#3-source-correlation-analysis">3. Source Correlation Analysis</a></h3>
+<pre><code class="language-bash"># Group syscalls by source file
+renacer --format json --source -- ./myapp | \
+  jq '.syscalls | group_by(.source.file) | map({file: .[0].source.file, count: length})'
+
+# Find syscalls from specific function
+renacer --format json --source -- ./myapp | \
+  jq '.syscalls[] | select(.source.function == "main")'
+</code></pre>
+<hr />
+<h3 id="4-anomaly-detection"><a class="header" href="#4-anomaly-detection">4. Anomaly Detection</a></h3>
+<pre><code class="language-bash"># Extract ML-detected anomalies
+renacer --format json --ml-anomaly -- ./myapp | \
+  jq '.ml_analysis.anomalies[] | select(.avg_time_us &gt; 1000)'
+
+# Compare silhouette scores
+renacer --format json --ml-anomaly --ml-clusters 3 -- ./myapp | jq '.ml_analysis.silhouette_score'
+</code></pre>
+<hr />
+<h2 id="integration-examples"><a class="header" href="#integration-examples">Integration Examples</a></h2>
+<h3 id="python-pandas"><a class="header" href="#python-pandas">Python (pandas)</a></h3>
+<pre><code class="language-python">import json
+import pandas as pd
+
+# Load JSON trace
+with open('trace.json') as f:
+    data = json.load(f)
+
+# Convert to DataFrame
+df = pd.DataFrame(data['syscalls'])
+
+# Analyze duration distribution
+print(df.groupby('name')['duration_us'].describe())
+
+# Find outliers (&gt;3σ)
+mean = df['duration_us'].mean()
+std = df['duration_us'].std()
+outliers = df[df['duration_us'] &gt; mean + 3*std]
+print(outliers)
+</code></pre>
+<hr />
+<h3 id="python-jq-alternative"><a class="header" href="#python-jq-alternative">Python (jq alternative)</a></h3>
+<pre><code class="language-python">import json
+import sys
+
+# Read from stdin
+data = json.load(sys.stdin)
+
+# Filter failed syscalls
+failed = [s for s in data['syscalls'] if s['result'] &lt; 0]
+print(json.dumps(failed, indent=2))
+</code></pre>
+<p><strong>Usage:</strong></p>
+<pre><code class="language-bash">renacer --format json -- ls /tmp | python3 filter.py
+</code></pre>
+<hr />
+<h3 id="nodejs"><a class="header" href="#nodejs">Node.js</a></h3>
+<pre><code class="language-javascript">const fs = require('fs');
+
+// Read JSON trace
+const data = JSON.parse(fs.readFileSync('trace.json', 'utf8'));
+
+// Group by syscall name
+const grouped = data.syscalls.reduce((acc, sc) =&gt; {
+  acc[sc.name] = (acc[sc.name] || 0) + 1;
+  return acc;
+}, {});
+
+console.log(grouped);
+</code></pre>
+<hr />
+<h3 id="jq-queries"><a class="header" href="#jq-queries">jq Queries</a></h3>
+<p><strong>Count syscalls by type:</strong></p>
+<pre><code class="language-bash">renacer --format json -- ls | \
+  jq '.syscalls | group_by(.name) | map({name: .[0].name, count: length})'
+</code></pre>
+<p><strong>Find slow syscalls (&gt;1ms):</strong></p>
+<pre><code class="language-bash">renacer --format json --timing -- ./myapp | \
+  jq '.syscalls[] | select(.duration_us &gt; 1000)'
+</code></pre>
+<p><strong>Extract file paths from openat calls:</strong></p>
+<pre><code class="language-bash">renacer --format json -- ls /tmp | \
+  jq '.syscalls[] | select(.name == "openat") | .args[1]'
+</code></pre>
+<p><strong>Calculate total time:</strong></p>
+<pre><code class="language-bash">renacer --format json --timing -- ls | jq '.summary.total_time_us'
+</code></pre>
+<p><strong>Check for errors:</strong></p>
+<pre><code class="language-bash">renacer --format json -- ls /tmp | \
+  jq '.syscalls | map(select(.result &lt; 0)) | length'
+</code></pre>
+<hr />
+<h2 id="performance-characteristics"><a class="header" href="#performance-characteristics">Performance Characteristics</a></h2>
+<h3 id="output-size"><a class="header" href="#output-size">Output Size</a></h3>
+<p>Approximate JSON output size (uncompressed):</p>
+<div class="table-wrapper"><table><thead><tr><th>Syscalls</th><th>Text Format</th><th>JSON Format</th><th>Ratio</th></tr></thead><tbody>
+<tr><td>100</td><td>15 KB</td><td>25 KB</td><td>1.7×</td></tr>
+<tr><td>1,000</td><td>150 KB</td><td>250 KB</td><td>1.7×</td></tr>
+<tr><td>10,000</td><td>1.5 MB</td><td>2.5 MB</td><td>1.7×</td></tr>
+<tr><td>100,000</td><td>15 MB</td><td>25 MB</td><td>1.7×</td></tr>
+</tbody></table>
+</div>
+<p><strong>Compression:</strong></p>
+<pre><code class="language-bash"># gzip reduces JSON by ~70%
+renacer --format json -- make | gzip &gt; trace.json.gz
+# 2.5 MB → 750 KB
+</code></pre>
+<hr />
+<h3 id="generation-overhead"><a class="header" href="#generation-overhead">Generation Overhead</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>Format</th><th>Overhead vs Text</th><th>Reason</th></tr></thead><tbody>
+<tr><td>Text</td><td>0% (baseline)</td><td>Direct write</td></tr>
+<tr><td>JSON</td><td>+5-10%</td><td>Serialization, escaping, pretty-printing</td></tr>
+</tbody></table>
+</div>
+<p><strong>Recommendation:</strong> Use JSON for analysis, text for real-time monitoring.</p>
+<hr />
+<h3 id="parsing-speed"><a class="header" href="#parsing-speed">Parsing Speed</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>Tool</th><th>100K Syscalls</th><th>Notes</th></tr></thead><tbody>
+<tr><td><code>jq</code></td><td>~500ms</td><td>Fast C implementation</td></tr>
+<tr><td>Python <code>json</code></td><td>~800ms</td><td>Pure Python parser</td></tr>
+<tr><td>Node.js <code>JSON.parse</code></td><td>~300ms</td><td>V8 optimized</td></tr>
+<tr><td>pandas <code>read_json</code></td><td>~1,200ms</td><td>DataFrame overhead</td></tr>
+</tbody></table>
+</div>
+<p><strong>Tip:</strong> Use <code>jq</code> for quick queries, Python/Node.js for complex analysis.</p>
+<hr />
+<h2 id="format-evolution"><a class="header" href="#format-evolution">Format Evolution</a></h2>
+<h3 id="version-history"><a class="header" href="#version-history">Version History</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>Version</th><th>Changes</th></tr></thead><tbody>
+<tr><td><code>renacer-json-v1</code></td><td>Initial format (Sprint 9-10)</td></tr>
+<tr><td><code>renacer-json-v1</code></td><td>Added <code>ml_analysis</code> field (Sprint 23)</td></tr>
+</tbody></table>
+</div>
+<p><strong>Forward Compatibility:</strong></p>
+<ul>
+<li>New optional fields may be added in future versions</li>
+<li>Existing fields will <strong>not</strong> change type or meaning</li>
+<li>Parsers should ignore unknown fields</li>
+</ul>
+<p><strong>Backward Compatibility:</strong></p>
+<ul>
+<li>Old parsers can read new JSON (ignore unknown fields)</li>
+<li>New parsers can read old JSON (missing optional fields)</li>
+</ul>
+<hr />
+<h3 id="future-considerations-sprint-34"><a class="header" href="#future-considerations-sprint-34">Future Considerations (Sprint 34+)</a></h3>
+<p>Potential additions (not yet implemented):</p>
+<ol>
+<li>
+<p><strong>Multi-process support:</strong></p>
+<pre><code class="language-json">{
+  "processes": [
+    {
+      "pid": 12345,
+      "syscalls": [ /* ... */ ]
+    }
+  ]
+}
+</code></pre>
+</li>
+<li>
+<p><strong>Nanosecond precision:</strong></p>
+<pre><code class="language-json">{
+  "duration_ns": 1234567
+}
+</code></pre>
+</li>
+<li>
+<p><strong>Structured arguments:</strong></p>
+<pre><code class="language-json">{
+  "args_structured": {
+    "dirfd": -100,
+    "pathname": "/tmp/test",
+    "flags": ["O_RDONLY", "O_CLOEXEC"]
+  }
+}
+</code></pre>
+</li>
+</ol>
+<p><strong>Note:</strong> These are <strong>future considerations only</strong> - current format is stable.</p>
+<hr />
+<h2 id="error-handling"><a class="header" href="#error-handling">Error Handling</a></h2>
+<h3 id="invalid-json"><a class="header" href="#invalid-json">Invalid JSON</a></h3>
+<p>If Renacer generates invalid JSON (bug), use <code>jq</code> to validate:</p>
+<pre><code class="language-bash">renacer --format json -- ls | jq '.' &gt; /dev/null
+# Error: parse error: Expected separator between values at line 42, column 3
+</code></pre>
+<p><strong>Report bugs:</strong> https://github.com/pmat/renacer/issues</p>
+<hr />
+<h3 id="incomplete-output"><a class="header" href="#incomplete-output">Incomplete Output</a></h3>
+<p>If traced process crashes or is killed, JSON may be incomplete:</p>
+<pre><code class="language-json">{
+  "version": "0.4.1",
+  "format": "renacer-json-v1",
+  "syscalls": [
+    /* ... partial data ... */
+</code></pre>
+<p><strong>Workaround:</strong> Use <code>jq -s '.'</code> to parse partial JSON:</p>
+<pre><code class="language-bash">renacer --format json -- ./crash | jq -s '.' 2&gt;/dev/null
+</code></pre>
+<hr />
+<h2 id="comparison-with-other-formats"><a class="header" href="#comparison-with-other-formats">Comparison with Other Formats</a></h2>
+<h3 id="json-vs-text"><a class="header" href="#json-vs-text">JSON vs Text</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>Aspect</th><th>Text</th><th>JSON</th></tr></thead><tbody>
+<tr><td><strong>Human-readable</strong></td><td>✅ Yes</td><td>❌ No (needs jq)</td></tr>
+<tr><td><strong>Machine-parseable</strong></td><td>⚠️ Regex</td><td>✅ Native</td></tr>
+<tr><td><strong>File size</strong></td><td>Smaller</td><td>Larger (+70%)</td></tr>
+<tr><td><strong>Processing</strong></td><td>grep/awk</td><td>jq/Python</td></tr>
+<tr><td><strong>Streaming</strong></td><td>✅ Yes</td><td>⚠️ Buffered</td></tr>
+</tbody></table>
+</div>
+<hr />
+<h3 id="json-vs-csv"><a class="header" href="#json-vs-csv">JSON vs CSV</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>Aspect</th><th>JSON</th><th>CSV</th></tr></thead><tbody>
+<tr><td><strong>Nested data</strong></td><td>✅ Yes (source, ml_analysis)</td><td>❌ Flat only</td></tr>
+<tr><td><strong>Arrays</strong></td><td>✅ Native</td><td>⚠️ Concatenated strings</td></tr>
+<tr><td><strong>Tooling</strong></td><td>jq, Python</td><td>Excel, R</td></tr>
+<tr><td><strong>Streaming</strong></td><td>⚠️ Buffered</td><td>✅ Line-based</td></tr>
+</tbody></table>
+</div>
+<hr />
+<h2 id="schema-validation"><a class="header" href="#schema-validation">Schema Validation</a></h2>
+<h3 id="json-schema-draft-07"><a class="header" href="#json-schema-draft-07">JSON Schema (Draft-07)</a></h3>
+<pre><code class="language-json">{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["version", "format", "syscalls", "summary"],
+  "properties": {
+    "version": { "type": "string" },
+    "format": { "const": "renacer-json-v1" },
+    "syscalls": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "args", "result"],
+        "properties": {
+          "name": { "type": "string" },
+          "args": { "type": "array", "items": { "type": "string" } },
+          "result": { "type": "integer" },
+          "duration_us": { "type": "integer", "minimum": 0 },
+          "source": {
+            "type": "object",
+            "required": ["file", "line"],
+            "properties": {
+              "file": { "type": "string" },
+              "line": { "type": "integer", "minimum": 1 },
+              "function": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["total_syscalls", "exit_code"],
+      "properties": {
+        "total_syscalls": { "type": "integer", "minimum": 0 },
+        "total_time_us": { "type": "integer", "minimum": 0 },
+        "exit_code": { "type": "integer" }
+      }
+    },
+    "ml_analysis": {
+      "type": "object",
+      "required": ["clusters", "silhouette_score", "anomalies"],
+      "properties": {
+        "clusters": { "type": "integer", "minimum": 2 },
+        "silhouette_score": { "type": "number", "minimum": -1, "maximum": 1 },
+        "anomalies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["syscall", "avg_time_us", "cluster"],
+            "properties": {
+              "syscall": { "type": "string" },
+              "avg_time_us": { "type": "number" },
+              "cluster": { "type": "integer", "minimum": 0 }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+</code></pre>
+<p><strong>Validation:</strong></p>
+<pre><code class="language-bash"># Using ajv-cli
+npm install -g ajv-cli
+renacer --format json -- ls &gt; trace.json
+ajv validate -s schema.json -d trace.json
+</code></pre>
+<hr />
+<h2 id="related"><a class="header" href="#related">Related</a></h2>
+<ul>
+<li><a href="./output-formats.html">Output Formats Overview</a> - Format selection guide</li>
+<li><a href="./cli.html">CLI Reference</a> - <code>--format json</code> flag documentation</li>
+<li><a href="./format-csv.html">CSV Format</a> - CSV format specification</li>
+<li><a href="./format-text.html">Text Format</a> - Text format specification</li>
+<li><a href="../advanced/machine-learning.html">Machine Learning</a> - ML anomaly detection details</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../reference/format-text.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../reference/format-csv.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../reference/format-text.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../reference/format-csv.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../ace.js"></script>
+        <script src="../editor.js"></script>
+        <script src="../mode-rust.js"></script>
+        <script src="../theme-dawn.js"></script>
+        <script src="../theme-tomorrow_night.js"></script>
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

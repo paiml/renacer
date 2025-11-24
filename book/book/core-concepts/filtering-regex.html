@@ -1,0 +1,538 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Regex Patterns - The Renacer Book - Pure Rust System Call Tracing</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="A comprehensive guide to renacer: syscall tracing, DWARF correlation, and performance analysis">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "rust";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The Renacer Book - Pure Rust System Call Tracing</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer/edit/main/book/src/core-concepts/filtering-regex.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="regex-patterns"><a class="header" href="#regex-patterns">Regex Patterns</a></h1>
+<p><strong>Regex patterns</strong> provide powerful pattern matching for syscall filtering. Instead of listing individual syscalls or using predefined classes, you can use regular expressions to match syscall names flexibly.</p>
+<h2 id="why-use-regex"><a class="header" href="#why-use-regex">Why Use Regex?</a></h2>
+<h3 id="without-regex"><a class="header" href="#without-regex">Without Regex</a></h3>
+<pre><code class="language-bash"># Manually list all *at variants
+renacer -e 'trace=openat,fstatat,renameat,linkat,symlinkat,readlinkat,unlinkat' -- ls
+</code></pre>
+<p><strong>Problem:</strong> Tedious, error-prone, easy to miss some syscalls.</p>
+<h3 id="with-regex"><a class="header" href="#with-regex">With Regex</a></h3>
+<pre><code class="language-bash"># Match all syscalls ending with "at"
+renacer -e 'trace=/.*at$/' -- ls
+</code></pre>
+<p><strong>Result:</strong> Automatically matches all *at syscalls.</p>
+<h2 id="regex-syntax"><a class="header" href="#regex-syntax">Regex Syntax</a></h2>
+<h3 id="pattern-delimiters"><a class="header" href="#pattern-delimiters">Pattern Delimiters</a></h3>
+<p>Regex patterns must be enclosed in <strong>forward slashes</strong>: <code>/pattern/</code></p>
+<pre><code class="language-bash">renacer -e 'trace=/pattern/' -- command
+</code></pre>
+<p><strong>Valid:</strong></p>
+<pre><code class="language-bash">renacer -e 'trace=/^open.*/' -- ls
+</code></pre>
+<p><strong>Invalid:</strong></p>
+<pre><code class="language-bash">renacer -e 'trace=^open.*' -- ls  # Missing slashes
+</code></pre>
+<h3 id="supported-regex-features"><a class="header" href="#supported-regex-features">Supported Regex Features</a></h3>
+<p>Renacer uses the Rust <code>regex</code> crate (Perl-compatible):</p>
+<ul>
+<li><strong>Anchors</strong>: <code>^</code> (start), <code>$</code> (end)</li>
+<li><strong>Wildcards</strong>: <code>.</code> (any char), <code>.*</code> (any chars)</li>
+<li><strong>Character classes</strong>: <code>[abc]</code>, <code>[0-9]</code>, <code>[a-z]</code></li>
+<li><strong>Quantifiers</strong>: <code>*</code> (0+), <code>+</code> (1+), <code>?</code> (0-1), <code>{n}</code>, <code>{n,m}</code></li>
+<li><strong>Groups</strong>: <code>(...)</code>, <code>(?:...)</code> (non-capturing)</li>
+<li><strong>Alternation</strong>: <code>|</code> (OR)</li>
+<li><strong>Case-insensitive</strong>: <code>(?i)pattern</code></li>
+</ul>
+<h2 id="basic-patterns"><a class="header" href="#basic-patterns">Basic Patterns</a></h2>
+<h3 id="prefix-matching"><a class="header" href="#prefix-matching">Prefix Matching</a></h3>
+<p>Match syscalls starting with a pattern:</p>
+<pre><code class="language-bash">$ renacer -e 'trace=/^open.*/' -- ls
+openat(AT_FDCWD, "/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 3
+openat(AT_FDCWD, ".", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 3
+# Matches: open, openat, open_by_handle_at
+</code></pre>
+<p><strong>Regex:</strong> <code>/^open.*/</code></p>
+<ul>
+<li><code>^</code> - Start of string</li>
+<li><code>open</code> - Literal "open"</li>
+<li><code>.*</code> - Any characters (0 or more)</li>
+</ul>
+<h3 id="suffix-matching"><a class="header" href="#suffix-matching">Suffix Matching</a></h3>
+<p>Match syscalls ending with a pattern:</p>
+<pre><code class="language-bash">$ renacer -e 'trace=/.*at$/' -- ls
+openat(AT_FDCWD, ".", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 3
+fstatat(AT_FDCWD, "file.txt", {...}, 0) = 0
+renameat(AT_FDCWD, "old.txt", AT_FDCWD, "new.txt") = 0
+# Matches: openat, fstatat, renameat, linkat, etc.
+</code></pre>
+<p><strong>Regex:</strong> <code>/.*at$/</code></p>
+<ul>
+<li><code>.*</code> - Any characters (0 or more)</li>
+<li><code>at</code> - Literal "at"</li>
+<li><code>$</code> - End of string</li>
+</ul>
+<h3 id="exact-match"><a class="header" href="#exact-match">Exact Match</a></h3>
+<p>Match syscalls exactly:</p>
+<pre><code class="language-bash">$ renacer -e 'trace=/^read$/' -- cat file.txt
+read(3, "contents...\n", 131072) = 13
+# Matches only "read", not "readv", "pread64", etc.
+</code></pre>
+<p><strong>Regex:</strong> <code>/^read$/</code></p>
+<ul>
+<li><code>^</code> - Start</li>
+<li><code>read</code> - Literal "read"</li>
+<li><code>$</code> - End</li>
+</ul>
+<h3 id="substring-match"><a class="header" href="#substring-match">Substring Match</a></h3>
+<p>Match syscalls containing a pattern:</p>
+<pre><code class="language-bash">$ renacer -e 'trace=/stat/' -- ls
+fstat(3, {...}) = 0
+fstatat(AT_FDCWD, "file.txt", {...}, 0) = 0
+# Matches any syscall with "stat" anywhere: stat, fstat, lstat, fstatat, etc.
+</code></pre>
+<h2 id="or-patterns"><a class="header" href="#or-patterns">OR Patterns</a></h2>
+<h3 id="multiple-alternatives"><a class="header" href="#multiple-alternatives">Multiple Alternatives</a></h3>
+<pre><code class="language-bash">$ renacer -e 'trace=/read|write/' -- cat file.txt &gt; output.txt
+read(3, "contents...\n", 131072) = 13
+write(4, "contents...\n", 13) = 13
+# Matches: read, readv, pread64, write, writev, pwrite64, etc.
+</code></pre>
+<p><strong>Regex:</strong> <code>/read|write/</code></p>
+<ul>
+<li><code>read</code> - First alternative</li>
+<li><code>|</code> - OR operator</li>
+<li><code>write</code> - Second alternative</li>
+</ul>
+<h3 id="specific-alternatives"><a class="header" href="#specific-alternatives">Specific Alternatives</a></h3>
+<pre><code class="language-bash">$ renacer -e 'trace=/^(read|write|close)$/' -- ./app
+read(3, ...) = 42
+write(4, ...) = 42
+close(3) = 0
+# Matches ONLY: read, write, close (exact matches)
+</code></pre>
+<p><strong>Regex:</strong> <code>/^(read|write|close)$/</code></p>
+<ul>
+<li><code>^</code> - Start</li>
+<li><code>(read|write|close)</code> - Exact alternatives</li>
+<li><code>$</code> - End</li>
+</ul>
+<h2 id="advanced-patterns"><a class="header" href="#advanced-patterns">Advanced Patterns</a></h2>
+<h3 id="case-insensitive"><a class="header" href="#case-insensitive">Case-Insensitive</a></h3>
+<pre><code class="language-bash">$ renacer -e 'trace=/(?i)OPEN/' -- ls
+open("/etc/ld.so.cache", ...) = 3
+openat(AT_FDCWD, ".", ...) = 3
+# Matches: open, OPEN, Open, oPeN, etc.
+</code></pre>
+<p><strong>Regex:</strong> <code>/(?i)OPEN/</code></p>
+<ul>
+<li><code>(?i)</code> - Case-insensitive flag</li>
+<li><code>OPEN</code> - Pattern (matches any case)</li>
+</ul>
+<h3 id="character-classes"><a class="header" href="#character-classes">Character Classes</a></h3>
+<pre><code class="language-bash">$ renacer -e 'trace=/^[rw].*/' -- cat file.txt &gt; output.txt
+read(3, ...) = 42
+write(4, ...) = 42
+# Matches syscalls starting with 'r' or 'w'
+</code></pre>
+<p><strong>Regex:</strong> <code>/^[rw].*/</code></p>
+<ul>
+<li><code>^</code> - Start</li>
+<li><code>[rw]</code> - 'r' OR 'w'</li>
+<li><code>.*</code> - Any characters</li>
+</ul>
+<h3 id="quantifiers"><a class="header" href="#quantifiers">Quantifiers</a></h3>
+<pre><code class="language-bash">$ renacer -e 'trace=/^.{4,6}$/' -- ./app
+read(3, ...) = 42    # 4 chars
+write(4, ...) = 42   # 5 chars
+close(3) = 0         # 5 chars
+# Matches syscalls with 4-6 character names
+</code></pre>
+<p><strong>Regex:</strong> <code>/^.{4,6}$/</code></p>
+<ul>
+<li><code>^</code> - Start</li>
+<li><code>.{4,6}</code> - Any 4-6 characters</li>
+<li><code>$</code> - End</li>
+</ul>
+<h2 id="combining-regex-with-other-filters"><a class="header" href="#combining-regex-with-other-filters">Combining Regex with Other Filters</a></h2>
+<h3 id="regex--classes"><a class="header" href="#regex--classes">Regex + Classes</a></h3>
+<pre><code class="language-bash">$ renacer -e 'trace=file,/^recv.*/' -- wget https://example.com
+# Matches all file operations + recv-related syscalls
+openat(...) = 3        # From 'file' class
+read(...) = 1024       # From 'file' class
+recvfrom(...) = 512    # From regex /^recv.*/
+</code></pre>
+<h3 id="regex--literals"><a class="header" href="#regex--literals">Regex + Literals</a></h3>
+<pre><code class="language-bash">$ renacer -e 'trace=/^open.*/,close,read' -- ./app
+# Matches: open*, close (exact), read (exact)
+openat(...) = 3        # From regex
+open(...) = 4          # From regex
+close(3) = 0           # Literal
+read(4, ...) = 42      # Literal
+</code></pre>
+<h3 id="regex--negation"><a class="header" href="#regex--negation">Regex + Negation</a></h3>
+<pre><code class="language-bash">$ renacer -e 'trace=/^open.*/,!/openat/' -- ls
+open("/etc/ld.so.cache", ...) = 3
+# Matches open* EXCEPT openat
+</code></pre>
+<p><strong>Process:</strong></p>
+<ol>
+<li><code>/^open.*/</code> - Include all syscalls starting with "open"</li>
+<li><code>!/openat/</code> - Exclude "openat" specifically</li>
+</ol>
+<h2 id="common-use-cases"><a class="header" href="#common-use-cases">Common Use Cases</a></h2>
+<h3 id="1-all-variants-of-a-syscall"><a class="header" href="#1-all-variants-of-a-syscall">1. All Variants of a Syscall</a></h3>
+<p><strong>Problem:</strong> Want all read variants (read, readv, pread64, etc.)</p>
+<pre><code class="language-bash">$ renacer -e 'trace=/^read/' -- ./app
+read(3, ...) = 1024
+readv(4, ...) = 2048
+pread64(5, ..., 0) = 512
+</code></pre>
+<h3 id="2-modern-at-syscalls"><a class="header" href="#2-modern-at-syscalls">2. Modern *at Syscalls</a></h3>
+<p><strong>Problem:</strong> Focus on *at syscalls (modern POSIX API)</p>
+<pre><code class="language-bash">$ renacer -e 'trace=/.*at$/' -- ./app
+openat(AT_FDCWD, "/etc/passwd", O_RDONLY) = 3
+fstatat(AT_FDCWD, "file.txt", {...}, 0) = 0
+renameat(AT_FDCWD, "old", AT_FDCWD, "new") = 0
+</code></pre>
+<h3 id="3-short-syscall-names"><a class="header" href="#3-short-syscall-names">3. Short Syscall Names</a></h3>
+<p><strong>Problem:</strong> Filter to simple syscalls (short names)</p>
+<pre><code class="language-bash">$ renacer -e 'trace=/^.{1,5}$/' -- ./app
+open(...) = 3   # 4 chars
+read(...) = 42  # 4 chars
+write(...) = 42 # 5 chars
+close(...) = 0  # 5 chars
+# Excludes: openat (6), fstatat (7), etc.
+</code></pre>
+<h3 id="4-network-sendreceive"><a class="header" href="#4-network-sendreceive">4. Network Send/Receive</a></h3>
+<p><strong>Problem:</strong> All network send and receive operations</p>
+<pre><code class="language-bash">$ renacer -e 'trace=/send|recv/' -- curl https://api.example.com
+sendto(...) = 120
+recvfrom(...) = 1024
+sendmsg(...) = 256
+recvmsg(...) = 512
+</code></pre>
+<h2 id="troubleshooting"><a class="header" href="#troubleshooting">Troubleshooting</a></h2>
+<h3 id="issue-regex-not-matching"><a class="header" href="#issue-regex-not-matching">Issue: Regex Not Matching</a></h3>
+<p><strong>Symptoms:</strong></p>
+<pre><code class="language-bash">$ renacer -e 'trace=^open.*' -- ls
+# No output or error
+</code></pre>
+<p><strong>Cause:</strong> Missing slashes around regex pattern.</p>
+<p><strong>Fix:</strong></p>
+<pre><code class="language-bash">$ renacer -e 'trace=/^open.*/' -- ls
+</code></pre>
+<h3 id="issue-too-many-matches"><a class="header" href="#issue-too-many-matches">Issue: Too Many Matches</a></h3>
+<p><strong>Symptoms:</strong></p>
+<pre><code class="language-bash">$ renacer -e 'trace=/stat/' -- ls
+# Matches stat, fstat, lstat, fstatat, newfstatat, statfs, etc.
+</code></pre>
+<p><strong>Cause:</strong> Pattern too broad.</p>
+<p><strong>Fix:</strong> Be more specific:</p>
+<pre><code class="language-bash">$ renacer -e 'trace=/^stat$/' -- ls
+# Matches ONLY "stat" (exact)
+</code></pre>
+<h3 id="issue-invalid-regex-error"><a class="header" href="#issue-invalid-regex-error">Issue: Invalid Regex Error</a></h3>
+<p><strong>Symptoms:</strong></p>
+<pre><code class="language-bash">$ renacer -e 'trace=/[/' -- ls
+Error: Invalid regex pattern: unclosed character class
+</code></pre>
+<p><strong>Cause:</strong> Malformed regex syntax.</p>
+<p><strong>Fix:</strong> Check regex syntax:</p>
+<pre><code class="language-bash">$ renacer -e 'trace=/\[/' -- ls  # Escape special chars
+</code></pre>
+<h2 id="performance-considerations"><a class="header" href="#performance-considerations">Performance Considerations</a></h2>
+<h3 id="regex-compilation-cost"><a class="header" href="#regex-compilation-cost">Regex Compilation Cost</a></h3>
+<p>Renacer compiles regex patterns once at startup. No per-syscall regex cost.</p>
+<pre><code class="language-bash"># Fast: Regex compiled once
+renacer -e 'trace=/^open.*/' -- ./app
+</code></pre>
+<h3 id="specific-vs-broad-patterns"><a class="header" href="#specific-vs-broad-patterns">Specific vs. Broad Patterns</a></h3>
+<pre><code class="language-bash"># Faster: Specific pattern
+renacer -e 'trace=/^openat$/' -- ./app
+
+# Slower: Broad pattern matching many syscalls
+renacer -e 'trace=/.*/' -- ./app  # Matches everything
+</code></pre>
+<p><strong>Tip:</strong> Use specific patterns when possible.</p>
+<h2 id="best-practices"><a class="header" href="#best-practices">Best Practices</a></h2>
+<h3 id="1-start-simple"><a class="header" href="#1-start-simple">1. Start Simple</a></h3>
+<pre><code class="language-bash"># Start with simple substring match
+renacer -e 'trace=/read/' -- ./app
+
+# Refine to prefix if needed
+renacer -e 'trace=/^read/' -- ./app
+
+# Make exact if too broad
+renacer -e 'trace=/^read$/' -- ./app
+</code></pre>
+<h3 id="2-test-regex-separately"><a class="header" href="#2-test-regex-separately">2. Test Regex Separately</a></h3>
+<pre><code class="language-bash"># Test your regex pattern
+$ echo "openat" | grep -E '^open.*'
+openat
+
+$ echo "read" | grep -E '^open.*'
+# No match
+</code></pre>
+<h3 id="3-quote-your-patterns"><a class="header" href="#3-quote-your-patterns">3. Quote Your Patterns</a></h3>
+<pre><code class="language-bash"># Always quote filter expressions
+renacer -e 'trace=/^open.*/' -- ./app
+</code></pre>
+<p><strong>Why:</strong> Prevents shell from interpreting regex special characters.</p>
+<h3 id="4-use-negation-for-exclusion"><a class="header" href="#4-use-negation-for-exclusion">4. Use Negation for Exclusion</a></h3>
+<pre><code class="language-bash"># Include broad pattern, exclude specific
+renacer -e 'trace=/^open.*/,!/openat/' -- ./app
+</code></pre>
+<p><strong>Why:</strong> More maintainable than complex negative lookaheads.</p>
+<h2 id="examples-gallery"><a class="header" href="#examples-gallery">Examples Gallery</a></h2>
+<h3 id="match-all-file-descriptors-operations"><a class="header" href="#match-all-file-descriptors-operations">Match All File Descriptors Operations</a></h3>
+<pre><code class="language-bash">$ renacer -e 'trace=/^(dup|fcntl|ioctl)/' -- ./app
+dup2(3, 4) = 4
+fcntl(5, F_GETFD) = 0
+ioctl(6, TIOCGWINSZ, {...}) = 0
+</code></pre>
+<h3 id="match-memory-operations"><a class="header" href="#match-memory-operations">Match Memory Operations</a></h3>
+<pre><code class="language-bash">$ renacer -e 'trace=/^m(map|unmap|protect|advise)/' -- ./app
+mmap(NULL, 262144, PROT_READ|PROT_WRITE, ...) = 0x7f...
+munmap(0x7f..., 262144) = 0
+mprotect(0x7f..., 4096, PROT_READ) = 0
+</code></pre>
+<h3 id="match-asynchronous-io"><a class="header" href="#match-asynchronous-io">Match Asynchronous I/O</a></h3>
+<pre><code class="language-bash">$ renacer -e 'trace=/^(poll|select|epoll)/' -- ./app
+poll([{fd=3, events=POLLIN}], 1, 1000) = 1
+epoll_wait(4, [{...}], 128, -1) = 1
+</code></pre>
+<h2 id="summary"><a class="header" href="#summary">Summary</a></h2>
+<p><strong>Regex patterns</strong> enable flexible syscall filtering:</p>
+<ul>
+<li><strong>Syntax</strong>: <code>/pattern/</code> (slashes required)</li>
+<li><strong>Anchors</strong>: <code>^</code> (start), <code>$</code> (end)</li>
+<li><strong>Wildcards</strong>: <code>.</code> (any), <code>.*</code> (any sequence)</li>
+<li><strong>OR</strong>: <code>|</code> for alternatives</li>
+<li><strong>Case-insensitive</strong>: <code>(?i)pattern</code></li>
+</ul>
+<p><strong>Common Patterns:</strong></p>
+<ul>
+<li>Prefix: <code>/^open.*/</code> - Matches open, openat, etc.</li>
+<li>Suffix: <code>/.*at$/</code> - Matches *at syscalls</li>
+<li>OR: <code>/read|write/</code> - Matches read OR write</li>
+<li>Exact: <code>/^read$/</code> - Matches only "read"</li>
+</ul>
+<p><strong>Combine with:</strong></p>
+<ul>
+<li>Classes: <code>trace=file,/^recv.*/</code></li>
+<li>Literals: <code>trace=/^open.*/,close</code></li>
+<li>Negation: <code>trace=/^open.*/,!/openat/</code></li>
+</ul>
+<p><strong>Next Steps:</strong></p>
+<ul>
+<li><a href="./filtering-negation.html">Negation Operator</a> - Exclude patterns</li>
+<li><a href="./filtering-classes.html">Syscall Classes</a> - Predefined groups</li>
+<li><a href="./filtering.html">Filtering Syscalls</a> - Main filtering guide</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../core-concepts/filtering-negation.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../core-concepts/statistics.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../core-concepts/filtering-negation.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../core-concepts/statistics.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../ace.js"></script>
+        <script src="../editor.js"></script>
+        <script src="../mode-rust.js"></script>
+        <script src="../theme-dawn.js"></script>
+        <script src="../theme-tomorrow_night.js"></script>
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

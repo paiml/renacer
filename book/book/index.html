@@ -1,0 +1,300 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Introduction - The Renacer Book - Pure Rust System Call Tracing</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="A comprehensive guide to renacer: syscall tracing, DWARF correlation, and performance analysis">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "rust";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The Renacer Book - Pure Rust System Call Tracing</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer/edit/main/book/src/introduction.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="introduction"><a class="header" href="#introduction">Introduction</a></h1>
+<p>Welcome to <strong>Renacer</strong> (Spanish: "to be reborn"), a next-generation pure Rust system call tracer with source-aware correlation for Rust binaries.</p>
+<h2 id="what-is-renacer"><a class="header" href="#what-is-renacer">What is Renacer?</a></h2>
+<p>Renacer is a binary inspection and tracing framework that allows you to observe and analyze system calls made by programs. Unlike traditional tools like <code>strace</code>, Renacer provides:</p>
+<ul>
+<li><strong>Pure Rust implementation</strong> - Type-safe, memory-safe tracing</li>
+<li><strong>DWARF debug info correlation</strong> - See which source file and line triggered each syscall</li>
+<li><strong>Function-level profiling</strong> - Understand I/O bottlenecks and hot paths</li>
+<li><strong>Advanced filtering</strong> - Powerful syscall selection with regex patterns and negation</li>
+<li><strong>Statistical analysis</strong> - SIMD-accelerated percentile analysis and anomaly detection</li>
+<li><strong>OpenTelemetry integration</strong> - Export traces to Jaeger, Grafana Tempo, and more</li>
+<li><strong>Distributed tracing</strong> - W3C Trace Context propagation across services</li>
+<li><strong>Transpiler support</strong> - Map transpiled code (Python→Rust, C→Rust) back to original source</li>
+<li><strong>Performance optimized</strong> - &lt;5% overhead with memory pooling and zero-copy strings</li>
+<li><strong>Multiple output formats</strong> - JSON, CSV, HTML for integration with other tools</li>
+<li><strong>Chaos engineering</strong> - Test system resilience with controlled fault injection</li>
+<li><strong>Fuzz testing</strong> - Coverage-guided fuzzing for robustness</li>
+</ul>
+<h2 id="why-renacer"><a class="header" href="#why-renacer">Why Renacer?</a></h2>
+<p><strong>For Developers:</strong></p>
+<ul>
+<li>Debug performance issues by seeing exactly which functions cause slow I/O</li>
+<li>Understand your program's system-level behavior</li>
+<li>Correlate syscalls with source code locations</li>
+</ul>
+<p><strong>For DevOps:</strong></p>
+<ul>
+<li>Monitor production processes with minimal overhead (3-4% vs strace's 8-12%)</li>
+<li>Detect anomalies in real-time with configurable thresholds</li>
+<li>Export traces to OpenTelemetry backends (Jaeger, Tempo, Honeycomb)</li>
+<li>Build end-to-end observability with distributed tracing</li>
+</ul>
+<p><strong>For Security Researchers:</strong></p>
+<ul>
+<li>Observe program behavior at the syscall level</li>
+<li>Trace multi-process applications with fork/clone tracking</li>
+<li>Analyze syscall patterns with HPU-accelerated correlation matrices</li>
+</ul>
+<h2 id="current-status"><a class="header" href="#current-status">Current Status</a></h2>
+<p><strong>Version:</strong> 0.5.0
+<strong>Status:</strong> Production-Ready + Performance Optimization (Sprint 36)
+<strong>Test Coverage:</strong> 400+ tests (all passing)
+<strong>TDG Score:</strong> 95.1/100 (A+ grade)</p>
+<p>Renacer is built following Toyota Way principles and EXTREME TDD methodology, ensuring every feature is thoroughly tested and production-ready.</p>
+<h2 id="quick-example"><a class="header" href="#quick-example">Quick Example</a></h2>
+<pre><code class="language-bash"># Basic syscall tracing
+$ renacer -- ls -la
+openat(AT_FDCWD, "/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 3
+openat(AT_FDCWD, ".", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 3
+getdents64(3, [...], 32768) = 1024
+write(1, "total 128\n", 10) = 10
+...
+
+# With source correlation (requires debug symbols)
+$ renacer --source -- ./my-program
+read(3, buf, 1024) = 42          [src/main.rs:15 in my_function]
+write(1, "result", 6) = 6        [src/main.rs:20 in my_function]
+...
+
+# Function profiling with I/O bottleneck detection
+$ renacer --function-time --source -- cargo test
+Function Profiling Summary:
+========================
+Top 10 Hot Paths (by total time):
+  1. cargo::build_script  - 45.2% (1.2s, 67 syscalls) ⚠️ SLOW I/O
+  2. rustc::compile       - 32.1% (850ms, 45 syscalls)
+  ...
+</code></pre>
+<h2 id="who-built-renacer"><a class="header" href="#who-built-renacer">Who Built Renacer?</a></h2>
+<p>Renacer is developed by <a href="https://paiml.com">Pragmatic AI Labs</a> using:</p>
+<ul>
+<li><strong>Toyota Way</strong> quality principles</li>
+<li><strong>EXTREME TDD</strong> methodology (every feature test-driven)</li>
+<li><strong>Zero tolerance</strong> for defects (all 400+ tests pass, zero warnings)</li>
+<li><strong>Property-based testing</strong> (670+ test cases via proptest)</li>
+<li><strong>Mutation testing</strong> (80%+ mutation score via cargo-mutants)</li>
+<li><strong>Fuzz testing</strong> (coverage-guided fuzzing via cargo-fuzz)</li>
+<li><strong>Performance benchmarking</strong> (Criterion.rs with regression detection)</li>
+<li><strong>Tiered TDD</strong> (fast/medium/slow test tiers for rapid development)</li>
+</ul>
+<h2 id="next-steps"><a class="header" href="#next-steps">Next Steps</a></h2>
+<ul>
+<li><strong>New to Renacer?</strong> Start with <a href="./getting-started/quick-start.html">Quick Start</a></li>
+<li><strong>Want to understand concepts?</strong> Read <a href="./core-concepts/syscall-tracing.html">Core Concepts</a></li>
+<li><strong>Ready for advanced features?</strong> Explore <a href="./advanced/function-profiling.html">Function Profiling</a> or <a href="./advanced/anomaly-detection.html">Anomaly Detection</a></li>
+<li><strong>Contributing?</strong> See <a href="./contributing/extreme-tdd.html">EXTREME TDD</a>, <a href="./contributing/fuzz-testing.html">Fuzz Testing</a>, and <a href="./contributing/chaos-engineering.html">Chaos Engineering</a></li>
+<li><strong>Want faster development?</strong> Check out <a href="./contributing/tiered-tdd.html">Tiered TDD Workflow</a></li>
+</ul>
+<p>Let's get started!</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+
+                            <a rel="next prefetch" href="getting-started/installation.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+
+                    <a rel="next prefetch" href="getting-started/installation.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="ace.js"></script>
+        <script src="editor.js"></script>
+        <script src="mode-rust.js"></script>
+        <script src="theme-dawn.js"></script>
+        <script src="theme-tomorrow_night.js"></script>
+
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
+
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

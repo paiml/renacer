@@ -1,0 +1,851 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>CSV Format - The Renacer Book - Pure Rust System Call Tracing</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="A comprehensive guide to renacer: syscall tracing, DWARF correlation, and performance analysis">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "rust";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The Renacer Book - Pure Rust System Call Tracing</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer/edit/main/book/src/reference/format-csv.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="csv-format-specification"><a class="header" href="#csv-format-specification">CSV Format Specification</a></h1>
+<p>Complete technical reference for Renacer's CSV output format (spreadsheet-compatible).</p>
+<hr />
+<h2 id="overview"><a class="header" href="#overview">Overview</a></h2>
+<p>The CSV format provides machine-parseable syscall trace data optimized for spreadsheet analysis (Excel, LibreOffice Calc), statistical tools (R, MATLAB), and database import. It outputs RFC 4180-compliant CSV to stdout with optional timing and source correlation.</p>
+<p><strong>Format Identifier:</strong> <code>csv</code></p>
+<p><strong>Sprints:</strong> 17 (initial CSV implementation)</p>
+<hr />
+<h2 id="quick-start"><a class="header" href="#quick-start">Quick Start</a></h2>
+<h3 id="basic-usage"><a class="header" href="#basic-usage">Basic Usage</a></h3>
+<pre><code class="language-bash"># Output CSV to stdout
+renacer --format csv -- ls
+
+# Save to file
+renacer --format csv -- ls &gt; trace.csv
+
+# Open in Excel/LibreOffice
+renacer --format csv -- ls &gt; trace.csv
+libreoffice trace.csv
+
+# Import to database
+renacer --format csv -- ./myapp &gt; trace.csv
+sqlite3 db.sqlite ".mode csv" ".import trace.csv syscalls"
+</code></pre>
+<hr />
+<h2 id="csv-schema"><a class="header" href="#csv-schema">CSV Schema</a></h2>
+<h3 id="normal-mode-trace-mode"><a class="header" href="#normal-mode-trace-mode">Normal Mode (Trace Mode)</a></h3>
+<p>Individual syscall events with full details.</p>
+<p><strong>Header Row:</strong></p>
+<pre><code class="language-csv">syscall,arguments,result,duration,source_location
+</code></pre>
+<p><strong>Field Descriptions:</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Column</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>syscall</code></td><td>string</td><td>✅</td><td>Syscall name (e.g., <code>openat</code>, <code>read</code>)</td></tr>
+<tr><td><code>arguments</code></td><td>string</td><td>✅</td><td>Comma-separated arguments (escaped)</td></tr>
+<tr><td><code>result</code></td><td>i64</td><td>✅</td><td>Return value (negative for errors)</td></tr>
+<tr><td><code>duration</code></td><td>string</td><td>⚠️ Optional</td><td>Duration with unit (e.g., <code>234us</code>) - requires <code>--timing</code></td></tr>
+<tr><td><code>source_location</code></td><td>string</td><td>⚠️ Optional</td><td>Source file:line (e.g., <code>src/main.rs:42</code>) - requires <code>--source</code></td></tr>
+</tbody></table>
+</div>
+<p><strong>Notes:</strong></p>
+<ul>
+<li><code>duration</code> column only present when <code>--timing</code> (or <code>-T</code>) flag is used</li>
+<li><code>source_location</code> column only present when <code>--source</code> flag is used</li>
+<li>Columns are dynamically added based on flags</li>
+</ul>
+<hr />
+<h3 id="statistics-mode--c-flag"><a class="header" href="#statistics-mode--c-flag">Statistics Mode (<code>-c</code> flag)</a></h3>
+<p>Aggregated syscall statistics summary.</p>
+<p><strong>Header Row:</strong></p>
+<pre><code class="language-csv">syscall,calls,errors,total_time
+</code></pre>
+<p><strong>Field Descriptions:</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Column</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>syscall</code></td><td>string</td><td>✅</td><td>Syscall name</td></tr>
+<tr><td><code>calls</code></td><td>u64</td><td>✅</td><td>Number of calls</td></tr>
+<tr><td><code>errors</code></td><td>u64</td><td>✅</td><td>Number of failed calls (result &lt; 0)</td></tr>
+<tr><td><code>total_time</code></td><td>string</td><td>⚠️ Optional</td><td>Total time with unit (e.g., <code>1234us</code>) - requires <code>--timing</code></td></tr>
+</tbody></table>
+</div>
+<p><strong>Notes:</strong></p>
+<ul>
+<li><code>total_time</code> column only present when <code>--timing</code> flag is used</li>
+<li>Statistics mode outputs summary only (no individual syscall rows)</li>
+</ul>
+<hr />
+<h2 id="data-examples"><a class="header" href="#data-examples">Data Examples</a></h2>
+<h3 id="normal-mode-default"><a class="header" href="#normal-mode-default">Normal Mode (Default)</a></h3>
+<p><strong>Command:</strong></p>
+<pre><code class="language-bash">renacer --format csv -- cat /etc/hostname
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code class="language-csv">syscall,arguments,result
+execve,"/usr/bin/cat cat /etc/hostname",0
+brk,NULL,94112345678912
+access,"/etc/ld.so.cache R_OK",0
+openat,"AT_FDCWD /etc/ld.so.cache O_RDONLY|O_CLOEXEC",3
+fstat,3,0
+read,"3 832",832
+close,3,0
+openat,"AT_FDCWD /etc/hostname O_RDONLY",3
+fstat,3,0
+read,"3 7",7
+write,"1 myhost\n 7",7
+read,"3 0",0
+close,3,0
+exit_group,0,?
+</code></pre>
+<hr />
+<h3 id="with-timing---timing"><a class="header" href="#with-timing---timing">With Timing (<code>--timing</code>)</a></h3>
+<p><strong>Command:</strong></p>
+<pre><code class="language-bash">renacer --format csv --timing -- cat /etc/hostname
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code class="language-csv">syscall,arguments,result,duration
+openat,"AT_FDCWD /etc/hostname O_RDONLY",3,145us
+fstat,3,0,23us
+read,"3 7",7,67us
+write,"1 myhost\n 7",7,34us
+close,3,0,8us
+exit_group,0,?,
+</code></pre>
+<p><strong>Duration Format:</strong></p>
+<ul>
+<li>Unit: microseconds (<code>us</code>)</li>
+<li>Example: <code>145us</code> = 145 microseconds</li>
+<li>Empty if syscall unfinished (e.g., <code>exit_group</code>)</li>
+</ul>
+<hr />
+<h3 id="with-source-correlation---source"><a class="header" href="#with-source-correlation---source">With Source Correlation (<code>--source</code>)</a></h3>
+<p><strong>Command:</strong></p>
+<pre><code class="language-bash">renacer --format csv --source -- ./myapp
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code class="language-csv">syscall,arguments,result,source_location
+openat,"AT_FDCWD /etc/config O_RDONLY",3,src/config.rs:127
+read,"3 10",10,src/config.rs:129
+close,3,0,src/config.rs:130
+write,"1 Config loaded\n 14",14,src/main.rs:45
+</code></pre>
+<p><strong>Source Location Format:</strong></p>
+<ul>
+<li>Pattern: <code>file:line</code> or <code>file:line function</code></li>
+<li>Example: <code>src/config.rs:127</code> or <code>src/config.rs:127 load_config</code></li>
+<li>Empty if DWARF unavailable for that syscall</li>
+</ul>
+<hr />
+<h3 id="all-features-combined"><a class="header" href="#all-features-combined">All Features Combined</a></h3>
+<p><strong>Command:</strong></p>
+<pre><code class="language-bash">renacer --format csv --timing --source -- ./myapp
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code class="language-csv">syscall,arguments,result,duration,source_location
+openat,"AT_FDCWD /etc/config O_RDONLY",3,145us,src/config.rs:127
+read,"3 10",10,67us,src/config.rs:129
+close,3,0,8us,src/config.rs:130
+</code></pre>
+<hr />
+<h3 id="statistics-mode--c"><a class="header" href="#statistics-mode--c">Statistics Mode (<code>-c</code>)</a></h3>
+<p><strong>Command:</strong></p>
+<pre><code class="language-bash">renacer --format csv -c -- ls
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code class="language-csv">syscall,calls,errors
+openat,20,0
+read,8,0
+fstat,4,0
+write,2,0
+close,2,0
+execve,1,0
+</code></pre>
+<hr />
+<h3 id="statistics-with-timing--c---timing"><a class="header" href="#statistics-with-timing--c---timing">Statistics with Timing (<code>-c --timing</code>)</a></h3>
+<p><strong>Command:</strong></p>
+<pre><code class="language-bash">renacer --format csv -c --timing -- ls
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code class="language-csv">syscall,calls,errors,total_time
+openat,20,0,2340us
+read,8,0,536us
+fstat,4,0,92us
+write,2,0,68us
+close,2,0,16us
+execve,1,0,234us
+</code></pre>
+<hr />
+<h2 id="csv-escaping-rfc-4180"><a class="header" href="#csv-escaping-rfc-4180">CSV Escaping (RFC 4180)</a></h2>
+<p>Renacer follows <a href="https://tools.ietf.org/html/rfc4180">RFC 4180</a> CSV specification.</p>
+<h3 id="escaping-rules"><a class="header" href="#escaping-rules">Escaping Rules</a></h3>
+<h4 id="commas"><a class="header" href="#commas">Commas</a></h4>
+<p>Fields containing commas are quoted:</p>
+<pre><code class="language-csv">syscall,arguments,result
+openat,"AT_FDCWD, /tmp/file, O_RDONLY",3
+</code></pre>
+<p><strong>Raw field:</strong> <code>AT_FDCWD, /tmp/file, O_RDONLY</code>
+<strong>Escaped:</strong> <code>"AT_FDCWD, /tmp/file, O_RDONLY"</code></p>
+<hr />
+<h4 id="quotes"><a class="header" href="#quotes">Quotes</a></h4>
+<p>Quotes within fields are doubled and field is quoted:</p>
+<pre><code class="language-csv">syscall,arguments,result
+write,"1 ""Hello, World!"" 14",14
+</code></pre>
+<p><strong>Raw field:</strong> <code>1 "Hello, World!" 14</code>
+<strong>Escaped:</strong> <code>"1 ""Hello, World!"" 14"</code></p>
+<hr />
+<h4 id="newlines"><a class="header" href="#newlines">Newlines</a></h4>
+<p>Fields containing newlines are quoted:</p>
+<pre><code class="language-csv">syscall,arguments,result
+write,"1 ""Line1
+Line2"" 12",12
+</code></pre>
+<p><strong>Raw field:</strong> <code>1 "Line1\nLine2" 12</code> (with literal newline)
+<strong>Escaped:</strong> Field wrapped in quotes with literal newline preserved</p>
+<hr />
+<h4 id="no-escaping-needed"><a class="header" href="#no-escaping-needed">No Escaping Needed</a></h4>
+<p>Simple fields without special characters:</p>
+<pre><code class="language-csv">syscall,arguments,result
+close,3,0
+brk,NULL,94112345678912
+</code></pre>
+<hr />
+<h2 id="importing-to-tools"><a class="header" href="#importing-to-tools">Importing to Tools</a></h2>
+<h3 id="excel--libreoffice-calc"><a class="header" href="#excel--libreoffice-calc">Excel / LibreOffice Calc</a></h3>
+<p><strong>Method 1: Direct Open</strong></p>
+<pre><code class="language-bash">renacer --format csv -- ls &gt; trace.csv
+# Open trace.csv in Excel or LibreOffice
+</code></pre>
+<p><strong>Method 2: Import Wizard</strong></p>
+<ol>
+<li>File → Open → Select <code>trace.csv</code></li>
+<li>Delimiter: Comma</li>
+<li>Text qualifier: <code>"</code></li>
+<li>Encoding: UTF-8</li>
+</ol>
+<p><strong>Analysis:</strong></p>
+<ul>
+<li>Create Pivot Table on <code>syscall</code> column</li>
+<li>Analyze <code>duration</code> statistics (SUM, AVG, MAX, MIN)</li>
+<li>Generate charts (histogram, bar chart)</li>
+</ul>
+<hr />
+<h3 id="r-statistical-analysis"><a class="header" href="#r-statistical-analysis">R (Statistical Analysis)</a></h3>
+<pre><code class="language-r"># Read CSV
+trace &lt;- read.csv("trace.csv")
+
+# Summary statistics
+summary(trace$duration)
+mean(trace$duration, na.rm=TRUE)
+
+# Group by syscall
+library(dplyr)
+trace %&gt;%
+  group_by(syscall) %&gt;%
+  summarize(
+    count = n(),
+    avg_duration = mean(duration, na.rm=TRUE),
+    total_duration = sum(duration, na.rm=TRUE)
+  )
+
+# Plot histogram
+hist(trace$duration, breaks=50, main="Syscall Duration Distribution")
+</code></pre>
+<hr />
+<h3 id="python-pandas"><a class="header" href="#python-pandas">Python (pandas)</a></h3>
+<pre><code class="language-python">import pandas as pd
+
+# Read CSV
+df = pd.read_csv('trace.csv')
+
+# Parse duration (strip 'us' suffix)
+df['duration_us'] = df['duration'].str.replace('us', '').astype(float)
+
+# Group by syscall
+summary = df.groupby('syscall').agg({
+    'duration_us': ['count', 'mean', 'sum', 'min', 'max']
+})
+print(summary)
+
+# Find slow syscalls (&gt;1000us)
+slow = df[df['duration_us'] &gt; 1000]
+print(slow[['syscall', 'arguments', 'duration_us']])
+
+# Plot
+import matplotlib.pyplot as plt
+df.boxplot(column='duration_us', by='syscall', figsize=(12,6))
+plt.show()
+</code></pre>
+<hr />
+<h3 id="postgresql"><a class="header" href="#postgresql">PostgreSQL</a></h3>
+<pre><code class="language-sql">-- Create table
+CREATE TABLE syscalls (
+    id SERIAL PRIMARY KEY,
+    syscall VARCHAR(64),
+    arguments TEXT,
+    result BIGINT,
+    duration VARCHAR(32),
+    source_location VARCHAR(256)
+);
+
+-- Import CSV
+\COPY syscalls(syscall, arguments, result, duration, source_location)
+FROM 'trace.csv' CSV HEADER;
+
+-- Query statistics
+SELECT
+    syscall,
+    COUNT(*) as calls,
+    AVG(CAST(REGEXP_REPLACE(duration, 'us', '') AS INT)) as avg_duration_us
+FROM syscalls
+WHERE duration IS NOT NULL
+GROUP BY syscall
+ORDER BY avg_duration_us DESC;
+</code></pre>
+<hr />
+<h3 id="sqlite"><a class="header" href="#sqlite">SQLite</a></h3>
+<pre><code class="language-bash"># Create database and import
+sqlite3 trace.db &lt;&lt;EOF
+CREATE TABLE syscalls (
+    syscall TEXT,
+    arguments TEXT,
+    result INTEGER,
+    duration TEXT,
+    source_location TEXT
+);
+.mode csv
+.import trace.csv syscalls
+.headers on
+.mode column
+SELECT syscall, COUNT(*) as calls FROM syscalls GROUP BY syscall;
+EOF
+</code></pre>
+<hr />
+<h2 id="field-details"><a class="header" href="#field-details">Field Details</a></h2>
+<h3 id="syscall-column"><a class="header" href="#syscall-column">Syscall Column</a></h3>
+<p><strong>Values:</strong> Syscall names as strings</p>
+<p><strong>Examples:</strong></p>
+<ul>
+<li><code>openat</code></li>
+<li><code>read</code></li>
+<li><code>write</code></li>
+<li><code>close</code></li>
+<li><code>syscall_999</code> (unknown syscalls)</li>
+</ul>
+<p><strong>Notes:</strong></p>
+<ul>
+<li>Always lowercase</li>
+<li>Unknown syscalls use <code>syscall_&lt;number&gt;</code> format</li>
+</ul>
+<hr />
+<h3 id="arguments-column"><a class="header" href="#arguments-column">Arguments Column</a></h3>
+<p><strong>Format:</strong> Space-separated arguments (simplified from text format)</p>
+<p><strong>Examples:</strong></p>
+<pre><code class="language-csv">"AT_FDCWD /tmp/file O_RDONLY"
+"3 4096"
+"1 hello 5"
+</code></pre>
+<p><strong>Escaping:</strong></p>
+<ul>
+<li>Commas in arguments → Field quoted</li>
+<li>Quotes in arguments → Doubled (<code>""</code>)</li>
+<li>Newlines in arguments → Preserved within quotes</li>
+</ul>
+<p><strong>Note:</strong> Arguments are simplified for CSV (no complex structure formatting)</p>
+<hr />
+<h3 id="result-column"><a class="header" href="#result-column">Result Column</a></h3>
+<p><strong>Type:</strong> Signed 64-bit integer</p>
+<p><strong>Values:</strong></p>
+<ul>
+<li><code>&gt;= 0</code> - Success (file descriptor, bytes read, etc.)</li>
+<li><code>&lt; 0</code> - Error (typically <code>-1</code>)</li>
+<li><code>?</code> - Unfinished syscall (process terminated)</li>
+</ul>
+<p><strong>Examples:</strong></p>
+<pre><code class="language-csv">syscall,arguments,result
+open,"/tmp/file O_RDONLY",3
+read,"3 4096",-1
+exit_group,0,?
+</code></pre>
+<p><strong>Note:</strong> Error names (ENOENT, etc.) are NOT included in CSV format</p>
+<hr />
+<h3 id="duration-column-optional"><a class="header" href="#duration-column-optional">Duration Column (Optional)</a></h3>
+<p><strong>Presence:</strong> Only when <code>--timing</code> flag is used</p>
+<p><strong>Format:</strong> <code>&lt;number&gt;us</code> (microseconds with unit suffix)</p>
+<p><strong>Examples:</strong></p>
+<ul>
+<li><code>145us</code> - 145 microseconds</li>
+<li><code>1234us</code> - 1.234 milliseconds</li>
+<li>Empty - Syscall unfinished</li>
+</ul>
+<p><strong>Parsing:</strong></p>
+<ul>
+<li>Strip <code>us</code> suffix and parse as integer</li>
+<li>Empty values should be treated as NULL/NA</li>
+</ul>
+<hr />
+<h3 id="source-location-column-optional"><a class="header" href="#source-location-column-optional">Source Location Column (Optional)</a></h3>
+<p><strong>Presence:</strong> Only when <code>--source</code> flag is used</p>
+<p><strong>Format:</strong></p>
+<ul>
+<li>Simple: <code>file:line</code></li>
+<li>With function: <code>file:line function</code></li>
+</ul>
+<p><strong>Examples:</strong></p>
+<pre><code class="language-csv">src/main.rs:42
+src/config.rs:127 load_config
+/usr/lib/x86_64-linux-gnu/ld-2.31.so:? _dl_start
+</code></pre>
+<p><strong>Notes:</strong></p>
+<ul>
+<li>Line <code>?</code> indicates unknown line (DWARF lookup failed)</li>
+<li>Empty if no source info available for that syscall</li>
+</ul>
+<hr />
+<h2 id="statistics-mode-details"><a class="header" href="#statistics-mode-details">Statistics Mode Details</a></h2>
+<h3 id="calls-column"><a class="header" href="#calls-column">Calls Column</a></h3>
+<p><strong>Type:</strong> Unsigned 64-bit integer</p>
+<p><strong>Description:</strong> Total number of times the syscall was invoked</p>
+<p><strong>Example:</strong></p>
+<pre><code class="language-csv">syscall,calls,errors
+openat,20,0
+read,8,0
+</code></pre>
+<p><strong>Interpretation:</strong> <code>openat</code> was called 20 times, <code>read</code> was called 8 times</p>
+<hr />
+<h3 id="errors-column"><a class="header" href="#errors-column">Errors Column</a></h3>
+<p><strong>Type:</strong> Unsigned 64-bit integer</p>
+<p><strong>Description:</strong> Number of calls that returned an error (result &lt; 0)</p>
+<p><strong>Example:</strong></p>
+<pre><code class="language-csv">syscall,calls,errors
+openat,20,2
+read,8,0
+</code></pre>
+<p><strong>Interpretation:</strong></p>
+<ul>
+<li>20 <code>openat</code> calls, 2 failed (10% error rate)</li>
+<li>8 <code>read</code> calls, 0 failed (0% error rate)</li>
+</ul>
+<hr />
+<h3 id="total-time-column-optional"><a class="header" href="#total-time-column-optional">Total Time Column (Optional)</a></h3>
+<p><strong>Presence:</strong> Only when <code>-c --timing</code> flags are used</p>
+<p><strong>Format:</strong> <code>&lt;number&gt;us</code> (total microseconds with unit suffix)</p>
+<p><strong>Example:</strong></p>
+<pre><code class="language-csv">syscall,calls,errors,total_time
+openat,20,0,2340us
+read,8,0,536us
+</code></pre>
+<p><strong>Interpretation:</strong></p>
+<ul>
+<li>All 20 <code>openat</code> calls took 2340μs total (average: 117μs per call)</li>
+<li>All 8 <code>read</code> calls took 536μs total (average: 67μs per call)</li>
+</ul>
+<p><strong>Calculation:</strong> Average = <code>total_time / calls</code></p>
+<hr />
+<h2 id="performance-characteristics"><a class="header" href="#performance-characteristics">Performance Characteristics</a></h2>
+<h3 id="overhead"><a class="header" href="#overhead">Overhead</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>Feature</th><th>Overhead vs Text</th><th>Reason</th></tr></thead><tbody>
+<tr><td><strong>Basic CSV</strong></td><td>+3-5%</td><td>CSV escaping, column formatting</td></tr>
+<tr><td><strong>With timing</strong></td><td>+2-3%</td><td>gettimeofday per syscall (same as text)</td></tr>
+<tr><td><strong>With source</strong></td><td>+5-10%</td><td>DWARF lookup (same as text)</td></tr>
+</tbody></table>
+</div>
+<p><strong>Total Overhead:</strong> ~8-18% vs text format (depending on flags)</p>
+<p><strong>Recommendation:</strong> Use CSV for post-processing, text for real-time monitoring.</p>
+<hr />
+<h3 id="output-size"><a class="header" href="#output-size">Output Size</a></h3>
+<p><strong>Typical Sizes (100 syscalls):</strong></p>
+<ul>
+<li><strong>Basic CSV:</strong> ~8-12 KB</li>
+<li><strong>With timing:</strong> ~10-15 KB</li>
+<li><strong>With source:</strong> ~12-18 KB</li>
+<li><strong>Statistics mode:</strong> ~1-2 KB (regardless of syscall count)</li>
+</ul>
+<p><strong>Comparison:</strong></p>
+<ul>
+<li><strong>Text:</strong> 5-10 KB (smallest)</li>
+<li><strong>CSV:</strong> 8-18 KB (medium)</li>
+<li><strong>JSON:</strong> 15-25 KB (larger - structured overhead)</li>
+<li><strong>HTML:</strong> 30-50 KB (largest - template overhead)</li>
+</ul>
+<hr />
+<h2 id="common-use-cases"><a class="header" href="#common-use-cases">Common Use Cases</a></h2>
+<h3 id="spreadsheet-analysis"><a class="header" href="#spreadsheet-analysis">Spreadsheet Analysis</a></h3>
+<pre><code class="language-bash"># Trace application, open in Excel
+renacer --format csv --timing -- ./myapp &gt; trace.csv
+
+# In Excel:
+# 1. Create Pivot Table: Row=syscall, Values=COUNT(syscall), AVG(duration)
+# 2. Create Bar Chart of syscall frequency
+# 3. Create Histogram of duration distribution
+</code></pre>
+<hr />
+<h3 id="statistical-analysis-in-r"><a class="header" href="#statistical-analysis-in-r">Statistical Analysis in R</a></h3>
+<pre><code class="language-bash"># Trace with timing
+renacer --format csv --timing -- ./myapp &gt; trace.csv
+</code></pre>
+<pre><code class="language-r"># Analyze in R
+trace &lt;- read.csv("trace.csv")
+trace$duration_us &lt;- as.numeric(gsub("us", "", trace$duration))
+
+# Statistical tests
+t.test(duration_us ~ syscall, data=trace[trace$syscall %in% c("read", "write"),])
+</code></pre>
+<hr />
+<h3 id="database-import"><a class="header" href="#database-import">Database Import</a></h3>
+<pre><code class="language-bash"># Trace long-running application
+renacer --format csv --timing --source -- ./long_app &gt; trace.csv
+
+# Import to PostgreSQL
+psql -d mydb -c "\COPY syscalls FROM 'trace.csv' CSV HEADER"
+
+# Query slow syscalls
+psql -d mydb -c "
+  SELECT syscall, source_location, duration
+  FROM syscalls
+  WHERE CAST(REGEXP_REPLACE(duration, 'us', '') AS INT) &gt; 1000
+  ORDER BY duration DESC;
+"
+</code></pre>
+<hr />
+<h3 id="time-series-analysis"><a class="header" href="#time-series-analysis">Time Series Analysis</a></h3>
+<pre><code class="language-bash"># Add timestamp column (requires future sprint)
+renacer --format csv --timing --timestamp -- ./myapp &gt; trace.csv
+</code></pre>
+<p><strong>Analysis:</strong> Track syscall patterns over time, detect performance degradation</p>
+<hr />
+<h2 id="filtering-and-combining"><a class="header" href="#filtering-and-combining">Filtering and Combining</a></h2>
+<h3 id="pre-filtering-with-renacer"><a class="header" href="#pre-filtering-with-renacer">Pre-filtering with Renacer</a></h3>
+<pre><code class="language-bash"># Only trace file operations
+renacer --format csv -e trace=file -- ./myapp &gt; file_ops.csv
+
+# Statistics for network operations
+renacer --format csv -c -e trace=network -- ./server &gt; net_stats.csv
+</code></pre>
+<hr />
+<h3 id="post-filtering-with-tools"><a class="header" href="#post-filtering-with-tools">Post-filtering with Tools</a></h3>
+<p><strong>CSV grep (csvkit):</strong></p>
+<pre><code class="language-bash"># Install csvkit
+pip install csvkit
+
+# Filter rows
+csvgrep -c syscall -m "openat" trace.csv
+
+# Select columns
+csvcut -c syscall,duration trace.csv
+</code></pre>
+<p><strong>awk:</strong></p>
+<pre><code class="language-bash"># Filter openat syscalls
+awk -F',' '$1 == "openat"' trace.csv
+
+# Calculate average duration
+awk -F',' 'NR&gt;1 {gsub(/us/,"",$4); sum+=$4; count++} END {print sum/count}' trace.csv
+</code></pre>
+<hr />
+<h2 id="comparison-with-other-formats"><a class="header" href="#comparison-with-other-formats">Comparison with Other Formats</a></h2>
+<h3 id="csv-vs-text"><a class="header" href="#csv-vs-text">CSV vs Text</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>Feature</th><th>CSV</th><th>Text</th></tr></thead><tbody>
+<tr><td><strong>Human-readable</strong></td><td>⚠️ Partial</td><td>✅ Yes</td></tr>
+<tr><td><strong>Machine-parseable</strong></td><td>✅ Yes</td><td>❌ No</td></tr>
+<tr><td><strong>Spreadsheet import</strong></td><td>✅ Native</td><td>❌ Requires conversion</td></tr>
+<tr><td><strong>Error details</strong></td><td>❌ No errno names</td><td>✅ Full (e.g., ENOENT)</td></tr>
+<tr><td><strong>Overhead</strong></td><td>+3-5%</td><td>0% (baseline)</td></tr>
+<tr><td><strong>File size</strong></td><td>+30-50%</td><td>Smallest</td></tr>
+</tbody></table>
+</div>
+<p><strong>Use Text when:</strong> Terminal debugging, piping to grep/awk
+<strong>Use CSV when:</strong> Spreadsheet analysis, database import, statistical analysis</p>
+<hr />
+<h3 id="csv-vs-json"><a class="header" href="#csv-vs-json">CSV vs JSON</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>Feature</th><th>CSV</th><th>JSON</th></tr></thead><tbody>
+<tr><td><strong>Spreadsheet import</strong></td><td>✅ Native</td><td>⚠️ Requires conversion</td></tr>
+<tr><td><strong>Statistical tools</strong></td><td>✅ R, MATLAB, pandas</td><td>⚠️ Requires parsing</td></tr>
+<tr><td><strong>Structure</strong></td><td>⚠️ Flat (columns)</td><td>✅ Nested (objects)</td></tr>
+<tr><td><strong>Typing</strong></td><td>❌ All strings</td><td>✅ Typed fields</td></tr>
+<tr><td><strong>Overhead</strong></td><td>+3-5%</td><td>+5-10%</td></tr>
+<tr><td><strong>File size</strong></td><td>Medium</td><td>Large</td></tr>
+</tbody></table>
+</div>
+<p><strong>Use CSV when:</strong> Spreadsheet/statistical analysis, SQL database import
+<strong>Use JSON when:</strong> Programmatic processing, REST APIs, complex data structures</p>
+<hr />
+<h2 id="edge-cases"><a class="header" href="#edge-cases">Edge Cases</a></h2>
+<h3 id="missing-optional-columns"><a class="header" href="#missing-optional-columns">Missing Optional Columns</a></h3>
+<p><strong>Duration column missing (no <code>--timing</code>):</strong></p>
+<pre><code class="language-csv">syscall,arguments,result
+openat,"AT_FDCWD /tmp/file O_RDONLY",3
+read,"3 4096",4096
+</code></pre>
+<p><strong>Source column missing (no <code>--source</code>):</strong></p>
+<pre><code class="language-csv">syscall,arguments,result,duration
+openat,"AT_FDCWD /tmp/file O_RDONLY",3,145us
+read,"3 4096",4096,67us
+</code></pre>
+<hr />
+<h3 id="empty-fields"><a class="header" href="#empty-fields">Empty Fields</a></h3>
+<p><strong>Empty duration (unfinished syscall):</strong></p>
+<pre><code class="language-csv">syscall,arguments,result,duration
+exit_group,0,?,
+</code></pre>
+<p><strong>Empty source location (DWARF unavailable):</strong></p>
+<pre><code class="language-csv">syscall,arguments,result,duration,source_location
+read,"3 4096",4096,67us,
+brk,NULL,94112345678912,12us,
+</code></pre>
+<hr />
+<h3 id="special-characters-in-arguments"><a class="header" href="#special-characters-in-arguments">Special Characters in Arguments</a></h3>
+<p><strong>Newlines in write() buffer:</strong></p>
+<pre><code class="language-csv">syscall,arguments,result
+write,"1 ""Line1
+Line2"" 12",12
+</code></pre>
+<p><strong>Quotes in arguments:</strong></p>
+<pre><code class="language-csv">syscall,arguments,result
+write,"1 ""He said ""Hello"""" 16",16
+</code></pre>
+<hr />
+<h2 id="format-specification-summary"><a class="header" href="#format-specification-summary">Format Specification Summary</a></h2>
+<h3 id="rfc-4180-compliance"><a class="header" href="#rfc-4180-compliance">RFC 4180 Compliance</a></h3>
+<p>Renacer CSV output is fully compliant with <a href="https://tools.ietf.org/html/rfc4180">RFC 4180</a>:</p>
+<ul>
+<li>✅ CRLF or LF line endings (LF used)</li>
+<li>✅ Header row included</li>
+<li>✅ Comma delimiter</li>
+<li>✅ Double-quote text qualifier</li>
+<li>✅ Escaped quotes (doubled: <code>""</code>)</li>
+<li>✅ UTF-8 encoding</li>
+</ul>
+<p><strong>Validation:</strong></p>
+<pre><code class="language-bash"># Validate with csvlint (requires Ruby csvlint gem)
+gem install csvlint
+csvlint trace.csv
+</code></pre>
+<hr />
+<h3 id="dynamic-schema"><a class="header" href="#dynamic-schema">Dynamic Schema</a></h3>
+<p>Columns vary based on flags:</p>
+<div class="table-wrapper"><table><thead><tr><th>Flags</th><th>Columns</th></tr></thead><tbody>
+<tr><td>(none)</td><td><code>syscall,arguments,result</code></td></tr>
+<tr><td><code>--timing</code></td><td><code>syscall,arguments,result,duration</code></td></tr>
+<tr><td><code>--source</code></td><td><code>syscall,arguments,result,source_location</code></td></tr>
+<tr><td><code>--timing --source</code></td><td><code>syscall,arguments,result,duration,source_location</code></td></tr>
+<tr><td><code>-c</code></td><td><code>syscall,calls,errors</code></td></tr>
+<tr><td><code>-c --timing</code></td><td><code>syscall,calls,errors,total_time</code></td></tr>
+</tbody></table>
+</div>
+<p><strong>Parsing Tip:</strong> Always read header row to determine schema dynamically.</p>
+<hr />
+<h2 id="related"><a class="header" href="#related">Related</a></h2>
+<ul>
+<li><a href="./output-formats.html">Output Formats Overview</a> - Format selection guide</li>
+<li><a href="./format-text.html">Text Format</a> - Human-readable text output</li>
+<li><a href="./format-json.html">JSON Format</a> - Machine-parseable JSON output</li>
+<li><a href="./format-html.html">HTML Format</a> - Interactive visual reports</li>
+<li><a href="./cli.html">CLI Reference</a> - <code>--format csv</code> flag documentation</li>
+<li><a href="../core-concepts/statistics.html">Statistics Mode</a> - Use with <code>-c</code> flag</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../reference/format-json.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../reference/format-html.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../reference/format-json.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../reference/format-html.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../ace.js"></script>
+        <script src="../editor.js"></script>
+        <script src="../mode-rust.js"></script>
+        <script src="../theme-dawn.js"></script>
+        <script src="../theme-tomorrow_night.js"></script>
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

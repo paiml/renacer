@@ -1,0 +1,529 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Filtering Syscalls - The Renacer Book - Pure Rust System Call Tracing</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="A comprehensive guide to renacer: syscall tracing, DWARF correlation, and performance analysis">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "rust";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The Renacer Book - Pure Rust System Call Tracing</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer/edit/main/book/src/core-concepts/filtering.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="filtering-syscalls"><a class="header" href="#filtering-syscalls">Filtering Syscalls</a></h1>
+<p>System call tracing generates a lot of output. A simple <code>ls</code> command can make hundreds of syscalls. <strong>Filtering</strong> lets you focus on what matters by showing only relevant syscalls.</p>
+<h2 id="why-filter"><a class="header" href="#why-filter">Why Filter?</a></h2>
+<p><strong>Without filtering:</strong></p>
+<pre><code class="language-bash">$ renacer -- cat /etc/hostname
+# ... 200+ lines of output ...
+openat(AT_FDCWD, "/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 3
+fstat(3, {...}) = 0
+mmap(NULL, 163352, PROT_READ, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9a2c000000
+close(3) = 0
+openat(AT_FDCWD, "/lib/x86_64-linux-gnu/libc.so.6", O_RDONLY|O_CLOEXEC) = 3
+read(3, "\177ELF\2\1\1\3\0\0\0\0...", 832) = 832
+# ... many more library loading syscalls ...
+openat(AT_FDCWD, "/etc/hostname", O_RDONLY) = 3
+read(3, "myserver\n", 131072) = 9
+write(1, "myserver\n", 9) = 9
+close(3) = 0
+exit_group(0) = ?
+</code></pre>
+<p><strong>With filtering</strong> (file operations only):</p>
+<pre><code class="language-bash">$ renacer -e 'trace=file' -- cat /etc/hostname
+openat(AT_FDCWD, "/etc/hostname", O_RDONLY) = 3
+read(3, "myserver\n", 131072) = 9
+write(1, "myserver\n", 9) = 9
+close(3) = 0
+</code></pre>
+<p><strong>Result:</strong> 200+ lines reduced to 4 essential lines.</p>
+<h2 id="basic-filtering-syntax"><a class="header" href="#basic-filtering-syntax">Basic Filtering Syntax</a></h2>
+<p>Use the <code>-e</code> flag with a filtering expression:</p>
+<pre><code class="language-bash">renacer -e 'trace=&lt;filter&gt;' -- command
+</code></pre>
+<p>The <code>trace=</code> specifies which syscalls to show.</p>
+<h2 id="syscall-classes"><a class="header" href="#syscall-classes">Syscall Classes</a></h2>
+<p>Renacer provides predefined classes for common syscall groups:</p>
+<h3 id="available-classes"><a class="header" href="#available-classes">Available Classes</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>Class</th><th>Description</th><th>Example Syscalls</th></tr></thead><tbody>
+<tr><td><code>file</code></td><td>File operations</td><td><code>open</code>, <code>openat</code>, <code>read</code>, <code>write</code>, <code>close</code>, <code>stat</code></td></tr>
+<tr><td><code>network</code></td><td>Network operations</td><td><code>socket</code>, <code>connect</code>, <code>send</code>, <code>recv</code>, <code>bind</code>, <code>listen</code></td></tr>
+<tr><td><code>process</code></td><td>Process management</td><td><code>fork</code>, <code>clone</code>, <code>execve</code>, <code>wait4</code>, <code>exit</code></td></tr>
+<tr><td><code>memory</code></td><td>Memory operations</td><td><code>mmap</code>, <code>munmap</code>, <code>brk</code>, <code>mprotect</code></td></tr>
+<tr><td><code>signal</code></td><td>Signal handling</td><td><code>kill</code>, <code>signal</code>, <code>sigaction</code>, <code>sigreturn</code></td></tr>
+<tr><td><code>ipc</code></td><td>Inter-process communication</td><td><code>pipe</code>, <code>shmget</code>, <code>msgget</code>, <code>semget</code></td></tr>
+<tr><td><code>desc</code></td><td>File descriptor operations</td><td><code>dup</code>, <code>fcntl</code>, <code>ioctl</code>, <code>select</code>, <code>poll</code></td></tr>
+</tbody></table>
+</div>
+<h3 id="class-examples"><a class="header" href="#class-examples">Class Examples</a></h3>
+<h4 id="file-operations-only"><a class="header" href="#file-operations-only">File Operations Only</a></h4>
+<pre><code class="language-bash">renacer -e 'trace=file' -- ls
+</code></pre>
+<p><strong>Shows:</strong></p>
+<pre><code>openat(AT_FDCWD, ".", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 3
+getdents64(3, [...], 32768) = 1024
+write(1, "file1.txt\nfile2.txt\n", 20) = 20
+close(3) = 0
+</code></pre>
+<h4 id="network-operations-only"><a class="header" href="#network-operations-only">Network Operations Only</a></h4>
+<pre><code class="language-bash">renacer -e 'trace=network' -- curl https://example.com
+</code></pre>
+<p><strong>Shows:</strong></p>
+<pre><code>socket(AF_INET, SOCK_STREAM, IPPROTO_TCP) = 3
+connect(3, {sa_family=AF_INET, sin_port=htons(443), ...}, 16) = 0
+sendto(3, "\x16\x03\x01...", 517, MSG_NOSIGNAL, NULL, 0) = 517
+recvfrom(3, "\x16\x03\x03...", 16384, 0, NULL, NULL) = 1234
+close(3) = 0
+</code></pre>
+<h4 id="process-operations-only"><a class="header" href="#process-operations-only">Process Operations Only</a></h4>
+<pre><code class="language-bash">renacer -e 'trace=process' -- sh -c 'echo hello'
+</code></pre>
+<p><strong>Shows:</strong></p>
+<pre><code>clone(child_stack=NULL, flags=CLONE_CHILD_CLEARTID|CLONE_CHILD_SETTID|SIGCHLD) = 12345
+wait4(12345, [{WIFEXITED(s) &amp;&amp; WEXITSTATUS(s) == 0}], 0, NULL) = 12345
+exit_group(0) = ?
+</code></pre>
+<h4 id="memory-operations-only"><a class="header" href="#memory-operations-only">Memory Operations Only</a></h4>
+<pre><code class="language-bash">renacer -e 'trace=memory' -- python3 -c 'print("hi")'
+</code></pre>
+<p><strong>Shows:</strong></p>
+<pre><code>brk(NULL) = 0x55e8f1a00000
+brk(0x55e8f1a21000) = 0x55e8f1a21000
+mmap(NULL, 262144, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f9a2c000000
+munmap(0x7f9a2c000000, 262144) = 0
+</code></pre>
+<h2 id="literal-syscall-names"><a class="header" href="#literal-syscall-names">Literal Syscall Names</a></h2>
+<p>You can specify exact syscall names instead of classes:</p>
+<h3 id="single-syscall"><a class="header" href="#single-syscall">Single Syscall</a></h3>
+<pre><code class="language-bash">renacer -e 'trace=openat' -- ls
+</code></pre>
+<p><strong>Shows only <code>openat</code> calls:</strong></p>
+<pre><code>openat(AT_FDCWD, "/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 3
+openat(AT_FDCWD, "/lib/x86_64-linux-gnu/libselinux.so.1", O_RDONLY|O_CLOEXEC) = 3
+openat(AT_FDCWD, ".", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 3
+</code></pre>
+<h3 id="multiple-syscalls"><a class="header" href="#multiple-syscalls">Multiple Syscalls</a></h3>
+<p>Use commas to separate multiple syscalls:</p>
+<pre><code class="language-bash">renacer -e 'trace=read,write' -- cat file.txt
+</code></pre>
+<p><strong>Shows only <code>read</code> and <code>write</code> calls:</strong></p>
+<pre><code>read(3, "file contents here\n", 131072) = 19
+write(1, "file contents here\n", 19) = 19
+</code></pre>
+<h2 id="combining-filters"><a class="header" href="#combining-filters">Combining Filters</a></h2>
+<h3 id="class--literal"><a class="header" href="#class--literal">Class + Literal</a></h3>
+<pre><code class="language-bash">renacer -e 'trace=file,socket' -- curl https://example.com
+</code></pre>
+<p>This shows:</p>
+<ul>
+<li>All file operations (via <code>file</code> class)</li>
+<li>Only <code>socket</code> syscalls (literal)</li>
+</ul>
+<h3 id="multiple-classes"><a class="header" href="#multiple-classes">Multiple Classes</a></h3>
+<pre><code class="language-bash">renacer -e 'trace=file,network' -- wget https://example.com/file.zip
+</code></pre>
+<p>This shows all file and network operations.</p>
+<h2 id="negation-excluding-syscalls"><a class="header" href="#negation-excluding-syscalls">Negation (Excluding Syscalls)</a></h2>
+<p>Use <code>!</code> to exclude specific syscalls from a broader filter.</p>
+<h3 id="exclude-specific-syscall"><a class="header" href="#exclude-specific-syscall">Exclude Specific Syscall</a></h3>
+<pre><code class="language-bash">renacer -e 'trace=file,!/fstat/' -- ls
+</code></pre>
+<p><strong>Meaning:</strong> Show all file operations EXCEPT <code>fstat</code>.</p>
+<p><strong>Example Output:</strong></p>
+<pre><code>openat(AT_FDCWD, ".", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 3
+# fstat calls are hidden
+getdents64(3, [...], 32768) = 1024
+write(1, "file.txt\n", 9) = 9
+close(3) = 0
+</code></pre>
+<h3 id="multiple-exclusions"><a class="header" href="#multiple-exclusions">Multiple Exclusions</a></h3>
+<pre><code class="language-bash">renacer -e 'trace=file,!/fstat/,!/close/' -- cat file
+</code></pre>
+<p><strong>Meaning:</strong> Show file operations, but exclude <code>fstat</code> and <code>close</code>.</p>
+<h3 id="exclude-class"><a class="header" href="#exclude-class">Exclude Class</a></h3>
+<pre><code class="language-bash">renacer -e 'trace=!memory' -- command
+</code></pre>
+<p><strong>Meaning:</strong> Show ALL syscalls EXCEPT memory operations.</p>
+<h2 id="regex-patterns-advanced"><a class="header" href="#regex-patterns-advanced">Regex Patterns (Advanced)</a></h2>
+<p>Renacer supports regex patterns for powerful matching (Sprint 16 feature).</p>
+<h3 id="regex-syntax"><a class="header" href="#regex-syntax">Regex Syntax</a></h3>
+<p>Enclose patterns in slashes: <code>/pattern/</code></p>
+<h3 id="prefix-matching"><a class="header" href="#prefix-matching">Prefix Matching</a></h3>
+<pre><code class="language-bash">renacer -e 'trace=/^open.*/' -- ls
+</code></pre>
+<p><strong>Meaning:</strong> Match syscalls starting with "open" (e.g., <code>open</code>, <code>openat</code>).</p>
+<p><strong>Shows:</strong></p>
+<pre><code>openat(AT_FDCWD, "/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 3
+openat(AT_FDCWD, ".", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 3
+</code></pre>
+<h3 id="suffix-matching"><a class="header" href="#suffix-matching">Suffix Matching</a></h3>
+<pre><code class="language-bash">renacer -e 'trace=/.*at$/' -- command
+</code></pre>
+<p><strong>Meaning:</strong> Match syscalls ending with "at" (e.g., <code>openat</code>, <code>fstatat</code>, <code>renameat</code>).</p>
+<h3 id="or-patterns"><a class="header" href="#or-patterns">OR Patterns</a></h3>
+<pre><code class="language-bash">renacer -e 'trace=/read|write/' -- cat file
+</code></pre>
+<p><strong>Meaning:</strong> Match syscalls containing "read" OR "write".</p>
+<p><strong>Shows:</strong></p>
+<pre><code>read(3, "contents...", 131072) = 42
+write(1, "contents...", 42) = 42
+</code></pre>
+<h3 id="case-insensitive"><a class="header" href="#case-insensitive">Case-Insensitive</a></h3>
+<pre><code class="language-bash">renacer -e 'trace=/(?i)OPEN/' -- ls
+</code></pre>
+<p><strong>Meaning:</strong> Match "open", "OPEN", "Open", etc. (case-insensitive).</p>
+<h3 id="regex--negation"><a class="header" href="#regex--negation">Regex + Negation</a></h3>
+<pre><code class="language-bash">renacer -e 'trace=/^open.*/,!/openat/' -- ls
+</code></pre>
+<p><strong>Meaning:</strong> Match syscalls starting with "open", but exclude <code>openat</code> specifically.</p>
+<p><strong>Result:</strong> Shows <code>open</code> but not <code>openat</code>.</p>
+<h2 id="combining-everything"><a class="header" href="#combining-everything">Combining Everything</a></h2>
+<p>You can mix classes, literals, regex, and negation:</p>
+<pre><code class="language-bash">renacer -e 'trace=file,/^recv.*/,!/fstat/,!memory' -- curl https://api.example.com
+</code></pre>
+<p><strong>Breakdown:</strong></p>
+<ul>
+<li><code>file</code> - Include all file operations</li>
+<li><code>/^recv.*/</code> - Include syscalls starting with "recv"</li>
+<li><code>!/fstat/</code> - Exclude <code>fstat</code></li>
+<li><code>!memory</code> - Exclude memory class</li>
+</ul>
+<h2 id="real-world-examples"><a class="header" href="#real-world-examples">Real-World Examples</a></h2>
+<h3 id="example-1-debug-file-access-issues"><a class="header" href="#example-1-debug-file-access-issues">Example 1: Debug File Access Issues</a></h3>
+<p><strong>Problem:</strong> Your app can't find a config file.</p>
+<pre><code class="language-bash">renacer -e 'trace=openat' -- ./myapp
+</code></pre>
+<p><strong>Look for:</strong></p>
+<ul>
+<li>Paths being attempted</li>
+<li>Return values (<code>-ENOENT</code> = file not found)</li>
+</ul>
+<h3 id="example-2-network-debugging"><a class="header" href="#example-2-network-debugging">Example 2: Network Debugging</a></h3>
+<p><strong>Problem:</strong> App can't connect to database.</p>
+<pre><code class="language-bash">renacer -e 'trace=network' -- ./db-client
+</code></pre>
+<p><strong>Look for:</strong></p>
+<ul>
+<li><code>connect</code> syscalls with IP addresses</li>
+<li>Return values (<code>-ECONNREFUSED</code>, <code>-ETIMEDOUT</code>)</li>
+</ul>
+<h3 id="example-3-performance-analysis"><a class="header" href="#example-3-performance-analysis">Example 3: Performance Analysis</a></h3>
+<p><strong>Problem:</strong> App is slow during startup.</p>
+<pre><code class="language-bash">renacer -e 'trace=file' -c -- ./slow-app
+</code></pre>
+<p><strong>Look for:</strong></p>
+<ul>
+<li>High <code>Total Time</code> for specific file operations</li>
+<li>Many <code>openat</code> calls (possible excessive file access)</li>
+</ul>
+<h3 id="example-4-security-audit"><a class="header" href="#example-4-security-audit">Example 4: Security Audit</a></h3>
+<p><strong>Problem:</strong> Verify sandboxed app doesn't access sensitive files.</p>
+<pre><code class="language-bash">renacer -e 'trace=file' -- ./untrusted-binary
+</code></pre>
+<p><strong>Check for:</strong></p>
+<ul>
+<li>Unexpected file paths (<code>/etc/shadow</code>, <code>~/.ssh/</code>)</li>
+<li>Permission errors (<code>-EACCES</code>)</li>
+</ul>
+<h3 id="example-5-reduce-noise"><a class="header" href="#example-5-reduce-noise">Example 5: Reduce Noise</a></h3>
+<p><strong>Problem:</strong> Too many <code>fstat</code> and <code>close</code> calls in output.</p>
+<pre><code class="language-bash">renacer -e 'trace=file,!/fstat/,!/close/' -- command
+</code></pre>
+<p><strong>Result:</strong> Cleaner output showing only meaningful file operations.</p>
+<h2 id="performance-tips"><a class="header" href="#performance-tips">Performance Tips</a></h2>
+<h3 id="filter-early"><a class="header" href="#filter-early">Filter Early</a></h3>
+<pre><code class="language-bash"># Fast: Filter at trace time
+renacer -e 'trace=file' -- command
+
+# Slow: Trace everything, filter later
+renacer -- command | grep "openat"
+</code></pre>
+<p><strong>Why:</strong> Filtering during tracing reduces overhead by not processing irrelevant syscalls.</p>
+<h3 id="use-specific-filters"><a class="header" href="#use-specific-filters">Use Specific Filters</a></h3>
+<pre><code class="language-bash"># Better: Specific
+renacer -e 'trace=openat,read,write' -- command
+
+# Worse: Broad
+renacer -e 'trace=file' -- command
+</code></pre>
+<p><strong>Why:</strong> Narrower filters process fewer syscalls, reducing overhead.</p>
+<h3 id="combine-with-statistics"><a class="header" href="#combine-with-statistics">Combine with Statistics</a></h3>
+<pre><code class="language-bash">renacer -e 'trace=file' -c -- command
+</code></pre>
+<p><strong>Why:</strong> Statistics mode (<code>-c</code>) with filtering gives focused performance data without per-syscall output noise.</p>
+<h2 id="common-pitfalls"><a class="header" href="#common-pitfalls">Common Pitfalls</a></h2>
+<h3 id="mistake-1-forgetting-quotes"><a class="header" href="#mistake-1-forgetting-quotes">Mistake 1: Forgetting Quotes</a></h3>
+<pre><code class="language-bash"># Wrong (shell interprets '!' as history expansion)
+renacer -e trace=file,!fstat -- ls
+
+# Correct (quotes protect from shell interpretation)
+renacer -e 'trace=file,!/fstat/' -- ls
+</code></pre>
+<h3 id="mistake-2-incorrect-regex-syntax"><a class="header" href="#mistake-2-incorrect-regex-syntax">Mistake 2: Incorrect Regex Syntax</a></h3>
+<pre><code class="language-bash"># Wrong (missing slashes)
+renacer -e 'trace=^open.*' -- ls
+
+# Correct (regex must be in /.../)
+renacer -e 'trace=/^open.*/' -- ls
+</code></pre>
+<h3 id="mistake-3-over-filtering"><a class="header" href="#mistake-3-over-filtering">Mistake 3: Over-Filtering</a></h3>
+<pre><code class="language-bash"># Too restrictive (might miss relevant syscalls)
+renacer -e 'trace=openat' -- complex-app
+
+# Better (broader class)
+renacer -e 'trace=file' -- complex-app
+</code></pre>
+<p><strong>Tip:</strong> Start broad, then narrow down as you identify what's relevant.</p>
+<h2 id="filter-expression-reference"><a class="header" href="#filter-expression-reference">Filter Expression Reference</a></h2>
+<h3 id="syntax"><a class="header" href="#syntax">Syntax</a></h3>
+<pre><code>trace=&lt;filter1&gt;,&lt;filter2&gt;,&lt;filter3&gt;,...
+</code></pre>
+<h3 id="filter-types"><a class="header" href="#filter-types">Filter Types</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>Type</th><th>Syntax</th><th>Example</th></tr></thead><tbody>
+<tr><td><strong>Syscall class</strong></td><td><code>class_name</code></td><td><code>file</code>, <code>network</code>, <code>process</code></td></tr>
+<tr><td><strong>Literal syscall</strong></td><td><code>syscall_name</code></td><td><code>openat</code>, <code>read</code>, <code>write</code></td></tr>
+<tr><td><strong>Regex pattern</strong></td><td><code>/regex/</code></td><td><code>/^open.*/</code>, <code>/read|write/</code></td></tr>
+<tr><td><strong>Negation</strong></td><td><code>!/pattern/</code> or <code>!class</code></td><td><code>!/fstat/</code>, <code>!memory</code></td></tr>
+</tbody></table>
+</div>
+<h3 id="combining-rules"><a class="header" href="#combining-rules">Combining Rules</a></h3>
+<ul>
+<li><strong>Comma</strong> (<code>,</code>) means OR: <code>trace=file,network</code> = file OR network syscalls</li>
+<li><strong>Negation</strong> (<code>!</code>) excludes: <code>trace=file,!/fstat/</code> = file syscalls except fstat</li>
+<li><strong>Order matters</strong>: Negations apply to everything before them</li>
+</ul>
+<h2 id="advanced-filtering-topics"><a class="header" href="#advanced-filtering-topics">Advanced Filtering Topics</a></h2>
+<p>For more detailed coverage, see:</p>
+<ul>
+<li><a href="./filtering-classes.html">Syscall Classes</a> - Complete list of all syscall classes and their members</li>
+<li><a href="./filtering-negation.html">Negation Patterns</a> - Advanced exclusion strategies</li>
+<li><a href="./filtering-regex.html">Regex Patterns</a> - Comprehensive regex filtering guide</li>
+</ul>
+<h2 id="summary"><a class="header" href="#summary">Summary</a></h2>
+<p><strong>Filtering</strong> makes syscall tracing practical:</p>
+<ul>
+<li><strong>Classes</strong> - Predefined groups (file, network, process, memory, signal, ipc, desc)</li>
+<li><strong>Literals</strong> - Exact syscall names (openat, read, write)</li>
+<li><strong>Regex</strong> - Pattern matching (<code>/^open.*/</code>, <code>/read|write/</code>)</li>
+<li><strong>Negation</strong> - Exclusion (<code>!/fstat/</code>, <code>!memory</code>)</li>
+<li><strong>Combining</strong> - Mix all types with commas</li>
+</ul>
+<p><strong>Best Practices:</strong></p>
+<ol>
+<li>Start with classes, narrow to literals</li>
+<li>Use negation to reduce noise</li>
+<li>Filter at trace time, not post-processing</li>
+<li>Combine with <code>-c</code> for focused statistics</li>
+<li>Quote your filter expressions</li>
+</ol>
+<p><strong>Next Steps:</strong></p>
+<ul>
+<li><a href="./dwarf-correlation.html">DWARF Source Correlation</a> - Map syscalls to source code</li>
+<li><a href="./statistics.html">Statistics Mode</a> - Aggregate analysis with <code>-c</code></li>
+<li><a href="./output-formats.html">Output Formats</a> - Export to JSON/CSV/HTML</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../core-concepts/dwarf-correlation.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../core-concepts/filtering-classes.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../core-concepts/dwarf-correlation.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../core-concepts/filtering-classes.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../ace.js"></script>
+        <script src="../editor.js"></script>
+        <script src="../mode-rust.js"></script>
+        <script src="../theme-dawn.js"></script>
+        <script src="../theme-tomorrow_night.js"></script>
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>
