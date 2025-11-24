@@ -506,11 +506,8 @@ fn process_syscall_exit(
     duration_us: u64,
 ) -> Result<()> {
     // Check if profiling is enabled and handle accordingly
-    let has_profiling = tracers.profiling_ctx.is_some();
-
-    if has_profiling {
+    if let Some(mut prof) = tracers.profiling_ctx.take() {
         // Temporarily take profiling_ctx out to avoid borrow conflict
-        let mut prof = tracers.profiling_ctx.take().unwrap();
         let result = prof.measure(crate::profiling::ProfilingCategory::Other, || {
             handle_syscall_exit(
                 child,

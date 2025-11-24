@@ -331,8 +331,12 @@ pub fn analyze_outliers(
         }
     }
 
-    // Sort by anomaly score (highest first)
-    outliers.sort_by(|a, b| b.anomaly_score.partial_cmp(&a.anomaly_score).unwrap());
+    // Sort by anomaly score (highest first, handle NaN gracefully)
+    outliers.sort_by(|a, b| {
+        b.anomaly_score
+            .partial_cmp(&a.anomaly_score)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
 
     OutlierReport {
         outliers,

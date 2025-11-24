@@ -371,11 +371,11 @@ pub fn analyze_anomalies(
         }
     }
 
-    // Sort by reconstruction error (highest first)
+    // Sort by reconstruction error (highest first, handle NaN gracefully)
     anomalies.sort_by(|a, b| {
         b.reconstruction_error
             .partial_cmp(&a.reconstruction_error)
-            .unwrap()
+            .unwrap_or(std::cmp::Ordering::Equal)
     });
 
     AutoencoderReport {
