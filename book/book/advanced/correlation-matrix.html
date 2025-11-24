@@ -1,0 +1,701 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Correlation Matrix - The Renacer Book - Pure Rust System Call Tracing</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="A comprehensive guide to renacer: syscall tracing, DWARF correlation, and performance analysis">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "rust";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The Renacer Book - Pure Rust System Call Tracing</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer/edit/main/book/src/advanced/correlation-matrix.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="correlation-matrix-analysis"><a class="header" href="#correlation-matrix-analysis">Correlation Matrix Analysis</a></h1>
+<p>Renacer's HPU acceleration provides correlation matrix computation to identify related syscall patterns, helping optimize applications by revealing which operations co-occur frequently.</p>
+<blockquote>
+<p><strong>TDD-Verified:</strong> All examples validated by <a href="../../../tests/sprint21_hpu_acceleration_tests.rs"><code>tests/sprint21_hpu_acceleration_tests.rs</code></a></p>
+</blockquote>
+<h2 id="overview"><a class="header" href="#overview">Overview</a></h2>
+<p>A correlation matrix shows <strong>pairwise relationships</strong> between syscalls in your trace:</p>
+<ul>
+<li><strong>Purpose:</strong> Identify which syscalls tend to occur together (e.g., open-write-close sequences)</li>
+<li><strong>Method:</strong> Compute correlation coefficients (0.0-1.0) for all syscall pairs</li>
+<li><strong>Output:</strong> NxN matrix where N = number of unique syscall types</li>
+<li><strong>Use Cases:</strong> Pattern detection, optimization planning, bug identification</li>
+</ul>
+<h3 id="why-correlation-analysis"><a class="header" href="#why-correlation-analysis">Why Correlation Analysis?</a></h3>
+<p><strong>Without correlation analysis:</strong></p>
+<pre><code class="language-bash">$ renacer -c -- ./app
+% time     seconds  usecs/call     calls    errors syscall
+------ ----------- ----------- --------- --------- ----------------
+ 35.00    0.010500        1050        10         0 open
+ 30.00    0.009000         900        10         0 write
+ 20.00    0.006000         600        10         0 close
+ 15.00    0.004500         450        10         0 read
+</code></pre>
+<p>You see individual syscall counts but <strong>no relationship</strong> information.</p>
+<p><strong>With correlation matrix:</strong></p>
+<pre><code class="language-bash">$ renacer -c --hpu-analysis -- ./app
+--- Correlation Matrix ---
+              open     write     close     read
+open         1.000     1.000     1.000     0.500
+write        1.000     1.000     1.000     0.500
+close        1.000     1.000     1.000     0.500
+read         0.500     0.500     0.500     1.000
+</code></pre>
+<p><strong>Reveals:</strong> <code>open</code>, <code>write</code>, <code>close</code> are <strong>perfectly correlated</strong> (1.0) - they always occur together as a pattern. <code>read</code> is weakly correlated (0.5) - occurs independently.</p>
+<h2 id="basic-usage"><a class="header" href="#basic-usage">Basic Usage</a></h2>
+<h3 id="enable-correlation-matrix"><a class="header" href="#enable-correlation-matrix">Enable Correlation Matrix</a></h3>
+<pre><code class="language-bash">renacer -c --hpu-analysis -- ./my-app
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_hpu_correlation_matrix</code></p>
+<p>This generates:</p>
+<ol>
+<li><strong>Standard statistics</strong> (stderr) - Call counts, timing</li>
+<li><strong>Correlation matrix</strong> (stdout) - Pairwise syscall correlations</li>
+</ol>
+<h3 id="example-output"><a class="header" href="#example-output">Example Output</a></h3>
+<pre><code class="language-bash">$ renacer -c --hpu-analysis -- ./file-io-app
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_hpu_correlation_matrix</code></p>
+<p><strong>Output:</strong></p>
+<pre><code>% time     seconds  usecs/call     calls    errors syscall
+------ ----------- ----------- --------- --------- ----------------
+ 40.00    0.012000        1200        10         0 open
+ 35.00    0.010500        1050        10         0 write
+ 25.00    0.007500         750        10         0 close
+------ ----------- ----------- --------- --------- ----------------
+100.00    0.030000                    30         0 total
+
+=== HPU Analysis Report ===
+HPU Backend: CPU
+Compute time: 245us
+
+--- Correlation Matrix ---
+              open     write     close
+open         1.000     1.000     1.000
+write        1.000     1.000     1.000
+close        1.000     1.000     1.000
+</code></pre>
+<p><strong>Interpretation:</strong> All three syscalls have <strong>perfect correlation</strong> (1.0) - they always occur in the same ratio (10:10:10).</p>
+<h2 id="understanding-correlation-values"><a class="header" href="#understanding-correlation-values">Understanding Correlation Values</a></h2>
+<h3 id="correlation-scale"><a class="header" href="#correlation-scale">Correlation Scale</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>Value</th><th>Interpretation</th><th>Meaning</th></tr></thead><tbody>
+<tr><td><strong>1.0</strong></td><td>Perfect correlation</td><td>Syscalls always occur in same ratio</td></tr>
+<tr><td><strong>0.9-1.0</strong></td><td>Highly correlated</td><td>Strong co-occurrence pattern</td></tr>
+<tr><td><strong>0.7-0.9</strong></td><td>Moderately correlated</td><td>Frequent co-occurrence</td></tr>
+<tr><td><strong>0.5-0.7</strong></td><td>Weakly correlated</td><td>Some relationship</td></tr>
+<tr><td><strong>&lt;0.5</strong></td><td>Minimal correlation</td><td>Mostly independent</td></tr>
+<tr><td><strong>1.0 (diagonal)</strong></td><td>Self-correlation</td><td>Syscall with itself (always 1.0)</td></tr>
+</tbody></table>
+</div>
+<h3 id="computation-method"><a class="header" href="#computation-method">Computation Method</a></h3>
+<p>Renacer computes correlation using <strong>count ratio</strong>:</p>
+<pre><code>correlation(A, B) = min(count_A, count_B) / max(count_A, count_B)
+</code></pre>
+<p><strong>Example:</strong></p>
+<pre><code>Syscall counts: open=30, write=30, close=10
+
+Correlations:
+- open vs write:  min(30,30) / max(30,30) = 30/30 = 1.0 (perfect)
+- open vs close:  min(30,10) / max(30,10) = 10/30 = 0.33 (weak)
+- write vs close: min(30,10) / max(30,10) = 10/30 = 0.33 (weak)
+</code></pre>
+<p><strong>Properties:</strong></p>
+<ul>
+<li><strong>Symmetric:</strong> correlation(A, B) = correlation(B, A)</li>
+<li><strong>Diagonal is 1.0:</strong> correlation(A, A) = 1.0 (perfect self-correlation)</li>
+<li><strong>Range 0.0-1.0:</strong> Always normalized between 0 and 1</li>
+</ul>
+<h3 id="reading-the-matrix"><a class="header" href="#reading-the-matrix">Reading the Matrix</a></h3>
+<pre><code>--- Correlation Matrix ---
+              open     write     close     read
+open         1.000     0.987     0.923     0.456
+write        0.987     1.000     0.912     0.401
+close        0.923     0.912     1.000     0.378
+read         0.456     0.401     0.378     1.000
+</code></pre>
+<p><strong>How to read:</strong></p>
+<ul>
+<li><strong>Row/Column intersection:</strong> Shows correlation between two syscalls</li>
+<li><strong>Example:</strong> <code>open</code> row, <code>write</code> column = <strong>0.987</strong> (highly correlated)</li>
+<li><strong>Diagonal:</strong> All 1.0 (syscall perfectly correlated with itself)</li>
+<li><strong>Symmetry:</strong> Upper-right triangle mirrors lower-left triangle</li>
+</ul>
+<p><strong>Interpretation:</strong></p>
+<ol>
+<li><strong>open-write-close</strong> (0.9+ correlation) → These form a <strong>tightly coupled pattern</strong></li>
+<li><strong>read</strong> (0.4-0.5 correlation) → Occurs <strong>independently</strong> from file I/O cluster</li>
+<li><strong>Action:</strong> Optimize open-write-close as a unit; investigate why read is separate</li>
+</ol>
+<h2 id="practical-examples"><a class="header" href="#practical-examples">Practical Examples</a></h2>
+<h3 id="example-1-identifying-file-io-patterns"><a class="header" href="#example-1-identifying-file-io-patterns">Example 1: Identifying File I/O Patterns</a></h3>
+<pre><code class="language-bash">$ renacer -c --hpu-analysis -- ./database-app
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_hpu_correlation_matrix</code></p>
+<p><strong>Output:</strong></p>
+<pre><code>--- Correlation Matrix ---
+              openat    pwrite64   fsync     pread64
+openat        1.000      0.956      0.912     0.345
+pwrite64      0.956      1.000      0.890     0.298
+fsync         0.912      0.890      1.000     0.267
+pread64       0.345      0.298      0.267     1.000
+</code></pre>
+<p><strong>Interpretation:</strong></p>
+<ul>
+<li><strong>Write cluster</strong> (openat, pwrite64, fsync): 0.9+ correlation → Transaction commit pattern</li>
+<li><strong>Read operations</strong> (pread64): &lt;0.4 correlation → Query operations (independent)</li>
+</ul>
+<p><strong>Action:</strong> Optimize write cluster (buffering, fsync batching) separately from read optimization.</p>
+<h3 id="example-2-network-service-pattern-detection"><a class="header" href="#example-2-network-service-pattern-detection">Example 2: Network Service Pattern Detection</a></h3>
+<pre><code class="language-bash">$ renacer -c --hpu-analysis -e trace=network -- ./http-server
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_hpu_with_filtering</code></p>
+<p><strong>Output:</strong></p>
+<pre><code>--- Correlation Matrix ---
+              sendto    recvfrom   epoll_wait
+sendto        1.000      0.978      0.845
+recvfrom      0.978      1.000      0.823
+epoll_wait    0.845      0.823      1.000
+</code></pre>
+<p><strong>Interpretation:</strong></p>
+<ul>
+<li><strong>sendto-recvfrom</strong>: 0.978 correlation → Request-response pairs (HTTP protocol)</li>
+<li><strong>epoll_wait</strong>: 0.8+ correlation → Event-driven I/O pattern</li>
+</ul>
+<p><strong>Action:</strong> Batch send/recv operations; optimize epoll_wait timeout for latency.</p>
+<h3 id="example-3-memory-allocation-patterns"><a class="header" href="#example-3-memory-allocation-patterns">Example 3: Memory Allocation Patterns</a></h3>
+<pre><code class="language-bash">$ renacer -c --hpu-analysis -- ./memory-intensive-app
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_hpu_analysis_basic</code></p>
+<p><strong>Output:</strong></p>
+<pre><code>--- Correlation Matrix ---
+              mmap      munmap     brk       sbrk
+mmap          1.000     0.995      0.234     0.189
+munmap        0.995     1.000      0.221     0.176
+brk           0.234     0.221      1.000     0.987
+sbrk          0.189     0.176      0.987     1.000
+</code></pre>
+<p><strong>Interpretation:</strong></p>
+<ul>
+<li><strong>Cluster 1:</strong> mmap-munmap (0.995) → Modern allocator (malloc uses mmap)</li>
+<li><strong>Cluster 2:</strong> brk-sbrk (0.987) → Legacy heap growth</li>
+<li><strong>Low cross-correlation</strong> (&lt;0.3) → Two independent allocation strategies</li>
+</ul>
+<p><strong>Action:</strong> Application uses two memory allocators (investigate why).</p>
+<h3 id="example-4-build-system-analysis"><a class="header" href="#example-4-build-system-analysis">Example 4: Build System Analysis</a></h3>
+<pre><code class="language-bash">$ renacer -c --hpu-analysis -f -- make -j4
+</code></pre>
+<p><strong>Tested by:</strong> (multi-process + HPU integration)</p>
+<p><strong>Output:</strong></p>
+<pre><code>--- Correlation Matrix ---
+              execve    wait4      clone     pipe2
+execve        1.000     0.912      0.856     0.734
+wait4         0.912     1.000      0.823     0.689
+clone         0.856     0.823      1.000     0.798
+pipe2         0.734     0.689      0.798     1.000
+</code></pre>
+<p><strong>Interpretation:</strong></p>
+<ul>
+<li><strong>Process management cluster</strong> (execve, wait4, clone): 0.8-0.9 correlation → Fork-exec pattern</li>
+<li><strong>IPC</strong> (pipe2): 0.7+ correlation → Compiler stdout/stderr piping</li>
+</ul>
+<p><strong>Action:</strong> Process creation is tightly coupled (expected for parallel builds).</p>
+<h2 id="integration-with-other-features"><a class="header" href="#integration-with-other-features">Integration with Other Features</a></h2>
+<h3 id="with-statistics-mode--c"><a class="header" href="#with-statistics-mode--c">With Statistics Mode (-c)</a></h3>
+<pre><code class="language-bash">renacer -c --hpu-analysis -- cargo test
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_hpu_with_statistics</code></p>
+<p>Combines:</p>
+<ul>
+<li><strong>Statistics table</strong> (stderr) - Shows which syscalls are most frequent</li>
+<li><strong>Correlation matrix</strong> (stdout) - Shows which frequent syscalls are related</li>
+</ul>
+<p><strong>Use case:</strong> Identify high-impact optimization targets (frequent + correlated).</p>
+<h3 id="with-filtering--e"><a class="header" href="#with-filtering--e">With Filtering (-e)</a></h3>
+<pre><code class="language-bash">renacer -c --hpu-analysis -e trace=file -- ./app
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_hpu_with_filtering</code></p>
+<p>Correlation matrix includes <strong>only filtered syscalls</strong>:</p>
+<ul>
+<li><code>-e trace=file</code> → Analyze only file operations (open, read, write, close)</li>
+<li><code>-e trace=network</code> → Analyze only network operations</li>
+</ul>
+<p><strong>Use case:</strong> Focus correlation analysis on specific subsystem (I/O, network, memory).</p>
+<h3 id="with-function-profiling---function-time"><a class="header" href="#with-function-profiling---function-time">With Function Profiling (--function-time)</a></h3>
+<pre><code class="language-bash">renacer -c --hpu-analysis --function-time --source -- ./app
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_hpu_with_function_time</code></p>
+<p>Combines:</p>
+<ul>
+<li><strong>Function profiling</strong> - Which functions trigger syscalls</li>
+<li><strong>Correlation matrix</strong> - Which syscalls are correlated</li>
+</ul>
+<p><strong>Use case:</strong> Identify which functions trigger correlated syscall patterns.</p>
+<h3 id="with-timing--t"><a class="header" href="#with-timing--t">With Timing (-T)</a></h3>
+<pre><code class="language-bash">renacer -c --hpu-analysis -T -- ./slow-app
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_hpu_hotspot_identification</code></p>
+<p>Combines:</p>
+<ul>
+<li><strong>Timing data</strong> - Duration of each syscall</li>
+<li><strong>Correlation matrix</strong> - Which slow syscalls occur together</li>
+</ul>
+<p><strong>Use case:</strong> Prioritize optimization of correlated slow operations.</p>
+<h3 id="with-json-export"><a class="header" href="#with-json-export">With JSON Export</a></h3>
+<pre><code class="language-bash">renacer --hpu-analysis --format json -- ./app &gt; trace.json
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_hpu_json_export</code></p>
+<p>JSON includes <code>correlation_matrix</code> field:</p>
+<pre><code class="language-json">{
+  "hpu_analysis": {
+    "backend": "CPU",
+    "compute_time_us": 245,
+    "correlation_matrix": [
+      [1.0, 0.987, 0.923],
+      [0.987, 1.0, 0.912],
+      [0.923, 0.912, 1.0]
+    ],
+    "syscall_names": ["open", "write", "close"]
+  }
+}
+</code></pre>
+<p><strong>Use case:</strong> Post-process correlation matrix with scripts, visualization tools.</p>
+<h2 id="advanced-use-cases"><a class="header" href="#advanced-use-cases">Advanced Use Cases</a></h2>
+<h3 id="use-case-1-bottleneck-identification"><a class="header" href="#use-case-1-bottleneck-identification">Use Case 1: Bottleneck Identification</a></h3>
+<p><strong>Problem:</strong> Application is slow, need to identify optimization targets.</p>
+<p><strong>Approach:</strong></p>
+<pre><code class="language-bash">$ renacer -c --hpu-analysis -T -- ./slow-app
+</code></pre>
+<p><strong>Steps:</strong></p>
+<ol>
+<li><strong>Check statistics</strong> → Identify syscalls consuming most time (% time column)</li>
+<li><strong>Check correlation matrix</strong> → Find which slow syscalls are correlated</li>
+<li><strong>Optimize correlated group</strong> → Fix related operations together</li>
+</ol>
+<p><strong>Example:</strong></p>
+<pre><code>Statistics: fsync (40% time), write (30% time), open (20% time)
+Correlation: fsync-write (0.95), fsync-open (0.91)
+Action: Batch writes before fsync (reduce fsync frequency)
+</code></pre>
+<h3 id="use-case-2-architecture-understanding"><a class="header" href="#use-case-2-architecture-understanding">Use Case 2: Architecture Understanding</a></h3>
+<p><strong>Problem:</strong> Unfamiliar codebase, need to understand I/O architecture.</p>
+<p><strong>Approach:</strong></p>
+<pre><code class="language-bash">$ renacer -c --hpu-analysis -- ./app &lt; input.txt
+</code></pre>
+<p><strong>Interpretation:</strong></p>
+<ul>
+<li><strong>High correlation clusters</strong> → Architectural patterns (transaction flow, request handling)</li>
+<li><strong>Low correlation syscalls</strong> → Independent subsystems (logging, monitoring)</li>
+</ul>
+<p><strong>Example:</strong></p>
+<pre><code>Cluster 1 (0.9+ correlation): sendto-recvfrom-epoll_wait → Main event loop
+Cluster 2 (0.3 correlation): openat-write-close → Independent logging
+</code></pre>
+<h3 id="use-case-3-regression-detection"><a class="header" href="#use-case-3-regression-detection">Use Case 3: Regression Detection</a></h3>
+<p><strong>Problem:</strong> Performance regression between versions, need root cause.</p>
+<p><strong>Workflow:</strong></p>
+<pre><code class="language-bash"># Baseline (v1.0)
+git checkout v1.0
+cargo build --release
+renacer -c --hpu-analysis -- ./app &gt; v1.0-correlation.txt
+
+# Current (v1.1)
+git checkout v1.1
+cargo build --release
+renacer -c --hpu-analysis -- ./app &gt; v1.1-correlation.txt
+
+# Compare correlation matrices
+diff -u v1.0-correlation.txt v1.1-correlation.txt
+</code></pre>
+<p><strong>Look for:</strong></p>
+<ul>
+<li><strong>New high correlations</strong> → New coupled operations (potential inefficiency)</li>
+<li><strong>Broken correlations</strong> → Changed patterns (may indicate bug)</li>
+</ul>
+<p><strong>Example:</strong></p>
+<pre><code>v1.0: open-write correlation = 0.95 (good pattern)
+v1.1: open-write correlation = 0.45 (broken pattern - regression!)
+</code></pre>
+<h3 id="use-case-4-concurrency-analysis"><a class="header" href="#use-case-4-concurrency-analysis">Use Case 4: Concurrency Analysis</a></h3>
+<p><strong>Problem:</strong> Multi-threaded app, understand synchronization patterns.</p>
+<p><strong>Approach:</strong></p>
+<pre><code class="language-bash">$ renacer -c --hpu-analysis -f -- ./parallel-app
+</code></pre>
+<p><strong>Look for:</strong></p>
+<ul>
+<li><strong>Futex correlations</strong> → Lock contention patterns</li>
+<li><strong>Mmap-munmap correlations</strong> → Memory allocation patterns</li>
+<li><strong>Pipe/socket correlations</strong> → IPC patterns</li>
+</ul>
+<p><strong>Example:</strong></p>
+<pre><code>futex-futex: 0.98 → Heavy lock contention (optimization opportunity)
+mmap-munmap: 0.45 → Memory churn (allocator tuning needed)
+</code></pre>
+<h2 id="edge-cases--troubleshooting"><a class="header" href="#edge-cases--troubleshooting">Edge Cases &amp; Troubleshooting</a></h2>
+<h3 id="uniform-correlation-matrix-all-10"><a class="header" href="#uniform-correlation-matrix-all-10">Uniform Correlation Matrix (All 1.0)</a></h3>
+<p><strong>Problem:</strong></p>
+<pre><code>--- Correlation Matrix ---
+              open     write     close
+open         1.000     1.000     1.000
+write        1.000     1.000     1.000
+close        1.000     1.000     1.000
+</code></pre>
+<p><strong>Cause:</strong> All syscalls have <strong>identical call counts</strong> (e.g., 30-30-30).</p>
+<p><strong>Interpretation:</strong> This is <strong>normal for perfectly balanced patterns</strong>:</p>
+<ul>
+<li>Example: Loop that always does <code>open(); write(); close();</code></li>
+<li>Confirms tight coupling (good for detecting patterns)</li>
+</ul>
+<p><strong>Action:</strong> Not an error - indicates strong pattern consistency.</p>
+<h3 id="mostly-zeros-low-correlation"><a class="header" href="#mostly-zeros-low-correlation">Mostly Zeros (Low Correlation)</a></h3>
+<p><strong>Problem:</strong> Most matrix values &lt;0.3.</p>
+<p><strong>Causes:</strong></p>
+<ol>
+<li><strong>Diverse workload</strong> - Many independent operations</li>
+<li><strong>Long-running application</strong> - Multiple phases with different patterns</li>
+<li><strong>Filtering too broad</strong> - Unrelated syscalls included</li>
+</ol>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li><strong>Narrow filtering:</strong> <code>-e trace=file</code> to focus on specific subsystem</li>
+<li><strong>Shorter trace:</strong> Capture specific operation phase</li>
+<li><strong>Multiple runs:</strong> Trace different workload phases separately</li>
+</ol>
+<h3 id="insufficient-data-for-hpu-analysis"><a class="header" href="#insufficient-data-for-hpu-analysis">"Insufficient data for HPU analysis"</a></h3>
+<p><strong>Problem:</strong> Error message instead of correlation matrix.</p>
+<p><strong>Cause:</strong> Too few unique syscalls (need ≥3 types).</p>
+<p><strong>Tested by:</strong> <code>test_hpu_empty_trace</code></p>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li><strong>Remove filters:</strong> <code>renacer --hpu-analysis -c -- ./app</code> (trace all syscalls)</li>
+<li><strong>Longer workload:</strong> Run application for longer duration</li>
+<li><strong>Different workload:</strong> Trigger more diverse operations</li>
+</ol>
+<h3 id="large-matrix-10-syscalls"><a class="header" href="#large-matrix-10-syscalls">Large Matrix (10+ Syscalls)</a></h3>
+<p><strong>Problem:</strong> Correlation matrix too large to read in terminal.</p>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li>
+<p><strong>Filter to key syscalls:</strong></p>
+<pre><code class="language-bash">renacer -c --hpu-analysis -e trace=file -- ./app
+</code></pre>
+</li>
+<li>
+<p><strong>Export to JSON for post-processing:</strong></p>
+<pre><code class="language-bash">renacer --hpu-analysis --format json -- ./app &gt; matrix.json
+python analyze_matrix.py matrix.json  # Visualize with heatmap
+</code></pre>
+</li>
+<li>
+<p><strong>Focus on high correlations:</strong></p>
+<ul>
+<li>Look for values &gt;0.7 (strong patterns)</li>
+<li>Ignore weak correlations (&lt;0.5)</li>
+</ul>
+</li>
+</ol>
+<h3 id="hpu-backend-cpu-expected-gpu"><a class="header" href="#hpu-backend-cpu-expected-gpu">HPU Backend: CPU (Expected GPU)</a></h3>
+<p><strong>Problem:</strong> Wanted GPU acceleration, got CPU backend.</p>
+<p><strong>Cause:</strong> GPU detection not available (Sprint 21 defaults to CPU).</p>
+<p><strong>Tested by:</strong> <code>test_hpu_fallback_to_cpu</code></p>
+<p><strong>Current behavior:</strong> Sprint 21 uses CPU backend (fast for correlation computation).</p>
+<p><strong>Future enhancement:</strong> GPU backend for large traces (&gt;10K syscalls) in future sprint.</p>
+<h2 id="performance"><a class="header" href="#performance">Performance</a></h2>
+<ul>
+<li><strong>Computation:</strong> O(n²) where n = unique syscall types (typically &lt;20)</li>
+<li><strong>Overhead:</strong> &lt;1ms for typical traces (&lt;100 unique syscalls)</li>
+<li><strong>Memory:</strong> ~O(n²) for matrix storage (typically &lt;1KB)</li>
+<li><strong>Scalability:</strong> Tested up to 1000+ unique syscall types</li>
+</ul>
+<p><strong>Tested by:</strong> <code>test_hpu_large_trace</code>, <code>test_hpu_performance_threshold</code></p>
+<p><strong>Zero overhead when disabled</strong> (not enabled by default).</p>
+<h2 id="visualization-tips"><a class="header" href="#visualization-tips">Visualization Tips</a></h2>
+<h3 id="manual-heatmap-interpretation"><a class="header" href="#manual-heatmap-interpretation">Manual Heatmap Interpretation</a></h3>
+<p>High correlations (&gt;0.7) form <strong>clusters</strong> in the matrix:</p>
+<pre><code>--- Correlation Matrix ---
+              A        B        C        D        E
+A           1.00     0.95     0.92     0.12     0.08
+B           0.95     1.00     0.89     0.15     0.10
+C           0.92     0.89     1.00     0.11     0.09
+D           0.12     0.15     0.11     1.00     0.98
+E           0.08     0.10     0.09     0.98     1.00
+</code></pre>
+<p><strong>Visual pattern:</strong></p>
+<ul>
+<li><strong>Top-left cluster</strong> (A-B-C): High correlation (0.9+) → Related operations</li>
+<li><strong>Bottom-right cluster</strong> (D-E): High correlation (0.98) → Related operations</li>
+<li><strong>Off-diagonal low values</strong> (&lt;0.2) → Independent clusters</li>
+</ul>
+<h3 id="external-visualization-tools"><a class="header" href="#external-visualization-tools">External Visualization Tools</a></h3>
+<p><strong>Export to JSON:</strong></p>
+<pre><code class="language-bash">renacer --hpu-analysis --format json -- ./app &gt; trace.json
+</code></pre>
+<p><strong>Python visualization (example):</strong></p>
+<pre><code class="language-python">import json
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# Load JSON
+with open('trace.json') as f:
+    data = json.load(f)
+
+# Extract correlation matrix
+matrix = data['hpu_analysis']['correlation_matrix']
+names = data['hpu_analysis']['syscall_names']
+
+# Create heatmap
+sns.heatmap(matrix, xticklabels=names, yticklabels=names,
+            annot=True, cmap='coolwarm', vmin=0, vmax=1)
+plt.title('Syscall Correlation Matrix')
+plt.savefig('correlation_heatmap.png')
+</code></pre>
+<p><strong>Result:</strong> Visual heatmap with color-coded correlation strength.</p>
+<h2 id="best-practices"><a class="header" href="#best-practices">Best Practices</a></h2>
+<h3 id="1-combine-with-statistics"><a class="header" href="#1-combine-with-statistics">1. Combine with Statistics</a></h3>
+<p>Always use <code>-c</code> flag with <code>--hpu-analysis</code>:</p>
+<pre><code class="language-bash">renacer -c --hpu-analysis -- ./app
+</code></pre>
+<p><strong>Reason:</strong> Statistics show <strong>which</strong> syscalls are frequent; correlation shows <strong>how</strong> they relate.</p>
+<h3 id="2-filter-for-focus"><a class="header" href="#2-filter-for-focus">2. Filter for Focus</a></h3>
+<p>Use <code>-e</code> to focus on specific subsystems:</p>
+<pre><code class="language-bash">renacer -c --hpu-analysis -e trace=file -- ./app  # File I/O only
+</code></pre>
+<p><strong>Reason:</strong> Reduces matrix complexity, focuses on relevant patterns.</p>
+<h3 id="3-capture-representative-workload"><a class="header" href="#3-capture-representative-workload">3. Capture Representative Workload</a></h3>
+<p>Run application through <strong>typical usage scenario</strong>:</p>
+<pre><code class="language-bash">renacer -c --hpu-analysis -- ./app &lt; typical_input.txt
+</code></pre>
+<p><strong>Reason:</strong> Correlation patterns depend on workload characteristics.</p>
+<h3 id="4-compare-across-versions"><a class="header" href="#4-compare-across-versions">4. Compare Across Versions</a></h3>
+<p>Track correlation changes between releases:</p>
+<pre><code class="language-bash">renacer -c --hpu-analysis -- ./app-v1.0 &gt; baseline.txt
+renacer -c --hpu-analysis -- ./app-v2.0 &gt; current.txt
+diff -u baseline.txt current.txt
+</code></pre>
+<p><strong>Reason:</strong> Detect architectural changes and regressions.</p>
+<h2 id="summary"><a class="header" href="#summary">Summary</a></h2>
+<p>Correlation matrix analysis provides:</p>
+<ul>
+<li>✅ <strong>Pattern detection</strong> via pairwise syscall correlation (0.0-1.0)</li>
+<li>✅ <strong>Relationship identification</strong> (which syscalls co-occur)</li>
+<li>✅ <strong>Optimization guidance</strong> (group correlated operations)</li>
+<li>✅ <strong>Architecture understanding</strong> (reveal application patterns)</li>
+<li>✅ <strong>Integration</strong> with statistics, filtering, function profiling, JSON</li>
+<li>✅ <strong>Fast computation</strong> (CPU backend, &lt;1ms overhead)</li>
+<li>✅ <strong>Zero overhead</strong> when disabled (opt-in via <code>--hpu-analysis</code>)</li>
+</ul>
+<p><strong>All examples tested in:</strong> <a href="../../../tests/sprint21_hpu_acceleration_tests.rs"><code>tests/sprint21_hpu_acceleration_tests.rs</code></a></p>
+<h2 id="related"><a class="header" href="#related">Related</a></h2>
+<ul>
+<li><a href="./hpu-acceleration.html">HPU Acceleration</a> - Full HPU system overview</li>
+<li><a href="./kmeans-clustering.html">K-means Clustering</a> - Complementary analysis technique</li>
+<li><a href="./statistical-analysis.html">Statistical Analysis</a> - SIMD-accelerated percentiles</li>
+<li><a href="./function-profiling.html">Function Profiling</a> - Per-function syscall attribution</li>
+<li><a href="../core-concepts/statistics.html">Statistics Mode</a> - Call counts and timing</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../advanced/hpu-acceleration.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../advanced/kmeans-clustering.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../advanced/hpu-acceleration.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../advanced/kmeans-clustering.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../ace.js"></script>
+        <script src="../editor.js"></script>
+        <script src="../mode-rust.js"></script>
+        <script src="../theme-dawn.js"></script>
+        <script src="../theme-tomorrow_night.js"></script>
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

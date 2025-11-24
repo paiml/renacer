@@ -248,7 +248,7 @@ fn test_parallel_workers_critical_path() {
     assert!(result.span_names.contains(&"worker2".to_string()));
 
     // worker2 should be the longest span
-    let (longest_node, longest_duration) = result.longest_span().unwrap();
+    let (_longest_node, longest_duration) = result.longest_span().unwrap();
     assert_eq!(longest_duration, 120_000);
 }
 

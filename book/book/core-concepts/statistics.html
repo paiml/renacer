@@ -1,0 +1,585 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Statistics Mode - The Renacer Book - Pure Rust System Call Tracing</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="A comprehensive guide to renacer: syscall tracing, DWARF correlation, and performance analysis">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "rust";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The Renacer Book - Pure Rust System Call Tracing</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer/edit/main/book/src/core-concepts/statistics.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="statistics-mode"><a class="header" href="#statistics-mode">Statistics Mode</a></h1>
+<p>When you need to understand overall system call behavior rather than individual calls, <strong>statistics mode</strong> (<code>-c</code> flag) provides aggregate analysis. Instead of thousands of lines of syscall traces, you get a concise summary of what happened.</p>
+<h2 id="what-is-statistics-mode"><a class="header" href="#what-is-statistics-mode">What is Statistics Mode?</a></h2>
+<p>Statistics mode counts and times syscalls, then displays a summary table instead of per-syscall output.</p>
+<h3 id="basic-usage"><a class="header" href="#basic-usage">Basic Usage</a></h3>
+<pre><code class="language-bash">renacer -c -- command
+</code></pre>
+<h3 id="example"><a class="header" href="#example">Example</a></h3>
+<p><strong>Without statistics:</strong></p>
+<pre><code class="language-bash">$ renacer -- ls
+openat(AT_FDCWD, "/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 3
+fstat(3, {...}) = 0
+mmap(NULL, 163352, PROT_READ, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9a2c000000
+# ... 200+ more lines ...
+</code></pre>
+<p><strong>With statistics:</strong></p>
+<pre><code class="language-bash">$ renacer -c -- ls
+System Call Summary:
+====================
+Syscall          Calls    Errors    Total Time    Avg Time    Min Time    Max Time
+openat           5        0         2.345ms       0.469ms     0.123ms     1.234ms
+fstat            8        0         0.891ms       0.111ms     0.089ms     0.156ms
+read             3        0         1.234ms       0.411ms     0.234ms     0.678ms
+mmap             12       0         3.456ms       0.288ms     0.145ms     0.567ms
+write            2        0         0.567ms       0.284ms     0.234ms     0.334ms
+close            5        0         0.234ms       0.047ms     0.034ms     0.067ms
+</code></pre>
+<p><strong>Result:</strong> 200+ lines reduced to 6 summary rows.</p>
+<h2 id="why-aggregate-analysis"><a class="header" href="#why-aggregate-analysis">Why Aggregate Analysis?</a></h2>
+<h3 id="1-performance-profiling"><a class="header" href="#1-performance-profiling">1. Performance Profiling</a></h3>
+<p><strong>Question:</strong> Which syscalls are slowing down my application?</p>
+<pre><code class="language-bash">$ renacer -c -- ./slow-app
+System Call Summary:
+====================
+Syscall          Calls    Errors    Total Time    Avg Time
+fsync            1247     0         5.678s        4.553ms     # ⚠️ Slow!
+openat           1247     0         2.345s        1.881ms
+write            3741     0         1.234s        0.330ms
+</code></pre>
+<p><strong>Answer:</strong> <code>fsync</code> is taking 5.6 seconds total (45% of execution time).</p>
+<h3 id="2-error-analysis"><a class="header" href="#2-error-analysis">2. Error Analysis</a></h3>
+<p><strong>Question:</strong> How many errors occurred?</p>
+<pre><code class="language-bash">$ renacer -c -- ./buggy-app
+System Call Summary:
+====================
+Syscall          Calls    Errors    Total Time    Avg Time
+openat           1500     247       1.234s        0.823ms     # 247 errors!
+read             1253     0         0.567s        0.453ms
+</code></pre>
+<p><strong>Answer:</strong> <code>openat</code> failed 247 times (16% failure rate).</p>
+<h3 id="3-syscall-frequency"><a class="header" href="#3-syscall-frequency">3. Syscall Frequency</a></h3>
+<p><strong>Question:</strong> Which syscalls are called most?</p>
+<pre><code class="language-bash">$ renacer -c -- cargo build
+System Call Summary:
+====================
+Syscall          Calls    Errors    Total Time    Avg Time
+read             45678    0         12.345s       0.270ms     # Most frequent
+write            23456    0         8.901s        0.379ms
+openat           12345    0         5.678s        0.460ms
+</code></pre>
+<p><strong>Answer:</strong> <code>read</code> is called 45,678 times during build.</p>
+<h2 id="understanding-the-output"><a class="header" href="#understanding-the-output">Understanding the Output</a></h2>
+<h3 id="column-descriptions"><a class="header" href="#column-descriptions">Column Descriptions</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>Column</th><th>Description</th><th>Example</th><th>Interpretation</th></tr></thead><tbody>
+<tr><td><strong>Syscall</strong></td><td>Syscall name</td><td><code>openat</code></td><td>Which syscall</td></tr>
+<tr><td><strong>Calls</strong></td><td>Total number of calls</td><td><code>1247</code></td><td>Frequency</td></tr>
+<tr><td><strong>Errors</strong></td><td>Number of failed calls</td><td><code>247</code></td><td>Failure count</td></tr>
+<tr><td><strong>Total Time</strong></td><td>Cumulative time</td><td><code>5.678s</code></td><td>Total time spent</td></tr>
+<tr><td><strong>Avg Time</strong></td><td>Average per call</td><td><code>4.553ms</code></td><td>Typical duration</td></tr>
+<tr><td><strong>Min Time</strong></td><td>Fastest call</td><td><code>0.123ms</code></td><td>Best case</td></tr>
+<tr><td><strong>Max Time</strong></td><td>Slowest call</td><td><code>23.456ms</code></td><td>Worst case</td></tr>
+</tbody></table>
+</div>
+<h3 id="sorting"><a class="header" href="#sorting">Sorting</a></h3>
+<p>By default, output is sorted by <strong>Total Time</strong> (descending) - showing most time-consuming syscalls first.</p>
+<p><strong>Example:</strong></p>
+<pre><code>System Call Summary:
+====================
+Syscall          Calls    Errors    Total Time    Avg Time
+fsync            100      0         5.678s        56.78ms     # #1: Most total time
+read             5000     0         3.456s        0.691ms     # #2
+write            3000     0         2.345s        0.782ms     # #3
+</code></pre>
+<h2 id="enhanced-statistics-sprint-19"><a class="header" href="#enhanced-statistics-sprint-19">Enhanced Statistics (Sprint 19+)</a></h2>
+<p>Renacer provides advanced statistical analysis beyond basic averages.</p>
+<h3 id="percentile-analysis"><a class="header" href="#percentile-analysis">Percentile Analysis</a></h3>
+<pre><code class="language-bash">$ renacer -c -- ./app
+System Call Summary (Enhanced):
+================================
+Syscall          Calls    Total Time    Avg      Min      p50      p90      p99      Max
+read             5000     3.456s        0.691ms  0.123ms  0.567ms  1.234ms  2.345ms  5.678ms
+write            3000     2.345s        0.782ms  0.234ms  0.678ms  1.456ms  3.456ms  8.901ms
+fsync            100      5.678s        56.78ms  12.34ms  45.67ms  89.01ms  123.45ms 234.56ms
+</code></pre>
+<p><strong>Percentiles explained:</strong></p>
+<ul>
+<li><strong>p50 (median)</strong>: 50% of calls faster than this</li>
+<li><strong>p90</strong>: 90% of calls faster than this (90th percentile)</li>
+<li><strong>p99</strong>: 99% of calls faster than this (outlier detection)</li>
+</ul>
+<h3 id="interpreting-percentiles"><a class="header" href="#interpreting-percentiles">Interpreting Percentiles</a></h3>
+<p><strong>Example: <code>read</code> syscall</strong></p>
+<pre><code>Avg: 0.691ms  p50: 0.567ms  p90: 1.234ms  p99: 2.345ms  Max: 5.678ms
+</code></pre>
+<p><strong>Analysis:</strong></p>
+<ul>
+<li><strong>p50 &lt; Avg</strong>: Distribution is right-skewed (few slow outliers pull average up)</li>
+<li><strong>p90 = 2x p50</strong>: 10% of reads take 2x longer than median</li>
+<li><strong>p99 = 4x p50</strong>: 1% of reads are extremely slow</li>
+<li><strong>Max &gt;&gt; p99</strong>: One outlier took 5.6ms (10x median)</li>
+</ul>
+<p><strong>Conclusion:</strong> Most reads are fast (~0.5ms), but occasional slow reads (p99) indicate I/O contention or disk latency spikes.</p>
+<h3 id="simd-accelerated-percentiles"><a class="header" href="#simd-accelerated-percentiles">SIMD-Accelerated Percentiles</a></h3>
+<p>Renacer uses SIMD instructions (AVX2/NEON) for fast percentile calculation on large datasets:</p>
+<pre><code class="language-bash">$ renacer -c -- stress-test  # 1M+ syscalls
+# Percentiles computed using SIMD in &lt;100ms
+</code></pre>
+<p>This makes statistics mode practical even for high-frequency tracing.</p>
+<h2 id="combining-with-filtering"><a class="header" href="#combining-with-filtering">Combining with Filtering</a></h2>
+<p>Statistics mode works seamlessly with syscall filtering.</p>
+<h3 id="file-operations-only"><a class="header" href="#file-operations-only">File Operations Only</a></h3>
+<pre><code class="language-bash">$ renacer -c -e 'trace=file' -- ./app
+System Call Summary:
+====================
+Syscall          Calls    Errors    Total Time    Avg Time
+openat           1247     23        2.345s        1.881ms
+read             3741     0         1.234s        0.330ms
+write            1867     0         0.891s        0.477ms
+close            1224     0         0.123s        0.101ms
+</code></pre>
+<h3 id="network-operations-only"><a class="header" href="#network-operations-only">Network Operations Only</a></h3>
+<pre><code class="language-bash">$ renacer -c -e 'trace=network' -- curl https://example.com
+System Call Summary:
+====================
+Syscall          Calls    Errors    Total Time    Avg Time
+recvfrom         234      0         1.234s        5.274ms
+sendto           178      0         0.567s        3.185ms
+connect          3        1         0.234s        78.0ms      # 1 error!
+socket           3        0         0.012s        4.0ms
+</code></pre>
+<p><strong>Insight:</strong> <code>connect</code> failed once (probably timeout/refused connection).</p>
+<h3 id="specific-syscalls"><a class="header" href="#specific-syscalls">Specific Syscalls</a></h3>
+<pre><code class="language-bash">$ renacer -c -e 'trace=read,write' -- cat large-file.txt
+System Call Summary:
+====================
+Syscall          Calls    Errors    Total Time    Avg Time
+read             1024     0         2.345s        2.290ms
+write            1024     0         1.234s        1.205ms
+</code></pre>
+<h2 id="real-world-performance-analysis"><a class="header" href="#real-world-performance-analysis">Real-World Performance Analysis</a></h2>
+<h3 id="scenario-1-slow-startup"><a class="header" href="#scenario-1-slow-startup">Scenario 1: Slow Startup</a></h3>
+<p><strong>Problem:</strong> Application takes 10 seconds to start.</p>
+<pre><code class="language-bash">$ renacer -c -- ./slow-startup
+System Call Summary:
+====================
+Syscall          Calls    Errors    Total Time    Avg Time
+openat           5678     0         7.890s        1.390ms     # 79% of startup time!
+fstat            5678     0         1.234s        0.217ms
+read             17034    0         0.891s        0.052ms
+</code></pre>
+<p><strong>Analysis:</strong></p>
+<ul>
+<li><code>openat</code> dominates with 7.9s (79% of time)</li>
+<li>Called 5,678 times</li>
+<li>Average 1.4ms per call (seems slow for file open)</li>
+</ul>
+<p><strong>Investigation:</strong></p>
+<pre><code class="language-bash">$ renacer -e 'trace=openat' -- ./slow-startup
+openat(AT_FDCWD, "/usr/share/icons/hicolor/16x16/apps/icon001.png", O_RDONLY) = 3
+openat(AT_FDCWD, "/usr/share/icons/hicolor/16x16/apps/icon002.png", O_RDONLY) = 3
+# ... 5676 more icons ...
+</code></pre>
+<p><strong>Problem:</strong> Loading 5,678 icons individually during startup.</p>
+<p><strong>Solution:</strong> Lazy-load icons or bundle them.</p>
+<h3 id="scenario-2-network-latency"><a class="header" href="#scenario-2-network-latency">Scenario 2: Network Latency</a></h3>
+<p><strong>Problem:</strong> API client seems slow.</p>
+<pre><code class="language-bash">$ renacer -c -e 'trace=network' -- ./api-client
+System Call Summary (Enhanced):
+================================
+Syscall          Calls    Avg      p50      p90      p99      Max
+recvfrom         500      34.5ms   12.3ms   89.0ms   234.5ms  567.8ms
+sendto           500      2.3ms    1.2ms    4.5ms    12.3ms   23.4ms
+</code></pre>
+<p><strong>Analysis:</strong></p>
+<ul>
+<li><strong>p50 (12.3ms)</strong>: Typical network round-trip is fast</li>
+<li><strong>p90 (89.0ms)</strong>: 10% of requests take 7x longer</li>
+<li><strong>p99 (234.5ms)</strong>: 1% take 20x longer</li>
+<li><strong>Max (567.8ms)</strong>: One request took half a second</li>
+</ul>
+<p><strong>Conclusion:</strong> Network latency is highly variable. Possible causes:</p>
+<ul>
+<li>Server under load (slow p90/p99)</li>
+<li>Network congestion</li>
+<li>DNS resolution delays</li>
+</ul>
+<p><strong>Solution:</strong> Add retry logic with exponential backoff for slow requests.</p>
+<h3 id="scenario-3-file-io-bottleneck"><a class="header" href="#scenario-3-file-io-bottleneck">Scenario 3: File I/O Bottleneck</a></h3>
+<p><strong>Problem:</strong> Data processing is slower than expected.</p>
+<pre><code class="language-bash">$ renacer -c -e 'trace=read,write' -- ./data-processor input.csv
+System Call Summary:
+====================
+Syscall          Calls    Errors    Total Time    Avg Time
+read             100000   0         45.678s       0.457ms
+write            100000   0         12.345s       0.123ms
+</code></pre>
+<p><strong>Analysis:</strong></p>
+<ul>
+<li>Reading 100K times taking 45 seconds (73% of time)</li>
+<li>Average 0.457ms per read (seems slow for in-memory buffer)</li>
+</ul>
+<p><strong>Investigation:</strong></p>
+<pre><code class="language-bash">$ renacer -- ./data-processor input.csv 2&gt;&amp;1 | grep read | head -3
+read(3, "1,2,3,4,5\n", 10) = 10      # Reading 10 bytes at a time!
+read(3, "6,7,8,9,10\n", 10) = 11
+read(3, "11,12,13\n", 10) = 9
+</code></pre>
+<p><strong>Problem:</strong> Buffer size too small (10 bytes per read). For 1MB file, that's 100K syscalls.</p>
+<p><strong>Solution:</strong> Increase buffer to 4096 bytes, reducing syscalls 400x.</p>
+<h2 id="anomaly-detection-sprint-20"><a class="header" href="#anomaly-detection-sprint-20">Anomaly Detection (Sprint 20)</a></h2>
+<p>Renacer detects unusual patterns automatically:</p>
+<pre><code class="language-bash">$ renacer -c -- ./app
+System Call Summary:
+====================
+Syscall          Calls    Errors    Total Time    Avg Time    Anomalies
+openat           1247     247       2.345s        1.881ms     ⚠️ High error rate (19.8%)
+fsync            100      0         12.345s       123.45ms    ⚠️ Slow average (&gt;50ms)
+read             5000     0         3.456s        0.691ms
+</code></pre>
+<p><strong>Anomalies flagged:</strong></p>
+<ul>
+<li><strong>High error rate</strong>: <code>openat</code> fails 19.8% of the time</li>
+<li><strong>Slow average</strong>: <code>fsync</code> averaging 123ms per call</li>
+</ul>
+<h3 id="anomaly-thresholds"><a class="header" href="#anomaly-thresholds">Anomaly Thresholds</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>Anomaly Type</th><th>Threshold</th><th>Meaning</th></tr></thead><tbody>
+<tr><td>High error rate</td><td>&gt;5%</td><td>More than 5% of calls fail</td></tr>
+<tr><td>Slow average</td><td>&gt;50ms</td><td>Average call duration exceeds 50ms</td></tr>
+<tr><td>High variance</td><td>p99 &gt; 10x p50</td><td>Extreme outliers present</td></tr>
+</tbody></table>
+</div>
+<h2 id="sorting-and-analyzing"><a class="header" href="#sorting-and-analyzing">Sorting and Analyzing</a></h2>
+<h3 id="sort-by-total-time-default"><a class="header" href="#sort-by-total-time-default">Sort by Total Time (Default)</a></h3>
+<pre><code class="language-bash">$ renacer -c -- ./app
+# Sorted by Total Time (highest first)
+</code></pre>
+<p>Shows which syscalls consume most time.</p>
+<h3 id="sort-by-calls"><a class="header" href="#sort-by-calls">Sort by Calls</a></h3>
+<p>To find most frequently called syscalls, sort output:</p>
+<pre><code class="language-bash">$ renacer -c -- ./app | sort -k2 -n -r
+# Sort by column 2 (Calls), numeric, reversed
+</code></pre>
+<h3 id="sort-by-errors"><a class="header" href="#sort-by-errors">Sort by Errors</a></h3>
+<p>To find syscalls with most errors:</p>
+<pre><code class="language-bash">$ renacer -c -- ./app | grep -v "0     " | sort -k3 -n -r
+# Filter out zero errors, sort by column 3 (Errors)
+</code></pre>
+<h2 id="combining-statistics-with-other-features"><a class="header" href="#combining-statistics-with-other-features">Combining Statistics with Other Features</a></h2>
+<h3 id="statistics--source-correlation"><a class="header" href="#statistics--source-correlation">Statistics + Source Correlation</a></h3>
+<pre><code class="language-bash">$ renacer -c --source -- ./app
+System Call Summary:
+====================
+Syscall          Calls    Total Time    Top Function
+read             5000     3.456s        process_input (src/main.rs:42)
+write            3000     2.345s        flush_output (src/io.rs:89)
+</code></pre>
+<p>Shows which functions are responsible for syscall time.</p>
+<h3 id="statistics--function-profiling"><a class="header" href="#statistics--function-profiling">Statistics + Function Profiling</a></h3>
+<pre><code class="language-bash">$ renacer -c --function-time -- cargo test
+Function Profiling Summary:
+========================
+Top 10 Hot Paths (by total time):
+  1. cargo::compile  - 45.2% (1.2s, 67 syscalls)
+     └─ openat: 34 calls, 890ms
+     └─ read: 23 calls, 234ms
+     └─ write: 10 calls, 76ms
+</code></pre>
+<p>Breaks down syscall time by function.</p>
+<h3 id="statistics--output-formats"><a class="header" href="#statistics--output-formats">Statistics + Output Formats</a></h3>
+<p>Export statistics to JSON for analysis:</p>
+<pre><code class="language-bash">$ renacer -c --format json -- ./app &gt; stats.json
+$ jq '.summary[] | select(.errors &gt; 0)' stats.json
+# Filter to syscalls with errors using jq
+</code></pre>
+<h2 id="best-practices"><a class="header" href="#best-practices">Best Practices</a></h2>
+<h3 id="1-use-statistics-for-performance-analysis"><a class="header" href="#1-use-statistics-for-performance-analysis">1. Use Statistics for Performance Analysis</a></h3>
+<pre><code class="language-bash"># Quick performance overview
+renacer -c -- ./app
+</code></pre>
+<p><strong>Why:</strong> Faster than analyzing thousands of individual syscalls.</p>
+<h3 id="2-combine-with-filtering"><a class="header" href="#2-combine-with-filtering">2. Combine with Filtering</a></h3>
+<pre><code class="language-bash"># Focus on file I/O performance
+renacer -c -e 'trace=file' -- ./app
+</code></pre>
+<p><strong>Why:</strong> Reduces noise from irrelevant syscalls.</p>
+<h3 id="3-check-percentiles-for-latency"><a class="header" href="#3-check-percentiles-for-latency">3. Check Percentiles for Latency</a></h3>
+<pre><code class="language-bash"># Understand latency distribution
+renacer -c -- ./network-app
+# Look at p50, p90, p99 for outliers
+</code></pre>
+<p><strong>Why:</strong> Average can hide important outliers.</p>
+<h3 id="4-monitor-error-rates"><a class="header" href="#4-monitor-error-rates">4. Monitor Error Rates</a></h3>
+<pre><code class="language-bash"># Look for syscalls with errors &gt; 0
+renacer -c -- ./app | grep -v "0     "
+</code></pre>
+<p><strong>Why:</strong> Errors indicate bugs or resource issues.</p>
+<h3 id="5-export-for-long-term-analysis"><a class="header" href="#5-export-for-long-term-analysis">5. Export for Long-Term Analysis</a></h3>
+<pre><code class="language-bash"># Export statistics to JSON
+renacer -c --format json -- ./app &gt; stats-$(date +%Y%m%d).json
+</code></pre>
+<p><strong>Why:</strong> Track performance regressions over time.</p>
+<h2 id="common-patterns"><a class="header" href="#common-patterns">Common Patterns</a></h2>
+<h3 id="high-call-count-low-total-time"><a class="header" href="#high-call-count-low-total-time">High Call Count, Low Total Time</a></h3>
+<pre><code>Syscall          Calls    Total Time    Avg Time
+getpid           10000    0.123s        0.012ms
+</code></pre>
+<p><strong>Meaning:</strong> Called frequently but very fast. Not a bottleneck.</p>
+<h3 id="low-call-count-high-total-time"><a class="header" href="#low-call-count-high-total-time">Low Call Count, High Total Time</a></h3>
+<pre><code>Syscall          Calls    Total Time    Avg Time
+fsync            10       5.678s        567.8ms
+</code></pre>
+<p><strong>Meaning:</strong> Infrequent but slow. Major bottleneck.</p>
+<h3 id="high-error-rate"><a class="header" href="#high-error-rate">High Error Rate</a></h3>
+<pre><code>Syscall          Calls    Errors    Total Time
+openat           1000     500       2.345s      # 50% failure rate!
+</code></pre>
+<p><strong>Meaning:</strong> Half of all file opens fail. Check permissions/paths.</p>
+<h3 id="large-variance-p99--p50"><a class="header" href="#large-variance-p99--p50">Large Variance (p99 &gt;&gt; p50)</a></h3>
+<pre><code>Syscall          p50      p90      p99      Max
+read             1.2ms    3.4ms    45.6ms   234.5ms
+</code></pre>
+<p><strong>Meaning:</strong> Occasional extremely slow reads. Possible disk I/O contention.</p>
+<h2 id="summary"><a class="header" href="#summary">Summary</a></h2>
+<p><strong>Statistics mode</strong> (<code>-c</code>) provides aggregate syscall analysis:</p>
+<ul>
+<li><strong>What:</strong> Counts and times syscalls, displays summary table</li>
+<li><strong>Why:</strong> Understand overall behavior without trace noise</li>
+<li><strong>How:</strong> Add <code>-c</code> flag to any renacer command</li>
+</ul>
+<p><strong>Key Features:</strong></p>
+<ul>
+<li>Call counts and error counts</li>
+<li>Total time and average time per syscall</li>
+<li>Min/Max timing</li>
+<li>Percentiles (p50/p90/p99) for latency analysis</li>
+<li>SIMD-accelerated computation</li>
+<li>Anomaly detection (high error rates, slow averages)</li>
+</ul>
+<p><strong>Best For:</strong></p>
+<ul>
+<li>Performance profiling</li>
+<li>Error analysis</li>
+<li>Identifying bottlenecks</li>
+<li>Comparing before/after optimizations</li>
+</ul>
+<p><strong>Combine With:</strong></p>
+<ul>
+<li><strong>Filtering</strong> (<code>-e 'trace=file'</code>) - Focus on specific syscalls</li>
+<li><strong>Source correlation</strong> (<code>--source</code>) - See which functions are slow</li>
+<li><strong>Function profiling</strong> (<code>--function-time</code>) - Per-function breakdown</li>
+<li><strong>Output formats</strong> (<code>--format json</code>) - Export for analysis</li>
+</ul>
+<p><strong>Next Steps:</strong></p>
+<ul>
+<li><a href="./output-formats.html">Output Formats</a> - Export to JSON/CSV/HTML</li>
+<li><a href="filtering.html">Filtering</a> - Filter syscalls by type or pattern</li>
+<li><a href="../SUMMARY.html">Core Concepts Overview</a> - Return to table of contents</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../core-concepts/filtering-regex.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../core-concepts/output-formats.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../core-concepts/filtering-regex.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../core-concepts/output-formats.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../ace.js"></script>
+        <script src="../editor.js"></script>
+        <script src="../mode-rust.js"></script>
+        <script src="../theme-dawn.js"></script>
+        <script src="../theme-tomorrow_night.js"></script>
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

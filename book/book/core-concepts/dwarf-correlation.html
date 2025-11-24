@@ -1,0 +1,566 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>DWARF Source Correlation - The Renacer Book - Pure Rust System Call Tracing</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="A comprehensive guide to renacer: syscall tracing, DWARF correlation, and performance analysis">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "rust";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The Renacer Book - Pure Rust System Call Tracing</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer/edit/main/book/src/core-concepts/dwarf-correlation.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="dwarf-source-correlation"><a class="header" href="#dwarf-source-correlation">DWARF Source Correlation</a></h1>
+<p>One of Renacer's most powerful features is <strong>DWARF source correlation</strong> - the ability to map system calls back to the exact source code location that triggered them. This turns raw syscall traces into a debugging superpower.</p>
+<h2 id="what-is-dwarf"><a class="header" href="#what-is-dwarf">What is DWARF?</a></h2>
+<p><strong>DWARF</strong> is a standardized debugging data format embedded in compiled binaries. It contains:</p>
+<ul>
+<li><strong>File names</strong> and <strong>line numbers</strong> for each instruction</li>
+<li><strong>Function names</strong> and boundaries</li>
+<li><strong>Variable names</strong> and types</li>
+<li><strong>Inlined function</strong> information</li>
+</ul>
+<p>When you compile with <code>cargo build</code> (debug mode) or <code>cargo build --release</code> with debug symbols, the Rust compiler embeds DWARF data in your binary.</p>
+<h2 id="why-source-correlation-matters"><a class="header" href="#why-source-correlation-matters">Why Source Correlation Matters</a></h2>
+<h3 id="without-source-correlation"><a class="header" href="#without-source-correlation">Without Source Correlation</a></h3>
+<pre><code class="language-bash">$ strace -- ./myapp
+openat(AT_FDCWD, "/etc/config.toml", O_RDONLY) = -ENOENT
+openat(AT_FDCWD, "/home/user/.config.toml", O_RDONLY) = 3
+read(3, "timeout = 30\nhost = \"...\"\n", 4096) = 45
+</code></pre>
+<p><strong>Questions:</strong></p>
+<ul>
+<li>Which function made these calls?</li>
+<li>What line of code is trying to open <code>/etc/config.toml</code>?</li>
+<li>Is this expected behavior or a bug?</li>
+</ul>
+<h3 id="with-source-correlation"><a class="header" href="#with-source-correlation">With Source Correlation</a></h3>
+<pre><code class="language-bash">$ renacer --source -- ./myapp
+openat(AT_FDCWD, "/etc/config.toml", O_RDONLY) = -ENOENT         [src/config.rs:42 in load_config]
+openat(AT_FDCWD, "/home/user/.config.toml", O_RDONLY) = 3        [src/config.rs:43 in load_config]
+read(3, "timeout = 30\nhost = \"...\"\n", 4096) = 45              [src/config.rs:48 in parse_toml]
+</code></pre>
+<p><strong>Answers:</strong></p>
+<ul>
+<li>Function: <code>load_config</code> tries <code>/etc/config.toml</code> first</li>
+<li>Location: <code>src/config.rs:42</code> and <code>src/config.rs:43</code></li>
+<li>Context: Fallback behavior from system config to user config</li>
+</ul>
+<h2 id="enabling-source-correlation"><a class="header" href="#enabling-source-correlation">Enabling Source Correlation</a></h2>
+<h3 id="basic-usage"><a class="header" href="#basic-usage">Basic Usage</a></h3>
+<pre><code class="language-bash">renacer --source -- ./my-program
+</code></pre>
+<h3 id="requirements"><a class="header" href="#requirements">Requirements</a></h3>
+<ol>
+<li><strong>Debug symbols</strong> must be present in the binary</li>
+<li><strong>Source files</strong> should be accessible (for best results)</li>
+<li><strong>Rust binaries</strong> work best (Renacer optimized for Rust's DWARF output)</li>
+</ol>
+<h2 id="building-with-debug-symbols"><a class="header" href="#building-with-debug-symbols">Building with Debug Symbols</a></h2>
+<h3 id="debug-mode-default"><a class="header" href="#debug-mode-default">Debug Mode (Default)</a></h3>
+<pre><code class="language-bash">cargo build
+</code></pre>
+<p><strong>Result:</strong> Binary at <code>target/debug/myapp</code> has full debug symbols.</p>
+<h3 id="release-mode-with-debug-symbols"><a class="header" href="#release-mode-with-debug-symbols">Release Mode with Debug Symbols</a></h3>
+<p>Add to <code>Cargo.toml</code>:</p>
+<pre><code class="language-toml">[profile.release]
+debug = true  # Include debug symbols in release builds
+</code></pre>
+<p>Then build:</p>
+<pre><code class="language-bash">cargo build --release
+</code></pre>
+<p><strong>Result:</strong> Optimized binary at <code>target/release/myapp</code> with debug symbols.</p>
+<p><strong>Note:</strong> Debug symbols increase binary size (~2-5x) but don't affect runtime performance.</p>
+<h3 id="strip-debug-symbols-deployment"><a class="header" href="#strip-debug-symbols-deployment">Strip Debug Symbols (Deployment)</a></h3>
+<p>For production deployment, strip symbols to reduce size:</p>
+<pre><code class="language-bash">strip target/release/myapp
+</code></pre>
+<p><strong>Warning:</strong> Stripping removes DWARF data - source correlation won't work.</p>
+<h2 id="understanding-the-output"><a class="header" href="#understanding-the-output">Understanding the Output</a></h2>
+<h3 id="source-annotation-format"><a class="header" href="#source-annotation-format">Source Annotation Format</a></h3>
+<pre><code>syscall_name(args...) = return_value         [file:line in function_name]
+</code></pre>
+<p><strong>Example:</strong></p>
+<pre><code>read(3, buf, 1024) = 42         [src/main.rs:15 in process_input]
+</code></pre>
+<p><strong>Breakdown:</strong></p>
+<ul>
+<li><code>read(3, buf, 1024) = 42</code> - Syscall information</li>
+<li><code>[src/main.rs:15 in process_input]</code> - Source correlation
+<ul>
+<li>File: <code>src/main.rs</code></li>
+<li>Line: 15</li>
+<li>Function: <code>process_input</code></li>
+</ul>
+</li>
+</ul>
+<h3 id="real-world-example"><a class="header" href="#real-world-example">Real-World Example</a></h3>
+<p><strong>Rust code</strong> (<code>src/server.rs</code>):</p>
+<pre><code class="language-rust">// src/server.rs
+pub fn start_server(port: u16) -&gt; Result&lt;()&gt; {
+    let listener = TcpListener::bind(("0.0.0.0", port))?;  // Line 42
+
+    for stream in listener.incoming() {                    // Line 44
+        match stream {
+            Ok(socket) =&gt; handle_client(socket)?,          // Line 46
+            Err(e) =&gt; eprintln!("Connection error: {}", e),
+        }
+    }
+    Ok(())
+}
+
+fn handle_client(mut socket: TcpStream) -&gt; Result&lt;()&gt; {
+    let mut buf = [0u8; 1024];
+    let n = socket.read(&amp;mut buf)?;                        // Line 54
+    socket.write_all(&amp;buf[..n])?;                          // Line 55
+    Ok(())
+}</code></pre>
+<p><strong>Renacer output:</strong></p>
+<pre><code class="language-bash">$ renacer --source -- ./server
+socket(AF_INET, SOCK_STREAM, IPPROTO_TCP) = 3                     [src/server.rs:42 in start_server]
+bind(3, {sa_family=AF_INET, sin_port=htons(8080), ...}, 16) = 0   [src/server.rs:42 in start_server]
+listen(3, 128) = 0                                                [src/server.rs:42 in start_server]
+accept(3, {...}, [...]) = 4                                       [src/server.rs:44 in start_server]
+read(4, "GET / HTTP/1.1\r\n...", 1024) = 128                      [src/server.rs:54 in handle_client]
+write(4, "GET / HTTP/1.1\r\n...", 128) = 128                      [src/server.rs:55 in handle_client]
+close(4) = 0                                                      [src/server.rs:55 in handle_client]
+</code></pre>
+<p><strong>Analysis:</strong></p>
+<ul>
+<li><code>TcpListener::bind()</code> generates <code>socket</code>, <code>bind</code>, and <code>listen</code> syscalls (line 42)</li>
+<li><code>listener.incoming()</code> generates <code>accept</code> syscall (line 44)</li>
+<li><code>socket.read()</code> maps to <code>read</code> syscall (line 54)</li>
+<li><code>socket.write_all()</code> maps to <code>write</code> syscall (line 55)</li>
+</ul>
+<h2 id="how-it-works"><a class="header" href="#how-it-works">How It Works</a></h2>
+<p>Renacer uses the <strong>gimli</strong> crate to parse DWARF debug information:</p>
+<pre><code>┌─────────────────────────────┐
+│   Traced Binary (ELF)       │
+│  - Executable code           │
+│  - .debug_info section       │  ← DWARF data
+│  - .debug_line section       │
+└──────────────┬───────────────┘
+               │
+               ↓ gimli crate
+┌─────────────────────────────┐
+│   DWARF Parser (Renacer)    │
+│  - Read instruction pointer  │
+│  - Lookup in debug_line      │
+│  - Find file + line + fn     │
+└──────────────┬───────────────┘
+               │
+               ↓
+┌─────────────────────────────┐
+│   Source Correlation         │
+│  "src/main.rs:42 in foo"    │
+└─────────────────────────────┘
+</code></pre>
+<h3 id="implementation-details"><a class="header" href="#implementation-details">Implementation Details</a></h3>
+<p>When a syscall occurs:</p>
+<ol>
+<li><strong>Capture IP</strong> (instruction pointer) from tracee</li>
+<li><strong>Lookup in DWARF</strong> using <code>gimli::lookup_unit(ip)</code></li>
+<li><strong>Find source location</strong> using <code>gimli::find_location(ip)</code></li>
+<li><strong>Extract metadata</strong>:
+<ul>
+<li>File path from compilation units</li>
+<li>Line number from <code>.debug_line</code> section</li>
+<li>Function name from <code>.debug_info</code> section</li>
+</ul>
+</li>
+<li><strong>Format annotation</strong> as <code>[file:line in function]</code></li>
+</ol>
+<h2 id="combining-with-function-profiling"><a class="header" href="#combining-with-function-profiling">Combining with Function Profiling</a></h2>
+<p>The <code>--function-time</code> flag combines source correlation with I/O timing:</p>
+<pre><code class="language-bash">renacer --source --function-time -- cargo test
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>Function Profiling Summary:
+========================
+Top 10 Hot Paths (by total time):
+  1. cargo::compile          - 45.2% (1.2s, 67 syscalls) ⚠️ SLOW I/O
+     └─ src/cargo/ops/compile.rs:89
+  2. rustc::codegen          - 32.1% (850ms, 45 syscalls)
+     └─ src/librustc/codegen.rs:234
+  3. cargo::resolve_deps     - 12.3% (325ms, 23 syscalls)
+     └─ src/cargo/ops/resolve.rs:156
+</code></pre>
+<p>This shows:</p>
+<ul>
+<li><strong>Function name</strong> (<code>cargo::compile</code>)</li>
+<li><strong>Percentage of total time</strong> (45.2%)</li>
+<li><strong>Total time spent in I/O</strong> (1.2s)</li>
+<li><strong>Number of syscalls</strong> (67)</li>
+<li><strong>Source location</strong> (<code>src/cargo/ops/compile.rs:89</code>)</li>
+<li><strong>Slow I/O warning</strong> (⚠️ if &gt;30% of time)</li>
+</ul>
+<h2 id="real-world-debugging-scenarios"><a class="header" href="#real-world-debugging-scenarios">Real-World Debugging Scenarios</a></h2>
+<h3 id="scenario-1-file-not-found"><a class="header" href="#scenario-1-file-not-found">Scenario 1: File Not Found</a></h3>
+<p><strong>Problem:</strong> Application crashes with "file not found" error.</p>
+<pre><code class="language-bash">$ renacer --source -- ./myapp
+openat(AT_FDCWD, "/var/data/input.csv", O_RDONLY) = -ENOENT      [src/data.rs:23 in load_dataset]
+</code></pre>
+<p><strong>Solution:</strong> Check <code>src/data.rs</code> line 23. The path <code>/var/data/input.csv</code> is hardcoded. Make it configurable.</p>
+<h3 id="scenario-2-performance-bottleneck"><a class="header" href="#scenario-2-performance-bottleneck">Scenario 2: Performance Bottleneck</a></h3>
+<p><strong>Problem:</strong> Application is slow during startup.</p>
+<pre><code class="language-bash">$ renacer --source --function-time -- ./slow-app
+Function Profiling Summary:
+  1. config::validate - 78.5% (2.1s, 1247 syscalls) ⚠️ SLOW I/O
+     └─ src/config.rs:156
+</code></pre>
+<p><strong>Analysis:</strong> <code>config::validate</code> at line 156 is calling 1247 syscalls and taking 2.1s.</p>
+<p><strong>Investigation:</strong></p>
+<pre><code class="language-bash">$ renacer --source -e 'trace=file' -- ./slow-app | grep config.rs:156
+openat(AT_FDCWD, "/etc/schemas/schema1.json", O_RDONLY) = 3      [src/config.rs:156 in validate]
+openat(AT_FDCWD, "/etc/schemas/schema2.json", O_RDONLY) = 3      [src/config.rs:156 in validate]
+# ... 1245 more files ...
+</code></pre>
+<p><strong>Problem:</strong> Validation loads 1247 JSON schemas individually.</p>
+<p><strong>Solution:</strong> Batch load schemas or cache them.</p>
+<h3 id="scenario-3-unexpected-network-call"><a class="header" href="#scenario-3-unexpected-network-call">Scenario 3: Unexpected Network Call</a></h3>
+<p><strong>Problem:</strong> Application making network calls when it shouldn't.</p>
+<pre><code class="language-bash">$ renacer --source -e 'trace=network' -- ./offline-app
+socket(AF_INET, SOCK_STREAM, IPPROTO_TCP) = 3                    [src/analytics.rs:67 in send_telemetry]
+connect(3, {sin_addr=inet_addr("35.190.27.188"), ...}, 16) = 0   [src/analytics.rs:68 in send_telemetry]
+</code></pre>
+<p><strong>Discovery:</strong> Analytics module at <code>src/analytics.rs:67</code> is sending telemetry even in "offline mode".</p>
+<p><strong>Solution:</strong> Check if telemetry is properly disabled or refactor to respect offline flag.</p>
+<h3 id="scenario-4-resource-leak"><a class="header" href="#scenario-4-resource-leak">Scenario 4: Resource Leak</a></h3>
+<p><strong>Problem:</strong> Application running out of file descriptors.</p>
+<pre><code class="language-bash">$ renacer --source -- ./leaky-app
+openat(AT_FDCWD, "/var/log/app.log", O_WRONLY|O_APPEND) = 3      [src/logger.rs:45 in log_event]
+openat(AT_FDCWD, "/var/log/app.log", O_WRONLY|O_APPEND) = 4      [src/logger.rs:45 in log_event]
+openat(AT_FDCWD, "/var/log/app.log", O_WRONLY|O_APPEND) = 5      [src/logger.rs:45 in log_event]
+# ... keeps opening, never closing ...
+</code></pre>
+<p><strong>Problem:</strong> <code>src/logger.rs:45</code> opens log file but never closes it.</p>
+<p><strong>Solution:</strong> Ensure file handle is closed after each write, or use a persistent handle.</p>
+<h2 id="limitations-and-troubleshooting"><a class="header" href="#limitations-and-troubleshooting">Limitations and Troubleshooting</a></h2>
+<h3 id="limitation-1-stripped-binaries"><a class="header" href="#limitation-1-stripped-binaries">Limitation 1: Stripped Binaries</a></h3>
+<pre><code class="language-bash">$ renacer --source -- /usr/bin/ls
+openat(AT_FDCWD, ".", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 3
+# No source correlation - binary is stripped
+</code></pre>
+<p><strong>Solution:</strong> Use debug builds or binaries with debug symbols.</p>
+<h3 id="limitation-2-optimizations-and-inlining"><a class="header" href="#limitation-2-optimizations-and-inlining">Limitation 2: Optimizations and Inlining</a></h3>
+<p>Compiler optimizations can make correlation less precise:</p>
+<pre><code>read(3, buf, 1024) = 42         [src/main.rs:15 in &lt;unknown&gt;]
+</code></pre>
+<p><strong>Cause:</strong> Function was inlined, name lost.</p>
+<p><strong>Solution:</strong> Build with less aggressive optimization:</p>
+<pre><code class="language-toml">[profile.release]
+debug = true
+opt-level = 2  # Instead of 3
+</code></pre>
+<h3 id="limitation-3-non-rust-binaries"><a class="header" href="#limitation-3-non-rust-binaries">Limitation 3: Non-Rust Binaries</a></h3>
+<pre><code class="language-bash">$ renacer --source -- python3 script.py
+# Source correlation may be incomplete or missing
+</code></pre>
+<p><strong>Reason:</strong> DWARF format varies by language/compiler. Renacer is optimized for Rust's DWARF output.</p>
+<p><strong>Workaround:</strong> Source correlation works best with Rust, C, and C++ binaries. Python/Go/Java may have limited support.</p>
+<h3 id="limitation-4-relative-paths"><a class="header" href="#limitation-4-relative-paths">Limitation 4: Relative Paths</a></h3>
+<p>If binary is built with relative paths, correlation shows relative to build directory:</p>
+<pre><code>read(3, buf, 1024) = 42         [../../src/main.rs:15 in foo]
+</code></pre>
+<p><strong>Solution:</strong> Build with absolute paths or run Renacer from the same directory as the build.</p>
+<h3 id="troubleshooting-no-source-info"><a class="header" href="#troubleshooting-no-source-info">Troubleshooting: No Source Info</a></h3>
+<p><strong>Symptoms:</strong></p>
+<pre><code class="language-bash">$ renacer --source -- ./myapp
+read(3, buf, 1024) = 42
+# Missing [file:line in function] annotation
+</code></pre>
+<p><strong>Checklist:</strong></p>
+<ol>
+<li>
+<p><strong>Verify debug symbols exist:</strong></p>
+<pre><code class="language-bash">file ./myapp
+# Should show: "not stripped"
+</code></pre>
+</li>
+<li>
+<p><strong>Check DWARF sections:</strong></p>
+<pre><code class="language-bash">objdump -h ./myapp | grep debug
+# Should show .debug_info, .debug_line, etc.
+</code></pre>
+</li>
+<li>
+<p><strong>Rebuild with debug symbols:</strong></p>
+<pre><code class="language-bash">cargo build  # Debug mode includes symbols by default
+</code></pre>
+</li>
+<li>
+<p><strong>Check Renacer can read DWARF:</strong></p>
+<pre><code class="language-bash">renacer --source -- ./myapp 2&gt;&amp;1 | grep -i dwarf
+# Look for DWARF parsing errors
+</code></pre>
+</li>
+</ol>
+<h2 id="best-practices"><a class="header" href="#best-practices">Best Practices</a></h2>
+<h3 id="1-always-use-in-development"><a class="header" href="#1-always-use-in-development">1. Always Use in Development</a></h3>
+<pre><code class="language-bash"># Development workflow
+cargo build
+renacer --source -- ./myapp
+</code></pre>
+<p><strong>Benefit:</strong> Immediate source-level debugging without debugger overhead.</p>
+<h3 id="2-combine-with-filtering"><a class="header" href="#2-combine-with-filtering">2. Combine with Filtering</a></h3>
+<pre><code class="language-bash">renacer --source -e 'trace=file' -- ./myapp
+</code></pre>
+<p><strong>Benefit:</strong> Focus on file operations with source context.</p>
+<h3 id="3-use-function-profiling"><a class="header" href="#3-use-function-profiling">3. Use Function Profiling</a></h3>
+<pre><code class="language-bash">renacer --source --function-time -- ./myapp
+</code></pre>
+<p><strong>Benefit:</strong> Find I/O bottlenecks with exact source locations.</p>
+<h3 id="4-keep-debug-symbols-in-ci"><a class="header" href="#4-keep-debug-symbols-in-ci">4. Keep Debug Symbols in CI</a></h3>
+<pre><code class="language-toml">[profile.release]
+debug = true  # Keep symbols for release builds in CI
+</code></pre>
+<p><strong>Benefit:</strong> Trace production-like binaries with source correlation.</p>
+<h3 id="5-document-source-locations"><a class="header" href="#5-document-source-locations">5. Document Source Locations</a></h3>
+<p>When filing bug reports, include source correlation output:</p>
+<pre><code>Bug: Excessive file access during startup
+
+Trace shows:
+openat(AT_FDCWD, "/etc/config.toml", O_RDONLY) = 3      [src/config.rs:42 in load_config]
+# ... called 1247 times ...
+
+Expected: 1 call
+Actual: 1247 calls
+</code></pre>
+<h2 id="integration-with-ides"><a class="header" href="#integration-with-ides">Integration with IDEs</a></h2>
+<p>Future work: Renacer's source correlation output can integrate with IDEs:</p>
+<pre><code class="language-bash"># Output JSON with clickable file:line references
+renacer --source --format json -- ./myapp &gt; trace.json
+</code></pre>
+<p>Then import <code>trace.json</code> into your IDE to jump directly to syscall source locations.</p>
+<h2 id="summary"><a class="header" href="#summary">Summary</a></h2>
+<p><strong>DWARF source correlation</strong> transforms syscall tracing:</p>
+<ul>
+<li><strong>What:</strong> Maps syscalls to source code locations using DWARF debug info</li>
+<li><strong>Why:</strong> Answers "which function and line triggered this syscall?"</li>
+<li><strong>How:</strong> Enable with <code>--source</code> flag, requires debug symbols</li>
+<li><strong>Best for:</strong> Rust binaries (optimized DWARF parsing)</li>
+</ul>
+<p><strong>Key Benefits:</strong></p>
+<ol>
+<li>Source-level debugging without debugger</li>
+<li>Function-level I/O profiling</li>
+<li>Precise bottleneck identification</li>
+<li>Real-world debugging scenarios</li>
+</ol>
+<p><strong>Requirements:</strong></p>
+<ul>
+<li>Debug symbols in binary (<code>cargo build</code> or <code>debug = true</code> in release profile)</li>
+<li>DWARF debug sections (<code>.debug_info</code>, <code>.debug_line</code>)</li>
+<li>Source files accessible (for best results)</li>
+</ul>
+<p><strong>Next Steps:</strong></p>
+<ul>
+<li><a href="./statistics.html">Statistics Mode</a> - Aggregate syscall analysis with <code>-c</code></li>
+<li><a href="../advanced/function-profiling.html">Function Profiling</a> - Deep dive into <code>--function-time</code></li>
+<li><a href="./output-formats.html">Output Formats</a> - Export to JSON/CSV/HTML</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../core-concepts/syscall-tracing.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../core-concepts/filtering.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../core-concepts/syscall-tracing.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../core-concepts/filtering.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../ace.js"></script>
+        <script src="../editor.js"></script>
+        <script src="../mode-rust.js"></script>
+        <script src="../theme-dawn.js"></script>
+        <script src="../theme-tomorrow_night.js"></script>
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

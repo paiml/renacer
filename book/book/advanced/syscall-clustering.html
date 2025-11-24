@@ -1,0 +1,410 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Syscall Clustering - The Renacer Book - Pure Rust System Call Tracing</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="A comprehensive guide to renacer: syscall tracing, DWARF correlation, and performance analysis">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "rust";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The Renacer Book - Pure Rust System Call Tracing</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer/edit/main/book/src/advanced/syscall-clustering.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="syscall-clustering"><a class="header" href="#syscall-clustering">Syscall Clustering</a></h1>
+<p>TOML-based configuration for grouping syscalls into semantic clusters.</p>
+<h2 id="overview"><a class="header" href="#overview">Overview</a></h2>
+<p>Instead of analyzing raw syscalls (<code>mmap</code>, <code>brk</code>, <code>munmap</code>), Renacer groups them into <strong>semantic clusters</strong> like "MemoryAllocation" or "FileIO". This provides high-level, actionable insights.</p>
+<h2 id="key-innovation-open-closed-principle"><a class="header" href="#key-innovation-open-closed-principle">Key Innovation: Open-Closed Principle</a></h2>
+<p>The clustering algorithm is <strong>user-extensible via TOML configuration</strong> - no code changes required to add new clusters or modify existing ones.</p>
+<pre><code class="language-toml"># clusters.toml
+[[cluster]]
+name = "MemoryAllocation"
+description = "Heap management and memory mapping"
+syscalls = ["mmap", "munmap", "brk", "sbrk", "madvise", "mprotect"]
+expected_for_transpiler = true
+anomaly_threshold = 0.50
+severity = "medium"
+
+[[cluster]]
+name = "Networking"
+description = "Network I/O operations"
+syscalls = ["socket", "connect", "send", "recv", "accept", "bind"]
+expected_for_transpiler = false  # UNEXPECTED for transpilers!
+anomaly_threshold = 0.20
+severity = "high"
+</code></pre>
+<h2 id="configuration-format"><a class="header" href="#configuration-format">Configuration Format</a></h2>
+<h3 id="cluster-definition"><a class="header" href="#cluster-definition">Cluster Definition</a></h3>
+<p>Each cluster has the following fields:</p>
+<ul>
+<li><strong><code>name</code></strong>: Unique identifier (e.g., "FileIO", "GPU")</li>
+<li><strong><code>description</code></strong>: Human-readable explanation</li>
+<li><strong><code>syscalls</code></strong>: List of syscalls to include</li>
+<li><strong><code>expected_for_transpiler</code></strong>: Whether this cluster is normal for transpilers</li>
+<li><strong><code>anomaly_threshold</code></strong>: Percentage change before flagging (0.0-1.0)</li>
+<li><strong><code>severity</code></strong>: <code>"low"</code>, <code>"medium"</code>, or <code>"high"</code></li>
+</ul>
+<h3 id="args-filtering-context-aware-classification"><a class="header" href="#args-filtering-context-aware-classification">Args Filtering (Context-Aware Classification)</a></h3>
+<p>For syscalls that need context (like <code>ioctl</code>), you can filter by arguments:</p>
+<pre><code class="language-toml">[[cluster]]
+name = "GPU"
+description = "GPU compute operations"
+syscalls = ["ioctl"]
+expected_for_transpiler = false
+anomaly_threshold = 0.10
+severity = "critical"
+
+# Only classify as GPU if fd_path matches these patterns
+[[cluster.args_filter]]
+fd_path_pattern = "/dev/nvidia.*"
+
+[[cluster.args_filter]]
+fd_path_pattern = "/dev/dri/.*"
+</code></pre>
+<h3 id="example-filtering-by-argument-contains"><a class="header" href="#example-filtering-by-argument-contains">Example: Filtering by Argument Contains</a></h3>
+<pre><code class="language-toml">[[cluster]]
+name = "ProcessControl"
+description = "Process management"
+syscalls = ["fork", "execve", "waitpid", "clone"]
+expected_for_transpiler = false  # Transpilers should NOT spawn processes!
+anomaly_threshold = 0.05
+severity = "critical"
+</code></pre>
+<h2 id="default-cluster-pack"><a class="header" href="#default-cluster-pack">Default Cluster Pack</a></h2>
+<p>Renacer ships with a default cluster pack optimized for <strong>transpiler analysis</strong>:</p>
+<pre><code class="language-rust">use renacer::cluster::ClusterRegistry;
+
+// Load default transpiler-optimized clusters
+let registry = ClusterRegistry::default_transpiler_clusters()?;</code></pre>
+<p>The default pack includes:</p>
+<ul>
+<li><strong>MemoryAllocation</strong> (expected: yes)</li>
+<li><strong>FileIO</strong> (expected: yes)</li>
+<li><strong>DynamicLinking</strong> (expected: yes)</li>
+<li><strong>Networking</strong> (expected: <strong>NO</strong> - flags telemetry leaks)</li>
+<li><strong>GPU</strong> (expected: <strong>NO</strong> - flags accidental compute)</li>
+<li><strong>ProcessControl</strong> (expected: <strong>NO</strong> - flags subprocess spawning)</li>
+</ul>
+<h2 id="usage-examples"><a class="header" href="#usage-examples">Usage Examples</a></h2>
+<h3 id="load-custom-clusters"><a class="header" href="#load-custom-clusters">Load Custom Clusters</a></h3>
+<pre><code class="language-rust">use renacer::cluster::ClusterRegistry;
+
+let registry = ClusterRegistry::from_toml("my-clusters.toml")?;</code></pre>
+<h3 id="classify-a-syscall"><a class="header" href="#classify-a-syscall">Classify a Syscall</a></h3>
+<pre><code class="language-rust">use renacer::cluster::{ClusterRegistry, FdTable};
+
+let registry = ClusterRegistry::default_transpiler_clusters()?;
+let fd_table = FdTable::new();
+
+// Simple syscall (no context needed)
+if let Some(cluster) = registry.classify("mmap", &amp;[], &amp;fd_table) {
+    println!("Cluster: {}", cluster.name);  // "MemoryAllocation"
+}
+
+// Context-aware syscall (ioctl on /dev/nvidia0)
+let args = vec!["/dev/nvidia0".to_string()];
+if let Some(cluster) = registry.classify("ioctl", &amp;args, &amp;fd_table) {
+    println!("Cluster: {}", cluster.name);  // "GPU"
+}</code></pre>
+<h3 id="poka-yoke-warn-on-unmatched-syscalls"><a class="header" href="#poka-yoke-warn-on-unmatched-syscalls">Poka-Yoke: Warn on Unmatched Syscalls</a></h3>
+<p>If a syscall doesn't match any cluster, Renacer warns you and suggests adding it:</p>
+<pre><code class="language-text">WARNING: Unmatched syscall: getrandom
+  Occurred 142 times in trace
+  Consider adding to clusters.toml:
+
+  [[cluster]]
+  name = "Randomness"
+  syscalls = ["getrandom", "urandom"]
+  expected_for_transpiler = true
+</code></pre>
+<h2 id="real-world-examples"><a class="header" href="#real-world-examples">Real-World Examples</a></h2>
+<h3 id="example-1-decy-futex-anomaly"><a class="header" href="#example-1-decy-futex-anomaly">Example 1: decy Futex Anomaly</a></h3>
+<p><strong>Problem</strong>: Accidental async runtime initialization increased <code>futex</code> calls from 3 to 50.</p>
+<p><strong>Cluster Configuration</strong>:</p>
+<pre><code class="language-toml">[[cluster]]
+name = "Concurrency"
+syscalls = ["futex", "pthread_create", "pthread_join"]
+expected_for_transpiler = false  # Single-threaded transpiler!
+anomaly_threshold = 0.30
+severity = "high"
+</code></pre>
+<p><strong>Detection</strong>: Renacer flagged "Concurrency" cluster as unexpected, leading to discovery of accidental Tokio initialization.</p>
+<h3 id="example-2-depyler-telemetry-leak"><a class="header" href="#example-2-depyler-telemetry-leak">Example 2: depyler Telemetry Leak</a></h3>
+<p><strong>Problem</strong>: Sentry-rs added networking syscalls (<code>socket</code>, <code>connect</code>, <code>send</code>).</p>
+<p><strong>Cluster Configuration</strong>:</p>
+<pre><code class="language-toml">[[cluster]]
+name = "Networking"
+syscalls = ["socket", "connect", "send", "recv", "accept"]
+expected_for_transpiler = false  # Transpilers should be offline!
+anomaly_threshold = 0.10
+severity = "critical"
+</code></pre>
+<p><strong>Detection</strong>: Renacer flagged "Networking" cluster as unexpected, revealing Sentry telemetry leak.</p>
+<h2 id="implementation-details"><a class="header" href="#implementation-details">Implementation Details</a></h2>
+<h3 id="clusterregistry-api"><a class="header" href="#clusterregistry-api">ClusterRegistry API</a></h3>
+<pre><code class="language-rust">pub struct ClusterRegistry {
+    clusters: Vec&lt;ClusterDefinition&gt;,
+    syscall_to_cluster: HashMap&lt;String, String&gt;,  // Fast lookup
+}
+
+impl ClusterRegistry {
+    /// Load from TOML file
+    pub fn from_toml&lt;P: AsRef&lt;Path&gt;&gt;(path: P) -&gt; Result&lt;Self&gt;;
+
+    /// Load default transpiler pack
+    pub fn default_transpiler_clusters() -&gt; Result&lt;Self&gt;;
+
+    /// Classify a syscall
+    pub fn classify(
+        &amp;self,
+        syscall: &amp;str,
+        args: &amp;[String],
+        fd_table: &amp;FdTable,
+    ) -&gt; Option&lt;ClusterDefinition&gt;;
+
+    /// Simple classification (no context)
+    pub fn classify_simple(&amp;self, syscall: &amp;str, args: &amp;[String]) -&gt; Option&lt;String&gt;;
+}</code></pre>
+<h3 id="performance"><a class="header" href="#performance">Performance</a></h3>
+<ul>
+<li><strong>Lookup</strong>: O(1) HashMap lookup</li>
+<li><strong>Memory</strong>: ~5KB for default cluster pack</li>
+<li><strong>Startup</strong>: &lt;1ms to load TOML file</li>
+</ul>
+<h2 id="toyota-way-principles"><a class="header" href="#toyota-way-principles">Toyota Way Principles</a></h2>
+<h3 id="open-closed-principle"><a class="header" href="#open-closed-principle">Open-Closed Principle</a></h3>
+<ul>
+<li><strong>Open for extension</strong>: Add clusters via TOML</li>
+<li><strong>Closed for modification</strong>: No code changes needed</li>
+</ul>
+<h3 id="poka-yoke-error-proofing"><a class="header" href="#poka-yoke-error-proofing">Poka-Yoke (Error-Proofing)</a></h3>
+<ul>
+<li>Warns on unmatched syscalls</li>
+<li>Suggests cluster additions</li>
+<li>Validates TOML at startup</li>
+</ul>
+<h3 id="genchi-genbutsu-go-and-see"><a class="header" href="#genchi-genbutsu-go-and-see">Genchi Genbutsu (Go and See)</a></h3>
+<ul>
+<li>User-defined clusters match real-world needs</li>
+<li>Not hardcoded assumptions</li>
+</ul>
+<h2 id="testing"><a class="header" href="#testing">Testing</a></h2>
+<p>The clustering implementation has <strong>18 passing tests</strong> covering:</p>
+<ul>
+<li>TOML parsing and validation</li>
+<li>Context-aware classification (fd_path filtering)</li>
+<li>Default cluster pack loading</li>
+<li>Error handling (duplicate syscalls, invalid TOML)</li>
+<li>Performance benchmarks</li>
+</ul>
+<h2 id="next-steps"><a class="header" href="#next-steps">Next Steps</a></h2>
+<ul>
+<li>Learn about <a href="./sequence-mining.html">Sequence Mining</a> for grammar detection</li>
+<li>Use <a href="./time-attribution.html">Time-Weighted Attribution</a> with clusters</li>
+<li>Detect <a href="./regression-detection.html">Anomalies</a> using cluster analysis</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../advanced/single-shot-compile.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../advanced/sequence-mining.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../advanced/single-shot-compile.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../advanced/sequence-mining.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../ace.js"></script>
+        <script src="../editor.js"></script>
+        <script src="../mode-rust.js"></script>
+        <script src="../theme-dawn.js"></script>
+        <script src="../theme-tomorrow_night.js"></script>
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

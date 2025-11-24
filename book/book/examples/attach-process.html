@@ -1,0 +1,676 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Attach to Running Process - The Renacer Book - Pure Rust System Call Tracing</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="A comprehensive guide to renacer: syscall tracing, DWARF correlation, and performance analysis">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "rust";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The Renacer Book - Pure Rust System Call Tracing</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer/edit/main/book/src/examples/attach-process.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="example-attach-to-running-process"><a class="header" href="#example-attach-to-running-process">Example: Attach to Running Process</a></h1>
+<p>This example shows how to use Renacer to attach to and debug running processes without restarting them - crucial for production debugging.</p>
+<h2 id="scenario-debug-production-service"><a class="header" href="#scenario-debug-production-service">Scenario: Debug Production Service</a></h2>
+<p>Your production service is slow, but you can't restart it. Let's attach and profile it.</p>
+<h3 id="step-1-find-the-process"><a class="header" href="#step-1-find-the-process">Step 1: Find the Process</a></h3>
+<pre><code class="language-bash">$ ps aux | grep myservice
+user     12345  15.2  2.3  512340  94532 ?  Ssl  10:23  1:45 /usr/bin/myservice
+</code></pre>
+<p><strong>Process ID:</strong> 12345</p>
+<h3 id="step-2-attach-and-profile"><a class="header" href="#step-2-attach-and-profile">Step 2: Attach and Profile</a></h3>
+<pre><code class="language-bash">$ renacer -p 12345 -c -e 'trace=file'
+</code></pre>
+<p><strong>Note:</strong> Requires same user or root permissions.</p>
+<p><strong>Output:</strong></p>
+<pre><code>Attaching to process 12345...
+Attached successfully. Press Ctrl+C to detach.
+
+System Call Summary (60 seconds):
+====================
+Syscall          Calls    Total Time    Avg Time    p50      p90      p99
+read             45678    23456.78ms    0.514ms     0.2ms    1.2ms    5.6ms
+write            34567    12345.67ms    0.357ms     0.1ms    0.8ms    3.2ms
+fsync            1234     5678.90ms     4.603ms     3.5ms    8.2ms    23.4ms
+openat           567      234.56ms      0.414ms     0.2ms    0.9ms    2.1ms
+</code></pre>
+<p><strong>Analysis:</strong></p>
+<ul>
+<li><code>fsync</code> is the bottleneck (4.6ms average)</li>
+<li>1,234 fsyncs in 60s = 20 per second</li>
+<li>p99 latency is 23ms (unacceptable spikes)</li>
+</ul>
+<h3 id="step-3-locate-the-problem-code"><a class="header" href="#step-3-locate-the-problem-code">Step 3: Locate the Problem Code</a></h3>
+<pre><code class="language-bash">$ renacer -p 12345 --source -e 'trace=fsync'
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>Attaching to process 12345...
+fsync(3) = 0   [/usr/lib/myservice/logger.so:89 in flush_logs]
+fsync(3) = 0   [/usr/lib/myservice/logger.so:89 in flush_logs]
+fsync(3) = 0   [/usr/lib/myservice/logger.so:89 in flush_logs]
+</code></pre>
+<p><strong>Problem Found:</strong> Logger syncing on every write (logger.so:89).</p>
+<h3 id="step-4-detach-cleanly"><a class="header" href="#step-4-detach-cleanly">Step 4: Detach Cleanly</a></h3>
+<pre><code>Press Ctrl+C
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>^C
+Detaching from process 12345...
+Detached successfully. Process continues running.
+</code></pre>
+<p><strong>Service:</strong> Continues uninterrupted.</p>
+<h2 id="scenario-debug-intermittent-issue"><a class="header" href="#scenario-debug-intermittent-issue">Scenario: Debug Intermittent Issue</a></h2>
+<p>Your application occasionally hangs. Attach when it happens.</p>
+<h3 id="step-1-identify-hung-process"><a class="header" href="#step-1-identify-hung-process">Step 1: Identify Hung Process</a></h3>
+<pre><code class="language-bash">$ ps aux | grep hung-app
+user     23456  99.0  1.2  123456  48576 ?  R    14:32  2:30 ./hung-app
+</code></pre>
+<p><strong>Note:</strong> 99% CPU - spinning, not blocked.</p>
+<h3 id="step-2-attach-and-see-what-its-doing"><a class="header" href="#step-2-attach-and-see-what-its-doing">Step 2: Attach and See What It's Doing</a></h3>
+<pre><code class="language-bash">$ renacer -p 23456
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>Attaching to process 23456...
+read(3, "", 8192) = 0
+read(3, "", 8192) = 0
+read(3, "", 8192) = 0
+# ... repeated thousands of times ...
+</code></pre>
+<p><strong>Problem:</strong> Infinite loop reading EOF (read returns 0).</p>
+<h3 id="step-3-find-the-code-location"><a class="header" href="#step-3-find-the-code-location">Step 3: Find the Code Location</a></h3>
+<pre><code class="language-bash">$ renacer -p 23456 --source -e 'trace=read' | head -10
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>read(3, "", 8192) = 0   [src/parser.rs:156 in read_next_line]
+read(3, "", 8192) = 0   [src/parser.rs:156 in read_next_line]
+read(3, "", 8192) = 0   [src/parser.rs:156 in read_next_line]
+</code></pre>
+<p><strong>Bug Found:</strong> <code>src/parser.rs:156</code> doesn't handle EOF properly, causing infinite loop.</p>
+<h2 id="scenario-monitor-live-traffic"><a class="header" href="#scenario-monitor-live-traffic">Scenario: Monitor Live Traffic</a></h2>
+<p>Attach to a web server to monitor incoming requests.</p>
+<h3 id="step-1-attach-to-running-server"><a class="header" href="#step-1-attach-to-running-server">Step 1: Attach to Running Server</a></h3>
+<pre><code class="language-bash">$ pidof nginx-worker
+34567
+$ renacer -p 34567 -e 'trace=network'
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>Attaching to process 34567...
+accept(6, {sa_family=AF_INET, sin_port=htons(54321), sin_addr=inet_addr("192.168.1.100")}, [16]) = 8
+recvfrom(8, "GET /api/users HTTP/1.1\r\nHost: example.com\r\n...", 4096, 0, NULL, NULL) = 234
+sendto(8, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n...", 512, MSG_NOSIGNAL, NULL, 0) = 512
+close(8) = 0
+accept(6, {sa_family=AF_INET, sin_port=htons(54322), sin_addr=inet_addr("192.168.1.101")}, [16]) = 9
+recvfrom(9, "GET /api/products HTTP/1.1\r\n...", 4096, 0, NULL, NULL) = 198
+sendto(9, "HTTP/1.1 200 OK\r\n...", 1024, MSG_NOSIGNAL, NULL, 0) = 1024
+close(9) = 0
+</code></pre>
+<p><strong>Analysis:</strong></p>
+<ul>
+<li>Handling requests from 192.168.1.100, 192.168.1.101</li>
+<li>GET /api/users, GET /api/products</li>
+<li>All returning 200 OK</li>
+</ul>
+<h3 id="step-2-count-request-rate"><a class="header" href="#step-2-count-request-rate">Step 2: Count Request Rate</a></h3>
+<pre><code class="language-bash">$ renacer -p 34567 -c -e 'trace=accept,recvfrom,sendto'
+# Wait 60 seconds, then Ctrl+C
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>System Call Summary (60 seconds):
+====================
+Syscall          Calls    Total Time    Avg Time
+accept           1234     123.45ms      0.100ms
+recvfrom         1234     234.56ms      0.190ms
+sendto           1234     345.67ms      0.280ms
+</code></pre>
+<p><strong>Throughput:</strong> 1,234 requests / 60s = ~20 requests/second.</p>
+<h2 id="scenario-find-memory-leak-in-production"><a class="header" href="#scenario-find-memory-leak-in-production">Scenario: Find Memory Leak in Production</a></h2>
+<p>Your process memory grows over time. Let's trace allocations.</p>
+<h3 id="step-1-monitor-memory-operations"><a class="header" href="#step-1-monitor-memory-operations">Step 1: Monitor Memory Operations</a></h3>
+<pre><code class="language-bash">$ renacer -p 45678 -c -e 'trace=memory'
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>System Call Summary (60 seconds):
+====================
+Syscall          Calls    Total Time    Avg Time
+mmap             5678     123.45ms      0.022ms
+munmap           234      12.34ms       0.053ms
+brk              1234     23.45ms       0.019ms
+</code></pre>
+<p><strong>Problem:</strong> 5,678 mmap calls, only 234 munmap calls - memory leak!</p>
+<h3 id="step-2-find-leak-location"><a class="header" href="#step-2-find-leak-location">Step 2: Find Leak Location</a></h3>
+<pre><code class="language-bash">$ renacer -p 45678 --source -e 'trace=mmap,munmap'
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f... [src/cache.rs:67 in allocate_entry]
+mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f... [src/cache.rs:67 in allocate_entry]
+mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f... [src/cache.rs:67 in allocate_entry]
+# No corresponding munmap calls!
+</code></pre>
+<p><strong>Leak Source:</strong> <code>src/cache.rs:67</code> allocates but never frees.</p>
+<h2 id="scenario-debug-database-connection-issues"><a class="header" href="#scenario-debug-database-connection-issues">Scenario: Debug Database Connection Issues</a></h2>
+<p>Your app loses DB connections. Monitor connection lifecycle.</p>
+<h3 id="step-1-trace-connection-attempts"><a class="header" href="#step-1-trace-connection-attempts">Step 1: Trace Connection Attempts</a></h3>
+<pre><code class="language-bash">$ renacer -p 56789 -e 'trace=connect,close'
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>Attaching to process 56789...
+connect(3, {sa_family=AF_INET, sin_port=htons(5432), sin_addr=inet_addr("10.0.1.50")}, 16) = 0
+# ... connection used ...
+close(3) = 0
+connect(4, {sa_family=AF_INET, sin_port=htons(5432), sin_addr=inet_addr("10.0.1.50")}, 16) = -ECONNREFUSED
+connect(5, {sa_family=AF_INET, sin_port=htons(5432), sin_addr=inet_addr("10.0.1.50")}, 16) = -ECONNREFUSED
+connect(6, {sa_family=AF_INET, sin_port=htons(5432), sin_addr=inet_addr("10.0.1.50")}, 16) = 0
+</code></pre>
+<p><strong>Analysis:</strong></p>
+<ul>
+<li>First connection succeeds, then closed</li>
+<li>Two connection attempts fail (ECONNREFUSED)</li>
+<li>Third attempt succeeds</li>
+</ul>
+<p><strong>Diagnosis:</strong> Database restarted or connection pool exhausted.</p>
+<h3 id="step-2-monitor-connection-duration"><a class="header" href="#step-2-monitor-connection-duration">Step 2: Monitor Connection Duration</a></h3>
+<pre><code class="language-bash">$ renacer -p 56789 -c -e 'trace=connect' --format json &gt; connections.json
+</code></pre>
+<p><strong>Analyze with jq:</strong></p>
+<pre><code class="language-bash">$ jq '.syscalls[] | select(.name == "connect") | {addr: .args.addr, result: .return.value}' connections.json
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code class="language-json">{"addr": "10.0.1.50:5432", "result": 0}
+{"addr": "10.0.1.50:5432", "result": -111}
+{"addr": "10.0.1.50:5432", "result": -111}
+{"addr": "10.0.1.50:5432", "result": 0}
+</code></pre>
+<p><strong>Pattern:</strong> Intermittent ECONNREFUSED (-111) errors.</p>
+<h2 id="attaching-workflow"><a class="header" href="#attaching-workflow">Attaching Workflow</a></h2>
+<h3 id="step-1-find-the-process-1"><a class="header" href="#step-1-find-the-process-1">Step 1: Find the Process</a></h3>
+<h4 id="by-name"><a class="header" href="#by-name">By Name</a></h4>
+<pre><code class="language-bash">$ ps aux | grep &lt;process-name&gt;
+$ pidof &lt;process-name&gt;
+$ pgrep -f &lt;process-pattern&gt;
+</code></pre>
+<h4 id="by-port-for-servers"><a class="header" href="#by-port-for-servers">By Port (for servers)</a></h4>
+<pre><code class="language-bash">$ sudo lsof -i :8080
+COMMAND   PID  USER   FD   TYPE DEVICE SIZE/OFF NODE NAME
+myserver  12345 user  3u  IPv4 123456   0t0  TCP *:8080 (LISTEN)
+</code></pre>
+<h4 id="by-user"><a class="header" href="#by-user">By User</a></h4>
+<pre><code class="language-bash">$ ps -u &lt;username&gt;
+</code></pre>
+<h3 id="step-2-check-permissions"><a class="header" href="#step-2-check-permissions">Step 2: Check Permissions</a></h3>
+<pre><code class="language-bash"># Same user - works
+$ renacer -p 12345
+
+# Different user - requires sudo
+$ sudo renacer -p 12345
+
+# Check process owner
+$ ps -p 12345 -o user=
+</code></pre>
+<h3 id="step-3-attach-with-appropriate-filters"><a class="header" href="#step-3-attach-with-appropriate-filters">Step 3: Attach with Appropriate Filters</a></h3>
+<pre><code class="language-bash"># File I/O profiling
+$ renacer -p 12345 -c -e 'trace=file'
+
+# Network monitoring
+$ renacer -p 12345 -c -e 'trace=network'
+
+# Full trace
+$ renacer -p 12345
+</code></pre>
+<h3 id="step-4-export-for-analysis"><a class="header" href="#step-4-export-for-analysis">Step 4: Export for Analysis</a></h3>
+<pre><code class="language-bash"># JSON export
+$ renacer -p 12345 --format json -c -e 'trace=file' &gt; profile.json
+
+# CSV for spreadsheet
+$ renacer -p 12345 --format csv -c &gt; profile.csv
+</code></pre>
+<h3 id="step-5-detach-gracefully"><a class="header" href="#step-5-detach-gracefully">Step 5: Detach Gracefully</a></h3>
+<pre><code>Press Ctrl+C
+</code></pre>
+<p><strong>Process continues running without interruption.</strong></p>
+<h2 id="permissions-and-security"><a class="header" href="#permissions-and-security">Permissions and Security</a></h2>
+<h3 id="permission-requirements"><a class="header" href="#permission-requirements">Permission Requirements</a></h3>
+<h4 id="attach-to-own-process"><a class="header" href="#attach-to-own-process">Attach to Own Process</a></h4>
+<pre><code class="language-bash">$ renacer -p $(pgrep -u $USER myapp)
+# Works - same user
+</code></pre>
+<h4 id="attach-to-other-users-process"><a class="header" href="#attach-to-other-users-process">Attach to Other User's Process</a></h4>
+<pre><code class="language-bash">$ renacer -p 12345
+Error: Operation not permitted (EPERM)
+
+$ sudo renacer -p 12345
+# Works with sudo
+</code></pre>
+<h3 id="security-implications"><a class="header" href="#security-implications">Security Implications</a></h3>
+<p><strong>Ptrace restrictions:</strong></p>
+<p>Linux protects processes from unauthorized tracing:</p>
+<pre><code class="language-bash"># Check ptrace scope
+$ cat /proc/sys/kernel/yama/ptrace_scope
+1
+
+# 0 = Classical ptrace (unrestricted)
+# 1 = Restricted ptrace (only descendants)
+# 2 = Admin-only attach
+# 3 = No attach allowed
+</code></pre>
+<p><strong>To allow attaching to own processes:</strong></p>
+<pre><code class="language-bash"># Temporary (until reboot)
+$ sudo sysctl kernel.yama.ptrace_scope=0
+
+# Permanent
+$ echo "kernel.yama.ptrace_scope = 0" | sudo tee -a /etc/sysctl.conf
+$ sudo sysctl -p
+</code></pre>
+<h3 id="best-practices-for-production"><a class="header" href="#best-practices-for-production">Best Practices for Production</a></h3>
+<h4 id="1-use-minimal-filtering"><a class="header" href="#1-use-minimal-filtering">1. Use Minimal Filtering</a></h4>
+<pre><code class="language-bash"># Bad - traces everything (high overhead)
+$ sudo renacer -p 12345
+
+# Good - traces only what's needed
+$ sudo renacer -p 12345 -e 'trace=file'
+</code></pre>
+<h4 id="2-limit-attachment-duration"><a class="header" href="#2-limit-attachment-duration">2. Limit Attachment Duration</a></h4>
+<pre><code class="language-bash"># Attach for 60 seconds, then auto-detach
+$ timeout 60 sudo renacer -p 12345 -c -e 'trace=file'
+</code></pre>
+<h4 id="3-export-for-offline-analysis"><a class="header" href="#3-export-for-offline-analysis">3. Export for Offline Analysis</a></h4>
+<pre><code class="language-bash"># Attach briefly, export data, analyze later
+$ sudo renacer -p 12345 --format json -e 'trace=file' &gt; /tmp/trace.json
+# Detach (Ctrl+C)
+$ jq '.syscalls | group_by(.name) | map({name: .[0].name, calls: length})' /tmp/trace.json
+</code></pre>
+<h4 id="4-monitor-impact"><a class="header" href="#4-monitor-impact">4. Monitor Impact</a></h4>
+<pre><code class="language-bash"># Check overhead before full trace
+$ top -p 12345
+# Note CPU% before attaching
+
+$ sudo renacer -p 12345 -c -e 'trace=file' &amp;
+$ top -p 12345
+# Monitor CPU% during trace
+</code></pre>
+<h2 id="common-attach-scenarios"><a class="header" href="#common-attach-scenarios">Common Attach Scenarios</a></h2>
+<h3 id="scenario-1-process-wont-start"><a class="header" href="#scenario-1-process-wont-start">Scenario 1: Process Won't Start</a></h3>
+<pre><code class="language-bash"># Start process, attach immediately
+$ ./myapp &amp;
+$ renacer -p $!
+</code></pre>
+<p><strong>Use Case:</strong> Debug startup issues without modifying launch command.</p>
+<h3 id="scenario-2-periodic-task-debugging"><a class="header" href="#scenario-2-periodic-task-debugging">Scenario 2: Periodic Task Debugging</a></h3>
+<pre><code class="language-bash"># Attach when cron job runs
+$ pgrep -f my-cron-job
+$ renacer -p &lt;pid&gt;
+</code></pre>
+<p><strong>Use Case:</strong> Debug scheduled tasks that run periodically.</p>
+<h3 id="scenario-3-multi-threaded-application"><a class="header" href="#scenario-3-multi-threaded-application">Scenario 3: Multi-Threaded Application</a></h3>
+<pre><code class="language-bash"># Attach to main process, traces all threads
+$ renacer -p 12345
+</code></pre>
+<p><strong>Output shows threads:</strong></p>
+<pre><code>[pid 12345] read(3, ...) = 1024
+[pid 12346] write(4, ...) = 2048   # Thread 1
+[pid 12347] read(5, ...) = 512     # Thread 2
+</code></pre>
+<h3 id="scenario-4-attach-to-child-process"><a class="header" href="#scenario-4-attach-to-child-process">Scenario 4: Attach to Child Process</a></h3>
+<pre><code class="language-bash"># Parent spawns child, attach to child
+$ ps --ppid 12345  # Find children of PID 12345
+  PID TTY          TIME CMD
+ 12456 ?        00:00:01 worker-1
+ 12457 ?        00:00:02 worker-2
+
+$ renacer -p 12456  # Attach to worker-1
+</code></pre>
+<h2 id="troubleshooting"><a class="header" href="#troubleshooting">Troubleshooting</a></h2>
+<h3 id="issue-operation-not-permitted"><a class="header" href="#issue-operation-not-permitted">Issue: Operation Not Permitted</a></h3>
+<p><strong>Symptoms:</strong></p>
+<pre><code class="language-bash">$ renacer -p 12345
+Error: Operation not permitted (EPERM)
+</code></pre>
+<p><strong>Causes:</strong></p>
+<ul>
+<li>Different user owns the process</li>
+<li>Ptrace restrictions (yama.ptrace_scope)</li>
+<li>Process has security modules (SELinux, AppArmor)</li>
+</ul>
+<p><strong>Solutions:</strong></p>
+<pre><code class="language-bash"># 1. Use sudo
+$ sudo renacer -p 12345
+
+# 2. Adjust ptrace scope
+$ sudo sysctl -w kernel.yama.ptrace_scope=0
+
+# 3. Check SELinux
+$ getenforce
+$ sudo setenforce 0  # Temporarily disable
+</code></pre>
+<h3 id="issue-process-slows-down-significantly"><a class="header" href="#issue-process-slows-down-significantly">Issue: Process Slows Down Significantly</a></h3>
+<p><strong>Symptoms:</strong></p>
+<pre><code class="language-bash">$ renacer -p 12345
+# Process becomes very slow
+</code></pre>
+<p><strong>Cause:</strong> Tracing all syscalls has high overhead.</p>
+<p><strong>Solution:</strong> Filter to relevant syscalls only:</p>
+<pre><code class="language-bash"># Instead of tracing everything
+$ renacer -p 12345
+
+# Trace only specific operations
+$ renacer -p 12345 -e 'trace=file'
+$ renacer -p 12345 -e 'trace=network'
+</code></pre>
+<h3 id="issue-process-dies-when-attaching"><a class="header" href="#issue-process-dies-when-attaching">Issue: Process Dies When Attaching</a></h3>
+<p><strong>Symptoms:</strong></p>
+<pre><code class="language-bash">$ renacer -p 12345
+Attaching to process 12345...
+Error: No such process
+</code></pre>
+<p><strong>Causes:</strong></p>
+<ul>
+<li>Process exited before attach completed</li>
+<li>Process PID reused by another process</li>
+<li>Race condition</li>
+</ul>
+<p><strong>Solution:</strong></p>
+<pre><code class="language-bash"># Verify process is still running
+$ ps -p 12345
+  PID TTY          TIME CMD
+12345 ?        00:01:23 myapp
+
+# Retry attach
+$ renacer -p 12345
+</code></pre>
+<h3 id="issue-attachment-hangs"><a class="header" href="#issue-attachment-hangs">Issue: Attachment Hangs</a></h3>
+<p><strong>Symptoms:</strong></p>
+<pre><code class="language-bash">$ renacer -p 12345
+Attaching to process 12345...
+# Hangs indefinitely
+</code></pre>
+<p><strong>Cause:</strong> Process already being traced (e.g., by debugger).</p>
+<p><strong>Solution:</strong></p>
+<pre><code class="language-bash"># Check if process is already traced
+$ sudo cat /proc/12345/status | grep TracerPid
+TracerPid:      0  # Not traced
+TracerPid:   5678  # Already traced by PID 5678
+
+# If traced, find the tracer
+$ ps -p 5678
+  PID TTY          TIME CMD
+ 5678 pts/0    00:00:01 gdb
+
+# Stop the tracer first
+$ kill 5678
+</code></pre>
+<h2 id="best-practices"><a class="header" href="#best-practices">Best Practices</a></h2>
+<h3 id="1-filter-aggressively"><a class="header" href="#1-filter-aggressively">1. Filter Aggressively</a></h3>
+<pre><code class="language-bash"># Trace only what you need
+$ renacer -p 12345 -e 'trace=file,!/fstat/'
+</code></pre>
+<p><strong>Why:</strong> Reduces overhead and noise.</p>
+<h3 id="2-use-statistics-mode"><a class="header" href="#2-use-statistics-mode">2. Use Statistics Mode</a></h3>
+<pre><code class="language-bash"># Get aggregate data
+$ renacer -p 12345 -c -e 'trace=file'
+</code></pre>
+<p><strong>Why:</strong> Lower overhead than individual syscall tracing.</p>
+<h3 id="3-correlate-with-source-code"><a class="header" href="#3-correlate-with-source-code">3. Correlate with Source Code</a></h3>
+<pre><code class="language-bash"># Find hot paths
+$ renacer -p 12345 --source -c -e 'trace=file'
+</code></pre>
+<p><strong>Why:</strong> Identifies exact code locations.</p>
+<h3 id="4-minimize-attachment-time"><a class="header" href="#4-minimize-attachment-time">4. Minimize Attachment Time</a></h3>
+<pre><code class="language-bash"># Attach for 30 seconds
+$ timeout 30 sudo renacer -p 12345 -c -e 'trace=network'
+</code></pre>
+<p><strong>Why:</strong> Reduces production impact.</p>
+<h3 id="5-compare-beforeafter"><a class="header" href="#5-compare-beforeafter">5. Compare Before/After</a></h3>
+<pre><code class="language-bash"># Baseline
+$ sudo renacer -p 12345 -c -e 'trace=file' &gt; before.txt
+
+# After config change, measure again
+$ sudo renacer -p 12345 -c -e 'trace=file' &gt; after.txt
+
+$ diff before.txt after.txt
+</code></pre>
+<p><strong>Why:</strong> Quantify impact of changes.</p>
+<h3 id="6-document-findings"><a class="header" href="#6-document-findings">6. Document Findings</a></h3>
+<pre><code class="language-bash"># Export with timestamp
+$ sudo renacer -p 12345 --format json -c &gt; "trace-$(date +%Y%m%d-%H%M%S).json"
+</code></pre>
+<p><strong>Why:</strong> Track issues over time.</p>
+<h2 id="summary"><a class="header" href="#summary">Summary</a></h2>
+<p><strong>Attaching to processes:</strong></p>
+<ul>
+<li><strong>Find PID</strong>: <code>ps</code>, <code>pidof</code>, <code>pgrep</code>, <code>lsof</code></li>
+<li><strong>Attach</strong>: <code>renacer -p &lt;pid&gt;</code></li>
+<li><strong>Filter</strong>: Use <code>-e 'trace=...'</code> to reduce overhead</li>
+<li><strong>Detach</strong>: Press Ctrl+C (process continues)</li>
+</ul>
+<p><strong>Permissions:</strong></p>
+<ul>
+<li><strong>Same user</strong>: Works without sudo</li>
+<li><strong>Different user</strong>: Requires sudo</li>
+<li><strong>Ptrace scope</strong>: May need adjustment (<code>yama.ptrace_scope</code>)</li>
+</ul>
+<p><strong>Production tips:</strong></p>
+<ul>
+<li>Filter aggressively to minimize impact</li>
+<li>Use statistics mode (<code>-c</code>) for lower overhead</li>
+<li>Limit attachment duration (<code>timeout 60 ...</code>)</li>
+<li>Export for offline analysis (<code>--format json</code>)</li>
+</ul>
+<p><strong>Common use cases:</strong></p>
+<ul>
+<li>Debug production issues without restart</li>
+<li>Monitor live traffic</li>
+<li>Find memory leaks</li>
+<li>Profile database connections</li>
+<li>Debug intermittent hangs</li>
+</ul>
+<h2 id="next-steps"><a class="header" href="#next-steps">Next Steps</a></h2>
+<ul>
+<li><a href="./multi-process.html">Multi-Process Tracing</a> - Trace process trees</li>
+<li><a href="./export-data.html">Export Data</a> - JSON/CSV analysis</li>
+<li><a href="./html-reports.html">HTML Reports</a> - Visual analysis</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../examples/monitor-network.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../examples/multi-process.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../examples/monitor-network.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../examples/multi-process.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../ace.js"></script>
+        <script src="../editor.js"></script>
+        <script src="../mode-rust.js"></script>
+        <script src="../theme-dawn.js"></script>
+        <script src="../theme-tomorrow_night.js"></script>
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

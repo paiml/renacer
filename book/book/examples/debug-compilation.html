@@ -1,0 +1,722 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Debug Compilation &amp; Transpilation - The Renacer Book - Pure Rust System Call Tracing</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="A comprehensive guide to renacer: syscall tracing, DWARF correlation, and performance analysis">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "rust";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The Renacer Book - Pure Rust System Call Tracing</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer/edit/main/book/src/examples/debug-compilation.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="example-debug-compilation-and-transpilation"><a class="header" href="#example-debug-compilation-and-transpilation">Example: Debug Compilation and Transpilation</a></h1>
+<p>This example demonstrates debugging the entire compilation pipeline: from Python source code through transpilation (Depyler), compilation (rustc), to final binary execution. Perfect for diagnosing issues like DEPYLER-0435.</p>
+<hr />
+<h2 id="overview-the-full-pipeline"><a class="header" href="#overview-the-full-pipeline">Overview: The Full Pipeline</a></h2>
+<p>When transpiling Python to Rust with Depyler, we have multiple layers:</p>
+<pre><code>Python Source (.py)
+    ↓ [Depyler Transpiler]
+Generated Rust (.rs) + Source Map (.map)
+    ↓ [cargo/rustc Compiler]
+Binary Executable + DWARF Debug Info
+    ↓ [Execution]
+Runtime Syscalls
+</code></pre>
+<p><strong>Renacer can trace and correlate across ALL these layers.</strong></p>
+<hr />
+<h2 id="scenario-1-debugging-slow-compilation"><a class="header" href="#scenario-1-debugging-slow-compilation">Scenario 1: Debugging Slow Compilation</a></h2>
+<p>Your Depyler-transpiled project takes 15 minutes to compile. Let's find why.</p>
+<h3 id="step-1-measure-compilation-performance"><a class="header" href="#step-1-measure-compilation-performance">Step 1: Measure Compilation Performance</a></h3>
+<pre><code class="language-bash"># Baseline: How long does it take?
+$ time cargo build --release
+
+real    15m23s
+user    42m15s
+sys     2m34s
+</code></pre>
+<p><strong>Problem:</strong> 15 minutes is too slow. What's happening?</p>
+<h3 id="step-2-trace-the-build-process"><a class="header" href="#step-2-trace-the-build-process">Step 2: Trace the Build Process</a></h3>
+<pre><code class="language-bash">$ renacer -f -c -e 'trace=file,process' -- cargo build --release
+</code></pre>
+<p><strong>Output (summary):</strong></p>
+<pre><code>System Call Summary (Multi-Process):
+=====================================
+Process Tree:
+[PID 12345] cargo build
+  └─ [PID 12346] rustc --crate-name myapp ...
+       ├─ [PID 12347] rustc --crate-name dep1 ...
+       ├─ [PID 12348] rustc --crate-name dep2 ...
+       └─ [PID 12349] ld (linker)
+
+Syscall Statistics:
+Syscall    Total Calls   Total Time    Process Distribution
+openat     125,847       45.2s         rustc: 98%, ld: 2%
+read       2,456,789     23.4s         rustc: 100%
+write      345,678       12.3s         rustc: 95%, ld: 5%
+execve     1,247         8.9s          cargo: 100%
+</code></pre>
+<p><strong>Analysis:</strong></p>
+<ul>
+<li>125,847 <code>openat</code> calls taking 45 seconds</li>
+<li>1,247 <code>execve</code> calls (many rustc invocations)</li>
+<li>Most time in <code>rustc</code> reading files</li>
+</ul>
+<h3 id="step-3-find-whats-being-opened"><a class="header" href="#step-3-find-whats-being-opened">Step 3: Find What's Being Opened</a></h3>
+<pre><code class="language-bash">$ renacer -f -e 'trace=openat' -- cargo build --release 2&gt;&amp;1 | \
+  grep -o '"/[^"]*"' | sort | uniq -c | sort -rn | head -20
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>12,456 "/home/user/.cargo/registry/cache/..."
+8,923  "/usr/lib/rustlib/x86_64-unknown-linux-gnu/..."
+4,567  "/home/user/project/target/release/deps/..."
+3,421  "/home/user/project/src/generated/mod_0001.rs"
+3,420  "/home/user/project/src/generated/mod_0002.rs"
+3,419  "/home/user/project/src/generated/mod_0003.rs"
+... (1,200 more generated modules)
+</code></pre>
+<p><strong>Root Cause Found:</strong> Depyler generated 1,200+ separate <code>.rs</code> modules, each opened ~3 times during compilation!</p>
+<h3 id="step-4-correlate-with-source-code"><a class="header" href="#step-4-correlate-with-source-code">Step 4: Correlate with Source Code</a></h3>
+<pre><code class="language-bash"># Find where rustc is spending time
+$ renacer -f --source -e 'trace=read' -- cargo build --release 2&gt;&amp;1 | \
+  grep "rustc" | head -10
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>[PID 12346] read(3, "// Generated by Depyler\nmod mo...", 8192) = 8192
+  [/rustc/hash/compiler/rustc_parse/src/parser/item.rs:234 in parse_item]
+
+[PID 12346] read(4, "// Generated by Depyler\npub fn...", 8192) = 8192
+  [/rustc/hash/compiler/rustc_parse/src/parser/item.rs:234 in parse_item]
+</code></pre>
+<p><strong>Insight:</strong> <code>rustc</code> parser is reading each generated file individually.</p>
+<h3 id="step-5-analyze-depyler-output-structure"><a class="header" href="#step-5-analyze-depyler-output-structure">Step 5: Analyze Depyler Output Structure</a></h3>
+<pre><code class="language-bash"># Trace the transpilation step
+$ renacer -e 'trace=file' -- depyler transpile main.py --output src/generated/
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>openat(AT_FDCWD, "main.py", O_RDONLY) = 3
+# ... parsing ...
+openat(AT_FDCWD, "src/generated/mod_0001.rs", O_WRONLY|O_CREAT) = 4
+write(4, "// Generated by Depyler\n...", 2456) = 2456
+close(4) = 0
+openat(AT_FDCWD, "src/generated/mod_0002.rs", O_WRONLY|O_CREAT) = 4
+write(4, "// Generated by Depyler\n...", 2398) = 2398
+close(4) = 0
+# ... 1,198 more files ...
+</code></pre>
+<p><strong>Problem:</strong> Depyler is generating 1,200 small modules instead of consolidating them.</p>
+<p><strong>Solution:</strong> Configure Depyler to use <code>--merge-modules</code> flag:</p>
+<pre><code class="language-bash">$ depyler transpile main.py --output src/generated/ --merge-modules=100
+</code></pre>
+<p><strong>Result:</strong> 1,200 modules → 12 modules (100 items per file)</p>
+<h3 id="step-6-verify-improvement"><a class="header" href="#step-6-verify-improvement">Step 6: Verify Improvement</a></h3>
+<pre><code class="language-bash">$ time cargo build --release
+
+real    2m34s   ← 6x faster!
+user    7m12s
+sys     0m23s
+</code></pre>
+<p><strong>Improvement:</strong></p>
+<ul>
+<li>Compilation time: 15m23s → 2m34s (6x faster)</li>
+<li><code>openat</code> calls: 125,847 → 12,456 (10x reduction)</li>
+</ul>
+<hr />
+<h2 id="scenario-2-finding-missing-dependencies"><a class="header" href="#scenario-2-finding-missing-dependencies">Scenario 2: Finding Missing Dependencies</a></h2>
+<p>Your transpiled code fails to compile with cryptic error. Let's trace it.</p>
+<h3 id="problem-statement"><a class="header" href="#problem-statement">Problem Statement</a></h3>
+<pre><code class="language-bash">$ cargo build
+   Compiling myapp v0.1.0
+error[E0433]: failed to resolve: use of undeclared crate or module `std`
+  --&gt; src/generated/mod_main.rs:42:5
+   |
+42 |     std::fs::read_to_string(path)
+   |     ^^^ use of undeclared crate or module `std`
+</code></pre>
+<p><strong>Question:</strong> Why can't it find <code>std</code>? It should be automatically available!</p>
+<h3 id="step-1-trace-the-failing-compilation"><a class="header" href="#step-1-trace-the-failing-compilation">Step 1: Trace the Failing Compilation</a></h3>
+<pre><code class="language-bash">$ renacer -f --source -e 'trace=openat' -- cargo build 2&gt;&amp;1 | \
+  grep -E "\.rs|ENOENT"
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>[PID 12350] openat(AT_FDCWD, "src/generated/mod_main.rs", O_RDONLY) = 3
+[PID 12350] openat(AT_FDCWD, "/usr/lib/rustlib/x86_64-unknown-linux-gnu/lib/libstd.rlib", O_RDONLY) = 4
+[PID 12350] openat(AT_FDCWD, "src/generated/prelude.rs", O_RDONLY) = -2 (ENOENT)
+[PID 12350] openat(AT_FDCWD, "src/lib.rs", O_RDONLY) = -2 (ENOENT)
+</code></pre>
+<p><strong>Analysis:</strong></p>
+<ul>
+<li><code>rustc</code> successfully opens <code>libstd.rlib</code> (so std EXISTS)</li>
+<li>Looking for <code>prelude.rs</code> but not found (ENOENT)</li>
+<li>The generated code is missing the prelude import!</li>
+</ul>
+<h3 id="step-2-check-generated-code"><a class="header" href="#step-2-check-generated-code">Step 2: Check Generated Code</a></h3>
+<pre><code class="language-bash">$ head -20 src/generated/mod_main.rs
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code class="language-rust">// Generated by Depyler v0.4.0
+// Source: main.py
+
+#![no_std]  ← PROBLEM! This disables std library
+
+pub fn read_file(path: &amp;str) -&gt; String {
+    std::fs::read_to_string(path)  // ← Tries to use std, but no_std is set!
+}</code></pre>
+<p><strong>Root Cause:</strong> Depyler incorrectly set <code>#![no_std]</code> attribute in generated code.</p>
+<h3 id="step-3-trace-depyler-transpilation"><a class="header" href="#step-3-trace-depyler-transpilation">Step 3: Trace Depyler Transpilation</a></h3>
+<pre><code class="language-bash">$ renacer --source -e 'trace=write' -- depyler transpile main.py 2&gt;&amp;1 | \
+  grep "no_std"
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>write(4, "#![no_std]\n", 11) = 11
+  [depyler/src/codegen/rust_emitter.rs:156 in emit_crate_attrs]
+</code></pre>
+<p><strong>Found It:</strong> <code>depyler/src/codegen/rust_emitter.rs:156</code> is emitting <code>#![no_std]</code> incorrectly.</p>
+<h3 id="step-4-fix-and-verify"><a class="header" href="#step-4-fix-and-verify">Step 4: Fix and Verify</a></h3>
+<p>Edit Depyler configuration:</p>
+<pre><code class="language-toml"># depyler.toml
+[codegen]
+use_std = true  # ← Force std library usage
+no_std = false
+</code></pre>
+<p><strong>Recompile:</strong></p>
+<pre><code class="language-bash">$ depyler transpile main.py
+$ cargo build
+   Compiling myapp v0.1.0
+   Finished dev [unoptimized + debuginfo] target(s) in 12.3s
+</code></pre>
+<p><strong>Success!</strong></p>
+<hr />
+<h2 id="scenario-3-transpiler-source-mapping-sprint-24-28"><a class="header" href="#scenario-3-transpiler-source-mapping-sprint-24-28">Scenario 3: Transpiler Source Mapping (Sprint 24-28)</a></h2>
+<p>A runtime error occurs in transpiled code. Can we trace it back to the original Python?</p>
+<h3 id="problem-runtime-panic-in-generated-rust"><a class="header" href="#problem-runtime-panic-in-generated-rust">Problem: Runtime Panic in Generated Rust</a></h3>
+<pre><code class="language-bash">$ ./target/release/myapp
+thread 'main' panicked at 'index out of bounds: the len is 5 but the index is 10',
+  src/generated/mod_array_ops.rs:234:9
+</code></pre>
+<p><strong>Question:</strong> What line in the <strong>original Python</strong> caused this?</p>
+<h3 id="step-1-trace-runtime-execution"><a class="header" href="#step-1-trace-runtime-execution">Step 1: Trace Runtime Execution</a></h3>
+<pre><code class="language-bash">$ renacer --source -- ./target/release/myapp
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>read(3, "[1, 2, 3, 4, 5]", 4096) = 15
+  [src/generated/mod_array_ops.rs:230 in parse_array]
+
+read(3, "10", 4096) = 2
+  [src/generated/mod_array_ops.rs:232 in read_index]
+
+# PANIC at src/generated/mod_array_ops.rs:234
+</code></pre>
+<p><strong>DWARF tells us:</strong> Crash is at <code>mod_array_ops.rs:234</code></p>
+<p><strong>But we need:</strong> Original Python source location!</p>
+<h3 id="step-2-use-transpiler-source-map"><a class="header" href="#step-2-use-transpiler-source-map">Step 2: Use Transpiler Source Map</a></h3>
+<pre><code class="language-bash">$ renacer --source --transpiler-map src/generated.map -- ./target/release/myapp
+</code></pre>
+<p><strong>Output (with source map):</strong></p>
+<pre><code>read(3, "[1, 2, 3, 4, 5]", 4096) = 15
+  [src/generated/mod_array_ops.rs:230 in parse_array]
+  ↳ [Original: main.py:42 in process_data]  ← Transpiler mapping!
+
+read(3, "10", 4096) = 2
+  [src/generated/mod_array_ops.rs:232 in read_index]
+  ↳ [Original: main.py:43 in process_data]
+
+# PANIC at src/generated/mod_array_ops.rs:234
+  ↳ [Original: main.py:44 in process_data]  ← Root cause in Python!
+</code></pre>
+<p><strong>Correlation Chain:</strong></p>
+<pre><code>Python: main.py:44
+   ↓ (transpiled to)
+Rust: src/generated/mod_array_ops.rs:234
+   ↓ (compiled to)
+Binary: 0x401234 (with DWARF)
+   ↓ (executes)
+Syscall: read(3, ...) = 2
+</code></pre>
+<h3 id="step-3-inspect-original-python-source"><a class="header" href="#step-3-inspect-original-python-source">Step 3: Inspect Original Python Source</a></h3>
+<pre><code class="language-python"># main.py:42-44 (the actual bug)
+def process_data(filename):
+    data = json.load(open(filename))  # Line 42
+    index = int(input("Enter index: "))  # Line 43
+    return data[index]  # Line 44 ← Out of bounds!
+</code></pre>
+<p><strong>Root Cause Found:</strong> Python code doesn't validate <code>index</code> before accessing <code>data[index]</code>.</p>
+<p><strong>Fix:</strong></p>
+<pre><code class="language-python">def process_data(filename):
+    data = json.load(open(filename))
+    index = int(input("Enter index: "))
+    if index &lt; 0 or index &gt;= len(data):
+        raise IndexError(f"Index {index} out of range [0, {len(data)})")
+    return data[index]
+</code></pre>
+<hr />
+<h2 id="scenario-4-multi-process-compilation-pipeline"><a class="header" href="#scenario-4-multi-process-compilation-pipeline">Scenario 4: Multi-Process Compilation Pipeline</a></h2>
+<p>Understanding the full build dependency tree.</p>
+<h3 id="step-1-trace-full-build-with-process-tree"><a class="header" href="#step-1-trace-full-build-with-process-tree">Step 1: Trace Full Build with Process Tree</a></h3>
+<pre><code class="language-bash">$ renacer -f -c --function-time -- cargo build
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>Process Hierarchy:
+==================
+[PID 10001] cargo build (parent)
+    Time in execve: 234ms (spawning children)
+    Time in wait4: 145.2s (waiting for rustc)
+
+  [PID 10002] rustc --crate-name myapp (child 1)
+      Time in openat: 12.3s (reading source files)
+      Time in read: 45.6s (parsing)
+      Time in write: 8.9s (emitting LLVM IR)
+      Time in execve: 1.2s (spawning linker)
+
+    [PID 10003] ld (linker, grandchild)
+        Time in openat: 3.4s (reading .o files)
+        Time in read: 8.9s (linking)
+        Time in write: 2.1s (writing binary)
+
+  [PID 10004] rustc --crate-name dep1 (child 2 - parallel)
+      Time in openat: 5.6s
+      Time in read: 23.4s
+      Time in write: 4.3s
+
+  [PID 10005] rustc --crate-name dep2 (child 3 - parallel)
+      Time in openat: 4.2s
+      Time in read: 18.9s
+      Time in write: 3.1s
+</code></pre>
+<p><strong>Analysis:</strong></p>
+<ul>
+<li><code>cargo</code> spends 145s waiting for child processes</li>
+<li>3 <code>rustc</code> processes run in parallel</li>
+<li>Each <code>rustc</code> spends most time in <code>read</code> (parsing)</li>
+<li>Linker (<code>ld</code>) is relatively fast (14.4s total)</li>
+</ul>
+<h3 id="step-2-find-slowest-compilation-unit"><a class="header" href="#step-2-find-slowest-compilation-unit">Step 2: Find Slowest Compilation Unit</a></h3>
+<pre><code class="language-bash">$ renacer -f -c -e 'trace=file' -- cargo build 2&gt;&amp;1 | \
+  grep -A 3 "rustc.*myapp"
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>[PID 10002] rustc --crate-name myapp
+  Syscall Statistics:
+  openat: 8,923 calls, 12.3s total
+  read:   125,847 calls, 45.6s total  ← Slowest operation
+  write:  34,521 calls, 8.9s total
+</code></pre>
+<p><strong>Bottleneck:</strong> <code>rustc</code> reading 125,847 times (parsing generated code)</p>
+<h3 id="step-3-optimize-build-parallelism"><a class="header" href="#step-3-optimize-build-parallelism">Step 3: Optimize Build Parallelism</a></h3>
+<pre><code class="language-bash"># Before: Serial compilation
+$ time cargo build -j 1
+real    8m34s
+
+# After: Parallel compilation
+$ time cargo build -j 4
+real    2m45s  ← 3x faster
+</code></pre>
+<p><strong>Result:</strong> Multi-process tracing revealed parallelization opportunity.</p>
+<hr />
+<h2 id="scenario-5-debugging-compilation-errors"><a class="header" href="#scenario-5-debugging-compilation-errors">Scenario 5: Debugging Compilation Errors</a></h2>
+<p>The compiler fails with an error. Where is the problem in the pipeline?</p>
+<h3 id="problem-mysterious-type-error"><a class="header" href="#problem-mysterious-type-error">Problem: Mysterious Type Error</a></h3>
+<pre><code class="language-bash">$ cargo build
+error[E0308]: mismatched types
+  --&gt; src/generated/mod_types.rs:89:5
+   |
+89 |     result
+   |     ^^^^^^ expected `i32`, found `String`
+</code></pre>
+<h3 id="step-1-trace-code-generation"><a class="header" href="#step-1-trace-code-generation">Step 1: Trace Code Generation</a></h3>
+<pre><code class="language-bash">$ renacer --transpiler-map depyler.map -- depyler transpile types.py
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>write(4, "fn convert(x: String) -&gt; i32 {\n", 31) = 31
+  [depyler/src/codegen/type_inference.rs:123 in emit_function]
+  ↳ [Original: types.py:12 in convert]
+
+write(4, "    result\n", 11) = 11
+  [depyler/src/codegen/type_inference.rs:145 in emit_return]
+  ↳ [Original: types.py:15 in convert]  ← Wrong type inferred!
+</code></pre>
+<p><strong>Root Cause:</strong> Depyler's type inference at <code>type_inference.rs:123</code> incorrectly assumed <code>String</code> when it should be <code>i32</code>.</p>
+<h3 id="step-2-check-original-python-type-hint"><a class="header" href="#step-2-check-original-python-type-hint">Step 2: Check Original Python Type Hint</a></h3>
+<pre><code class="language-python"># types.py:12-15
+def convert(x: str) -&gt; int:  # ← Type hint says int
+    result = int(x)  # Line 14
+    return result  # Line 15 ← Should return int, not str
+</code></pre>
+<p><strong>Problem:</strong> Depyler didn't respect Python type hints during code generation.</p>
+<h3 id="step-3-fix-depyler-type-mapping"><a class="header" href="#step-3-fix-depyler-type-mapping">Step 3: Fix Depyler Type Mapping</a></h3>
+<p>Report bug to Depyler:</p>
+<ul>
+<li>Type hint <code>int</code> should map to Rust <code>i32</code></li>
+<li>Type inference failed to see <code>int(x)</code> converts to integer</li>
+</ul>
+<hr />
+<h2 id="advanced-full-stack-correlation"><a class="header" href="#advanced-full-stack-correlation">Advanced: Full Stack Correlation</a></h2>
+<p>Combining all features to trace from Python source to binary execution.</p>
+<h3 id="scenario-performance-regression-after-transpilation"><a class="header" href="#scenario-performance-regression-after-transpilation">Scenario: Performance Regression After Transpilation</a></h3>
+<p>Python version runs fast, but transpiled Rust version is slow. Why?</p>
+<h3 id="step-1-compare-python-vs-transpiled-performance"><a class="header" href="#step-1-compare-python-vs-transpiled-performance">Step 1: Compare Python vs Transpiled Performance</a></h3>
+<pre><code class="language-bash"># Python baseline
+$ time python3 main.py
+real    0.5s
+
+# Transpiled Rust version
+$ time ./target/release/myapp
+real    5.2s  ← 10x slower!
+</code></pre>
+<h3 id="step-2-profile-both-versions"><a class="header" href="#step-2-profile-both-versions">Step 2: Profile Both Versions</a></h3>
+<pre><code class="language-bash"># Profile Python
+$ renacer -c -e 'trace=file' -- python3 main.py
+</code></pre>
+<p><strong>Output (Python):</strong></p>
+<pre><code>Syscall Statistics:
+openat: 12 calls, 23ms
+read:   156 calls, 45ms
+write:  89 calls, 12ms
+Total:  80ms (rest is Python interpreter overhead)
+</code></pre>
+<pre><code class="language-bash"># Profile Transpiled Rust
+$ renacer -c -e 'trace=file' -- ./target/release/myapp
+</code></pre>
+<p><strong>Output (Rust):</strong></p>
+<pre><code>Syscall Statistics:
+openat: 1,247 calls, 2.3s  ← 100x more opens!
+read:   156 calls, 45ms
+write:  89 calls, 12ms
+Total:  2.4s
+</code></pre>
+<p><strong>Problem:</strong> Rust version makes 1,247 <code>openat</code> calls vs 12 in Python!</p>
+<h3 id="step-3-find-source-of-extra-opens"><a class="header" href="#step-3-find-source-of-extra-opens">Step 3: Find Source of Extra Opens</a></h3>
+<pre><code class="language-bash">$ renacer --source --transpiler-map depyler.map -e 'trace=openat' -- ./target/release/myapp 2&gt;&amp;1 | head -50
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>openat(AT_FDCWD, "config.json", O_RDONLY) = 3
+  [src/generated/mod_config.rs:45 in load_config]
+  ↳ [Original: main.py:23 in initialize]
+
+openat(AT_FDCWD, "config.json", O_RDONLY) = 3
+  [src/generated/mod_config.rs:45 in load_config]
+  ↳ [Original: main.py:23 in initialize]  ← Same file opened again!
+
+# ... 1,245 more identical opens ...
+</code></pre>
+<p><strong>Root Cause:</strong> Transpiled code calls <code>load_config()</code> in a loop without caching!</p>
+<h3 id="step-4-check-original-python"><a class="header" href="#step-4-check-original-python">Step 4: Check Original Python</a></h3>
+<pre><code class="language-python"># main.py:22-30
+def initialize():
+    for i in range(1000):
+        config = load_config()  # Line 23 ← Opens file every iteration!
+        process_item(i, config)
+</code></pre>
+<p><strong>Problem:</strong> Python's file caching masked this issue, but Rust opens file every time.</p>
+<p><strong>Fix:</strong></p>
+<pre><code class="language-python">def initialize():
+    config = load_config()  # ← Cache outside loop
+    for i in range(1000):
+        process_item(i, config)
+</code></pre>
+<p><strong>Result After Fix:</strong></p>
+<pre><code class="language-bash">$ time ./target/release/myapp
+real    0.4s  ← 13x faster! Even faster than Python!
+</code></pre>
+<hr />
+<h2 id="debugging-workflow-summary"><a class="header" href="#debugging-workflow-summary">Debugging Workflow Summary</a></h2>
+<h3 id="full-pipeline-debugging-process"><a class="header" href="#full-pipeline-debugging-process">Full Pipeline Debugging Process:</a></h3>
+<pre><code class="language-bash"># 1. Trace transpilation (Depyler)
+$ renacer -e 'trace=file' -- depyler transpile main.py
+
+# 2. Trace compilation (cargo/rustc)
+$ renacer -f -c -e 'trace=file,process' -- cargo build
+
+# 3. Trace execution with source maps
+$ renacer --source --transpiler-map out.map -- ./myapp
+
+# 4. Export for analysis
+$ renacer --format json --transpiler-map out.map -- ./myapp &gt; trace.json
+</code></pre>
+<h3 id="key-techniques"><a class="header" href="#key-techniques">Key Techniques:</a></h3>
+<ol>
+<li><strong><code>-f</code> (follow forks)</strong> - Trace multi-process builds</li>
+<li><strong><code>--source</code> (DWARF)</strong> - Correlate binary → Rust source</li>
+<li><strong><code>--transpiler-map</code></strong> - Correlate Rust → Python source</li>
+<li><strong><code>-e trace=file,process</code></strong> - Focus on build-relevant syscalls</li>
+<li><strong><code>-c</code> (statistics)</strong> - Measure compilation performance</li>
+</ol>
+<hr />
+<h2 id="common-compilation-issues"><a class="header" href="#common-compilation-issues">Common Compilation Issues</a></h2>
+<h3 id="issue-1-missing-source-maps"><a class="header" href="#issue-1-missing-source-maps">Issue 1: Missing Source Maps</a></h3>
+<p><strong>Symptom:</strong></p>
+<pre><code class="language-bash">$ renacer --transpiler-map out.map -- ./myapp
+Error: Transpiler map not found: out.map
+</code></pre>
+<p><strong>Solution:</strong></p>
+<pre><code class="language-bash"># Ensure Depyler generates source maps
+$ depyler transpile main.py --emit-source-map
+# Creates: src/generated.map
+</code></pre>
+<h3 id="issue-2-dwarf-info-stripped"><a class="header" href="#issue-2-dwarf-info-stripped">Issue 2: DWARF Info Stripped</a></h3>
+<p><strong>Symptom:</strong></p>
+<pre><code class="language-bash">$ renacer --source -- ./target/release/myapp
+Warning: No DWARF debug info found
+</code></pre>
+<p><strong>Solution:</strong></p>
+<pre><code class="language-bash"># Always compile with debug info
+$ cargo build --release  # Includes debug info by default
+# OR explicitly:
+$ RUSTFLAGS="-C debuginfo=2" cargo build --release
+</code></pre>
+<h3 id="issue-3-too-many-processes-to-track"><a class="header" href="#issue-3-too-many-processes-to-track">Issue 3: Too Many Processes to Track</a></h3>
+<p><strong>Symptom:</strong></p>
+<pre><code class="language-bash">$ renacer -f -- cargo build
+Error: Process limit exceeded (ptrace: ENOMEM)
+</code></pre>
+<p><strong>Solution:</strong></p>
+<pre><code class="language-bash"># Limit parallel jobs
+$ renacer -f -- cargo build -j 4
+
+# OR filter to specific crate
+$ renacer -f -- cargo build -p myapp
+</code></pre>
+<hr />
+<h2 id="best-practices"><a class="header" href="#best-practices">Best Practices</a></h2>
+<h3 id="1-always-use-source-maps-for-transpiled-code"><a class="header" href="#1-always-use-source-maps-for-transpiled-code">1. Always Use Source Maps for Transpiled Code</a></h3>
+<pre><code class="language-bash"># Generate with source maps
+$ depyler transpile --emit-source-map main.py
+
+# Trace with source maps
+$ renacer --transpiler-map out.map -- ./myapp
+</code></pre>
+<h3 id="2-profile-before-optimizing"><a class="header" href="#2-profile-before-optimizing">2. Profile Before Optimizing</a></h3>
+<pre><code class="language-bash"># Baseline first
+$ renacer -c -- cargo build &gt; before.txt
+
+# Optimize, then compare
+$ renacer -c -- cargo build &gt; after.txt
+$ diff before.txt after.txt
+</code></pre>
+<h3 id="3-use-multi-process-tracing-for-builds"><a class="header" href="#3-use-multi-process-tracing-for-builds">3. Use Multi-Process Tracing for Builds</a></h3>
+<pre><code class="language-bash"># Always use -f for build systems
+$ renacer -f -c -- cargo build
+$ renacer -f -c -- make
+</code></pre>
+<h3 id="4-export-for-cicd-integration"><a class="header" href="#4-export-for-cicd-integration">4. Export for CI/CD Integration</a></h3>
+<pre><code class="language-bash"># Export compilation stats for regression detection
+$ renacer -f --format json -c -- cargo build &gt; build-trace.json
+
+# CI script checks:
+# - Total compilation time &lt; threshold
+# - No excessive file opens during linking
+# - Process tree depth reasonable
+</code></pre>
+<hr />
+<h2 id="related"><a class="header" href="#related">Related</a></h2>
+<ul>
+<li><a href="./multi-process.html">Multi-Process Tracing</a> - Using <code>-f</code> flag</li>
+<li><a href="../core-concepts/dwarf-correlation.html">DWARF Source Correlation</a> - <code>--source</code> flag</li>
+<li><a href="./export-data.html">Export to JSON/CSV</a> - Automated analysis</li>
+<li><a href="./debug-performance.html">Debug Performance Issues</a> - General profiling</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../examples/debug-performance.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../examples/monitor-network.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../examples/debug-performance.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../examples/monitor-network.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../ace.js"></script>
+        <script src="../editor.js"></script>
+        <script src="../mode-rust.js"></script>
+        <script src="../theme-dawn.js"></script>
+        <script src="../theme-tomorrow_night.js"></script>
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

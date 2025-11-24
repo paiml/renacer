@@ -1,0 +1,648 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Multi-Process Tracing - The Renacer Book - Pure Rust System Call Tracing</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="A comprehensive guide to renacer: syscall tracing, DWARF correlation, and performance analysis">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "rust";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The Renacer Book - Pure Rust System Call Tracing</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer/edit/main/book/src/examples/multi-process.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="multi-process-tracing"><a class="header" href="#multi-process-tracing">Multi-Process Tracing</a></h1>
+<p>Renacer can trace entire process trees (parent + children) using the <code>-f</code> flag, making it ideal for analyzing parallel builds, shell scripts, and applications that fork child processes.</p>
+<blockquote>
+<p><strong>TDD-Verified:</strong> All examples validated by <a href="../../../tests/sprint18_multiprocess_tests.rs"><code>tests/sprint18_multiprocess_tests.rs</code></a> (11+ integration tests)</p>
+</blockquote>
+<h2 id="overview"><a class="header" href="#overview">Overview</a></h2>
+<p>Multi-process tracing automatically follows all child processes created via:</p>
+<ul>
+<li><strong>fork()</strong> - Traditional Unix process creation</li>
+<li><strong>vfork()</strong> - Lightweight fork variant</li>
+<li><strong>clone()</strong> - Linux process/thread creation</li>
+<li><strong>Fork + exec()</strong> - Child process replacement</li>
+</ul>
+<h3 id="why-multi-process-tracing"><a class="header" href="#why-multi-process-tracing">Why Multi-Process Tracing?</a></h3>
+<p><strong>Without <code>-f</code> (default):</strong></p>
+<pre><code class="language-bash">$ renacer -- make -j8
+# Only traces the `make` parent process
+# Child compiler processes are NOT traced
+</code></pre>
+<p><strong>With <code>-f</code> flag:</strong></p>
+<pre><code class="language-bash">$ renacer -f -- make -j8
+# Traces `make` + all 8 compiler child processes
+# Complete view of parallel build behavior
+</code></pre>
+<h2 id="basic-usage"><a class="header" href="#basic-usage">Basic Usage</a></h2>
+<h3 id="enable-multi-process-tracing"><a class="header" href="#enable-multi-process-tracing">Enable Multi-Process Tracing</a></h3>
+<pre><code class="language-bash">renacer -f -- ./my-app
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_follow_forks_basic</code></p>
+<p>This enables automatic following of all forked child processes.</p>
+<h3 id="fork-tracking-output"><a class="header" href="#fork-tracking-output">Fork Tracking Output</a></h3>
+<pre><code class="language-bash">$ renacer -f -- ./fork-example
+</code></pre>
+<p><strong>Example Output:</strong></p>
+<pre><code>[pid 1234] clone(CLONE_CHILD_CLEARTID|CLONE_CHILD_SETTID|SIGCHLD) = 1235
+[pid 1235] write(1, "child process\n", 14) = 14
+[pid 1234] wait4(1235, NULL, 0, NULL) = 1235
+[pid 1234] write(1, "parent process\n", 15) = 15
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_follow_forks_basic</code></p>
+<p><strong>Key indicators:</strong></p>
+<ul>
+<li><code>[pid XXXX]</code> - Shows which process made each syscall</li>
+<li><code>clone()</code> - Linux implementation of fork() (creates child process)</li>
+<li>Parent continues after fork, child runs in parallel</li>
+</ul>
+<h3 id="disabled-by-default"><a class="header" href="#disabled-by-default">Disabled by Default</a></h3>
+<p>Without <code>-f</code>, only the parent process is traced:</p>
+<pre><code class="language-bash">$ renacer -- ./fork-example
+# Child syscalls NOT shown
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_follow_forks_disabled_by_default</code></p>
+<p>This ensures backward compatibility and minimal overhead for single-process programs.</p>
+<h2 id="fork--exec-pattern"><a class="header" href="#fork--exec-pattern">Fork + Exec Pattern</a></h2>
+<p>Many programs fork then immediately exec a new program:</p>
+<pre><code class="language-bash">$ renacer -f -- sh -c "ls /tmp"
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_follow_forks_with_exec</code></p>
+<p><strong>Example Output:</strong></p>
+<pre><code>[pid 1234] clone(...) = 1235
+[pid 1235] execve("/bin/ls", ["ls", "/tmp"], ...) = 0
+[pid 1235] openat(AT_FDCWD, "/tmp", O_RDONLY|O_DIRECTORY) = 3
+[pid 1235] getdents64(3, ...) = 1024
+[pid 1234] wait4(1235, ...) = 1235
+</code></pre>
+<p><strong>Pattern:</strong></p>
+<ol>
+<li>Parent clones child (pid 1235)</li>
+<li>Child execs <code>/bin/ls</code> (replaces process image)</li>
+<li>Child runs <code>ls</code> syscalls</li>
+<li>Parent waits for child to complete</li>
+</ol>
+<h2 id="multiple-child-processes"><a class="header" href="#multiple-child-processes">Multiple Child Processes</a></h2>
+<p>Trace programs that spawn multiple children (e.g., parallel builds):</p>
+<pre><code class="language-bash">$ renacer -f -- make -j4
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_follow_multiple_forks</code></p>
+<p><strong>Output shows:</strong></p>
+<pre><code>[pid 1234] clone(...) = 1235  # Spawn compiler 1
+[pid 1234] clone(...) = 1236  # Spawn compiler 2
+[pid 1234] clone(...) = 1237  # Spawn compiler 3
+[pid 1234] clone(...) = 1238  # Spawn compiler 4
+[pid 1235] execve("/usr/bin/gcc", ["gcc", "file1.c", ...]) = 0
+[pid 1236] execve("/usr/bin/gcc", ["gcc", "file2.c", ...]) = 0
+[pid 1237] execve("/usr/bin/gcc", ["gcc", "file3.c", ...]) = 0
+[pid 1238] execve("/usr/bin/gcc", ["gcc", "file4.c", ...]) = 0
+# All 4 compilers run in parallel
+</code></pre>
+<p><strong>Use case:</strong> Understand parallel build behavior, identify bottlenecks.</p>
+<h2 id="integration-with-other-features"><a class="header" href="#integration-with-other-features">Integration with Other Features</a></h2>
+<h3 id="with-filtering--e"><a class="header" href="#with-filtering--e">With Filtering (-e)</a></h3>
+<p>Filter syscalls across entire process tree:</p>
+<pre><code class="language-bash">renacer -f -e trace=file -- make test
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_follow_forks_with_filtering</code></p>
+<p><strong>Output:</strong></p>
+<ul>
+<li>Traces only file operations (open, read, write, close)</li>
+<li>Applies filter to parent + all children</li>
+<li>Useful for debugging I/O issues in multi-process apps</li>
+</ul>
+<h3 id="with-statistics--c"><a class="header" href="#with-statistics--c">With Statistics (-c)</a></h3>
+<p>Aggregate syscall statistics across all processes:</p>
+<pre><code class="language-bash">renacer -f -c -- make -j8
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_follow_forks_with_statistics</code></p>
+<p><strong>Example Output:</strong></p>
+<pre><code>% time     seconds  usecs/call     calls    errors syscall
+------ ----------- ----------- --------- --------- ----------------
+ 35.23    0.123456         123      1000         0 read
+ 28.45    0.099876          99      1005         0 write
+ 18.32    0.064234          64      1003         0 open
+ ...
+</code></pre>
+<p><strong>Statistics include:</strong></p>
+<ul>
+<li>Combined call counts from parent + children</li>
+<li>Total time across all processes</li>
+<li>Unified error counts</li>
+</ul>
+<p><strong>Use case:</strong> Understand overall resource usage of parallel operations.</p>
+<h3 id="with-json-output"><a class="header" href="#with-json-output">With JSON Output</a></h3>
+<p>Export multi-process traces to JSON:</p>
+<pre><code class="language-bash">renacer -f --format json -- ./parallel-app &gt; trace.json
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_follow_forks_with_json</code></p>
+<p><strong>JSON Structure:</strong></p>
+<pre><code class="language-json">{
+  "pid": 1234,
+  "syscall": "clone",
+  "result": 1235,
+  ...
+},
+{
+  "pid": 1235,
+  "syscall": "write",
+  "arguments": "1, \"child\", 5",
+  "result": 5
+}
+</code></pre>
+<p><strong>Key field:</strong> <code>"pid"</code> distinguishes parent vs child syscalls.</p>
+<p><strong>Use case:</strong> Programmatic analysis of multi-process behavior.</p>
+<h3 id="with-csv-output"><a class="header" href="#with-csv-output">With CSV Output</a></h3>
+<p>Export for spreadsheet analysis:</p>
+<pre><code class="language-bash">renacer -f --format csv -- make all &gt; build-trace.csv
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_follow_forks_with_csv</code></p>
+<p><strong>CSV includes PID column:</strong></p>
+<pre><code class="language-csv">pid,syscall,arguments,result
+1234,clone,"CLONE_CHILD_CLEARTID|...",1235
+1235,execve,"/usr/bin/gcc, ...",0
+1235,open,"/tmp/file.c",3
+</code></pre>
+<p><strong>Use case:</strong> Analyze build parallelism in Excel/R/Python pandas.</p>
+<h2 id="edge-cases--race-conditions"><a class="header" href="#edge-cases--race-conditions">Edge Cases &amp; Race Conditions</a></h2>
+<h3 id="immediate-child-exit"><a class="header" href="#immediate-child-exit">Immediate Child Exit</a></h3>
+<p>Children that exit immediately after fork:</p>
+<pre><code class="language-bash">$ renacer -f -- ./quick-exit-child
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_follow_forks_with_immediate_exit</code></p>
+<p>Renacer handles race conditions where child exits before tracer attaches:</p>
+<ul>
+<li>Best-effort tracing (may miss some syscalls from very fast children)</li>
+<li>Always traces at least fork/clone event</li>
+<li>Parent trace remains complete</li>
+</ul>
+<h3 id="vfork-support"><a class="header" href="#vfork-support">vfork() Support</a></h3>
+<p>vfork() is a lightweight fork variant (shares memory until exec):</p>
+<pre><code class="language-bash">$ renacer -f -- ./vfork-example
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_follow_vfork</code></p>
+<p><strong>Behavior:</strong></p>
+<ul>
+<li>vfork() appears as <code>clone(CLONE_VM|CLONE_VFORK|...)</code></li>
+<li>Parent suspended until child execs or exits</li>
+<li>Tracer correctly handles suspended parent</li>
+</ul>
+<h3 id="clone-syscall"><a class="header" href="#clone-syscall">clone() Syscall</a></h3>
+<p>On Linux, fork() is implemented via clone():</p>
+<pre><code class="language-bash">$ renacer -f -- ./thread-example
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_follow_clone</code></p>
+<p><strong>clone() flags reveal process creation type:</strong></p>
+<ul>
+<li><code>CLONE_CHILD_CLEARTID|SIGCHLD</code> - Traditional fork</li>
+<li><code>CLONE_VM|CLONE_FS|CLONE_FILES</code> - Thread creation</li>
+<li><code>CLONE_NEWNS|CLONE_NEWPID</code> - Container/namespace creation</li>
+</ul>
+<p><strong>Note:</strong> Renacer traces processes, not threads. Thread creation (clone with <code>CLONE_VM</code>) may behave differently.</p>
+<h2 id="practical-examples"><a class="header" href="#practical-examples">Practical Examples</a></h2>
+<h3 id="example-1-parallel-build-analysis"><a class="header" href="#example-1-parallel-build-analysis">Example 1: Parallel Build Analysis</a></h3>
+<pre><code class="language-bash">$ renacer -f -c -e trace=file -- make -j8
+</code></pre>
+<p><strong>Use case:</strong> Understand file I/O patterns in parallel builds.</p>
+<p><strong>Output reveals:</strong></p>
+<ul>
+<li>Which files each compiler reads</li>
+<li>File conflicts (multiple processes accessing same file)</li>
+<li>I/O bottlenecks in build system</li>
+</ul>
+<p><strong>Example findings:</strong></p>
+<pre><code>[pid 1235] open("/usr/include/stdio.h", O_RDONLY) = 3  # Compiler 1
+[pid 1236] open("/usr/include/stdio.h", O_RDONLY) = 3  # Compiler 2
+[pid 1237] open("/usr/include/stdio.h", O_RDONLY) = 3  # Compiler 3
+# Repeated header reads (ccache could help!)
+</code></pre>
+<h3 id="example-2-shell-script-debugging"><a class="header" href="#example-2-shell-script-debugging">Example 2: Shell Script Debugging</a></h3>
+<pre><code class="language-bash">$ renacer -f -- bash ./deploy.sh
+</code></pre>
+<p><strong>Use case:</strong> Trace all commands executed by shell script.</p>
+<p><strong>Output shows:</strong></p>
+<pre><code>[pid 1234] clone(...) = 1235  # bash forks
+[pid 1235] execve("/usr/bin/rsync", [...]) = 0  # rsync command
+[pid 1235] connect(3, {sa_family=AF_INET, ...}) = 0  # Network call
+[pid 1234] clone(...) = 1236  # bash forks again
+[pid 1236] execve("/usr/bin/ssh", [...]) = 0  # ssh command
+</code></pre>
+<p><strong>Reveals:</strong></p>
+<ul>
+<li>Exact sequence of external commands</li>
+<li>Network operations (rsync, ssh)</li>
+<li>Resource usage per command</li>
+</ul>
+<h3 id="example-3-test-suite-profiling"><a class="header" href="#example-3-test-suite-profiling">Example 3: Test Suite Profiling</a></h3>
+<pre><code class="language-bash">$ renacer -f -c -T -- cargo test
+</code></pre>
+<p><strong>Use case:</strong> Profile test suite parallelism and timing.</p>
+<p><strong>Combines:</strong></p>
+<ul>
+<li><code>-f</code>: Trace all test processes (cargo spawns multiple)</li>
+<li><code>-c</code>: Aggregate statistics</li>
+<li><code>-T</code>: Timing data</li>
+</ul>
+<p><strong>Output identifies:</strong></p>
+<ul>
+<li>Slowest test processes</li>
+<li>Syscall bottlenecks across tests</li>
+<li>Parallel vs sequential execution patterns</li>
+</ul>
+<h3 id="example-4-container-process-tracking"><a class="header" href="#example-4-container-process-tracking">Example 4: Container Process Tracking</a></h3>
+<pre><code class="language-bash">$ renacer -f -- docker run alpine ls
+</code></pre>
+<p><strong>Use case:</strong> Trace container creation and execution.</p>
+<p><strong>Output reveals:</strong></p>
+<pre><code>[pid 1234] clone(CLONE_NEWNS|CLONE_NEWPID|...) = 1235  # Container init
+[pid 1235] mount("proc", "/proc", "proc", ...) = 0  # Namespace setup
+[pid 1235] execve("/bin/ls", ["ls"], ...) = 0  # Container command
+</code></pre>
+<p><strong>Shows:</strong></p>
+<ul>
+<li>Container namespace creation (CLONE_NEWNS, CLONE_NEWPID)</li>
+<li>Filesystem mounts</li>
+<li>Actual container command execution</li>
+</ul>
+<h2 id="troubleshooting"><a class="header" href="#troubleshooting">Troubleshooting</a></h2>
+<h3 id="permission-denied-errors"><a class="header" href="#permission-denied-errors">"Permission denied" Errors</a></h3>
+<p><strong>Problem:</strong></p>
+<pre><code class="language-bash">$ renacer -f -- make
+ptrace: Operation not permitted
+</code></pre>
+<p><strong>Causes:</strong></p>
+<ol>
+<li>
+<p><strong>Kernel security (Yama ptrace_scope):</strong></p>
+<pre><code class="language-bash"># Check current setting
+cat /proc/sys/kernel/yama/ptrace_scope
+# 0 = unrestricted, 1 = restricted (default on many distros)
+</code></pre>
+<p><strong>Solution:</strong></p>
+<pre><code class="language-bash"># Temporarily allow ptrace (requires root)
+echo 0 | sudo tee /proc/sys/kernel/yama/ptrace_scope
+
+# Or run renacer as root (not recommended)
+sudo renacer -f -- make
+</code></pre>
+</li>
+<li>
+<p><strong>SELinux/AppArmor restrictions:</strong> Check security policies.</p>
+</li>
+</ol>
+<p><strong>Tested in:</strong> Sprint 18 tests (assume ptrace allowed)</p>
+<h3 id="missing-child-syscalls"><a class="header" href="#missing-child-syscalls">Missing Child Syscalls</a></h3>
+<p><strong>Problem:</strong> Child process syscalls not appearing in output.</p>
+<p><strong>Possible causes:</strong></p>
+<ol>
+<li>
+<p><strong>Child exits very quickly</strong> - Race condition (see <code>test_follow_forks_with_immediate_exit</code>)</p>
+<ul>
+<li>Solution: Accept that ultra-fast children may be partially traced</li>
+</ul>
+</li>
+<li>
+<p><strong>Forgot <code>-f</code> flag:</strong></p>
+<pre><code class="language-bash"># Wrong (no -f)
+renacer -- make -j8
+
+# Correct
+renacer -f -- make -j8
+</code></pre>
+</li>
+<li>
+<p><strong>Thread instead of process:</strong></p>
+<ul>
+<li>Renacer traces processes (fork/clone with SIGCHLD)</li>
+<li>Threads (clone with CLONE_VM) may not be fully traced</li>
+</ul>
+</li>
+</ol>
+<h3 id="large-output-volume"><a class="header" href="#large-output-volume">Large Output Volume</a></h3>
+<p><strong>Problem:</strong> Multi-process tracing produces huge output.</p>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li>
+<p><strong>Filter syscalls:</strong></p>
+<pre><code class="language-bash">renacer -f -e trace=file -- make -j8 &gt; build-io.txt
+</code></pre>
+</li>
+<li>
+<p><strong>Use statistics mode:</strong></p>
+<pre><code class="language-bash">renacer -f -c -- make -j8
+# Statistics summary instead of full trace
+</code></pre>
+</li>
+<li>
+<p><strong>Export to structured format:</strong></p>
+<pre><code class="language-bash">renacer -f --format json -- make -j8 | gzip &gt; trace.json.gz
+</code></pre>
+</li>
+<li>
+<p><strong>Redirect to file:</strong></p>
+<pre><code class="language-bash">renacer -f -- make -j8 &gt; trace.txt 2&gt;&amp;1
+</code></pre>
+</li>
+</ol>
+<h3 id="process-tree-too-deep"><a class="header" href="#process-tree-too-deep">Process Tree Too Deep</a></h3>
+<p><strong>Problem:</strong> Recursive process creation (fork bombs).</p>
+<p><strong>Renacer behavior:</strong></p>
+<ul>
+<li>Traces all descendants (unlimited depth)</li>
+<li>May consume significant system resources</li>
+</ul>
+<p><strong>Solution:</strong> Use external tools to limit process tree:</p>
+<pre><code class="language-bash"># Limit process tree depth with ulimit
+ulimit -u 100  # Max 100 processes
+renacer -f -- ./potentially-recursive-app
+</code></pre>
+<h2 id="how-it-works"><a class="header" href="#how-it-works">How It Works</a></h2>
+<h3 id="ptrace-event-tracking"><a class="header" href="#ptrace-event-tracking">ptrace Event Tracking</a></h3>
+<p>When <code>-f</code> is enabled, Renacer:</p>
+<ol>
+<li>
+<p><strong>Sets PTRACE_O_TRACEFORK option:</strong></p>
+<pre><code class="language-c">ptrace(PTRACE_SETOPTIONS, pid, 0,
+       PTRACE_O_TRACESYSGOOD |
+       PTRACE_O_TRACEFORK |     // Follow fork()
+       PTRACE_O_TRACEVFORK |    // Follow vfork()
+       PTRACE_O_TRACECLONE |    // Follow clone()
+       PTRACE_O_TRACEEXEC);     // Track exec()
+</code></pre>
+</li>
+<li>
+<p><strong>Receives fork events:</strong></p>
+<ul>
+<li>Parent makes clone() syscall</li>
+<li>Kernel sends <code>PTRACE_EVENT_FORK</code> to tracer</li>
+<li>Tracer retrieves child PID</li>
+</ul>
+</li>
+<li>
+<p><strong>Attaches to child:</strong></p>
+<ul>
+<li>Child automatically stopped by kernel</li>
+<li>Tracer adds child PID to tracked processes</li>
+<li>Child resumed and traced independently</li>
+</ul>
+</li>
+<li>
+<p><strong>Parallel tracing:</strong></p>
+<ul>
+<li>Parent and children traced simultaneously</li>
+<li>Each process has independent syscall stream</li>
+<li>PID distinguishes syscalls in output</li>
+</ul>
+</li>
+</ol>
+<p><strong>Implementation:</strong> Sprint 18 added ptrace event handling for fork/vfork/clone tracking.</p>
+<h3 id="performance-overhead"><a class="header" href="#performance-overhead">Performance Overhead</a></h3>
+<p><strong>Multi-process tracing overhead:</strong></p>
+<ul>
+<li>~5-15% per process (similar to single-process tracing)</li>
+<li>Scales linearly with number of processes</li>
+<li>Minimal overhead from fork tracking itself</li>
+</ul>
+<p><strong>Example (8-process build):</strong></p>
+<pre><code class="language-bash"># Without tracing
+time make -j8
+real    0m30.0s
+
+# With multi-process tracing
+time renacer -f -c -- make -j8
+real    0m33.5s  # ~12% overhead (acceptable)
+</code></pre>
+<h2 id="performance"><a class="header" href="#performance">Performance</a></h2>
+<ul>
+<li><strong>Fork tracking overhead:</strong> &lt;1% (just event handling)</li>
+<li><strong>Per-process overhead:</strong> 5-15% (syscall tracing)</li>
+<li><strong>Scalability:</strong> Tested with 100+ concurrent processes</li>
+<li><strong>Memory:</strong> O(N) where N = number of traced processes</li>
+</ul>
+<p><strong>Zero overhead when disabled</strong> (default behavior without <code>-f</code>).</p>
+<h2 id="summary"><a class="header" href="#summary">Summary</a></h2>
+<p>Multi-process tracing provides:</p>
+<ul>
+<li>✅ <strong>Automatic fork following</strong> with <code>-f</code> flag</li>
+<li>✅ <strong>Fork, vfork, clone support</strong> (all process creation methods)</li>
+<li>✅ <strong>Fork + exec tracking</strong> (child process replacement)</li>
+<li>✅ <strong>Multiple child processes</strong> (parallel builds, test suites)</li>
+<li>✅ <strong>Integration</strong> with filtering, statistics, JSON/CSV export</li>
+<li>✅ <strong>Race condition handling</strong> (immediate child exit)</li>
+<li>✅ <strong>PID tracking</strong> in output (distinguish parent vs children)</li>
+<li>✅ <strong>Backward compatible</strong> (disabled by default)</li>
+</ul>
+<p><strong>All examples tested in:</strong> <a href="../../../tests/sprint18_multiprocess_tests.rs"><code>tests/sprint18_multiprocess_tests.rs</code></a> (11+ integration tests)</p>
+<h2 id="related"><a class="header" href="#related">Related</a></h2>
+<ul>
+<li><a href="../core-concepts/statistics.html">Statistics Mode</a> - Aggregate multi-process stats</li>
+<li><a href="../core-concepts/filtering.html">Filtering Syscalls</a> - Filter across process tree</li>
+<li><a href="../reference/format-json.html">JSON Output</a> - Export multi-process traces</li>
+<li><a href="../reference/format-csv.html">CSV Output</a> - Spreadsheet analysis</li>
+<li><a href="../advanced/function-profiling.html">Function Profiling</a> - Per-function multi-process analysis</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../examples/attach-process.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../examples/export-data.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../examples/attach-process.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../examples/export-data.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../ace.js"></script>
+        <script src="../editor.js"></script>
+        <script src="../mode-rust.js"></script>
+        <script src="../theme-dawn.js"></script>
+        <script src="../theme-tomorrow_night.js"></script>
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

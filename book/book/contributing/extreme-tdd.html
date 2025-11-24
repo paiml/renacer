@@ -1,0 +1,446 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>EXTREME TDD - The Renacer Book - Pure Rust System Call Tracing</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="A comprehensive guide to renacer: syscall tracing, DWARF correlation, and performance analysis">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "rust";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The Renacer Book - Pure Rust System Call Tracing</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer/edit/main/book/src/contributing/extreme-tdd.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="extreme-tdd-methodology"><a class="header" href="#extreme-tdd-methodology">EXTREME TDD Methodology</a></h1>
+<p>Renacer is built using <strong>EXTREME TDD</strong> - a rigorous test-driven development approach that ensures zero defects and complete test coverage.</p>
+<h2 id="the-philosophy"><a class="header" href="#the-philosophy">The Philosophy</a></h2>
+<blockquote>
+<p><strong>"Test EVERYTHING. Trust NOTHING. Verify ALWAYS."</strong></p>
+</blockquote>
+<p>EXTREME TDD goes beyond standard TDD by requiring:</p>
+<ol>
+<li><strong>Tests written first</strong> (RED phase) - NO exceptions</li>
+<li><strong>Minimal implementation</strong> (GREEN phase) - Just enough to pass</li>
+<li><strong>Comprehensive refactoring</strong> (REFACTOR phase) - With safety net of tests</li>
+<li><strong>Property-based testing</strong> - Cover edge cases automatically</li>
+<li><strong>Mutation testing</strong> - Verify tests actually catch bugs</li>
+<li><strong>Zero tolerance</strong> - All tests pass, zero warnings, always</li>
+</ol>
+<h2 id="the-red-green-refactor-cycle"><a class="header" href="#the-red-green-refactor-cycle">The RED-GREEN-REFACTOR Cycle</a></h2>
+<p>Every feature in Renacer follows this exact cycle:</p>
+<h3 id="red-phase-write-failing-tests"><a class="header" href="#red-phase-write-failing-tests">RED Phase: Write Failing Tests</a></h3>
+<p><strong>Rule:</strong> Write integration tests BEFORE any implementation.</p>
+<p>Example from Sprint 16 (Regex Filtering):</p>
+<pre><code class="language-rust">// tests/sprint16_regex_filtering_tests.rs
+#[test]
+fn test_regex_prefix_pattern() {
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
+    cmd.arg("-e")
+        .arg("trace=/^open.*/")
+        .arg("--")
+        .arg("cat")
+        .arg("/dev/null");
+
+    let output = cmd.output().unwrap();
+    assert!(output.status.success());
+
+    let stdout = String::from_utf8_lossy(&amp;output.stdout);
+    assert!(stdout.contains("openat("));  // Should match /^open.*/
+    assert!(!stdout.contains("close(")); // Should NOT match
+}</code></pre>
+<p><strong>Verification:</strong> Run tests, confirm they FAIL:</p>
+<pre><code class="language-bash">cargo test --test sprint16_regex_filtering_tests
+# Expected: 7/9 tests failed (feature not implemented)
+</code></pre>
+<h3 id="green-phase-minimal-implementation"><a class="header" href="#green-phase-minimal-implementation">GREEN Phase: Minimal Implementation</a></h3>
+<p><strong>Rule:</strong> Write JUST enough code to make tests pass.</p>
+<pre><code class="language-rust">// src/filter.rs
+pub struct SyscallFilter {
+    // ... existing fields ...
+    include_regex: Vec&lt;Regex&gt;,  // Add regex support
+    exclude_regex: Vec&lt;Regex&gt;,
+}
+
+fn parse_regex_pattern(s: &amp;str) -&gt; Option&lt;Result&lt;Regex, regex::Error&gt;&gt; {
+    if s.starts_with('/') &amp;&amp; s.ends_with('/') &amp;&amp; s.len() &gt; 2 {
+        let pattern = &amp;s[1..s.len() - 1];
+        Some(Regex::new(pattern))
+    } else {
+        None
+    }
+}</code></pre>
+<p><strong>Verification:</strong> Tests now pass:</p>
+<pre><code class="language-bash">cargo test --test sprint16_regex_filtering_tests
+# Result: All 9 tests passing ✅
+</code></pre>
+<h3 id="refactor-phase-improve--harden"><a class="header" href="#refactor-phase-improve--harden">REFACTOR Phase: Improve &amp; Harden</a></h3>
+<p><strong>Rule:</strong> Add unit tests, property tests, and mutation tests. Fix complexity.</p>
+<ol>
+<li><strong>Add Unit Tests</strong> (14 added for regex feature):</li>
+</ol>
+<pre><code class="language-rust">#[test]
+fn test_parse_regex_pattern_valid() {
+    assert!(parse_regex_pattern("/^open/").is_some());
+    assert!(parse_regex_pattern("/.*at$/").is_some());
+}
+
+#[test]
+fn test_regex_pattern_case_insensitive() {
+    let filter = SyscallFilter::new("trace=/(?i)OPEN/").unwrap();
+    assert!(filter.should_trace("openat"));
+}</code></pre>
+<ol start="2">
+<li><strong>Run Clippy</strong> (zero warnings tolerance):</li>
+</ol>
+<pre><code class="language-bash">cargo clippy -- -D warnings
+# Fix all warnings, refactor complex code
+</code></pre>
+<ol start="3">
+<li><strong>Check Complexity</strong> (≤10 target):</li>
+</ol>
+<pre><code class="language-bash">pmat analyze complexity src/
+# All functions ≤10 complexity ✅
+</code></pre>
+<ol start="4">
+<li><strong>Run Mutation Tests</strong> (80%+ target):</li>
+</ol>
+<pre><code class="language-bash">cargo mutants
+# Verify tests catch injected bugs
+</code></pre>
+<h2 id="sprint-based-development"><a class="header" href="#sprint-based-development">Sprint-Based Development</a></h2>
+<p>Each feature is a "sprint" with its own test file:</p>
+<pre><code>tests/
+├── sprint1_mvp_tests.rs          # Basic tracing
+├── sprint3_full_syscalls_tests.rs # All 335 syscalls
+├── sprint5_dwarf_source_tests.rs  # Source correlation
+├── sprint13_function_profiling_tests.rs
+├── sprint15_negation_tests.rs
+├── sprint16_regex_filtering_tests.rs
+└── sprint22_html_output_tests.rs
+</code></pre>
+<p><strong>Each sprint follows RED-GREEN-REFACTOR:</strong></p>
+<ol>
+<li>Create <code>tests/sprintN_feature_tests.rs</code></li>
+<li>Write 5-15 integration tests (RED)</li>
+<li>Implement feature (GREEN)</li>
+<li>Add unit tests + refactor (REFACTOR)</li>
+<li>Verify all quality gates pass</li>
+<li>Commit with detailed sprint report</li>
+</ol>
+<h2 id="quality-gates"><a class="header" href="#quality-gates">Quality Gates</a></h2>
+<p>Before ANY commit, ALL gates must pass:</p>
+<pre><code class="language-bash"># 1. Format check
+cargo fmt --check
+
+# 2. Clippy (zero warnings)
+cargo clippy -- -D warnings
+
+# 3. All tests pass
+cargo test
+
+# 4. Property-based tests
+cargo test --test property_based_comprehensive
+
+# 5. Security audit
+cargo audit
+</code></pre>
+<p>These are enforced via pre-commit hook (<code>.git/hooks/pre-commit</code>).</p>
+<h2 id="real-example-sprint-16-complete-cycle"><a class="header" href="#real-example-sprint-16-complete-cycle">Real Example: Sprint 16 Complete Cycle</a></h2>
+<h3 id="initial-commit-red-phase"><a class="header" href="#initial-commit-red-phase">Initial Commit (RED Phase)</a></h3>
+<pre><code>test: Sprint 16 - Add regex filtering tests (RED phase)
+
+Created 9 integration tests for regex pattern matching:
+- test_regex_prefix_pattern
+- test_regex_suffix_pattern
+- test_regex_or_pattern
+- test_invalid_regex_error
+- test_mixed_regex_and_literal
+
+Result: 7/9 tests failed ✅ (expected - feature not implemented)
+</code></pre>
+<h3 id="implementation-commit-green-phase"><a class="header" href="#implementation-commit-green-phase">Implementation Commit (GREEN Phase)</a></h3>
+<pre><code>feat: Sprint 16 - Implement regex filtering (GREEN phase)
+
+Modified src/filter.rs:
+- Added include_regex, exclude_regex fields
+- Implemented parse_regex_pattern()
+- Updated should_trace() for regex matching
+
+Result: All 9 integration tests passing ✅
+</code></pre>
+<h3 id="final-commit-refactor-phase"><a class="header" href="#final-commit-refactor-phase">Final Commit (REFACTOR Phase)</a></h3>
+<pre><code>feat: Sprint 16 - Advanced Filtering with Regex Patterns (COMPLETE)
+
+REFACTOR Phase:
+- Added 14 unit tests for edge cases
+- Fixed clippy warnings (ParseResult type alias)
+- Complexity check: all functions ≤10 ✅
+- Updated documentation
+
+Final Results:
+- Tests: 201 total (178 + 23 new) ✅
+- Complexity: ≤10 (max: 8) ✅
+- Clippy: Zero warnings ✅
+- TDG Score: 94.5/100 maintained ✅
+</code></pre>
+<h2 id="anti-hallucination-enforcement"><a class="header" href="#anti-hallucination-enforcement">Anti-Hallucination Enforcement</a></h2>
+<p><strong>Book examples MUST be test-backed:</strong></p>
+<p>Every code example in this book is validated by:</p>
+<ol>
+<li><strong>Integration tests</strong> - Example commands tested in <code>tests/sprint*.rs</code></li>
+<li><strong>GitHub Actions</strong> - CI runs all examples automatically</li>
+<li><strong>Test references</strong> - Each example links to validating test</li>
+</ol>
+<p>Example:</p>
+<pre><code class="language-bash"># This command is validated by tests/sprint9_filtering_tests.rs
+renacer -e trace=file -- cat /etc/hostname
+</code></pre>
+<p><strong>If an example cannot be validated by a test, it MUST NOT be in the book.</strong></p>
+<h2 id="property-based-testing"><a class="header" href="#property-based-testing">Property-Based Testing</a></h2>
+<p>Beyond unit tests, we use <code>proptest</code> for comprehensive edge case coverage:</p>
+<pre><code class="language-rust">use proptest::prelude::*;
+
+proptest! {
+    #[test]
+    fn test_filter_never_panics(s in "\\PC*") {
+        // Fuzz testing: random input should never panic
+        let _ = SyscallFilter::new(&amp;s);
+    }
+}</code></pre>
+<p>This generates 670+ test cases automatically, catching edge cases humans miss.</p>
+<h2 id="mutation-testing"><a class="header" href="#mutation-testing">Mutation Testing</a></h2>
+<p>Verify that tests actually catch bugs:</p>
+<pre><code class="language-bash">cargo mutants --in-place
+</code></pre>
+<p>Mutants injects bugs (e.g., <code>&gt;</code> → <code>&lt;</code>, <code>+</code> → <code>-</code>) and verifies tests fail.</p>
+<p><strong>Target:</strong> 80%+ mutation score (caught mutations / total mutations)</p>
+<h2 id="tdg-score"><a class="header" href="#tdg-score">TDG Score</a></h2>
+<p>Toyota Development Grade measures code quality:</p>
+<pre><code class="language-bash">pmat analyze tdg src/
+</code></pre>
+<p><strong>Target:</strong> 94+/100 (A grade)</p>
+<p>Metrics:</p>
+<ul>
+<li>Test coverage (weight: 30%)</li>
+<li>Complexity (weight: 25%)</li>
+<li>Documentation (weight: 20%)</li>
+<li>Modularity (weight: 15%)</li>
+<li>Error handling (weight: 10%)</li>
+</ul>
+<h2 id="summary"><a class="header" href="#summary">Summary</a></h2>
+<p>EXTREME TDD principles used in Renacer:</p>
+<ol>
+<li>✅ <strong>RED-GREEN-REFACTOR</strong> - Every feature, every time</li>
+<li>✅ <strong>Sprint-based</strong> - Isolated test files per feature</li>
+<li>✅ <strong>Zero tolerance</strong> - All tests pass, zero warnings</li>
+<li>✅ <strong>Property testing</strong> - 670+ generated test cases</li>
+<li>✅ <strong>Mutation testing</strong> - 80%+ mutation score</li>
+<li>✅ <strong>Quality gates</strong> - Pre-commit hook enforces standards</li>
+<li>✅ <strong>Anti-hallucination</strong> - All book examples test-backed</li>
+</ol>
+<p>This methodology ensures Renacer maintains production-quality with zero defects.</p>
+<p><strong>Next:</strong> <a href="./red-green-refactor.html">RED-GREEN-REFACTOR Cycle</a> | <a href="./quality-gates.html">Quality Gates</a></p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../contributing/setup.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../contributing/red-green-refactor.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../contributing/setup.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../contributing/red-green-refactor.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../ace.js"></script>
+        <script src="../editor.js"></script>
+        <script src="../mode-rust.js"></script>
+        <script src="../theme-dawn.js"></script>
+        <script src="../theme-tomorrow_night.js"></script>
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

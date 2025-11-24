@@ -1,0 +1,680 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Function Profiling - The Renacer Book - Pure Rust System Call Tracing</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="A comprehensive guide to renacer: syscall tracing, DWARF correlation, and performance analysis">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "rust";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The Renacer Book - Pure Rust System Call Tracing</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer/edit/main/book/src/advanced/function-profiling.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="function-profiling"><a class="header" href="#function-profiling">Function Profiling</a></h1>
+<p>Renacer provides advanced function-level profiling to identify which functions in your program are making syscalls, how much time they spend, and where I/O bottlenecks occur.</p>
+<blockquote>
+<p><strong>TDD-Verified:</strong> All examples validated by <a href="../../../tests/"><code>tests/sprint13_*.rs</code></a> (15 integration tests)</p>
+</blockquote>
+<h2 id="overview"><a class="header" href="#overview">Overview</a></h2>
+<p>Function profiling correlates syscalls with source code functions using DWARF debug information to provide:</p>
+<ul>
+<li><strong>Function-level syscall attribution</strong> - See which functions make syscalls</li>
+<li><strong>Per-function timing</strong> - Total time spent in syscalls per function</li>
+<li><strong>I/O bottleneck detection</strong> - Identify slow I/O operations (&gt;1ms)</li>
+<li><strong>Call graph tracking</strong> - Parent-child function relationships</li>
+<li><strong>Self-profiling</strong> - Measure Renacer's own overhead</li>
+</ul>
+<h3 id="features"><a class="header" href="#features">Features</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>Feature</th><th>Flag</th><th>Use Case</th></tr></thead><tbody>
+<tr><td><strong>Function profiling</strong></td><td><code>--function-time</code></td><td>Attribute syscalls to functions</td></tr>
+<tr><td><strong>Self-profiling</strong></td><td><code>--profile-self</code></td><td>Measure Renacer's overhead</td></tr>
+<tr><td><strong>Stack unwinding</strong></td><td><code>--function-time --source</code></td><td>Full call stack attribution</td></tr>
+</tbody></table>
+</div>
+<h2 id="basic-usage"><a class="header" href="#basic-usage">Basic Usage</a></h2>
+<h3 id="enable-function-profiling"><a class="header" href="#enable-function-profiling">Enable Function Profiling</a></h3>
+<pre><code class="language-bash">renacer --function-time -- ./my-app
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_function_time_flag_accepted</code></p>
+<p>This enables function-level profiling with syscall-to-function attribution.</p>
+<h3 id="function-profiling-output"><a class="header" href="#function-profiling-output">Function Profiling Output</a></h3>
+<pre><code class="language-bash">$ renacer --function-time --source -- cargo build
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_function_time_output_format</code></p>
+<p><strong>Example Output:</strong></p>
+<pre><code>write(1, "   Compiling renacer v0.3.0\n", 28) = 28
+read(3, buf, 832) = 832
+close(3) = 0
+
+=== Function Profiling Summary ===
+Function                     Calls    Total Time    Avg Time
+────────────────────────────────────────────────────────────
+src/main.rs:42               15       1234 μs       82 μs
+src/tracer.rs:156            8        567 μs        70 μs
+std::io::stdio:print         12       234 μs        19 μs
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_function_time_output_format</code></p>
+<p>The report shows:</p>
+<ul>
+<li><strong>Function</strong> - Source location or function name</li>
+<li><strong>Calls</strong> - Number of syscalls from this function</li>
+<li><strong>Total Time</strong> - Cumulative time in syscalls (μs)</li>
+<li><strong>Avg Time</strong> - Average syscall duration (μs)</li>
+</ul>
+<h3 id="requirements"><a class="header" href="#requirements">Requirements</a></h3>
+<p>Function profiling requires <strong>debug symbols</strong> in the binary:</p>
+<pre><code class="language-bash"># Cargo: Ensure debug = true in Cargo.toml
+cargo build  # Dev builds have debug symbols by default
+
+# Manual compilation: Use -g flag
+gcc -g my_program.c -o my_program
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_stack_frame_struct</code></p>
+<p>Without debug symbols, you'll see:</p>
+<pre><code>=== Function Profiling Summary ===
+No function profiling data collected
+(Binary may lack DWARF debug information)
+</code></pre>
+<h2 id="self-profiling"><a class="header" href="#self-profiling">Self-Profiling</a></h2>
+<p>Measure Renacer's own overhead when tracing programs:</p>
+<pre><code class="language-bash">renacer --profile-self -- cargo test
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_profile_self_flag_outputs_summary</code></p>
+<p><strong>Example Output:</strong></p>
+<pre><code>=== Renacer Self-Profiling Results ===
+Total syscalls traced:     1,234
+Total wall time:           123.45 ms
+
+Time Breakdown:
+  Kernel time (ptrace):    45.23 ms  (36.6%)
+  User time (renacer):     78.22 ms  (63.4%)
+    - Formatting:          23.45 ms  (19.0%)
+    - DWARF lookups:       12.34 ms  (10.0%)
+    - Memory reads:        8.90 ms   (7.2%)
+    - Statistics:          5.67 ms   (4.6%)
+    - Other:               27.86 ms  (22.6%)
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_profile_self_flag_outputs_summary</code></p>
+<h3 id="profiling-categories"><a class="header" href="#profiling-categories">Profiling Categories</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>Category</th><th>Description</th></tr></thead><tbody>
+<tr><td><strong>Kernel time (ptrace)</strong></td><td>Time in ptrace syscalls (getregs, setregs)</td></tr>
+<tr><td><strong>Formatting</strong></td><td>Syscall output string generation</td></tr>
+<tr><td><strong>DWARF lookups</strong></td><td>Debug info queries for source locations</td></tr>
+<tr><td><strong>Memory reads</strong></td><td>Reading process memory (filenames, args)</td></tr>
+<tr><td><strong>Statistics</strong></td><td>Call count tracking and aggregation</td></tr>
+<tr><td><strong>Other</strong></td><td>Miscellaneous operations</td></tr>
+</tbody></table>
+</div>
+<p><strong>Implementation:</strong> <code>src/profiling.rs:94-100</code></p>
+<h3 id="self-profiling-with-statistics"><a class="header" href="#self-profiling-with-statistics">Self-Profiling with Statistics</a></h3>
+<p>Combine with <code>-c</code> for comprehensive analysis:</p>
+<pre><code class="language-bash">renacer --profile-self -c -- ./my-app
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_profile_self_with_statistics_mode</code></p>
+<p><strong>Output includes:</strong></p>
+<ol>
+<li><strong>Syscall trace</strong> (stdout) - Individual syscall events</li>
+<li><strong>Statistics summary</strong> (stderr) - Call counts, timing, errors</li>
+<li><strong>Self-profiling report</strong> (stderr) - Renacer's overhead</li>
+</ol>
+<p><strong>Use case:</strong> Understand both application behavior and tracing overhead.</p>
+<h2 id="stack-unwinding"><a class="header" href="#stack-unwinding">Stack Unwinding</a></h2>
+<p>Stack unwinding reconstructs the full call stack for each syscall:</p>
+<pre><code class="language-bash">renacer --function-time --source -- ./my-app
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_stack_unwinding_with_simple_program</code></p>
+<h3 id="how-stack-unwinding-works"><a class="header" href="#how-stack-unwinding-works">How Stack Unwinding Works</a></h3>
+<ol>
+<li><strong>Get current registers</strong> - Read RIP (instruction pointer) and RBP (base pointer)</li>
+<li><strong>Walk frame pointer chain</strong> - Follow RBP links to find return addresses</li>
+<li><strong>Map to functions</strong> - Use DWARF debug info to resolve addresses to function names</li>
+<li><strong>Aggregate stats</strong> - Count syscalls and time per function</li>
+</ol>
+<p><strong>Algorithm (from <code>src/stack_unwind.rs:43-80</code>):</strong></p>
+<pre><code class="language-rust">// Simplified algorithm
+fn unwind_stack(pid: Pid) -&gt; Result&lt;Vec&lt;StackFrame&gt;&gt; {
+    let regs = ptrace::getregs(pid)?;
+    let mut rbp = regs.rbp;
+    let mut frames = vec![StackFrame { rip: regs.rip, rbp }];
+
+    for _ in 0..MAX_STACK_DEPTH {  // MAX_STACK_DEPTH = 64
+        if rbp == 0 { break; }
+
+        let saved_rbp = read_u64_from_process(pid, rbp)?;
+        let return_address = read_u64_from_process(pid, rbp + 8)?;
+
+        frames.push(StackFrame { rip: return_address, rbp: saved_rbp });
+        rbp = saved_rbp;
+    }
+
+    Ok(frames)
+}</code></pre>
+<h3 id="stack-unwinding-safety"><a class="header" href="#stack-unwinding-safety">Stack Unwinding Safety</a></h3>
+<p><strong>Max depth protection</strong> prevents infinite loops:</p>
+<pre><code class="language-bash">$ renacer --function-time --source -- ./recursive-app
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_stack_unwinding_max_depth_protection</code></p>
+<p>Stack unwinding stops when:</p>
+<ul>
+<li><strong>RBP == 0</strong> - End of stack</li>
+<li><strong>Invalid memory</strong> - Can't read return address</li>
+<li><strong>Max depth reached</strong> - 64 frames (prevents infinite loops)</li>
+</ul>
+<p><strong>Tested by:</strong> <code>test_stack_unwinding_does_not_crash</code></p>
+<h3 id="frame-pointer-requirement"><a class="header" href="#frame-pointer-requirement">Frame Pointer Requirement</a></h3>
+<p>Stack unwinding uses the <strong>x86_64 frame pointer convention</strong>:</p>
+<pre><code class="language-bash"># ✅ Works (frame pointers enabled - default)
+gcc -g my_program.c -o my_program
+renacer --function-time --source -- ./my_program
+
+# ❌ May not work (frame pointers omitted)
+gcc -g -fomit-frame-pointer my_program.c -o my_program
+renacer --function-time --source -- ./my_program
+</code></pre>
+<p><strong>Note:</strong> Most binaries use frame pointers by default. Only highly optimized release builds may omit them.</p>
+<h2 id="integration-with-other-features"><a class="header" href="#integration-with-other-features">Integration with Other Features</a></h2>
+<h3 id="with-filtering--e"><a class="header" href="#with-filtering--e">With Filtering (-e)</a></h3>
+<p>Profile only specific syscalls:</p>
+<pre><code class="language-bash">renacer --function-time -e trace=write -- ./my-app
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_function_time_with_filter</code></p>
+<p><strong>Output shows:</strong></p>
+<ul>
+<li><strong>Filtered syscalls only</strong> (e.g., <code>write</code> operations)</li>
+<li><strong>Function profiling</strong> for those syscalls only</li>
+</ul>
+<p><strong>Use case:</strong> Focus on I/O functions without noise from other syscalls.</p>
+<p><strong>Tested by:</strong> <code>test_profile_self_with_filtering</code></p>
+<h3 id="with-statistics-mode--c"><a class="header" href="#with-statistics-mode--c">With Statistics Mode (-c)</a></h3>
+<pre><code class="language-bash">renacer --function-time -c -- ./my-app
+</code></pre>
+<p><strong>Combines:</strong></p>
+<ul>
+<li><strong>Function profiling</strong> - Per-function attribution</li>
+<li><strong>Statistics summary</strong> - Overall call counts and timing</li>
+</ul>
+<p><strong>Output structure:</strong></p>
+<pre><code>[Syscall trace - stdout]
+write(1, "test", 4) = 4
+
+[Statistics summary - stderr]
+% time     seconds  usecs/call     calls    errors syscall
+------ ----------- ----------- --------- --------- ----------------
+ 50.00    0.001234        1234         1         0 write
+100.00    0.002468                     1         0 total
+
+[Function profiling - stderr]
+=== Function Profiling Summary ===
+Function                     Calls    Total Time    Avg Time
+────────────────────────────────────────────────────────────
+src/main.rs:42               1        1234 μs       1234 μs
+</code></pre>
+<h3 id="with-multi-process-tracing--f"><a class="header" href="#with-multi-process-tracing--f">With Multi-Process Tracing (-f)</a></h3>
+<pre><code class="language-bash">renacer -f --function-time --source -- make -j8
+</code></pre>
+<p><strong>Function profiling</strong> aggregates across all processes:</p>
+<ul>
+<li>Parent + child processes combined</li>
+<li>Per-function stats across entire process tree</li>
+</ul>
+<h3 id="without-function-profiling"><a class="header" href="#without-function-profiling">Without Function Profiling</a></h3>
+<p><strong>Zero overhead</strong> when disabled:</p>
+<pre><code class="language-bash">$ renacer -- ./my-app
+# No function profiling output, no DWARF lookups
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_function_time_without_flag_no_profiling</code>, <code>test_profile_self_without_flag_no_output</code></p>
+<p>This ensures:</p>
+<ul>
+<li><strong>Backward compatibility</strong> - Existing users unaffected</li>
+<li><strong>Opt-in only</strong> - No surprise behavior</li>
+<li><strong>No performance impact</strong> when not enabled</li>
+</ul>
+<p><strong>Tested by:</strong> <code>test_stack_unwinding_with_function_time_disabled</code></p>
+<h2 id="io-bottleneck-detection"><a class="header" href="#io-bottleneck-detection">I/O Bottleneck Detection</a></h2>
+<p>Function profiler automatically detects slow I/O operations:</p>
+<h3 id="io-syscalls-tracked"><a class="header" href="#io-syscalls-tracked">I/O Syscalls Tracked</a></h3>
+<pre><code class="language-rust">// From src/function_profiler.rs:18-35
+const IO_SYSCALLS: &amp;[&amp;str] = &amp;[
+    "read", "write", "readv", "writev",
+    "pread64", "pwrite64",
+    "openat", "open", "close",
+    "fsync", "fdatasync", "sync",
+    "sendfile", "splice", "tee", "vmsplice",
+];</code></pre>
+<h3 id="slow-io-threshold"><a class="header" href="#slow-io-threshold">Slow I/O Threshold</a></h3>
+<p><strong>SLOW_IO_THRESHOLD_US = 1000</strong> (1ms)</p>
+<p>Operations exceeding 1ms are flagged as slow I/O bottlenecks.</p>
+<pre><code class="language-bash">$ renacer --function-time --source -- ./database-app
+</code></pre>
+<p><strong>Example Output:</strong></p>
+<pre><code>=== Function Profiling Summary ===
+Function                     Calls    Total Time    Avg Time    Slow I/O
+──────────────────────────────────────────────────────────────────────────
+src/db.rs:commit             10       12345 μs      1234 μs     8  ⚠️
+src/db.rs:read_row           100      5678 μs       56 μs       0
+src/main.rs:startup          1        234 μs        234 μs      0
+</code></pre>
+<p><strong>Slow I/O column</strong> shows operations &gt;1ms, helping identify:</p>
+<ul>
+<li>Database commit bottlenecks (fsync)</li>
+<li>Network latency (sendto/recvfrom)</li>
+<li>Disk I/O issues (read/write blocking)</li>
+</ul>
+<h2 id="practical-examples"><a class="header" href="#practical-examples">Practical Examples</a></h2>
+<h3 id="example-1-database-performance-analysis"><a class="header" href="#example-1-database-performance-analysis">Example 1: Database Performance Analysis</a></h3>
+<pre><code class="language-bash">$ renacer --function-time --source -e trace=file -- pg_bench
+</code></pre>
+<p><strong>Use case:</strong> Identify which database functions cause I/O bottlenecks.</p>
+<p><strong>Expected Output:</strong></p>
+<pre><code>=== Function Profiling Summary ===
+Function                     Calls    Total Time    Avg Time    Slow I/O
+──────────────────────────────────────────────────────────────────────────
+src/wal.c:write_wal          150      45678 μs      304 μs      12  ⚠️
+src/buffer.c:flush_page      80       23456 μs      293 μs      8   ⚠️
+src/file.c:read_block        500      12345 μs      24 μs       0
+</code></pre>
+<p><strong>Action:</strong> Optimize <code>write_wal</code> and <code>flush_page</code> (high slow I/O count).</p>
+<h3 id="example-2-build-system-profiling"><a class="header" href="#example-2-build-system-profiling">Example 2: Build System Profiling</a></h3>
+<pre><code class="language-bash">$ renacer --function-time -c -- cargo build
+</code></pre>
+<p><strong>Use case:</strong> Understand which Cargo functions spend time in I/O.</p>
+<p><strong>Combines:</strong></p>
+<ul>
+<li><strong>Statistics</strong> - Overall syscall breakdown</li>
+<li><strong>Function profiling</strong> - Per-function attribution</li>
+</ul>
+<p><strong>Reveals:</strong></p>
+<ul>
+<li>Which compiler phases make syscalls</li>
+<li>I/O-heavy vs CPU-heavy build steps</li>
+</ul>
+<h3 id="example-3-network-service-debugging"><a class="header" href="#example-3-network-service-debugging">Example 3: Network Service Debugging</a></h3>
+<pre><code class="language-bash">$ renacer --function-time --source -e trace=network -- ./http_server
+</code></pre>
+<p><strong>Use case:</strong> Find which functions make slow network syscalls.</p>
+<p><strong>Filter:</strong></p>
+<ul>
+<li><code>trace=network</code> - Only network syscalls (sendto, recvfrom, etc.)</li>
+</ul>
+<p><strong>Output shows:</strong></p>
+<ul>
+<li>Functions making network calls</li>
+<li>Average latency per function</li>
+<li>Slow operations (&gt;1ms)</li>
+</ul>
+<h3 id="example-4-measuring-renacers-overhead"><a class="header" href="#example-4-measuring-renacers-overhead">Example 4: Measuring Renacer's Overhead</a></h3>
+<pre><code class="language-bash">$ renacer --profile-self -c -- ./large-io-app
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_profile_self_reports_nonzero_syscalls</code></p>
+<p><strong>Use case:</strong> Determine if Renacer adds significant overhead to tracing.</p>
+<p><strong>Metrics:</strong></p>
+<ul>
+<li><strong>Syscall count</strong> - Total traced operations</li>
+<li><strong>Wall time</strong> - Total execution time</li>
+<li><strong>Kernel time</strong> - Time in ptrace syscalls</li>
+<li><strong>User time</strong> - Time in Renacer's own processing</li>
+</ul>
+<p><strong>Example result:</strong></p>
+<pre><code>Total syscalls traced:     10,234
+Total wall time:           1234.56 ms
+Kernel time (ptrace):      456.78 ms  (37%)
+User time (renacer):       777.78 ms  (63%)
+</code></pre>
+<p><strong>Interpretation:</strong> Renacer adds ~37% overhead from ptrace operations.</p>
+<h2 id="troubleshooting"><a class="header" href="#troubleshooting">Troubleshooting</a></h2>
+<h3 id="no-function-profiling-data-collected"><a class="header" href="#no-function-profiling-data-collected">"No function profiling data collected"</a></h3>
+<p><strong>Cause:</strong> Binary lacks DWARF debug information.</p>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li>
+<p><strong>Cargo projects:</strong></p>
+<pre><code class="language-toml"># Cargo.toml
+[profile.dev]
+debug = true  # Default, should already be enabled
+
+[profile.release]
+debug = true  # Enable debug info in release builds
+</code></pre>
+</li>
+<li>
+<p><strong>Manual compilation:</strong></p>
+<pre><code class="language-bash"># Add -g flag
+gcc -g my_program.c -o my_program
+g++ -g my_program.cpp -o my_program
+</code></pre>
+</li>
+<li>
+<p><strong>Verify debug symbols:</strong></p>
+<pre><code class="language-bash">file ./my_program
+# Should show "with debug_info, not stripped"
+
+readelf -S ./my_program | grep debug
+# Should show .debug_info, .debug_line, etc.
+</code></pre>
+</li>
+</ol>
+<h3 id="stack-unwinding-incomplete"><a class="header" href="#stack-unwinding-incomplete">Stack Unwinding Incomplete</a></h3>
+<p><strong>Cause:</strong> Binary compiled with <code>-fomit-frame-pointer</code>.</p>
+<p><strong>Solution:</strong> Rebuild with frame pointers:</p>
+<pre><code class="language-bash"># Remove -fomit-frame-pointer flag
+gcc -g my_program.c -o my_program  # Frame pointers enabled by default
+</code></pre>
+<p><strong>Check frame pointer usage:</strong></p>
+<pre><code class="language-bash">objdump -d ./my_program | grep -E "push.*%rbp|mov.*%rsp,%rbp"
+# Should show frame pointer setup in functions
+</code></pre>
+<h3 id="function-names-show-as-addresses"><a class="header" href="#function-names-show-as-addresses">Function Names Show as Addresses</a></h3>
+<p><strong>Cause:</strong> DWARF info missing or corrupted.</p>
+<p><strong>Check:</strong></p>
+<pre><code class="language-bash">dwarfdump ./my_program | head -50
+# Should show debug information entries
+</code></pre>
+<p><strong>Solution:</strong> Rebuild with proper debug flags (<code>-g</code>).</p>
+<h3 id="profiling-overhead-too-high"><a class="header" href="#profiling-overhead-too-high">Profiling Overhead Too High</a></h3>
+<p><strong>Check:</strong></p>
+<pre><code class="language-bash">renacer --profile-self -c -- ./my-app
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_profile_self_flag_outputs_summary</code></p>
+<p>If Renacer overhead &gt;50%, consider:</p>
+<ol>
+<li>
+<p><strong>Disable unnecessary features:</strong></p>
+<pre><code class="language-bash"># Without function profiling
+renacer -c -- ./my-app
+
+# Without statistics
+renacer --function-time -- ./my-app
+</code></pre>
+</li>
+<li>
+<p><strong>Use filtering:</strong></p>
+<pre><code class="language-bash"># Only trace specific syscalls
+renacer --function-time -e trace=write -- ./my-app
+</code></pre>
+</li>
+<li>
+<p><strong>Disable stack unwinding:</strong></p>
+<pre><code class="language-bash"># Without --source (faster)
+renacer --function-time -- ./my-app
+</code></pre>
+</li>
+</ol>
+<h2 id="how-it-works"><a class="header" href="#how-it-works">How It Works</a></h2>
+<h3 id="function-attribution-algorithm"><a class="header" href="#function-attribution-algorithm">Function Attribution Algorithm</a></h3>
+<ol>
+<li><strong>Syscall entry</strong> - Program makes syscall, ptrace stops it</li>
+<li><strong>Get registers</strong> - Read RIP (instruction pointer)</li>
+<li><strong>Stack unwinding</strong> - Walk RBP chain to get call stack</li>
+<li><strong>DWARF lookup</strong> - Map RIP addresses to function names</li>
+<li><strong>Record stats</strong> - Increment syscall count, add duration</li>
+<li><strong>Resume</strong> - Continue program execution</li>
+</ol>
+<p><strong>Implementation:</strong> <code>src/function_profiler.rs:78-100</code></p>
+<h3 id="self-profiling-mechanism"><a class="header" href="#self-profiling-mechanism">Self-Profiling Mechanism</a></h3>
+<p>Uses <code>std::time::Instant</code> to measure operation duration:</p>
+<pre><code class="language-rust">// From src/profiling.rs:81-90
+pub fn measure&lt;F, R&gt;(&amp;mut self, category: ProfilingCategory, f: F) -&gt; R
+where
+    F: FnOnce() -&gt; R,
+{
+    let start = Instant::now();
+    let result = f();  // Execute operation
+    let elapsed = start.elapsed();
+    self.record_time(category, elapsed);  // Track time
+    result
+}</code></pre>
+<p><strong>Example usage:</strong></p>
+<pre><code class="language-rust">let result = profiling_ctx.measure(ProfilingCategory::DwarfLookup, || {
+    dwarf_info.find_function_name(rip)
+});</code></pre>
+<h3 id="stack-frame-layout-x86_64"><a class="header" href="#stack-frame-layout-x86_64">Stack Frame Layout (x86_64)</a></h3>
+<pre><code>High addresses
+┌─────────────────┐
+│ Return address  │  RBP + 8  (RIP for caller)
+├─────────────────┤
+│ Saved RBP       │  RBP + 0  (RBP for caller)
+├─────────────────┤
+│ Local variables │  RBP - 8, RBP - 16, ...
+└─────────────────┘
+Low addresses
+</code></pre>
+<p><strong>Stack unwinding walks:</strong></p>
+<ol>
+<li>Read current RBP</li>
+<li>Read saved RBP at <code>[RBP + 0]</code></li>
+<li>Read return address at <code>[RBP + 8]</code></li>
+<li>Repeat with saved RBP until RBP == 0 or MAX_DEPTH</li>
+</ol>
+<p><strong>Implementation:</strong> <code>src/stack_unwind.rs:43-80</code></p>
+<h2 id="performance"><a class="header" href="#performance">Performance</a></h2>
+<ul>
+<li><strong>Function profiling overhead:</strong> ~10-30% (depends on syscall frequency)</li>
+<li><strong>Stack unwinding:</strong> ~50-100μs per syscall (DWARF lookup cost)</li>
+<li><strong>Self-profiling overhead:</strong> &lt;1% (minimal instrumentation)</li>
+<li><strong>Memory:</strong> O(unique_functions) - typically &lt;1MB</li>
+</ul>
+<p><strong>Zero overhead when disabled</strong> (not enabled by default).</p>
+<h2 id="summary"><a class="header" href="#summary">Summary</a></h2>
+<p>Function profiling provides:</p>
+<ul>
+<li>✅ <strong>Per-function attribution</strong> with DWARF correlation</li>
+<li>✅ <strong>I/O bottleneck detection</strong> (&gt;1ms threshold)</li>
+<li>✅ <strong>Stack unwinding</strong> via ptrace (64 frame max depth)</li>
+<li>✅ <strong>Self-profiling</strong> for overhead analysis</li>
+<li>✅ <strong>Call graph tracking</strong> (parent-child relationships)</li>
+<li>✅ <strong>Integration</strong> with filtering, statistics, multi-process</li>
+<li>✅ <strong>Zero overhead</strong> when disabled (opt-in only)</li>
+</ul>
+<p><strong>All examples tested in:</strong> <a href="../../../tests/"><code>tests/sprint13_*.rs</code></a> (15 integration tests)</p>
+<h2 id="related"><a class="header" href="#related">Related</a></h2>
+<ul>
+<li><a href="../core-concepts/dwarf-correlation.html">DWARF Source Correlation</a> - Debug info integration</li>
+<li><a href="../core-concepts/statistics.html">Statistics Mode</a> - Call counts and timing</li>
+<li><a href="../core-concepts/filtering.html">Filtering Syscalls</a> - Focus profiling with filters</li>
+<li><a href="../examples/multi-process.html">Multi-Process Tracing</a> - Profile process trees</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../examples/html-reports.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../advanced/io-bottlenecks.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../examples/html-reports.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../advanced/io-bottlenecks.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../ace.js"></script>
+        <script src="../editor.js"></script>
+        <script src="../mode-rust.js"></script>
+        <script src="../theme-dawn.js"></script>
+        <script src="../theme-tomorrow_night.js"></script>
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

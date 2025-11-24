@@ -1,0 +1,397 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Trace File Operations - The Renacer Book - Pure Rust System Call Tracing</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="A comprehensive guide to renacer: syscall tracing, DWARF correlation, and performance analysis">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "rust";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The Renacer Book - Pure Rust System Call Tracing</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer/edit/main/book/src/examples/trace-file-ops.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="example-trace-file-operations"><a class="header" href="#example-trace-file-operations">Example: Trace File Operations</a></h1>
+<p>This example shows how to use Renacer to trace and debug file operations in your applications.</p>
+<h2 id="scenario-debug-configuration-file-loading"><a class="header" href="#scenario-debug-configuration-file-loading">Scenario: Debug Configuration File Loading</a></h2>
+<p>Your application can't find its configuration file. Let's trace which files it tries to open.</p>
+<h3 id="step-1-basic-file-tracing"><a class="header" href="#step-1-basic-file-tracing">Step 1: Basic File Tracing</a></h3>
+<pre><code class="language-bash">$ renacer -e 'trace=file' -- ./myapp
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>openat(AT_FDCWD, "/etc/myapp/config.toml", O_RDONLY) = -ENOENT
+openat(AT_FDCWD, "/home/user/.config/myapp.toml", O_RDONLY) = -ENOENT
+openat(AT_FDCWD, "./config.toml", O_RDONLY) = 3
+read(3, "database_url = \"postgres://...\"\n", 4096) = 156
+close(3) = 0
+</code></pre>
+<p><strong>Analysis:</strong></p>
+<ul>
+<li>First two locations fail (<code>-ENOENT</code> = file not found)</li>
+<li>Third location succeeds (returns FD 3)</li>
+<li>Config file read successfully</li>
+</ul>
+<h3 id="step-2-focus-on-open-calls-only"><a class="header" href="#step-2-focus-on-open-calls-only">Step 2: Focus on Open Calls Only</a></h3>
+<p>Too much output? Filter to just file opens:</p>
+<pre><code class="language-bash">$ renacer -e 'trace=openat' -- ./myapp
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>openat(AT_FDCWD, "/etc/myapp/config.toml", O_RDONLY) = -ENOENT
+openat(AT_FDCWD, "/home/user/.config/myapp.toml", O_RDONLY) = -ENOENT
+openat(AT_FDCWD, "./config.toml", O_RDONLY) = 3
+</code></pre>
+<p><strong>Much cleaner!</strong> Now you can see the exact search order.</p>
+<h3 id="step-3-add-source-correlation"><a class="header" href="#step-3-add-source-correlation">Step 3: Add Source Correlation</a></h3>
+<p>Which code is doing this?</p>
+<pre><code class="language-bash">$ renacer --source -e 'trace=openat' -- ./myapp
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>openat(AT_FDCWD, "/etc/myapp/config.toml", O_RDONLY) = -ENOENT   [src/config.rs:42 in load_config]
+openat(AT_FDCWD, "/home/user/.config/myapp.toml", O_RDONLY) = -ENOENT   [src/config.rs:43 in load_config]
+openat(AT_FDCWD, "./config.toml", O_RDONLY) = 3   [src/config.rs:44 in load_config]
+</code></pre>
+<p><strong>Perfect!</strong> Now you know <code>src/config.rs:42-44</code> is checking these locations.</p>
+<h2 id="scenario-excessive-file-access"><a class="header" href="#scenario-excessive-file-access">Scenario: Excessive File Access</a></h2>
+<p>Your app is slow during startup. Let's find out why.</p>
+<h3 id="step-1-count-file-operations"><a class="header" href="#step-1-count-file-operations">Step 1: Count File Operations</a></h3>
+<pre><code class="language-bash">$ renacer -c -e 'trace=file' -- ./slow-app
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>System Call Summary:
+====================
+Syscall          Calls    Total Time    Avg Time
+openat           1247     890.2ms       0.714ms
+fstat            1247     156.3ms       0.125ms
+read             3741     445.1ms       0.119ms
+close            1224     34.5ms        0.028ms
+</code></pre>
+<p><strong>Problem Found:</strong> 1,247 <code>openat</code> calls taking 890ms (60% of startup time)!</p>
+<h3 id="step-2-investigate-whats-being-opened"><a class="header" href="#step-2-investigate-whats-being-opened">Step 2: Investigate What's Being Opened</a></h3>
+<pre><code class="language-bash">$ renacer -e 'trace=openat' -- ./slow-app | head -20
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>openat(AT_FDCWD, "/usr/share/icons/hicolor/16x16/apps/icon001.png", O_RDONLY) = 3
+openat(AT_FDCWD, "/usr/share/icons/hicolor/16x16/apps/icon002.png", O_RDONLY) = 3
+openat(AT_FDCWD, "/usr/share/icons/hicolor/16x16/apps/icon003.png", O_RDONLY) = 3
+...
+</code></pre>
+<p><strong>Root Cause:</strong> Loading 1,247 icon files individually!</p>
+<p><strong>Solution:</strong> Lazy-load icons or bundle them into a single resource file.</p>
+<h2 id="scenario-find-permission-errors"><a class="header" href="#scenario-find-permission-errors">Scenario: Find Permission Errors</a></h2>
+<p>Your app crashes with "permission denied". Which file?</p>
+<h3 id="step-1-filter-to-errors"><a class="header" href="#step-1-filter-to-errors">Step 1: Filter to Errors</a></h3>
+<pre><code class="language-bash">$ renacer -e 'trace=file' -- ./app 2&gt;&amp;1 | grep -E 'EACCES|EPERM'
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>openat(AT_FDCWD, "/var/log/myapp.log", O_WRONLY|O_CREAT|O_APPEND, 0644) = -EACCES
+</code></pre>
+<p><strong>Found it!</strong> Can't write to <code>/var/log/myapp.log</code> (permission denied).</p>
+<p><strong>Solution:</strong> Either fix permissions or change log location to <code>~/.local/share/myapp/log</code>.</p>
+<h3 id="step-2-verify-the-fix"><a class="header" href="#step-2-verify-the-fix">Step 2: Verify the Fix</a></h3>
+<p>After changing to home directory:</p>
+<pre><code class="language-bash">$ renacer -e 'trace=openat,write' -- ./app
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>openat(AT_FDCWD, "/home/user/.local/share/myapp/log", O_WRONLY|O_CREAT|O_APPEND, 0644) = 3
+write(3, "[INFO] Application started\n", 28) = 28
+</code></pre>
+<p><strong>Success!</strong> File opens and writes complete successfully.</p>
+<h2 id="scenario-track-file-modifications"><a class="header" href="#scenario-track-file-modifications">Scenario: Track File Modifications</a></h2>
+<p>Which files does your app write to?</p>
+<h3 id="step-1-trace-writes-only"><a class="header" href="#step-1-trace-writes-only">Step 1: Trace Writes Only</a></h3>
+<pre><code class="language-bash">$ renacer -e 'trace=write,openat' -- ./data-processor input.csv
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>openat(AT_FDCWD, "input.csv", O_RDONLY) = 3
+openat(AT_FDCWD, "output.csv", O_WRONLY|O_CREAT|O_TRUNC, 0666) = 4
+write(4, "name,age,email\n", 15) = 15
+write(4, "Alice,30,alice@example.com\n", 28) = 28
+write(4, "Bob,25,bob@example.com\n", 24) = 24
+</code></pre>
+<p><strong>Observation:</strong> App reads <code>input.csv</code>, writes to <code>output.csv</code>.</p>
+<h3 id="step-2-export-for-analysis"><a class="header" href="#step-2-export-for-analysis">Step 2: Export for Analysis</a></h3>
+<pre><code class="language-bash">$ renacer --format json -e 'trace=write' -- ./data-processor input.csv &gt; writes.json
+</code></pre>
+<p>Then analyze with <code>jq</code>:</p>
+<pre><code class="language-bash">$ jq '.syscalls[] | select(.name == "write") | .args.count' writes.json | paste -sd+ | bc
+67
+</code></pre>
+<p><strong>Result:</strong> 67 bytes written total.</p>
+<h2 id="scenario-detect-resource-leaks"><a class="header" href="#scenario-detect-resource-leaks">Scenario: Detect Resource Leaks</a></h2>
+<p>Are files being closed properly?</p>
+<h3 id="step-1-compare-opens-vs-closes"><a class="header" href="#step-1-compare-opens-vs-closes">Step 1: Compare Opens vs. Closes</a></h3>
+<pre><code class="language-bash">$ renacer -e 'trace=openat,close' -- ./leaky-app
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>openat(AT_FDCWD, "file1.txt", O_RDONLY) = 3
+openat(AT_FDCWD, "file2.txt", O_RDONLY) = 4
+openat(AT_FDCWD, "file3.txt", O_RDONLY) = 5
+# ... program continues ...
+# No close() calls!
+</code></pre>
+<p><strong>Problem:</strong> Files opened but never closed - file descriptor leak!</p>
+<h3 id="step-2-use-statistics-to-confirm"><a class="header" href="#step-2-use-statistics-to-confirm">Step 2: Use Statistics to Confirm</a></h3>
+<pre><code class="language-bash">$ renacer -c -e 'trace=openat,close' -- ./leaky-app
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>Syscall          Calls    Errors
+openat           100      0
+close            0        0
+</code></pre>
+<p><strong>Confirmed:</strong> 100 opens, 0 closes = file descriptor leak.</p>
+<h2 id="best-practices"><a class="header" href="#best-practices">Best Practices</a></h2>
+<h3 id="1-start-broad-narrow-down"><a class="header" href="#1-start-broad-narrow-down">1. Start Broad, Narrow Down</a></h3>
+<pre><code class="language-bash"># Step 1: See all file operations
+renacer -e 'trace=file' -- ./app
+
+# Step 2: Too noisy? Remove metadata calls
+renacer -e 'trace=file,!/fstat/,!/close/' -- ./app
+
+# Step 3: Focus on specific operations
+renacer -e 'trace=openat,read,write' -- ./app
+</code></pre>
+<h3 id="2-combine-with-source-correlation"><a class="header" href="#2-combine-with-source-correlation">2. Combine with Source Correlation</a></h3>
+<pre><code class="language-bash"># Always use --source for debugging
+renacer --source -e 'trace=file' -- ./app
+</code></pre>
+<p>Tells you <strong>exactly</strong> which code line is making each syscall.</p>
+<h3 id="3-use-statistics-for-performance"><a class="header" href="#3-use-statistics-for-performance">3. Use Statistics for Performance</a></h3>
+<pre><code class="language-bash"># Find slow file operations
+renacer -c -e 'trace=file' -- ./app
+</code></pre>
+<p>Shows which file operations take the most time.</p>
+<h3 id="4-export-for-later-analysis"><a class="header" href="#4-export-for-later-analysis">4. Export for Later Analysis</a></h3>
+<pre><code class="language-bash"># Export to JSON
+renacer --format json -e 'trace=file' -- ./app &gt; file-ops.json
+
+# Analyze with jq
+jq '.syscalls[] | select(.return.error != null)' file-ops.json
+</code></pre>
+<p>Filter to errors, slow operations, specific files, etc.</p>
+<h2 id="common-patterns"><a class="header" href="#common-patterns">Common Patterns</a></h2>
+<h3 id="pattern-1-find-missing-files"><a class="header" href="#pattern-1-find-missing-files">Pattern 1: Find Missing Files</a></h3>
+<pre><code class="language-bash">renacer -e 'trace=openat' -- ./app 2&gt;&amp;1 | grep ENOENT
+</code></pre>
+<p>Shows all "file not found" errors.</p>
+<h3 id="pattern-2-find-excessive-io"><a class="header" href="#pattern-2-find-excessive-io">Pattern 2: Find Excessive I/O</a></h3>
+<pre><code class="language-bash">renacer -c -e 'trace=read,write' -- ./app
+</code></pre>
+<p>Count read/write calls and total time.</p>
+<h3 id="pattern-3-track-specific-file"><a class="header" href="#pattern-3-track-specific-file">Pattern 3: Track Specific File</a></h3>
+<pre><code class="language-bash">renacer -e 'trace=file' -- ./app 2&gt;&amp;1 | grep config.toml
+</code></pre>
+<p>Filter output to specific file path.</p>
+<h3 id="pattern-4-debug-file-permissions"><a class="header" href="#pattern-4-debug-file-permissions">Pattern 4: Debug File Permissions</a></h3>
+<pre><code class="language-bash">renacer -e 'trace=file' -- ./app 2&gt;&amp;1 | grep -E 'EACCES|EPERM'
+</code></pre>
+<p>Find all permission denied errors.</p>
+<h2 id="next-steps"><a class="header" href="#next-steps">Next Steps</a></h2>
+<ul>
+<li><a href="./debug-performance.html">Debug Performance Issues</a> - Profile I/O bottlenecks</li>
+<li><a href="./monitor-network.html">Monitor Network Calls</a> - Trace network operations</li>
+<li><a href="./export-data.html">Export to JSON/CSV</a> - Analyze traces programmatically</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../core-concepts/output-formats.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../examples/debug-performance.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../core-concepts/output-formats.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../examples/debug-performance.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../ace.js"></script>
+        <script src="../editor.js"></script>
+        <script src="../mode-rust.js"></script>
+        <script src="../theme-dawn.js"></script>
+        <script src="../theme-tomorrow_night.js"></script>
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

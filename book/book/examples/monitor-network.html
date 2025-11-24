@@ -1,0 +1,699 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Monitor Network Calls - The Renacer Book - Pure Rust System Call Tracing</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="A comprehensive guide to renacer: syscall tracing, DWARF correlation, and performance analysis">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "rust";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The Renacer Book - Pure Rust System Call Tracing</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer/edit/main/book/src/examples/monitor-network.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="example-monitor-network-operations"><a class="header" href="#example-monitor-network-operations">Example: Monitor Network Operations</a></h1>
+<p>This example shows how to use Renacer to debug network operations, analyze protocols, and troubleshoot connectivity issues.</p>
+<h2 id="scenario-debug-http-request"><a class="header" href="#scenario-debug-http-request">Scenario: Debug HTTP Request</a></h2>
+<p>Your HTTP client can't reach the server. Let's trace the network calls.</p>
+<h3 id="step-1-basic-network-tracing"><a class="header" href="#step-1-basic-network-tracing">Step 1: Basic Network Tracing</a></h3>
+<pre><code class="language-bash">$ renacer -e 'trace=network' -- curl https://example.com
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>socket(AF_INET, SOCK_STREAM, IPPROTO_TCP) = 3
+connect(3, {sa_family=AF_INET, sin_port=htons(443), sin_addr=inet_addr("93.184.216.34")}, 16) = 0
+sendto(3, "\x16\x03\x01\x02\x00...", 517, MSG_NOSIGNAL, NULL, 0) = 517
+recvfrom(3, "\x16\x03\x03\x00\x59...", 16384, 0, NULL, NULL) = 1234
+recvfrom(3, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n...", 16384, 0, NULL, NULL) = 2048
+close(3) = 0
+</code></pre>
+<p><strong>Analysis:</strong></p>
+<ul>
+<li>Socket created successfully (FD 3)</li>
+<li>Connection to 93.184.216.34:443 succeeded</li>
+<li>TLS handshake completed (0x16 0x03 = TLS)</li>
+<li>HTTP response received (200 OK)</li>
+</ul>
+<h3 id="step-2-find-connection-failures"><a class="header" href="#step-2-find-connection-failures">Step 2: Find Connection Failures</a></h3>
+<pre><code class="language-bash">$ renacer -e 'trace=connect' -- curl http://localhost:9999
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>socket(AF_INET, SOCK_STREAM, IPPROTO_TCP) = 3
+connect(3, {sa_family=AF_INET, sin_port=htons(9999), sin_addr=inet_addr("127.0.0.1")}, 16) = -ECONNREFUSED
+close(3) = 0
+</code></pre>
+<p><strong>Problem Found:</strong> Connection refused - server not listening on port 9999.</p>
+<h3 id="step-3-trace-with-source-correlation"><a class="header" href="#step-3-trace-with-source-correlation">Step 3: Trace with Source Correlation</a></h3>
+<pre><code class="language-bash">$ renacer --source -e 'trace=network' -- ./http-client
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>socket(AF_INET, SOCK_STREAM, IPPROTO_TCP) = 3   [src/client.rs:45 in connect_to_server]
+connect(3, {...}, 16) = -ETIMEDOUT   [src/client.rs:52 in connect_to_server]
+</code></pre>
+<p><strong>Insight:</strong> Connection timeout at <code>src/client.rs:52</code> - network unreachable or firewall blocking.</p>
+<h2 id="scenario-analyze-api-response-times"><a class="header" href="#scenario-analyze-api-response-times">Scenario: Analyze API Response Times</a></h2>
+<p>Your API client is slow. Is it network latency or server processing?</p>
+<h3 id="step-1-measure-network-call-duration"><a class="header" href="#step-1-measure-network-call-duration">Step 1: Measure Network Call Duration</a></h3>
+<pre><code class="language-bash">$ renacer -c -e 'trace=network' -- curl https://api.example.com/data
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>System Call Summary:
+====================
+Syscall          Calls    Total Time    Avg Time    p50      p90      p99
+socket           1        0.15ms        0.150ms     -        -        -
+connect          1        245.67ms      245.670ms   -        -        -
+sendto           3        1.23ms        0.410ms     0.3ms    0.5ms    0.6ms
+recvfrom         12       3456.78ms     288.065ms   12.3ms   567.8ms  1234.5ms
+shutdown         1        0.08ms        0.080ms     -        -        -
+close            1        0.05ms        0.050ms     -        -        -
+</code></pre>
+<p><strong>Analysis:</strong></p>
+<ul>
+<li>Connect: 245ms (DNS + TCP handshake)</li>
+<li>Receive: 3.4s total, p99 is 1.2s (server latency)</li>
+<li>Network latency dominates (97% of time)</li>
+</ul>
+<h3 id="step-2-compare-multiple-requests"><a class="header" href="#step-2-compare-multiple-requests">Step 2: Compare Multiple Requests</a></h3>
+<pre><code class="language-bash"># First request (cold cache)
+$ renacer -c -e 'trace=recvfrom' -- curl https://api.example.com/data
+
+# Second request (warm cache)
+$ renacer -c -e 'trace=recvfrom' -- curl https://api.example.com/data
+</code></pre>
+<p><strong>First Request:</strong></p>
+<pre><code>Syscall          Calls    Total Time
+recvfrom         12       3456.78ms
+</code></pre>
+<p><strong>Second Request:</strong></p>
+<pre><code>Syscall          Calls    Total Time
+recvfrom         12       234.56ms
+</code></pre>
+<p><strong>Insight:</strong> 15x faster on second request - server caching works, cold start is slow.</p>
+<h2 id="scenario-debug-websocket-connection"><a class="header" href="#scenario-debug-websocket-connection">Scenario: Debug WebSocket Connection</a></h2>
+<p>WebSocket connection drops unexpectedly. Let's trace the lifecycle.</p>
+<h3 id="step-1-trace-socket-lifecycle"><a class="header" href="#step-1-trace-socket-lifecycle">Step 1: Trace Socket Lifecycle</a></h3>
+<pre><code class="language-bash">$ renacer -e 'trace=socket,connect,send,recv,close' -- ./websocket-client
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>socket(AF_INET, SOCK_STREAM, IPPROTO_TCP) = 3
+connect(3, {sin_addr=inet_addr("192.168.1.100"), sin_port=htons(8080)}, 16) = 0
+sendto(3, "GET /ws HTTP/1.1\r\nUpgrade: websocket\r\n...", 234, MSG_NOSIGNAL, NULL, 0) = 234
+recvfrom(3, "HTTP/1.1 101 Switching Protocols\r\n...", 4096, 0, NULL, NULL) = 156
+# WebSocket frames exchanged
+sendto(3, "\x81\x85...", 7, MSG_NOSIGNAL, NULL, 0) = 7
+recvfrom(3, "\x81\x05hello", 4096, 0, NULL, NULL) = 7
+# ... 500 more messages ...
+recvfrom(3, "", 4096, 0, NULL, NULL) = 0
+close(3) = 0
+</code></pre>
+<p><strong>Analysis:</strong></p>
+<ul>
+<li>HTTP upgrade to WebSocket succeeded (101 response)</li>
+<li>500 messages exchanged successfully</li>
+<li>Server closed connection gracefully (recvfrom returns 0)</li>
+</ul>
+<h3 id="step-2-find-abnormal-closures"><a class="header" href="#step-2-find-abnormal-closures">Step 2: Find Abnormal Closures</a></h3>
+<pre><code class="language-bash">$ renacer -e 'trace=network' -- ./websocket-client 2&gt;&amp;1 | grep -E "close|shutdown|recv.*= 0"
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>recvfrom(3, "", 4096, 0, NULL, NULL) = 0
+close(3) = 0
+</code></pre>
+<p><strong>Normal:</strong> <code>recvfrom</code> returns 0 (EOF), then close - clean shutdown.</p>
+<p><strong>Abnormal example:</strong></p>
+<pre><code>recvfrom(3, ..., 4096, 0, NULL, NULL) = -ECONNRESET
+close(3) = 0
+</code></pre>
+<p><strong>Problem:</strong> <code>ECONNRESET</code> indicates server crashed or network issue.</p>
+<h2 id="scenario-monitor-dns-resolution"><a class="header" href="#scenario-monitor-dns-resolution">Scenario: Monitor DNS Resolution</a></h2>
+<p>Your application has slow startup due to DNS lookups.</p>
+<h3 id="step-1-trace-dns-syscalls"><a class="header" href="#step-1-trace-dns-syscalls">Step 1: Trace DNS Syscalls</a></h3>
+<p>DNS happens via socket syscalls (not dedicated DNS syscalls in Linux).</p>
+<pre><code class="language-bash">$ renacer -e 'trace=socket,connect,send,recv' -- host example.com
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP) = 3
+connect(3, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("8.8.8.8")}, 16) = 0
+sendto(3, "\x12\x34\x01\x00\x00\x01...", 32, MSG_NOSIGNAL, NULL, 0) = 32
+recvfrom(3, "\x12\x34\x81\x80...", 1024, 0, NULL, NULL) = 48
+close(3) = 0
+</code></pre>
+<p><strong>Analysis:</strong></p>
+<ul>
+<li>UDP socket to 8.8.8.8:53 (Google DNS)</li>
+<li>DNS query sent (32 bytes)</li>
+<li>Response received (48 bytes)</li>
+</ul>
+<h3 id="step-2-measure-dns-latency"><a class="header" href="#step-2-measure-dns-latency">Step 2: Measure DNS Latency</a></h3>
+<pre><code class="language-bash">$ renacer -c -e 'trace=network' -- getent hosts api.example.com
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>System Call Summary:
+====================
+Syscall          Calls    Total Time    Avg Time
+socket           2        0.25ms        0.125ms
+connect          2        0.15ms        0.075ms
+sendto           2        0.12ms        0.060ms
+recvfrom         2        456.78ms      228.390ms
+close            2        0.08ms        0.040ms
+</code></pre>
+<p><strong>Problem:</strong> <code>recvfrom</code> taking 456ms - DNS server latency or network issue.</p>
+<h3 id="step-3-identify-slow-dns-servers"><a class="header" href="#step-3-identify-slow-dns-servers">Step 3: Identify Slow DNS Servers</a></h3>
+<pre><code class="language-bash">$ renacer -e 'trace=connect' -- host slow-domain.example.com
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP) = 3
+connect(3, {sin_addr=inet_addr("192.168.1.1"), sin_port=htons(53)}, 16) = 0
+# ... long wait ...
+recvfrom(3, ..., 1024, 0, NULL, NULL) = -ETIMEDOUT
+socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP) = 4
+connect(4, {sin_addr=inet_addr("8.8.8.8"), sin_port=htons(53)}, 16) = 0
+recvfrom(4, ..., 1024, 0, NULL, NULL) = 48
+</code></pre>
+<p><strong>Analysis:</strong> Primary DNS (192.168.1.1) times out, fallback to 8.8.8.8 succeeds.</p>
+<h2 id="scenario-analyze-tcp-connection-parameters"><a class="header" href="#scenario-analyze-tcp-connection-parameters">Scenario: Analyze TCP Connection Parameters</a></h2>
+<p>Debugging TCP connection establishment and socket options.</p>
+<h3 id="step-1-trace-socket-options"><a class="header" href="#step-1-trace-socket-options">Step 1: Trace Socket Options</a></h3>
+<pre><code class="language-bash">$ renacer -e 'trace=setsockopt,getsockopt' -- curl https://example.com
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>setsockopt(3, SOL_SOCKET, SO_KEEPALIVE, [1], 4) = 0
+setsockopt(3, SOL_TCP, TCP_NODELAY, [1], 4) = 0
+setsockopt(3, SOL_SOCKET, SO_RCVTIMEO, {tv_sec=30, tv_usec=0}, 16) = 0
+setsockopt(3, SOL_SOCKET, SO_SNDTIMEO, {tv_sec=30, tv_usec=0}, 16) = 0
+</code></pre>
+<p><strong>Analysis:</strong></p>
+<ul>
+<li>Keepalive enabled (detects dead connections)</li>
+<li>Nagle disabled (TCP_NODELAY for low latency)</li>
+<li>30s receive/send timeouts</li>
+</ul>
+<h3 id="step-2-debug-timeout-issues"><a class="header" href="#step-2-debug-timeout-issues">Step 2: Debug Timeout Issues</a></h3>
+<pre><code class="language-bash">$ renacer --source -e 'trace=setsockopt,recvfrom' -- ./slow-client
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>setsockopt(3, SOL_SOCKET, SO_RCVTIMEO, {tv_sec=5, tv_usec=0}, 16) = 0   [src/client.rs:78]
+# ... 5 seconds later ...
+recvfrom(3, ..., 4096, 0, NULL, NULL) = -EAGAIN   [src/client.rs:92]
+</code></pre>
+<p><strong>Problem:</strong> 5-second timeout is too short, causing <code>EAGAIN</code> errors.</p>
+<h2 id="scenario-monitor-protocol-level-behavior"><a class="header" href="#scenario-monitor-protocol-level-behavior">Scenario: Monitor Protocol-Level Behavior</a></h2>
+<p>Analyzing HTTP/2, gRPC, or custom protocols.</p>
+<h3 id="step-1-count-requestresponse-pairs"><a class="header" href="#step-1-count-requestresponse-pairs">Step 1: Count Request/Response Pairs</a></h3>
+<pre><code class="language-bash">$ renacer -c -e 'trace=sendto,recvfrom' -- curl http://example.com
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>System Call Summary:
+====================
+Syscall          Calls    Total Time
+sendto           3        1.23ms
+recvfrom         12       234.56ms
+</code></pre>
+<p><strong>Analysis:</strong></p>
+<ul>
+<li>3 sends (HTTP request + headers)</li>
+<li>12 receives (HTTP response in chunks)</li>
+</ul>
+<h3 id="step-2-detect-protocol-errors"><a class="header" href="#step-2-detect-protocol-errors">Step 2: Detect Protocol Errors</a></h3>
+<pre><code class="language-bash">$ renacer -e 'trace=send,recv' -- ./http-client 2&gt;&amp;1 | grep "= -"
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>sendto(3, "GET /api/data HTTP/1.1\r\n...", 145, MSG_NOSIGNAL, NULL, 0) = 145
+recvfrom(3, "HTTP/1.1 400 Bad Request\r\n...", 4096, 0, NULL, NULL) = 123
+</code></pre>
+<p><strong>Error Found:</strong> Server returns 400 Bad Request - malformed HTTP request.</p>
+<h3 id="step-3-analyze-message-sizes"><a class="header" href="#step-3-analyze-message-sizes">Step 3: Analyze Message Sizes</a></h3>
+<pre><code class="language-bash">$ renacer --format json -e 'trace=sendto,recvfrom' -- ./grpc-client &gt; network.json
+$ jq '.syscalls[] | select(.name == "sendto") | .return.value' network.json
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>145
+234
+67
+512
+...
+</code></pre>
+<p><strong>Insight:</strong> Message sizes vary widely (67 to 512 bytes) - analyze protocol framing.</p>
+<h2 id="scenario-debug-tlsssl-handshake"><a class="header" href="#scenario-debug-tlsssl-handshake">Scenario: Debug TLS/SSL Handshake</a></h2>
+<p>TLS connection fails or is slow. Let's trace the handshake.</p>
+<h3 id="step-1-trace-tls-handshake"><a class="header" href="#step-1-trace-tls-handshake">Step 1: Trace TLS Handshake</a></h3>
+<pre><code class="language-bash">$ renacer -e 'trace=send,recv' -- openssl s_client -connect example.com:443
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>socket(AF_INET, SOCK_STREAM, IPPROTO_TCP) = 3
+connect(3, {sin_addr=inet_addr("93.184.216.34"), sin_port=htons(443)}, 16) = 0
+# Client Hello
+sendto(3, "\x16\x03\x01\x02\x00\x01\x00\x01\xfc\x03\x03...", 517, MSG_NOSIGNAL, NULL, 0) = 517
+# Server Hello, Certificate, ServerHelloDone
+recvfrom(3, "\x16\x03\x03\x00\x59\x02\x00\x00\x55...", 16384, 0, NULL, NULL) = 1234
+# Client Key Exchange, ChangeCipherSpec, Finished
+sendto(3, "\x16\x03\x03\x00\x46\x10\x00\x00\x42...", 137, MSG_NOSIGNAL, NULL, 0) = 137
+# Server ChangeCipherSpec, Finished
+recvfrom(3, "\x14\x03\x03\x00\x01\x01\x16\x03\x03...", 16384, 0, NULL, NULL) = 51
+</code></pre>
+<p><strong>Analysis:</strong></p>
+<ul>
+<li>TLS 1.2 handshake (0x03 0x03)</li>
+<li>Client Hello: 517 bytes</li>
+<li>Server response: 1234 bytes (certificate chain)</li>
+<li>Key exchange completed</li>
+</ul>
+<h3 id="step-2-measure-tls-handshake-time"><a class="header" href="#step-2-measure-tls-handshake-time">Step 2: Measure TLS Handshake Time</a></h3>
+<pre><code class="language-bash">$ renacer -c -e 'trace=network' -- curl https://example.com
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>System Call Summary:
+====================
+Syscall          Calls    Total Time    Avg Time
+connect          1        45.67ms       45.670ms
+sendto           5        2.34ms        0.468ms
+recvfrom         8        456.78ms      57.098ms
+</code></pre>
+<p><strong>Analysis:</strong></p>
+<ul>
+<li>Connect: 45ms (TCP handshake)</li>
+<li>TLS handshake: ~460ms (sendto + recvfrom)</li>
+<li>Total connection setup: 505ms</li>
+</ul>
+<h3 id="step-3-compare-http-vs-https"><a class="header" href="#step-3-compare-http-vs-https">Step 3: Compare HTTP vs HTTPS</a></h3>
+<pre><code class="language-bash"># HTTP
+$ renacer -c -e 'trace=network' -- curl http://example.com &gt; http.txt
+
+# HTTPS
+$ renacer -c -e 'trace=network' -- curl https://example.com &gt; https.txt
+
+$ diff http.txt https.txt
+</code></pre>
+<p><strong>Difference:</strong></p>
+<pre><code>HTTP:  connect=45ms, total=234ms
+HTTPS: connect=45ms, total=705ms (+470ms for TLS)
+</code></pre>
+<h2 id="scenario-monitor-streaming-data"><a class="header" href="#scenario-monitor-streaming-data">Scenario: Monitor Streaming Data</a></h2>
+<p>Analyze real-time streaming protocols (video, audio).</p>
+<h3 id="step-1-count-receive-rate"><a class="header" href="#step-1-count-receive-rate">Step 1: Count Receive Rate</a></h3>
+<pre><code class="language-bash">$ renacer -c -e 'trace=recvfrom' -- vlc http://stream.example.com/live.mp4
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>System Call Summary:
+====================
+Syscall          Calls    Total Time    Avg Time    p50      p90      p99
+recvfrom         12456    34567.89ms    2.777ms     1.2ms    5.6ms    23.4ms
+</code></pre>
+<p><strong>Analysis:</strong></p>
+<ul>
+<li>12,456 receives in 34 seconds = 366 recv/sec</li>
+<li>Average 2.8ms per receive</li>
+<li>p99 is 23ms (occasional latency spikes)</li>
+</ul>
+<h3 id="step-2-detect-buffer-starvation"><a class="header" href="#step-2-detect-buffer-starvation">Step 2: Detect Buffer Starvation</a></h3>
+<pre><code class="language-bash">$ renacer -e 'trace=recv' -- ./video-player stream.m3u8 2&gt;&amp;1 | grep "= 0"
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>recvfrom(3, "...", 65536, 0, NULL, NULL) = 8192
+recvfrom(3, "...", 65536, 0, NULL, NULL) = 8192
+recvfrom(3, "", 65536, 0, NULL, NULL) = 0
+# ... playback stutters ...
+socket(AF_INET, SOCK_STREAM, IPPROTO_TCP) = 4
+</code></pre>
+<p><strong>Problem:</strong> Connection closed (recvfrom = 0), new connection established - rebuffering.</p>
+<h2 id="common-network-patterns"><a class="header" href="#common-network-patterns">Common Network Patterns</a></h2>
+<h3 id="pattern-1-connection-refused"><a class="header" href="#pattern-1-connection-refused">Pattern 1: Connection Refused</a></h3>
+<p><strong>Symptom:</strong></p>
+<pre><code>connect(3, {...}, 16) = -ECONNREFUSED
+</code></pre>
+<p><strong>Causes:</strong></p>
+<ul>
+<li>Server not running</li>
+<li>Firewall blocking port</li>
+<li>Wrong IP/port</li>
+</ul>
+<p><strong>Fix:</strong> Verify server is listening (<code>netstat -tln | grep &lt;port&gt;</code>).</p>
+<h3 id="pattern-2-connection-timeout"><a class="header" href="#pattern-2-connection-timeout">Pattern 2: Connection Timeout</a></h3>
+<p><strong>Symptom:</strong></p>
+<pre><code>connect(3, {...}, 16) = -ETIMEDOUT
+</code></pre>
+<p><strong>Causes:</strong></p>
+<ul>
+<li>Network unreachable</li>
+<li>Firewall dropping packets</li>
+<li>Server overloaded</li>
+</ul>
+<p><strong>Fix:</strong> Check routing, firewall rules, server health.</p>
+<h3 id="pattern-3-connection-reset"><a class="header" href="#pattern-3-connection-reset">Pattern 3: Connection Reset</a></h3>
+<p><strong>Symptom:</strong></p>
+<pre><code>recvfrom(3, ..., 4096, 0, NULL, NULL) = -ECONNRESET
+</code></pre>
+<p><strong>Causes:</strong></p>
+<ul>
+<li>Server crashed</li>
+<li>Proxy/LB killed connection</li>
+<li>TCP RST sent</li>
+</ul>
+<p><strong>Fix:</strong> Check server logs, proxy settings.</p>
+<h3 id="pattern-4-broken-pipe"><a class="header" href="#pattern-4-broken-pipe">Pattern 4: Broken Pipe</a></h3>
+<p><strong>Symptom:</strong></p>
+<pre><code>sendto(3, ..., 1024, MSG_NOSIGNAL, NULL, 0) = -EPIPE
+</code></pre>
+<p><strong>Causes:</strong></p>
+<ul>
+<li>Client closed connection before write</li>
+<li>Server terminated unexpectedly</li>
+</ul>
+<p><strong>Fix:</strong> Handle SIGPIPE, check connection state before writing.</p>
+<h2 id="network-debugging-workflow"><a class="header" href="#network-debugging-workflow">Network Debugging Workflow</a></h2>
+<h3 id="step-1-verify-connection-establishment"><a class="header" href="#step-1-verify-connection-establishment">Step 1: Verify Connection Establishment</a></h3>
+<pre><code class="language-bash">$ renacer -e 'trace=socket,connect' -- ./app
+</code></pre>
+<p><strong>Check for:</strong></p>
+<ul>
+<li>Successful socket creation (FD &gt; 0)</li>
+<li>Successful connect (= 0)</li>
+<li>Connection errors (ECONNREFUSED, ETIMEDOUT, etc.)</li>
+</ul>
+<h3 id="step-2-analyze-sendreceive-patterns"><a class="header" href="#step-2-analyze-sendreceive-patterns">Step 2: Analyze Send/Receive Patterns</a></h3>
+<pre><code class="language-bash">$ renacer -c -e 'trace=sendto,recvfrom' -- ./app
+</code></pre>
+<p><strong>Look for:</strong></p>
+<ul>
+<li>Balanced send/recv counts (request/response pairs)</li>
+<li>Large time differences (network latency)</li>
+<li>Errors (EAGAIN, EWOULDBLOCK for non-blocking sockets)</li>
+</ul>
+<h3 id="step-3-identify-protocol-issues"><a class="header" href="#step-3-identify-protocol-issues">Step 3: Identify Protocol Issues</a></h3>
+<pre><code class="language-bash">$ renacer -e 'trace=send,recv' -- ./app 2&gt;&amp;1 | head -50
+</code></pre>
+<p><strong>Inspect:</strong></p>
+<ul>
+<li>First few bytes (protocol headers)</li>
+<li>Message framing</li>
+<li>Response codes (HTTP status, etc.)</li>
+</ul>
+<h3 id="step-4-measure-performance"><a class="header" href="#step-4-measure-performance">Step 4: Measure Performance</a></h3>
+<pre><code class="language-bash">$ renacer -c -e 'trace=network' -- ./app
+</code></pre>
+<p><strong>Analyze:</strong></p>
+<ul>
+<li>Total time per syscall</li>
+<li>p99 latency for reliability</li>
+<li>Call frequency for throughput</li>
+</ul>
+<h3 id="step-5-export-for-analysis"><a class="header" href="#step-5-export-for-analysis">Step 5: Export for Analysis</a></h3>
+<pre><code class="language-bash">$ renacer --format json -e 'trace=network' -- ./app &gt; network-trace.json
+$ jq '.syscalls[] | select(.name == "recvfrom" and .return.value == -1)' network-trace.json
+</code></pre>
+<p><strong>Use Case:</strong> Find all failed receives.</p>
+<h2 id="best-practices"><a class="header" href="#best-practices">Best Practices</a></h2>
+<h3 id="1-use-the-network-class"><a class="header" href="#1-use-the-network-class">1. Use the Network Class</a></h3>
+<pre><code class="language-bash">$ renacer -e 'trace=network' -- ./app
+</code></pre>
+<p><strong>Why:</strong> Automatically includes all network syscalls (socket, connect, send, recv, etc.).</p>
+<h3 id="2-filter-to-specific-operations"><a class="header" href="#2-filter-to-specific-operations">2. Filter to Specific Operations</a></h3>
+<pre><code class="language-bash"># Only trace receive operations
+$ renacer -e 'trace=recv,recvfrom,recvmsg' -- ./app
+</code></pre>
+<p><strong>Why:</strong> Focus on specific protocol direction (sending vs. receiving).</p>
+<h3 id="3-combine-with-statistics"><a class="header" href="#3-combine-with-statistics">3. Combine with Statistics</a></h3>
+<pre><code class="language-bash">$ renacer -c -e 'trace=network' -- ./app
+</code></pre>
+<p><strong>Why:</strong> Get aggregate view of network performance.</p>
+<h3 id="4-use-source-correlation"><a class="header" href="#4-use-source-correlation">4. Use Source Correlation</a></h3>
+<pre><code class="language-bash">$ renacer --source -e 'trace=connect' -- ./app
+</code></pre>
+<p><strong>Why:</strong> Identify which code is making connections.</p>
+<h3 id="5-export-for-protocol-analysis"><a class="header" href="#5-export-for-protocol-analysis">5. Export for Protocol Analysis</a></h3>
+<pre><code class="language-bash">$ renacer --format json -e 'trace=network' -- ./app &gt; trace.json
+# Analyze with wireshark-style tools
+</code></pre>
+<p><strong>Why:</strong> Deep protocol analysis requires structured data.</p>
+<h3 id="6-compare-multiple-runs"><a class="header" href="#6-compare-multiple-runs">6. Compare Multiple Runs</a></h3>
+<pre><code class="language-bash"># Before optimization
+$ renacer -c -e 'trace=network' -- ./app-v1 &gt; v1.txt
+
+# After optimization
+$ renacer -c -e 'trace=network' -- ./app-v2 &gt; v2.txt
+
+$ diff v1.txt v2.txt
+</code></pre>
+<p><strong>Why:</strong> Quantify network performance improvements.</p>
+<h2 id="troubleshooting"><a class="header" href="#troubleshooting">Troubleshooting</a></h2>
+<h3 id="issue-no-network-calls-visible"><a class="header" href="#issue-no-network-calls-visible">Issue: No Network Calls Visible</a></h3>
+<p><strong>Symptoms:</strong></p>
+<pre><code class="language-bash">$ renacer -e 'trace=network' -- ./app
+# No output
+</code></pre>
+<p><strong>Causes:</strong></p>
+<ul>
+<li>Application uses async I/O (io_uring, not standard syscalls)</li>
+<li>Network library uses different syscalls</li>
+<li>Application doesn't make network calls</li>
+</ul>
+<p><strong>Solution:</strong></p>
+<pre><code class="language-bash"># Trace all syscalls to see what's happening
+$ renacer -- ./app | head -100
+</code></pre>
+<h3 id="issue-tls-data-is-encrypted"><a class="header" href="#issue-tls-data-is-encrypted">Issue: TLS Data is Encrypted</a></h3>
+<p><strong>Symptoms:</strong></p>
+<pre><code class="language-bash">recvfrom(3, "\x17\x03\x03\x04\x56...", 16384, 0, NULL, NULL) = 1110
+</code></pre>
+<p><strong>Explanation:</strong> Renacer sees encrypted TLS data (0x17 = Application Data).</p>
+<p><strong>Solution:</strong> Use <code>SSLKEYLOGFILE</code> for TLS decryption with Wireshark, or trace before encryption.</p>
+<h3 id="issue-high-recv-call-count"><a class="header" href="#issue-high-recv-call-count">Issue: High recv Call Count</a></h3>
+<p><strong>Symptoms:</strong></p>
+<pre><code>Syscall          Calls    Total Time
+recvfrom         50000    12345.67ms
+</code></pre>
+<p><strong>Diagnosis:</strong> Receiving in small chunks (inefficient buffering).</p>
+<p><strong>Fix:</strong> Increase receive buffer size, use <code>setsockopt(SO_RCVBUF)</code>.</p>
+<h2 id="summary"><a class="header" href="#summary">Summary</a></h2>
+<p><strong>Network debugging workflow:</strong></p>
+<ol>
+<li><strong>Establish</strong> - Trace socket, connect for connection issues</li>
+<li><strong>Communicate</strong> - Trace send/recv for data transfer</li>
+<li><strong>Analyze</strong> - Use statistics to find performance issues</li>
+<li><strong>Optimize</strong> - Compare before/after changes</li>
+</ol>
+<p><strong>Key syscalls:</strong></p>
+<ul>
+<li><strong>socket</strong> - Create endpoint</li>
+<li><strong>connect</strong> - Establish connection</li>
+<li><strong>send/sendto</strong> - Send data</li>
+<li><strong>recv/recvfrom</strong> - Receive data</li>
+<li><strong>setsockopt</strong> - Configure socket behavior</li>
+<li><strong>close/shutdown</strong> - Clean up</li>
+</ul>
+<p><strong>Common issues:</strong></p>
+<ul>
+<li>ECONNREFUSED - Server not listening</li>
+<li>ETIMEDOUT - Network unreachable</li>
+<li>ECONNRESET - Connection terminated</li>
+<li>EPIPE - Broken pipe (write to closed socket)</li>
+</ul>
+<h2 id="next-steps"><a class="header" href="#next-steps">Next Steps</a></h2>
+<ul>
+<li><a href="./debug-performance.html">Debug Performance Issues</a> - Profile I/O performance</li>
+<li><a href="./attach-process.html">Attach to Running Process</a> - Debug production apps</li>
+<li><a href="./export-data.html">Export to JSON/CSV</a> - Automated analysis</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../examples/debug-compilation.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../examples/attach-process.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../examples/debug-compilation.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../examples/attach-process.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../ace.js"></script>
+        <script src="../editor.js"></script>
+        <script src="../mode-rust.js"></script>
+        <script src="../theme-dawn.js"></script>
+        <script src="../theme-tomorrow_night.js"></script>
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

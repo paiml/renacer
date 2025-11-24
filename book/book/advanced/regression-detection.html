@@ -1,0 +1,441 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Regression Detection - The Renacer Book - Pure Rust System Call Tracing</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="A comprehensive guide to renacer: syscall tracing, DWARF correlation, and performance analysis">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "rust";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The Renacer Book - Pure Rust System Call Tracing</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer/edit/main/book/src/advanced/regression-detection.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="regression-detection"><a class="header" href="#regression-detection">Regression Detection</a></h1>
+<p>Statistical hypothesis testing for detecting real performance regressions while filtering noise.</p>
+<h2 id="key-innovation-no-magic-numbers"><a class="header" href="#key-innovation-no-magic-numbers">Key Innovation: No Magic Numbers</a></h2>
+<p>Traditional approaches use <strong>fixed percentage thresholds</strong> (e.g., "5% slowdown = regression"). This leads to high false positives because:</p>
+<ol>
+<li>Natural variance differs per project</li>
+<li>Some syscalls have high inherent variability (network I/O)</li>
+<li>Fixed thresholds don't adapt to baseline noise</li>
+</ol>
+<p><strong>Renacer's approach</strong>: Use <strong>statistical hypothesis testing</strong> (t-tests) with p-values that adapt to project-specific variance.</p>
+<h2 id="problem-fixed-thresholds-dont-work"><a class="header" href="#problem-fixed-thresholds-dont-work">Problem: Fixed Thresholds Don't Work</a></h2>
+<h3 id="example-natural-variance"><a class="header" href="#example-natural-variance">Example: Natural Variance</a></h3>
+<pre><code class="language-text">Baseline read() times: [10ms, 12ms, 11ms, 13ms, 10ms]
+Current read() times:  [11ms, 13ms, 12ms, 14ms, 11ms]
+
+Fixed 5% threshold: 10ms → 12.6ms = +26% → FALSE POSITIVE!
+Statistical test: p = 0.18 (not significant) → Correctly ignores
+</code></pre>
+<p>The difference is just natural variance, not a true regression.</p>
+<h2 id="implementation"><a class="header" href="#implementation">Implementation</a></h2>
+<h3 id="statistical-comparison"><a class="header" href="#statistical-comparison">Statistical Comparison</a></h3>
+<pre><code class="language-rust">use renacer::regression::{assess_regression, RegressionConfig};
+use std::collections::HashMap;
+
+// Baseline measurements (5 runs)
+let mut baseline = HashMap::new();
+baseline.insert("read".to_string(), vec![10.0, 12.0, 11.0, 13.0, 10.0]);
+baseline.insert("mmap".to_string(), vec![5.0, 6.0, 5.0, 6.0, 5.0]);
+
+// Current measurements (5 runs)
+let mut current = HashMap::new();
+current.insert("read".to_string(), vec![25.0, 27.0, 26.0, 28.0, 25.0]);  // REGRESSED!
+current.insert("mmap".to_string(), vec![5.0, 6.0, 5.0, 6.0, 5.0]);      // Stable
+
+let config = RegressionConfig::default();  // 95% confidence (p &lt; 0.05)
+let assessment = assess_regression(&amp;baseline, &amp;current, &amp;config)?;
+
+match assessment.verdict {
+    RegressionVerdict::Regression { regressed_syscalls, .. } =&gt; {
+        println!("⚠️ REGRESSION DETECTED");
+        for syscall in regressed_syscalls {
+            println!("  - {}", syscall);
+        }
+    }
+    RegressionVerdict::NoRegression =&gt; {
+        println!("✅ No regression detected");
+    }
+    _ =&gt; {}
+}</code></pre>
+<h2 id="configuration-profiles"><a class="header" href="#configuration-profiles">Configuration Profiles</a></h2>
+<h3 id="default-balanced"><a class="header" href="#default-balanced">Default (Balanced)</a></h3>
+<pre><code class="language-rust">RegressionConfig::default()
+// - 95% confidence (p &lt; 0.05)
+// - 5 samples minimum
+// - Noise filtering enabled (CV &gt; 0.5)</code></pre>
+<h3 id="strict-fewer-false-positives"><a class="header" href="#strict-fewer-false-positives">Strict (Fewer False Positives)</a></h3>
+<pre><code class="language-rust">RegressionConfig::strict()
+// - 99% confidence (p &lt; 0.01)
+// - 10 samples minimum
+// - Aggressive noise filtering (CV &gt; 0.3)</code></pre>
+<h3 id="permissive-catch-early"><a class="header" href="#permissive-catch-early">Permissive (Catch Early)</a></h3>
+<pre><code class="language-rust">RegressionConfig::permissive()
+// - 90% confidence (p &lt; 0.10)
+// - 3 samples minimum
+// - Relaxed noise filtering (CV &gt; 1.0)</code></pre>
+<h2 id="noise-filtering-delta-debugging"><a class="header" href="#noise-filtering-delta-debugging">Noise Filtering: Delta Debugging</a></h2>
+<p>Based on <strong>Zeller (2002)</strong> Delta Debugging, Renacer filters out "noisy" syscalls before testing:</p>
+<pre><code class="language-rust">// Coefficient of Variation (CV) = std_dev / mean
+//
+// CV &gt; threshold → noisy → filtered out
+// CV ≤ threshold → stable → tested
+
+Stable syscall:
+  read: [10ms, 11ms, 10ms, 12ms, 10ms]
+  CV = 0.08 (8% variance) → TESTED
+
+Noisy syscall:
+  socket: [5ms, 50ms, 3ms, 45ms, 2ms]  (network latency)
+  CV = 0.96 (96% variance) → FILTERED</code></pre>
+<p><strong>Why?</strong> High-variance syscalls cause false positives. By filtering them, we focus on <strong>stable, repeatable</strong> regressions.</p>
+<h2 id="statistical-tests"><a class="header" href="#statistical-tests">Statistical Tests</a></h2>
+<h3 id="welchs-t-test"><a class="header" href="#welchs-t-test">Welch's T-Test</a></h3>
+<p>Renacer uses <strong>Welch's t-test</strong> (unequal variances) from the aprender library:</p>
+<pre><code class="language-rust">use aprender::stats::hypothesis::ttest_ind;
+
+// Compare two distributions
+let result = ttest_ind(baseline, current, false)?;
+
+if result.pvalue &lt; 0.05 {
+    println!("Statistically significant difference (p = {:.4})", result.pvalue);
+} else {
+    println!("No significant difference (p = {:.4})", result.pvalue);
+}</code></pre>
+<h3 id="why-t-tests"><a class="header" href="#why-t-tests">Why T-Tests?</a></h3>
+<ul>
+<li><strong>Adaptive</strong>: Accounts for variance automatically</li>
+<li><strong>Robust</strong>: Works with small sample sizes (n ≥ 5)</li>
+<li><strong>Validated</strong>: 70+ years of statistical research</li>
+</ul>
+<h2 id="real-world-example-decy-futex-regression"><a class="header" href="#real-world-example-decy-futex-regression">Real-World Example: decy Futex Regression</a></h2>
+<p><strong>Baseline futex times</strong>:</p>
+<pre><code class="language-text">[2ms, 3ms, 2ms, 3ms, 2ms]
+Mean: 2.4ms, StdDev: 0.55ms, CV: 0.23
+</code></pre>
+<p><strong>Current futex times</strong> (accidental async runtime):</p>
+<pre><code class="language-text">[50ms, 52ms, 51ms, 53ms, 50ms]
+Mean: 51.2ms, StdDev: 1.3ms, CV: 0.025
+</code></pre>
+<p><strong>Statistical Test</strong>:</p>
+<pre><code class="language-text">t-statistic: 89.3
+p-value: &lt; 0.001 (99.9% confidence)
+Verdict: ⚠️ REGRESSION DETECTED
+</code></pre>
+<p>The difference is <strong>statistically significant</strong> - not just noise.</p>
+<h2 id="report-format"><a class="header" href="#report-format">Report Format</a></h2>
+<pre><code class="language-rust">let report = assessment.to_report_string();
+println!("{}", report);</code></pre>
+<p><strong>Output</strong>:</p>
+<pre><code class="language-text"># Regression Detection Report
+
+## Verdict: ⚠️ REGRESSION DETECTED
+
+## Regressed Syscalls
+- **futex**: 2.4ms → 51.2ms (+2033%, p &lt; 0.001)
+- **read**: 10.2ms → 15.8ms (+55%, p = 0.003)
+
+## Stable Syscalls
+- mmap: 5.5ms → 5.6ms (+2%, p = 0.89)
+- write: 8.2ms → 8.3ms (+1%, p = 0.76)
+
+## Filtered (Noisy) Syscalls
+- socket: CV = 0.96 (high variance, unreliable)
+
+## Statistical Tests
+Total tests: 3
+Significant: 2 (futex, read)
+Not significant: 1 (mmap)
+Filtered: 1 (socket)
+
+## Recommendations
+1. Investigate futex regression (+2033% is critical)
+2. Profile read() operations (+55% is moderate)
+3. Socket variance too high - consider multiple runs
+</code></pre>
+<h2 id="cicd-integration"><a class="header" href="#cicd-integration">CI/CD Integration</a></h2>
+<h3 id="build-time-assertion"><a class="header" href="#build-time-assertion">Build-Time Assertion</a></h3>
+<pre><code class="language-rust">#[test]
+fn test_no_performance_regression() {
+    let baseline = load_golden_trace("golden.trace");
+    let current = run_transpiler_and_trace("test.py");
+
+    let config = RegressionConfig::default();
+    let assessment = assess_regression(&amp;baseline, &amp;current, &amp;config).unwrap();
+
+    assert!(matches!(assessment.verdict, RegressionVerdict::NoRegression),
+        "Performance regression detected:\n{}", assessment.to_report_string()
+    );
+}</code></pre>
+<h3 id="github-actions-example"><a class="header" href="#github-actions-example">GitHub Actions Example</a></h3>
+<pre><code class="language-yaml">- name: Performance Regression Check
+  run: |
+    cargo test test_no_performance_regression
+  continue-on-error: false  # FAIL CI on regression
+</code></pre>
+<h2 id="implementation-statistics"><a class="header" href="#implementation-statistics">Implementation Statistics</a></h2>
+<ul>
+<li><strong>Lines of Code</strong>: 1,285 lines (config, statistics, noise_filter, verdict)</li>
+<li><strong>Tests</strong>: 38/38 passing (100%)</li>
+<li><strong>Dependencies</strong>: aprender 0.7.1, trueno 0.7.0 (SIMD-optimized)</li>
+<li><strong>Zero Custom Implementations</strong>: Uses established libraries</li>
+</ul>
+<h2 id="api-reference"><a class="header" href="#api-reference">API Reference</a></h2>
+<h3 id="regressionconfig"><a class="header" href="#regressionconfig">RegressionConfig</a></h3>
+<pre><code class="language-rust">pub struct RegressionConfig {
+    pub significance_level: f64,     // p-value threshold (default: 0.05)
+    pub min_sample_size: usize,      // Minimum samples (default: 5)
+    pub enable_noise_filtering: bool, // Filter high-CV syscalls (default: true)
+    pub noise_threshold: f64,        // CV threshold (default: 0.5)
+}</code></pre>
+<h3 id="regressionverdict"><a class="header" href="#regressionverdict">RegressionVerdict</a></h3>
+<pre><code class="language-rust">pub enum RegressionVerdict {
+    Regression {
+        regressed_syscalls: Vec&lt;String&gt;,
+        total_tests: usize,
+        significant_tests: usize,
+    },
+    NoRegression,
+    InsufficientData {
+        reason: String,
+    },
+}</code></pre>
+<h2 id="peer-reviewed-foundation"><a class="header" href="#peer-reviewed-foundation">Peer-Reviewed Foundation</a></h2>
+<p>Based on:</p>
+<ul>
+<li>
+<p><strong>Heger et al. (2013)</strong> "Automated Root Cause Isolation of Performance Regressions" (ICPE)</p>
+<ul>
+<li>Finding: Fixed % thresholds have 40-60% false positive rate</li>
+<li>Solution: Statistical hypothesis testing with p-values</li>
+</ul>
+</li>
+<li>
+<p><strong>Zeller (2002)</strong> "Isolating Cause-Effect Chains from Computer Programs" (FSE)</p>
+<ul>
+<li>Delta Debugging for isolating relevant differences</li>
+<li>Applied here for noise filtering</li>
+</ul>
+</li>
+</ul>
+<h2 id="toyota-way-andon-stop-the-line"><a class="header" href="#toyota-way-andon-stop-the-line">Toyota Way: Andon (Stop the Line)</a></h2>
+<p>Regressions trigger CI failures, stopping deployment:</p>
+<pre><code class="language-text">⚠️ CI FAILED: Performance Regression Detected
+
+Regressed: futex (+2033%)
+Confidence: 99.9% (p &lt; 0.001)
+
+Action: Fix regression before merge.
+</code></pre>
+<h2 id="next-steps"><a class="header" href="#next-steps">Next Steps</a></h2>
+<ul>
+<li>Combine with <a href="./time-attribution.html">Time-Weighted Attribution</a> for impact analysis</li>
+<li>Use <a href="./semantic-equivalence.html">Semantic Equivalence</a> to validate fixes</li>
+<li>Integrate with <a href="./syscall-clustering.html">Syscall Clustering</a> for semantic grouping</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../advanced/semantic-equivalence.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../reference/cli.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../advanced/semantic-equivalence.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../reference/cli.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../ace.js"></script>
+        <script src="../editor.js"></script>
+        <script src="../mode-rust.js"></script>
+        <script src="../theme-dawn.js"></script>
+        <script src="../theme-tomorrow_night.js"></script>
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

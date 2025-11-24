@@ -1,0 +1,310 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Glossary - The Renacer Book - Pure Rust System Call Tracing</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="A comprehensive guide to renacer: syscall tracing, DWARF correlation, and performance analysis">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "rust";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The Renacer Book - Pure Rust System Call Tracing</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer/edit/main/book/src/appendix/glossary.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="glossary"><a class="header" href="#glossary">Glossary</a></h1>
+<p>Technical terms and concepts used throughout Renacer documentation.</p>
+<h2 id="syscall-tracing"><a class="header" href="#syscall-tracing">Syscall Tracing</a></h2>
+<p><strong>System Call (Syscall)</strong>
+: A mechanism that allows user-space programs to request services from the operating system kernel. Examples: <code>read()</code>, <code>write()</code>, <code>open()</code>, <code>close()</code>.</p>
+<p><strong>ptrace</strong>
+: Linux system call (<code>ptrace(2)</code>) used for process tracing and debugging. Renacer uses ptrace to intercept and monitor syscalls made by target processes.</p>
+<p><strong>Tracee</strong>
+: The process being traced by Renacer (the target process).</p>
+<p><strong>Tracer</strong>
+: The Renacer process that attaches to and monitors the tracee.</p>
+<p><strong>Attach</strong>
+: The operation of connecting Renacer to an already-running process using <code>ptrace(PTRACE_ATTACH)</code>. See <code>renacer -p PID</code>.</p>
+<p><strong>Fork Following</strong>
+: Automatically tracing child processes created by the target process. Enabled with <code>-f</code> flag.</p>
+<h2 id="debug-information"><a class="header" href="#debug-information">Debug Information</a></h2>
+<p><strong>DWARF</strong>
+: Debugging With Attributed Record Formats - a standardized debugging data format used by compilers (gcc, clang, rustc) to embed source-level information in binaries.</p>
+<p><strong>Debug Symbols</strong>
+: Metadata embedded in binaries that map machine code back to source code (file names, line numbers, function names). Generated with <code>-g</code> flag during compilation.</p>
+<p><strong>Frame Pointer</strong>
+: A CPU register (rbp on x86_64) that points to the current stack frame. Used for stack unwinding. Enable with <code>-fno-omit-frame-pointer</code>.</p>
+<p><strong>Stack Unwinding</strong>
+: The process of walking up the call stack to reconstruct the sequence of function calls. Renacer uses frame pointer chain walking (max 64 frames).</p>
+<p><strong>Source Correlation</strong>
+: Mapping syscalls back to specific source code locations using DWARF debug info. Enabled with <code>--source</code> flag.</p>
+<h2 id="filtering"><a class="header" href="#filtering">Filtering</a></h2>
+<p><strong>Syscall Filter</strong>
+: Rules for selecting which syscalls to trace. Specified with <code>-e trace=...</code> syntax.</p>
+<p><strong>Syscall Class</strong>
+: Predefined groups of related syscalls (e.g., <code>file</code>, <code>network</code>, <code>ipc</code>, <code>desc</code>). See <a href="../core-concepts/filtering-classes.html">Syscall Classes</a>.</p>
+<p><strong>Negation Operator</strong>
+: The <code>!</code> prefix to exclude specific syscalls from tracing. Example: <code>-e trace=file,!openat</code>.</p>
+<p><strong>Regex Pattern</strong>
+: Regular expression for matching syscall names, enclosed in slashes <code>/pattern/</code>. Example: <code>-e trace=/^open.*/</code>.</p>
+<h2 id="performance-analysis"><a class="header" href="#performance-analysis">Performance Analysis</a></h2>
+<p><strong>Function Profiling</strong>
+: Attributing syscall execution time to specific functions using DWARF correlation. Enabled with <code>--function-time</code> flag.</p>
+<p><strong>I/O Bottleneck</strong>
+: Slow I/O operations (&gt;1ms threshold) that degrade performance. Tracked syscalls: <code>read</code>, <code>write</code>, <code>fsync</code>, <code>openat</code>, etc.</p>
+<p><strong>Percentile (p50, p95, p99)</strong>
+: Statistical measure indicating the value below which a percentage of observations fall. p99 = 99% of syscalls complete within this time.</p>
+<p><strong>Tail Latency</strong>
+: Performance outliers at the high end of the latency distribution (p99, p99.9). Often indicate systemic issues.</p>
+<p><strong>Anomaly Detection</strong>
+: Identifying unusual syscall patterns via statistical methods (Z-score, IQR) or real-time monitoring.</p>
+<p><strong>Z-score</strong>
+: Number of standard deviations a value is from the mean. Values &gt;3σ are typically considered outliers.</p>
+<p><strong>IQR (Interquartile Range)</strong>
+: Q3 - Q1, used for robust outlier detection. Outliers: values outside [Q1 - 1.5×IQR, Q3 + 1.5×IQR].</p>
+<h2 id="statistics"><a class="header" href="#statistics">Statistics</a></h2>
+<p><strong>SIMD (Single Instruction, Multiple Data)</strong>
+: CPU instructions that process multiple data elements in parallel (4-8× speedup). Used for percentile calculations via NumPy/AVX2.</p>
+<p><strong>HPU (Hardware Processing Unit)</strong>
+: Generic term for GPU/TPU acceleration. Renacer uses HPU for matrix operations in statistical analysis (Sprint 21).</p>
+<p><strong>Correlation Matrix</strong>
+: Matrix showing pairwise correlation coefficients between syscall durations. Identifies related operations.</p>
+<p><strong>K-means Clustering</strong>
+: Unsupervised learning algorithm that groups syscalls into K clusters based on features (duration, frequency). Used for pattern discovery.</p>
+<h2 id="output-formats"><a class="header" href="#output-formats">Output Formats</a></h2>
+<p><strong>Text Format</strong>
+: Human-readable strace-like output (default). Example: <code>openat(AT_FDCWD, "file", O_RDONLY) = 3</code>.</p>
+<p><strong>JSON Format</strong>
+: Machine-parsable structured output (<code>--format json</code>). Ideal for post-processing with jq, Python pandas.</p>
+<p><strong>CSV Format</strong>
+: Comma-separated values (<code>--format csv</code>). Compatible with spreadsheets (Excel, LibreOffice) and R.</p>
+<p><strong>HTML Format</strong>
+: Interactive visual reports (<code>--format html</code>). Includes charts, tables, color-coded statistics (Sprint 22).</p>
+<h2 id="quality-engineering"><a class="header" href="#quality-engineering">Quality Engineering</a></h2>
+<p><strong>EXTREME TDD</strong>
+: Test-Driven Development methodology emphasizing RED-GREEN-REFACTOR cycle, 85%+ coverage, mutation testing.</p>
+<p><strong>Property-Based Testing</strong>
+: Testing approach using randomly generated inputs to verify invariants. Implemented with <code>proptest</code> crate (18 comprehensive tests).</p>
+<p><strong>Mutation Testing</strong>
+: Testing technique that modifies code to verify tests catch defects. Tool: <code>cargo-mutants</code>.</p>
+<p><strong>Fuzz Testing</strong>
+: Automated testing using malformed/random inputs to find edge cases. Applied to filter parser (Sprint 29).</p>
+<p><strong>Chaos Engineering</strong>
+: Injecting failures (file not found, permission denied) to verify error handling robustness (Sprint 29).</p>
+<p><strong>Quality Gates</strong>
+: Automated pre-commit checks: format, clippy, bashrs, property tests, security audit (completes in ~2s).</p>
+<h2 id="sprint-milestones"><a class="header" href="#sprint-milestones">Sprint Milestones</a></h2>
+<p><strong>Sprint 13</strong> - Function Profiling with DWARF correlation
+<strong>Sprint 15</strong> - Negation operator for advanced filtering
+<strong>Sprint 16</strong> - Regex pattern matching for syscall filtering
+<strong>Sprint 18</strong> - Multi-process tracing with fork following
+<strong>Sprint 19</strong> - Enhanced statistics with percentiles
+<strong>Sprint 20</strong> - Anomaly detection (post-hoc and real-time)
+<strong>Sprint 21</strong> - HPU acceleration for statistical analysis
+<strong>Sprint 22</strong> - HTML output format with visual reports
+<strong>Sprint 23</strong> - ML-based anomaly detection via Aprender
+<strong>Sprint 29</strong> - Chaos engineering and fuzz testing</p>
+<p>See <a href="./changelog.html">CHANGELOG</a> for detailed sprint history.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../contributing/release-process.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../appendix/faq.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../contributing/release-process.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../appendix/faq.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../ace.js"></script>
+        <script src="../editor.js"></script>
+        <script src="../mode-rust.js"></script>
+        <script src="../theme-dawn.js"></script>
+        <script src="../theme-tomorrow_night.js"></script>
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

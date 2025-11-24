@@ -1,0 +1,396 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Fuzz Testing - The Renacer Book - Pure Rust System Call Tracing</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="A comprehensive guide to renacer: syscall tracing, DWARF correlation, and performance analysis">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "rust";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The Renacer Book - Pure Rust System Call Tracing</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer/edit/main/book/src/contributing/fuzz-testing.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="fuzz-testing"><a class="header" href="#fuzz-testing">Fuzz Testing</a></h1>
+<p>Renacer uses <strong>cargo-fuzz</strong> for coverage-guided fuzz testing to discover edge cases and security vulnerabilities in parser code and other critical components.</p>
+<h2 id="overview"><a class="header" href="#overview">Overview</a></h2>
+<p>Fuzz testing generates random inputs to test code robustness. Unlike unit tests with specific inputs, fuzzing explores the input space automatically to find crashes, panics, and unexpected behavior.</p>
+<p><strong>When to Use Fuzz Testing:</strong></p>
+<ul>
+<li>Parser implementations (filter expressions, syscall names)</li>
+<li>Input validation code</li>
+<li>Binary format parsers (DWARF, ELF)</li>
+<li>Serialization/deserialization code</li>
+</ul>
+<h2 id="infrastructure-sprint-29"><a class="header" href="#infrastructure-sprint-29">Infrastructure (Sprint 29)</a></h2>
+<h3 id="setup"><a class="header" href="#setup">Setup</a></h3>
+<pre><code class="language-bash"># Install cargo-fuzz
+cargo install cargo-fuzz
+
+# List available fuzz targets
+cargo fuzz list
+
+# Run a specific fuzz target
+cargo fuzz run filter_parser
+</code></pre>
+<h3 id="fuzz-targets"><a class="header" href="#fuzz-targets">Fuzz Targets</a></h3>
+<h4 id="filter-parser-fuzzfuzz_targetsfilter_parserrs"><a class="header" href="#filter-parser-fuzzfuzz_targetsfilter_parserrs">Filter Parser (<code>fuzz/fuzz_targets/filter_parser.rs</code>)</a></h4>
+<p>Tests the <code>SyscallFilter::from_expr()</code> parser with arbitrary byte sequences:</p>
+<pre><code class="language-rust">#![no_main]
+
+use libfuzzer_sys::fuzz_target;
+use renacer::filter::SyscallFilter;
+
+fuzz_target!(|data: &amp;[u8]| {
+    // Convert arbitrary bytes to UTF-8 string (lossy conversion)
+    if let Ok(input) = std::str::from_utf8(data) {
+        // Attempt to parse the filter expression
+        // This should not panic regardless of input
+        let _ = SyscallFilter::from_expr(input);
+    }
+});</code></pre>
+<p><strong>What it Tests:</strong></p>
+<ul>
+<li>Invalid regex patterns</li>
+<li>Malformed class names</li>
+<li>Edge cases in negation operator</li>
+<li>Unusual character combinations</li>
+<li>Empty strings, null bytes, unicode</li>
+</ul>
+<h3 id="running-fuzz-tests"><a class="header" href="#running-fuzz-tests">Running Fuzz Tests</a></h3>
+<pre><code class="language-bash"># Run filter_parser fuzz target
+make fuzz
+
+# Run with specific duration
+cargo fuzz run filter_parser -- -max_total_time=300  # 5 minutes
+
+# Run with specific number of runs
+cargo fuzz run filter_parser -- -runs=1000000
+
+# Minimize a crashing input
+cargo fuzz cmin filter_parser
+</code></pre>
+<h3 id="analyzing-crashes"><a class="header" href="#analyzing-crashes">Analyzing Crashes</a></h3>
+<p>If fuzzing finds a crash:</p>
+<pre><code class="language-bash"># Crashes are saved to fuzz/artifacts/filter_parser/
+ls fuzz/artifacts/filter_parser/
+
+# Reproduce a crash
+cargo fuzz run filter_parser fuzz/artifacts/filter_parser/crash-abc123
+
+# View the input that caused the crash
+hexdump -C fuzz/artifacts/filter_parser/crash-abc123
+</code></pre>
+<h2 id="integration-with-extreme-tdd"><a class="header" href="#integration-with-extreme-tdd">Integration with EXTREME TDD</a></h2>
+<p>Fuzz testing is part of <strong>Tier 3</strong> testing workflow:</p>
+<pre><code class="language-bash"># Tier 3: Slow tests (&lt;5 minutes)
+make test-tier3
+</code></pre>
+<p>This runs:</p>
+<ol>
+<li>Fuzz tests (short run)</li>
+<li>Mutation tests</li>
+<li>Long-running integration tests</li>
+</ol>
+<h2 id="best-practices"><a class="header" href="#best-practices">Best Practices</a></h2>
+<h3 id="1-test-invariants-not-specific-behavior"><a class="header" href="#1-test-invariants-not-specific-behavior">1. Test Invariants, Not Specific Behavior</a></h3>
+<p>Good fuzz target:</p>
+<pre><code class="language-rust">fuzz_target!(|data: &amp;[u8]| {
+    if let Ok(input) = std::str::from_utf8(data) {
+        // Should never panic
+        let _ = parse_something(input);
+    }
+});</code></pre>
+<p>Bad fuzz target:</p>
+<pre><code class="language-rust">fuzz_target!(|data: &amp;[u8]| {
+    // Too specific - won't discover interesting inputs
+    assert_eq!(parse_number(data), expected_value);
+});</code></pre>
+<h3 id="2-use-arbitrary-crate-for-structured-fuzzing"><a class="header" href="#2-use-arbitrary-crate-for-structured-fuzzing">2. Use <code>arbitrary</code> Crate for Structured Fuzzing</a></h3>
+<p>For complex inputs:</p>
+<pre><code class="language-toml">[dependencies]
+arbitrary = { version = "1.3", features = ["derive"], optional = true }
+</code></pre>
+<pre><code class="language-rust">use arbitrary::Arbitrary;
+
+#[derive(Arbitrary, Debug)]
+struct FilterExpr {
+    trace_spec: String,
+    negations: Vec&lt;String&gt;,
+}
+
+fuzz_target!(|input: FilterExpr| {
+    // Fuzz with structured data
+    let _ = SyscallFilter::from_parts(&amp;input.trace_spec, &amp;input.negations);
+});</code></pre>
+<h3 id="3-continuous-fuzzing"><a class="header" href="#3-continuous-fuzzing">3. Continuous Fuzzing</a></h3>
+<p>Run fuzzing on CI/CD for extended periods:</p>
+<pre><code class="language-yaml"># .github/workflows/fuzz.yml
+- name: Fuzz for 1 hour
+  run: cargo fuzz run filter_parser -- -max_total_time=3600
+</code></pre>
+<h3 id="4-corpus-management"><a class="header" href="#4-corpus-management">4. Corpus Management</a></h3>
+<p>Save interesting inputs:</p>
+<pre><code class="language-bash"># Export corpus for long-term fuzzing
+cp -r fuzz/corpus/filter_parser fuzz/corpus-backup/
+
+# Merge multiple corpora
+cargo fuzz cmin filter_parser corpus1 corpus2 corpus3
+</code></pre>
+<h2 id="coverage-guided-fuzzing"><a class="header" href="#coverage-guided-fuzzing">Coverage-Guided Fuzzing</a></h2>
+<p>Cargo-fuzz uses <strong>libFuzzer</strong> which provides:</p>
+<ul>
+<li><strong>Coverage Feedback</strong>: Prioritizes inputs that increase code coverage</li>
+<li><strong>Mutation Strategies</strong>: Generates new inputs by mutating previous ones</li>
+<li><strong>Crash Detection</strong>: Automatically saves crashing inputs</li>
+</ul>
+<h3 id="viewing-coverage"><a class="header" href="#viewing-coverage">Viewing Coverage</a></h3>
+<pre><code class="language-bash"># Generate coverage report
+cargo fuzz coverage filter_parser
+llvm-cov show target/*/release/filter_parser -format=html -instr-profile=fuzz/coverage/filter_parser/coverage.profdata &gt; coverage.html
+</code></pre>
+<h2 id="example-finding-edge-cases"><a class="header" href="#example-finding-edge-cases">Example: Finding Edge Cases</a></h2>
+<p>Fuzz testing discovered these edge cases in Renacer:</p>
+<ol>
+<li><strong>Empty Regex Pattern</strong>: <code>/(?:)/</code> (valid but unusual)</li>
+<li><strong>Unicode in Class Names</strong>: <code>trace=file�invalid</code></li>
+<li><strong>Nested Negations</strong>: <code>trace=!!open</code> (double negation)</li>
+<li><strong>Malformed UTF-8</strong>: Filter parser handles invalid UTF-8 gracefully</li>
+</ol>
+<h2 id="troubleshooting"><a class="header" href="#troubleshooting">Troubleshooting</a></h2>
+<h3 id="slow-fuzzing"><a class="header" href="#slow-fuzzing">Slow Fuzzing</a></h3>
+<pre><code class="language-bash"># Use more cores
+cargo fuzz run filter_parser -- -workers=8
+
+# Reduce memory limit
+cargo fuzz run filter_parser -- -rss_limit_mb=2048
+</code></pre>
+<h3 id="out-of-memory"><a class="header" href="#out-of-memory">Out of Memory</a></h3>
+<pre><code class="language-bash"># Limit input size
+cargo fuzz run filter_parser -- -max_len=1024
+</code></pre>
+<h3 id="no-new-coverage"><a class="header" href="#no-new-coverage">No New Coverage</a></h3>
+<pre><code class="language-bash"># Try different mutation strategies
+cargo fuzz run filter_parser -- -mutate_depth=5
+
+# Seed with interesting inputs
+echo "trace=file,!close" &gt; fuzz/corpus/filter_parser/seed1
+</code></pre>
+<h2 id="future-fuzz-targets"><a class="header" href="#future-fuzz-targets">Future Fuzz Targets</a></h2>
+<p>Planned for upcoming sprints:</p>
+<ul>
+<li><code>syscall_name_parser</code> - Test syscall name resolution</li>
+<li><code>dwarf_line_parser</code> - Test DWARF debug info parsing</li>
+<li><code>json_serializer</code> - Test JSON output serialization</li>
+<li><code>transpiler_map_parser</code> - Test source map parsing</li>
+</ul>
+<h2 id="resources"><a class="header" href="#resources">Resources</a></h2>
+<ul>
+<li><a href="https://rust-fuzz.github.io/book/cargo-fuzz.html">cargo-fuzz Documentation</a></li>
+<li><a href="https://llvm.org/docs/LibFuzzer.html">libFuzzer Tutorial</a></li>
+<li><a href="https://github.com/rust-fuzz">Rust Fuzzing Authority</a></li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../contributing/mutation-testing.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../contributing/tiered-tdd.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../contributing/mutation-testing.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../contributing/tiered-tdd.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../ace.js"></script>
+        <script src="../editor.js"></script>
+        <script src="../mode-rust.js"></script>
+        <script src="../theme-dawn.js"></script>
+        <script src="../theme-tomorrow_night.js"></script>
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>
