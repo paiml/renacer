@@ -11082,6 +11082,595 @@ Anomalies: fsync operations in cluster 2
 <li><a href="advanced/./anomaly-detection.html">Anomaly Detection</a> - Real-time monitoring</li>
 <li><a href="advanced/./hpu-acceleration.html">HPU Acceleration</a> - GPU-accelerated clustering</li>
 </ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="ml-pipeline-with-extreme-tdd"><a class="header" href="#ml-pipeline-with-extreme-tdd">ML Pipeline with EXTREME TDD</a></h1>
+<p>This chapter demonstrates implementing renacer's Sprint 48 ML Pipeline using EXTREME TDD methodology: RED-GREEN-REFACTOR cycles, property-based testing, and Toyota Way principles.</p>
+<blockquote>
+<p><strong>EXTREME TDD-Verified:</strong> All code in this chapter developed test-first in <a href="advanced/../../../src/ml_pipeline.rs"><code>src/ml_pipeline.rs</code></a> and <a href="advanced/../../../src/model_persistence.rs"><code>src/model_persistence.rs</code></a></p>
+</blockquote>
+<h2 id="toyota-way-foundations"><a class="header" href="#toyota-way-foundations">Toyota Way Foundations</a></h2>
+<p>The ML Pipeline embodies three Toyota Way principles:</p>
+<div class="table-wrapper"><table><thead><tr><th>Principle</th><th>Japanese</th><th>Application</th></tr></thead><tbody>
+<tr><td><strong>Muda</strong></td><td>無駄</td><td>Eliminate waste: persist models instead of retraining</td></tr>
+<tr><td><strong>Kaizen</strong></td><td>改善</td><td>Continuous improvement via standardized preprocessing</td></tr>
+<tr><td><strong>Poka-yoke</strong></td><td>ポカヨケ</td><td>Error-proofing through type-safe APIs</td></tr>
+</tbody></table>
+</div>
+<h2 id="architecture-overview"><a class="header" href="#architecture-overview">Architecture Overview</a></h2>
+<pre><code>┌─────────────────────────────────────────────────────────────────┐
+│                    renacer ML Pipeline                          │
+├─────────────────────────────────────────────────────────────────┤
+│  Syscall Data (HashMap&lt;String, (u64, u64)&gt;)                     │
+│           │                                                      │
+│           ▼                                                      │
+│  ┌─────────────────┐                                            │
+│  │ extract_features│  → Matrix&lt;f32&gt; (n_samples × 3 features)    │
+│  └────────┬────────┘                                            │
+│           │                                                      │
+│           ▼                                                      │
+│  ┌─────────────────┐                                            │
+│  │normalize_features│ → NormalizedFeatures (StandardScaler)     │
+│  └────────┬────────┘                                            │
+│           │                                                      │
+│           ├──────────────┬──────────────┬──────────────┐        │
+│           ▼              ▼              ▼              ▼        │
+│    ┌──────────┐   ┌───────────┐   ┌─────────┐   ┌──────────┐   │
+│    │run_dbscan│   │  run_lof  │   │ run_pca │   │find_opt_k│   │
+│    └──────────┘   └───────────┘   └─────────┘   └──────────┘   │
+│           │              │              │              │        │
+│           ▼              ▼              ▼              ▼        │
+│    DBSCANResult   LOFResult      PCAResult     optimal_k       │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre>
+<h2 id="extreme-tdd-workflow"><a class="header" href="#extreme-tdd-workflow">EXTREME TDD Workflow</a></h2>
+<h3 id="phase-1-red---write-failing-tests-first"><a class="header" href="#phase-1-red---write-failing-tests-first">Phase 1: RED - Write Failing Tests First</a></h3>
+<p>Before writing any implementation, we define the expected behavior:</p>
+<pre><code class="language-rust">// RED: This test will fail - no implementation exists yet
+#[test]
+fn test_extract_features_basic() {
+    let mut data = HashMap::new();
+    data.insert("write".to_string(), (100, 1_000_000)); // 10µs avg
+    data.insert("read".to_string(), (50, 500_000));     // 10µs avg
+
+    let (names, features) = extract_features(&amp;data).unwrap();
+
+    assert_eq!(names.len(), 2);
+    let (rows, cols) = features.shape();
+    assert_eq!(rows, 2);
+    assert_eq!(cols, 3); // 3 features per syscall
+}</code></pre>
+<p><strong>Why 3 features?</strong> We extract:</p>
+<ol>
+<li><code>avg_duration</code> - Average syscall duration in microseconds</li>
+<li><code>log_count</code> - Log-scaled call count (handles large ranges)</li>
+<li><code>log_total_duration</code> - Log-scaled total time spent</li>
+</ol>
+<h3 id="phase-2-green---minimal-implementation"><a class="header" href="#phase-2-green---minimal-implementation">Phase 2: GREEN - Minimal Implementation</a></h3>
+<pre><code class="language-rust">pub fn extract_features(
+    syscall_data: &amp;HashMap&lt;String, (u64, u64)&gt;,
+) -&gt; Result&lt;(Vec&lt;String&gt;, Matrix&lt;f32&gt;)&gt; {
+    let mut syscall_names = Vec::new();
+    let mut features_data = Vec::new();
+
+    for (name, (count, total_time_ns)) in syscall_data {
+        if *count == 0 { continue; }
+
+        let total_time_us = *total_time_ns as f64 / 1000.0;
+        let avg_time_us = total_time_us / *count as f64;
+
+        syscall_names.push(name.clone());
+
+        // Feature vector: [avg_duration, log(count), log(total_duration)]
+        features_data.push(avg_time_us as f32);
+        features_data.push((*count as f32).ln().max(0.0));
+        features_data.push((total_time_us as f32).ln().max(0.0));
+    }
+
+    let n_samples = syscall_names.len();
+    if n_samples &lt; 2 {
+        return Err(PipelineError::InsufficientData {
+            required: 2,
+            actual: n_samples,
+        });
+    }
+
+    let matrix = Matrix::from_vec(n_samples, 3, features_data)
+        .map_err(|e| PipelineError::FeatureExtractionError(e.to_string()))?;
+
+    Ok((syscall_names, matrix))
+}</code></pre>
+<h3 id="phase-3-refactor---add-edge-case-tests"><a class="header" href="#phase-3-refactor---add-edge-case-tests">Phase 3: REFACTOR - Add Edge Case Tests</a></h3>
+<pre><code class="language-rust">#[test]
+fn test_extract_features_insufficient_data() {
+    let mut data = HashMap::new();
+    data.insert("write".to_string(), (100, 1_000_000));
+    // Only 1 syscall - not enough for clustering!
+
+    let result = extract_features(&amp;data);
+    assert!(matches!(result, Err(PipelineError::InsufficientData { .. })));
+}
+
+#[test]
+fn test_extract_features_skips_zero_count() {
+    let mut data = HashMap::new();
+    data.insert("write".to_string(), (100, 1_000_000));
+    data.insert("read".to_string(), (50, 500_000));
+    data.insert("empty".to_string(), (0, 0)); // Should be skipped
+
+    let (names, _) = extract_features(&amp;data).unwrap();
+    assert_eq!(names.len(), 2);
+    assert!(!names.contains(&amp;"empty".to_string()));
+}</code></pre>
+<h2 id="feature-normalization-with-standardscaler"><a class="header" href="#feature-normalization-with-standardscaler">Feature Normalization with StandardScaler</a></h2>
+<h3 id="red-define-expected-behavior"><a class="header" href="#red-define-expected-behavior">RED: Define Expected Behavior</a></h3>
+<pre><code class="language-rust">#[test]
+fn test_normalize_features_zero_mean() {
+    let mut data = HashMap::new();
+    data.insert("write".to_string(), (100, 1_000_000));
+    data.insert("read".to_string(), (50, 500_000));
+    data.insert("openat".to_string(), (20, 200_000));
+
+    let (names, features) = extract_features(&amp;data).unwrap();
+    let normalized = normalize_features(names, features).unwrap();
+
+    // After normalization, mean of each column should be ~0
+    let (n_rows, n_cols) = normalized.data.shape();
+    for j in 0..n_cols {
+        let sum: f32 = (0..n_rows).map(|i| normalized.data.get(i, j)).sum();
+        let mean = sum / n_rows as f32;
+        assert!(mean.abs() &lt; 0.01, "Column {} mean should be ~0, got {}", j, mean);
+    }
+}</code></pre>
+<h3 id="green-implementation"><a class="header" href="#green-implementation">GREEN: Implementation</a></h3>
+<pre><code class="language-rust">use aprender::preprocessing::StandardScaler;
+use aprender::traits::{Transformer, UnsupervisedEstimator};
+
+pub fn normalize_features(
+    syscall_names: Vec&lt;String&gt;,
+    features: Matrix&lt;f32&gt;,
+) -&gt; Result&lt;NormalizedFeatures&gt; {
+    let mut scaler = StandardScaler::new()
+        .with_mean(true)
+        .with_std(true);
+
+    scaler.fit(&amp;features)
+        .map_err(|e| PipelineError::PreprocessingError(e.to_string()))?;
+
+    let normalized = scaler.transform(&amp;features)
+        .map_err(|e| PipelineError::PreprocessingError(e.to_string()))?;
+
+    Ok(NormalizedFeatures {
+        data: normalized,
+        syscall_names,
+        feature_names: vec![
+            "avg_duration".to_string(),
+            "log_count".to_string(),
+            "log_total_duration".to_string(),
+        ],
+        means: scaler.mean().to_vec(),
+        stds: scaler.std().to_vec(),
+    })
+}</code></pre>
+<h2 id="dbscan-clustering"><a class="header" href="#dbscan-clustering">DBSCAN Clustering</a></h2>
+<p>DBSCAN (Density-Based Spatial Clustering of Applications with Noise) identifies anomalies as <strong>noise points</strong> (label = -1).</p>
+<h3 id="red-test-cluster-detection"><a class="header" href="#red-test-cluster-detection">RED: Test Cluster Detection</a></h3>
+<pre><code class="language-rust">#[test]
+fn test_dbscan_finds_clusters() {
+    let mut data = HashMap::new();
+    // Group 1: fast syscalls
+    data.insert("write".to_string(), (1000, 10_000_000));  // 10µs avg
+    data.insert("read".to_string(), (1000, 10_000_000));   // 10µs avg
+    // Group 2: slow syscalls
+    data.insert("mmap".to_string(), (100, 100_000_000));   // 1000µs avg
+    data.insert("munmap".to_string(), (100, 100_000_000)); // 1000µs avg
+
+    let (names, features) = extract_features(&amp;data).unwrap();
+    let normalized = normalize_features(names, features).unwrap();
+
+    let result = run_dbscan(&amp;normalized, 1.0, 2).unwrap();
+
+    assert!(result.n_clusters &gt;= 1);
+    assert_eq!(result.syscall_names.len(), 4);
+}</code></pre>
+<h3 id="red-test-noise-detection-anomalies"><a class="header" href="#red-test-noise-detection-anomalies">RED: Test Noise Detection (Anomalies)</a></h3>
+<pre><code class="language-rust">#[test]
+fn test_dbscan_identifies_noise() {
+    let mut data = HashMap::new();
+    // Normal syscalls (cluster together)
+    data.insert("write".to_string(), (1000, 10_000_000));
+    data.insert("read".to_string(), (1000, 10_000_000));
+    data.insert("close".to_string(), (1000, 10_000_000));
+    // Outlier (will be noise)
+    data.insert("slow_syscall".to_string(), (10, 1_000_000_000)); // 100ms avg!
+
+    let (names, features) = extract_features(&amp;data).unwrap();
+    let normalized = normalize_features(names, features).unwrap();
+
+    let result = run_dbscan(&amp;normalized, 0.5, 2).unwrap();
+
+    // Should have noise points (anomalies)
+    assert!(result.n_noise &gt; 0 || result.n_clusters &gt; 1);
+}</code></pre>
+<h3 id="green-implementation-1"><a class="header" href="#green-implementation-1">GREEN: Implementation</a></h3>
+<pre><code class="language-rust">use aprender::cluster::DBSCAN;
+
+pub fn run_dbscan(
+    features: &amp;NormalizedFeatures,
+    eps: f32,
+    min_samples: usize,
+) -&gt; Result&lt;DBSCANResult&gt; {
+    let mut dbscan = DBSCAN::new(eps, min_samples);
+
+    dbscan.fit(&amp;features.data)
+        .map_err(|e| PipelineError::ClusteringError(e.to_string()))?;
+
+    let labels = dbscan.labels().clone();
+
+    // Count clusters and noise
+    let n_noise = labels.iter().filter(|&amp;&amp;l| l == -1).count();
+    let n_clusters = labels.iter()
+        .filter(|&amp;&amp;l| l &gt;= 0)
+        .collect::&lt;HashSet&lt;_&gt;&gt;()
+        .len();
+
+    // Calculate silhouette score if we have enough clusters
+    let silhouette = calculate_silhouette(&amp;features.data, &amp;labels);
+
+    Ok(DBSCANResult {
+        labels,
+        n_clusters,
+        n_noise,
+        syscall_names: features.syscall_names.clone(),
+        silhouette,
+    })
+}</code></pre>
+<h2 id="local-outlier-factor-lof"><a class="header" href="#local-outlier-factor-lof">Local Outlier Factor (LOF)</a></h2>
+<p>LOF detects anomalies based on local density deviation. Syscalls with significantly lower density than neighbors are outliers.</p>
+<h3 id="red-test-outlier-detection"><a class="header" href="#red-test-outlier-detection">RED: Test Outlier Detection</a></h3>
+<pre><code class="language-rust">#[test]
+fn test_lof_detects_outliers() {
+    let mut data = HashMap::new();
+    // Normal syscalls
+    data.insert("write".to_string(), (1000, 10_000_000));
+    data.insert("read".to_string(), (1000, 10_000_000));
+    data.insert("close".to_string(), (1000, 10_000_000));
+    // Outlier
+    data.insert("slow_syscall".to_string(), (10, 1_000_000_000));
+
+    let (names, features) = extract_features(&amp;data).unwrap();
+    let normalized = normalize_features(names, features).unwrap();
+
+    let result = run_lof(&amp;normalized, &amp;data, 2, 0.25).unwrap();
+
+    // Should detect outliers
+    assert!(!result.outliers.is_empty() || result.labels.iter().any(|&amp;l| l == -1));
+    assert_eq!(result.scores.len(), 4);
+}</code></pre>
+<h3 id="green-implementation-2"><a class="header" href="#green-implementation-2">GREEN: Implementation</a></h3>
+<pre><code class="language-rust">use aprender::cluster::LocalOutlierFactor;
+
+pub fn run_lof(
+    features: &amp;NormalizedFeatures,
+    syscall_data: &amp;HashMap&lt;String, (u64, u64)&gt;,
+    n_neighbors: usize,
+    contamination: f32,
+) -&gt; Result&lt;LOFResult&gt; {
+    let mut lof = LocalOutlierFactor::new()
+        .with_n_neighbors(n_neighbors)
+        .with_contamination(contamination);
+
+    lof.fit(&amp;features.data)
+        .map_err(|e| PipelineError::ClusteringError(e.to_string()))?;
+
+    let labels = lof.predict(&amp;features.data);
+    let scores = lof.score_samples(&amp;features.data);
+
+    // Build outlier info
+    let mut outliers = Vec::new();
+    for (i, (&amp;label, &amp;score)) in labels.iter().zip(scores.iter()).enumerate() {
+        if label == -1 {
+            let syscall = &amp;features.syscall_names[i];
+            let (count, total_ns) = syscall_data.get(syscall).copied().unwrap_or((0, 0));
+            let avg_time_us = if count &gt; 0 {
+                (total_ns as f64 / 1000.0) / count as f64
+            } else { 0.0 };
+
+            outliers.push(OutlierInfo {
+                syscall: syscall.clone(),
+                lof_score: score,
+                avg_time_us,
+                call_count: count,
+            });
+        }
+    }
+
+    // Sort by LOF score (highest = most anomalous)
+    outliers.sort_by(|a, b| b.lof_score.partial_cmp(&amp;a.lof_score).unwrap_or(Ordering::Equal));
+
+    Ok(LOFResult { labels, scores, syscall_names: features.syscall_names.clone(), outliers })
+}</code></pre>
+<h2 id="silhouette-score-for-cluster-quality"><a class="header" href="#silhouette-score-for-cluster-quality">Silhouette Score for Cluster Quality</a></h2>
+<p>Silhouette score measures clustering quality: -1 (worst) to 1 (best).</p>
+<h3 id="red-test-well-separated-clusters"><a class="header" href="#red-test-well-separated-clusters">RED: Test Well-Separated Clusters</a></h3>
+<pre><code class="language-rust">#[test]
+fn test_silhouette_score_well_separated() {
+    // Two perfectly separated clusters
+    let data = vec![
+        1.0, 1.0,   // Cluster 0
+        1.1, 1.1,   // Cluster 0
+        10.0, 10.0, // Cluster 1
+        10.1, 10.1, // Cluster 1
+    ];
+    let matrix = Matrix::from_vec(4, 2, data).unwrap();
+    let labels = vec![0, 0, 1, 1];
+
+    let score = calculate_silhouette(&amp;matrix, &amp;labels);
+
+    assert!(score.is_some());
+    let s = score.unwrap();
+    assert!(s &gt; 0.8, "Well-separated clusters should have high silhouette, got {}", s);
+}</code></pre>
+<h3 id="red-edge-case---single-cluster"><a class="header" href="#red-edge-case---single-cluster">RED: Edge Case - Single Cluster</a></h3>
+<pre><code class="language-rust">#[test]
+fn test_silhouette_score_single_cluster() {
+    let data = vec![1.0, 1.0, 1.1, 1.1, 1.2, 1.2];
+    let matrix = Matrix::from_vec(3, 2, data).unwrap();
+    let labels = vec![0, 0, 0]; // Single cluster
+
+    let score = calculate_silhouette(&amp;matrix, &amp;labels);
+    assert!(score.is_none()); // Need at least 2 clusters
+}</code></pre>
+<h2 id="pca-dimensionality-reduction"><a class="header" href="#pca-dimensionality-reduction">PCA Dimensionality Reduction</a></h2>
+<p>PCA reduces feature dimensions while preserving variance - useful for visualization.</p>
+<h3 id="red-test-dimension-reduction"><a class="header" href="#red-test-dimension-reduction">RED: Test Dimension Reduction</a></h3>
+<pre><code class="language-rust">#[test]
+fn test_pca_reduces_dimensions() {
+    let mut data = HashMap::new();
+    data.insert("write".to_string(), (1000, 10_000_000));
+    data.insert("read".to_string(), (1000, 10_000_000));
+    data.insert("close".to_string(), (1000, 10_000_000));
+    data.insert("openat".to_string(), (500, 5_000_000));
+
+    let (names, features) = extract_features(&amp;data).unwrap();
+    let normalized = normalize_features(names, features).unwrap();
+
+    let result = run_pca(&amp;normalized, 2).unwrap();
+
+    let (n_samples, n_components) = result.reduced_data.shape();
+    assert_eq!(n_samples, 4);
+    assert_eq!(n_components, 2); // Reduced from 3 to 2
+}</code></pre>
+<h3 id="red-test-variance-explained"><a class="header" href="#red-test-variance-explained">RED: Test Variance Explained</a></h3>
+<pre><code class="language-rust">#[test]
+fn test_pca_variance_explained() {
+    // ... setup ...
+    let result = run_pca(&amp;normalized, 3).unwrap();
+
+    // Total variance should be &lt;= 1.0
+    assert!(result.total_variance_explained &lt;= 1.01,
+        "Total variance {} should be &lt;= 1.0", result.total_variance_explained);
+}</code></pre>
+<h2 id="model-persistence-eliminating-muda"><a class="header" href="#model-persistence-eliminating-muda">Model Persistence: Eliminating MUDA</a></h2>
+<p>The <code>.apr</code> format persists trained models, eliminating the waste of retraining.</p>
+<h3 id="red-test-saveload-roundtrip"><a class="header" href="#red-test-saveload-roundtrip">RED: Test Save/Load Roundtrip</a></h3>
+<pre><code class="language-rust">#[test]
+fn test_save_and_load_kmeans_model() {
+    let temp_dir = TempDir::new().unwrap();
+    let model_path = temp_dir.path().join("test_kmeans.apr");
+
+    let model = SerializableKMeansModel {
+        centroids: vec![
+            vec![1.0, 2.0, 3.0],
+            vec![4.0, 5.0, 6.0],
+            vec![7.0, 8.0, 9.0],
+        ],
+        n_clusters: 3,
+        n_features: 3,
+        metadata: ModelMetadata::new(1000)
+            .with_hyperparameter("n_clusters", "3")
+            .with_description("Test KMeans model"),
+    };
+
+    // Save
+    let options = PersistenceOptions::new()
+        .with_name("test-kmeans")
+        .with_description("Test model");
+    save_kmeans_model(&amp;model, &amp;model_path, options).expect("Failed to save");
+
+    // Load
+    let loaded = load_kmeans_model(&amp;model_path).expect("Failed to load");
+
+    assert_eq!(loaded.n_clusters, model.n_clusters);
+    assert_eq!(loaded.n_features, model.n_features);
+    for (orig, loaded_c) in model.centroids.iter().zip(loaded.centroids.iter()) {
+        for (o, l) in orig.iter().zip(loaded_c.iter()) {
+            assert!((o - l).abs() &lt; 1e-6);
+        }
+    }
+}</code></pre>
+<h3 id="green-implementation-3"><a class="header" href="#green-implementation-3">GREEN: Implementation</a></h3>
+<pre><code class="language-rust">use aprender::format::{save, load, Compression, ModelType, SaveOptions};
+
+pub fn save_kmeans_model(
+    model: &amp;SerializableKMeansModel,
+    path: impl AsRef&lt;Path&gt;,
+    options: PersistenceOptions,
+) -&gt; Result&lt;()&gt; {
+    let compression = if options.compress {
+        Compression::ZstdDefault
+    } else {
+        Compression::None
+    };
+
+    let mut save_options = SaveOptions::new().with_compression(compression);
+    if let Some(name) = options.name {
+        save_options = save_options.with_name(name);
+    }
+
+    save(model, ModelType::KMeans, path.as_ref(), save_options)
+        .map_err(|e| ModelPersistenceError::SaveError(e.to_string()))
+}</code></pre>
+<h2 id="property-based-testing"><a class="header" href="#property-based-testing">Property-Based Testing</a></h2>
+<p>Property tests verify invariants across random inputs:</p>
+<pre><code class="language-rust">#[test]
+fn test_normalization_preserves_sample_count() {
+    proptest::proptest!(|(n_syscalls in 3usize..10)| {
+        let mut data = HashMap::new();
+        for i in 0..n_syscalls {
+            data.insert(
+                format!("syscall_{}", i),
+                ((i + 1) as u64 * 100, (i + 1) as u64 * 1_000_000)
+            );
+        }
+
+        let (names, features) = extract_features(&amp;data).unwrap();
+        let normalized = normalize_features(names.clone(), features).unwrap();
+
+        // PROPERTY: Sample count never changes through normalization
+        prop_assert_eq!(normalized.syscall_names.len(), names.len());
+    });
+}
+
+#[test]
+fn test_silhouette_bounds() {
+    // PROPERTY: Silhouette score always in [-1, 1]
+    let data = vec![1.0, 2.0, 3.0, 4.0, 10.0, 20.0, 30.0, 40.0];
+    let matrix = Matrix::from_vec(4, 2, data).unwrap();
+    let labels = vec![0, 0, 1, 1];
+
+    if let Some(score) = calculate_silhouette(&amp;matrix, &amp;labels) {
+        assert!(score &gt;= -1.0 &amp;&amp; score &lt;= 1.0);
+    }
+}
+
+#[test]
+fn test_roundtrip_preserves_centroids() {
+    proptest::proptest!(|(n_clusters in 1usize..10, n_features in 1usize..5)| {
+        let temp_dir = TempDir::new().unwrap();
+        let model_path = temp_dir.path().join("proptest.apr");
+
+        let centroids: Vec&lt;Vec&lt;f32&gt;&gt; = (0..n_clusters)
+            .map(|i| (0..n_features).map(|j| (i * n_features + j) as f32).collect())
+            .collect();
+
+        let model = SerializableKMeansModel {
+            centroids: centroids.clone(),
+            n_clusters,
+            n_features,
+            metadata: ModelMetadata::new(100),
+        };
+
+        save_kmeans_model(&amp;model, &amp;model_path, PersistenceOptions::new()).unwrap();
+        let loaded = load_kmeans_model(&amp;model_path).unwrap();
+
+        // PROPERTY: Centroids survive roundtrip exactly
+        prop_assert_eq!(loaded.centroids.len(), centroids.len());
+    });
+}</code></pre>
+<h2 id="cli-integration"><a class="header" href="#cli-integration">CLI Integration</a></h2>
+<h3 id="save-trained-model"><a class="header" href="#save-trained-model">Save Trained Model</a></h3>
+<pre><code class="language-bash"># Train and save model
+renacer -c --ml-anomaly --save-model baseline.apr -- cargo build
+
+# Output:
+# Model saved to baseline.apr (1.2 KB)
+# Training samples: 47 syscalls
+# Silhouette score: 0.823
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_save_model_flag_accepted</code></p>
+<h3 id="load-pre-trained-model-muda-elimination"><a class="header" href="#load-pre-trained-model-muda-elimination">Load Pre-trained Model (MUDA Elimination)</a></h3>
+<pre><code class="language-bash"># Use saved model - no retraining!
+renacer -c --ml-anomaly --load-model baseline.apr -- cargo build
+
+# Output:
+# Loaded model: baseline.apr (renacer v0.6.3, 47 samples)
+# Anomalies detected: 2
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_load_model_flag_accepted</code></p>
+<h3 id="regression-detection"><a class="header" href="#regression-detection">Regression Detection</a></h3>
+<pre><code class="language-bash"># Compare against baseline
+renacer -c --ml-anomaly --baseline baseline.apr -- cargo build
+
+# Output:
+# === Regression Analysis ===
+# Baseline: 47 syscalls, 823ms total
+# Current:  52 syscalls, 1247ms total (+51%)
+#
+# New anomalies not in baseline:
+#   - futex (424ms avg) - REGRESSION
+</code></pre>
+<p><strong>Tested by:</strong> <code>test_baseline_flag_accepted</code></p>
+<h2 id="example-finding-performance-regressions"><a class="header" href="#example-finding-performance-regressions">Example: Finding Performance Regressions</a></h2>
+<pre><code class="language-bash"># Step 1: Capture baseline
+$ renacer -c --ml-anomaly --save-model release-1.0.apr -- ./my-app
+Model saved: release-1.0.apr (47 syscalls, silhouette: 0.85)
+
+# Step 2: After code changes, compare
+$ renacer -c --ml-anomaly --baseline release-1.0.apr -- ./my-app
+
+=== DBSCAN Clustering Results ===
+Clusters found: 3
+Noise points (potential anomalies): 2
+
+Noise/anomaly syscalls:
+  - futex (NEW - not in baseline!)
+  - mmap
+
+=== Local Outlier Factor Analysis ===
+Outliers detected: 2
+  - futex (LOF: 4.23, avg: 1250µs, calls: 847) - REGRESSION
+  - mmap (LOF: 2.15, avg: 523µs, calls: 12)
+
+=== Regression Summary ===
+Baseline silhouette: 0.85
+Current silhouette:  0.67 (-21%)
+New syscalls: futex
+Recommendation: Investigate futex contention
+</code></pre>
+<h2 id="performance-characteristics"><a class="header" href="#performance-characteristics">Performance Characteristics</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Operation</th><th>Complexity</th><th>Typical Time</th></tr></thead><tbody>
+<tr><td>Feature extraction</td><td>O(n)</td><td>&lt;1ms for 100 syscalls</td></tr>
+<tr><td>StandardScaler</td><td>O(n×d)</td><td>&lt;1ms</td></tr>
+<tr><td>DBSCAN</td><td>O(n²)</td><td>~10ms for 100 syscalls</td></tr>
+<tr><td>LOF</td><td>O(n×k)</td><td>~5ms for 100 syscalls</td></tr>
+<tr><td>PCA</td><td>O(n×d²)</td><td>&lt;1ms</td></tr>
+<tr><td>Model save</td><td>O(centroids)</td><td>~1ms</td></tr>
+<tr><td>Model load</td><td>O(centroids)</td><td>~1ms</td></tr>
+</tbody></table>
+</div>
+<p><strong>Zero overhead when ML disabled</strong> - all analysis is opt-in.</p>
+<h2 id="summary-29"><a class="header" href="#summary-29">Summary</a></h2>
+<p>The ML Pipeline demonstrates EXTREME TDD principles:</p>
+<div class="table-wrapper"><table><thead><tr><th>Phase</th><th>What We Did</th></tr></thead><tbody>
+<tr><td><strong>RED</strong></td><td>Wrote 21 failing tests defining exact behavior</td></tr>
+<tr><td><strong>GREEN</strong></td><td>Implemented minimal code to pass each test</td></tr>
+<tr><td><strong>REFACTOR</strong></td><td>Added property tests, edge cases, formatting</td></tr>
+</tbody></table>
+</div>
+<p>Toyota Way benefits achieved:</p>
+<ul>
+<li><strong>Muda</strong> (無駄): 10-50x faster startup with persisted models</li>
+<li><strong>Kaizen</strong> (改善): Standardized preprocessing pipeline</li>
+<li><strong>Poka-yoke</strong> (ポカヨケ): Type-safe <code>Result&lt;T&gt;</code> APIs prevent misuse</li>
+</ul>
+<h2 id="related-chapters"><a class="header" href="#related-chapters">Related Chapters</a></h2>
+<ul>
+<li><a href="advanced/./machine-learning.html">Machine Learning</a> - KMeans clustering basics</li>
+<li><a href="advanced/./anomaly-detection.html">Anomaly Detection</a> - Real-time monitoring</li>
+<li><a href="advanced/../contributing/extreme-tdd.html">EXTREME TDD</a> - Methodology guide</li>
+<li><a href="advanced/../contributing/toyota-way.html">Toyota Way Principles</a> - Design philosophy</li>
+</ul>
+<h2 id="future-hugging-face-hub-integration"><a class="header" href="#future-hugging-face-hub-integration">Future: Hugging Face Hub Integration</a></h2>
+<blockquote>
+<p><strong>Tracked:</strong> <a href="https://github.com/paiml/aprender/issues/100">aprender#100</a></p>
+</blockquote>
+<p>Once aprender adds HF Hub support, renacer will enable:</p>
+<pre><code class="language-bash"># Push model to Hugging Face Hub
+renacer --push-model hub:paiml/syscall-anomaly -- cargo build
+
+# Load model from Hugging Face Hub
+renacer --load-model hub:paiml/syscall-anomaly -- cargo build
+</code></pre>
+<p>Model cards will be auto-generated with training metadata, hyperparameters, and metrics.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="opentelemetry-integration"><a class="header" href="#opentelemetry-integration">OpenTelemetry Integration</a></h1>
 <p>Renacer integrates with OpenTelemetry (OTLP) to export syscall traces as distributed tracing spans. This enables seamless integration with observability backends like Jaeger, Grafana Tempo, Elastic APM, and Honeycomb.</p>
 <h2 id="overview-17"><a class="header" href="#overview-17">Overview</a></h2>
@@ -12339,7 +12928,7 @@ rustc -C opt-level=3 app.rs -o app
 # But keep debug symbols for source correlation
 rustc -C opt-level=3 -g app.rs -o app
 </code></pre>
-<h2 id="regression-detection"><a class="header" href="#regression-detection">Regression Detection</a></h2>
+<h2 id="regression-detection-1"><a class="header" href="#regression-detection-1">Regression Detection</a></h2>
 <p>Prevent performance regressions with automated checks:</p>
 <h3 id="cicd-integration-2"><a class="header" href="#cicd-integration-2">CI/CD Integration</a></h3>
 <pre><code class="language-yaml"># .github/workflows/perf.yml
@@ -12506,6 +13095,287 @@ docker run -p 4317:4317 otel/opentelemetry-collector
 <li><a href="advanced/./opentelemetry.html">OpenTelemetry Integration</a> - OTLP export configuration</li>
 <li><a href="advanced/./distributed-tracing.html">Distributed Tracing</a> - Low-overhead distributed tracing</li>
 </ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="chaos-testing-with-renacer"><a class="header" href="#chaos-testing-with-renacer">Chaos Testing with Renacer</a></h1>
+<p>Renacer includes built-in <strong>chaos engineering</strong> capabilities for robustness testing. Use chaos mode to test how your applications behave under resource pressure, timeouts, and signal interruptions.</p>
+<h2 id="why-chaos-testing"><a class="header" href="#why-chaos-testing">Why Chaos Testing?</a></h2>
+<p>Normal testing verifies your application works under ideal conditions. Chaos testing answers harder questions:</p>
+<ul>
+<li>What happens when memory is scarce?</li>
+<li>Does your app handle CPU throttling gracefully?</li>
+<li>How does it respond to unexpected signals?</li>
+<li>Will it timeout properly under load?</li>
+</ul>
+<h2 id="quick-start-2"><a class="header" href="#quick-start-2">Quick Start</a></h2>
+<h3 id="using-presets"><a class="header" href="#using-presets">Using Presets</a></h3>
+<p>The easiest way to get started is with presets:</p>
+<pre><code class="language-bash"># Gentle chaos - suitable for CI/CD
+renacer --chaos gentle -c -- ./my-app
+
+# Aggressive chaos - stress testing
+renacer --chaos aggressive -c -- ./my-app
+</code></pre>
+<p><strong>Preset configurations:</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Preset</th><th>Memory</th><th>CPU</th><th>Timeout</th><th>Signals</th></tr></thead><tbody>
+<tr><td><code>gentle</code></td><td>512MB</td><td>80%</td><td>120s</td><td>off</td></tr>
+<tr><td><code>aggressive</code></td><td>64MB</td><td>25%</td><td>10s</td><td>on</td></tr>
+</tbody></table>
+</div>
+<h3 id="custom-configuration"><a class="header" href="#custom-configuration">Custom Configuration</a></h3>
+<p>Fine-tune chaos parameters for your specific needs:</p>
+<pre><code class="language-bash"># Custom memory limit
+renacer --chaos-memory-limit 128M -c -- ./my-app
+
+# Custom CPU limit (50% of CPU time)
+renacer --chaos-cpu-limit 0.5 -c -- ./my-app
+
+# Custom timeout
+renacer --chaos-timeout 30s -c -- ./my-app
+
+# Enable signal injection
+renacer --chaos-signals -c -- ./my-app
+</code></pre>
+<h3 id="combined-options"><a class="header" href="#combined-options">Combined Options</a></h3>
+<p>Mix presets with custom overrides:</p>
+<pre><code class="language-bash"># Start with aggressive preset, but increase memory limit
+renacer --chaos aggressive --chaos-memory-limit 128M -c -- ./my-app
+
+# Gentle preset with signals enabled
+renacer --chaos gentle --chaos-signals -c -- ./my-app
+</code></pre>
+<h2 id="cli-reference"><a class="header" href="#cli-reference">CLI Reference</a></h2>
+<h3 id="--chaos-preset"><a class="header" href="#--chaos-preset"><code>--chaos &lt;PRESET&gt;</code></a></h3>
+<p>Use a named chaos preset. Available presets:</p>
+<ul>
+<li>
+<p><strong><code>gentle</code></strong>: Conservative limits for regular testing</p>
+<ul>
+<li>Memory: 512MB</li>
+<li>CPU: 80%</li>
+<li>Timeout: 120 seconds</li>
+<li>Signals: disabled</li>
+</ul>
+</li>
+<li>
+<p><strong><code>aggressive</code></strong>: Strict limits for stress testing</p>
+<ul>
+<li>Memory: 64MB</li>
+<li>CPU: 25%</li>
+<li>Timeout: 10 seconds</li>
+<li>Signals: enabled</li>
+</ul>
+</li>
+</ul>
+<h3 id="--chaos-memory-limit-size"><a class="header" href="#--chaos-memory-limit-size"><code>--chaos-memory-limit &lt;SIZE&gt;</code></a></h3>
+<p>Set the maximum virtual memory for the traced process.</p>
+<p><strong>Formats supported:</strong></p>
+<ul>
+<li>Bytes: <code>67108864</code></li>
+<li>Kilobytes: <code>64K</code> or <code>64k</code></li>
+<li>Megabytes: <code>64M</code> or <code>64m</code></li>
+<li>Gigabytes: <code>1G</code> or <code>1g</code></li>
+</ul>
+<p><strong>Examples:</strong></p>
+<pre><code class="language-bash">renacer --chaos-memory-limit 64M -- ./my-app
+renacer --chaos-memory-limit 1G -- ./memory-heavy-app
+renacer --chaos-memory-limit 512K -- ./small-app
+</code></pre>
+<h3 id="--chaos-cpu-limit-fraction"><a class="header" href="#--chaos-cpu-limit-fraction"><code>--chaos-cpu-limit &lt;FRACTION&gt;</code></a></h3>
+<p>Limit CPU time as a fraction of real time (0.0 to 1.0).</p>
+<ul>
+<li><code>0.5</code> = 50% of CPU time</li>
+<li><code>0.25</code> = 25% of CPU time</li>
+<li><code>1.0</code> = no limit (100%)</li>
+</ul>
+<p><strong>Examples:</strong></p>
+<pre><code class="language-bash"># Half CPU speed
+renacer --chaos-cpu-limit 0.5 -- ./my-app
+
+# Quarter CPU speed (stress test)
+renacer --chaos-cpu-limit 0.25 -- ./my-app
+</code></pre>
+<h3 id="--chaos-timeout-duration"><a class="header" href="#--chaos-timeout-duration"><code>--chaos-timeout &lt;DURATION&gt;</code></a></h3>
+<p>Set maximum execution time before termination.</p>
+<p><strong>Formats supported:</strong></p>
+<ul>
+<li>Seconds: <code>30</code> or <code>30s</code></li>
+<li>Minutes: <code>2m</code></li>
+<li>Hours: <code>1h</code></li>
+</ul>
+<p><strong>Examples:</strong></p>
+<pre><code class="language-bash">renacer --chaos-timeout 10s -- ./quick-app
+renacer --chaos-timeout 2m -- ./longer-app
+renacer --chaos-timeout 1h -- ./batch-job
+</code></pre>
+<h3 id="--chaos-signals"><a class="header" href="#--chaos-signals"><code>--chaos-signals</code></a></h3>
+<p>Enable random signal injection. Periodically sends signals to test signal handling:</p>
+<ul>
+<li><code>SIGALRM</code> - alarm timer signal</li>
+<li><code>SIGUSR1</code> - user-defined signal</li>
+</ul>
+<p><strong>Example:</strong></p>
+<pre><code class="language-bash">renacer --chaos-signals -- ./signal-handler-test
+</code></pre>
+<h2 id="use-cases"><a class="header" href="#use-cases">Use Cases</a></h2>
+<h3 id="1-memory-leak-detection"><a class="header" href="#1-memory-leak-detection">1. Memory Leak Detection</a></h3>
+<p>Test if your application handles memory pressure gracefully:</p>
+<pre><code class="language-bash"># Strict memory limit
+renacer --chaos-memory-limit 32M -c -- ./my-app
+
+# Watch for these patterns:
+# - Graceful error messages
+# - Proper cleanup on OOM
+# - No zombie processes
+</code></pre>
+<p><strong>What to look for:</strong></p>
+<ul>
+<li>Does the app exit cleanly?</li>
+<li>Are resources properly released?</li>
+<li>Is the error message helpful?</li>
+</ul>
+<h3 id="2-timeout-validation"><a class="header" href="#2-timeout-validation">2. Timeout Validation</a></h3>
+<p>Ensure your application respects timeouts:</p>
+<pre><code class="language-bash"># Short timeout for quick validation
+renacer --chaos-timeout 5s -c -- ./network-client
+
+# Expected: App should handle timeout gracefully
+# Red flag: Hanging processes, no timeout handling
+</code></pre>
+<h3 id="3-cicd-integration"><a class="header" href="#3-cicd-integration">3. CI/CD Integration</a></h3>
+<p>Add chaos testing to your CI pipeline:</p>
+<pre><code class="language-bash">#!/bin/bash
+# ci-chaos-test.sh
+
+echo "Running gentle chaos tests..."
+renacer --chaos gentle -c -- ./target/release/my-app
+if [ $? -ne 0 ]; then
+    echo "Failed gentle chaos test"
+    exit 1
+fi
+
+echo "Running aggressive chaos tests..."
+renacer --chaos aggressive -c -- ./target/release/my-app
+# May fail - that's expected for stress testing
+# Check for graceful failures, not crashes
+</code></pre>
+<h3 id="4-flaky-test-investigation"><a class="header" href="#4-flaky-test-investigation">4. Flaky Test Investigation</a></h3>
+<p>Reproduce timing-sensitive bugs:</p>
+<pre><code class="language-bash"># Slow down execution to expose race conditions
+renacer --chaos-cpu-limit 0.1 --chaos-signals -c -- ./flaky-test
+
+# If test fails under chaos but passes normally,
+# you likely have a race condition
+</code></pre>
+<h3 id="5-robustness-testing-before-deployment"><a class="header" href="#5-robustness-testing-before-deployment">5. Robustness Testing Before Deployment</a></h3>
+<p>Final validation before production:</p>
+<pre><code class="language-bash"># Full chaos suite
+renacer --chaos aggressive \
+    --chaos-memory-limit 64M \
+    --chaos-cpu-limit 0.25 \
+    --chaos-timeout 30s \
+    --chaos-signals \
+    -c -- ./production-binary
+
+# If it survives this, it's production-ready!
+</code></pre>
+<h2 id="example-session"><a class="header" href="#example-session">Example Session</a></h2>
+<p>Here's a complete chaos testing session:</p>
+<pre><code class="language-bash">$ renacer --chaos aggressive -c -- aprender-shell suggest "git "
+⚠️  Chaos mode enabled: memory=64MB, cpu=25%, timeout=10s, signals=on
+
+git status  1.000
+
+% time     seconds  usecs/call     calls    errors syscall
+------ ----------- ----------- --------- --------- ----------------
+ 45.23    0.012345         123       100           read
+ 30.12    0.008234          82       100           write
+ 15.45    0.004234          42       100           mmap
+  5.20    0.001423          14       100           close
+  4.00    0.001092          10       100           fstat
+------ ----------- ----------- --------- --------- ----------------
+100.00    0.027328                   500           total
+</code></pre>
+<h2 id="interpreting-results-1"><a class="header" href="#interpreting-results-1">Interpreting Results</a></h2>
+<h3 id="success-under-chaos"><a class="header" href="#success-under-chaos">Success Under Chaos</a></h3>
+<p>If your application completes successfully under aggressive chaos:</p>
+<ul>
+<li>Memory management is efficient</li>
+<li>Timeouts are handled properly</li>
+<li>Signal handlers are robust</li>
+</ul>
+<h3 id="graceful-failures"><a class="header" href="#graceful-failures">Graceful Failures</a></h3>
+<p>Some failures are expected and acceptable:</p>
+<ul>
+<li>Clean exit with error message</li>
+<li>Proper resource cleanup</li>
+<li>Meaningful exit codes</li>
+</ul>
+<h3 id="red-flags"><a class="header" href="#red-flags">Red Flags</a></h3>
+<p>Watch out for these warning signs:</p>
+<ul>
+<li><strong>Segmentation faults</strong> - memory corruption</li>
+<li><strong>Hanging processes</strong> - missing timeout handling</li>
+<li><strong>Zombie processes</strong> - improper cleanup</li>
+<li><strong>Cryptic errors</strong> - poor error handling</li>
+</ul>
+<h2 id="best-practices-15"><a class="header" href="#best-practices-15">Best Practices</a></h2>
+<h3 id="1-start-gentle-then-aggressive"><a class="header" href="#1-start-gentle-then-aggressive">1. Start Gentle, Then Aggressive</a></h3>
+<pre><code class="language-bash"># First, validate basic functionality
+renacer --chaos gentle -c -- ./my-app
+
+# Then stress test
+renacer --chaos aggressive -c -- ./my-app
+</code></pre>
+<h3 id="2-test-specific-failure-modes"><a class="header" href="#2-test-specific-failure-modes">2. Test Specific Failure Modes</a></h3>
+<pre><code class="language-bash"># Memory-only stress
+renacer --chaos-memory-limit 16M -c -- ./my-app
+
+# CPU-only stress
+renacer --chaos-cpu-limit 0.1 -c -- ./my-app
+
+# Timeout-only stress
+renacer --chaos-timeout 5s -c -- ./my-app
+</code></pre>
+<h3 id="3-combine-with-statistics-mode"><a class="header" href="#3-combine-with-statistics-mode">3. Combine with Statistics Mode</a></h3>
+<p>Always use <code>-c</code> (statistics mode) for better insights:</p>
+<pre><code class="language-bash">renacer --chaos aggressive -c --stats-extended -- ./my-app
+</code></pre>
+<h3 id="4-use-with-anomaly-detection"><a class="header" href="#4-use-with-anomaly-detection">4. Use with Anomaly Detection</a></h3>
+<p>Combine chaos with ML-based anomaly detection:</p>
+<pre><code class="language-bash">renacer --chaos gentle -c --ml-anomaly -- ./my-app
+</code></pre>
+<h2 id="troubleshooting-19"><a class="header" href="#troubleshooting-19">Troubleshooting</a></h2>
+<h3 id="permission-denied-errors-1"><a class="header" href="#permission-denied-errors-1">"Permission denied" Errors</a></h3>
+<p>Resource limits require appropriate permissions. Run without sudo first; some limits work without elevated privileges.</p>
+<h3 id="app-killed-immediately"><a class="header" href="#app-killed-immediately">App Killed Immediately</a></h3>
+<p>Memory limit may be too low. Start higher and decrease:</p>
+<pre><code class="language-bash"># Start high
+renacer --chaos-memory-limit 256M -c -- ./my-app
+
+# Decrease until failure
+renacer --chaos-memory-limit 128M -c -- ./my-app
+renacer --chaos-memory-limit 64M -c -- ./my-app
+</code></pre>
+<h3 id="timeout-too-short"><a class="header" href="#timeout-too-short">Timeout Too Short</a></h3>
+<p>Some applications need warm-up time:</p>
+<pre><code class="language-bash"># Increase timeout for initialization
+renacer --chaos-timeout 60s --chaos-memory-limit 64M -c -- ./slow-starter
+</code></pre>
+<h2 id="related-topics"><a class="header" href="#related-topics">Related Topics</a></h2>
+<ul>
+<li><a href="advanced/./statistical-analysis.html">Statistical Analysis</a> - Analyze syscall patterns</li>
+<li><a href="advanced/./anomaly-detection.html">Anomaly Detection</a> - Find outliers automatically</li>
+<li><a href="advanced/./performance-optimization.html">Performance Optimization</a> - Reduce overhead</li>
+<li><a href="advanced/../contributing/chaos-engineering.html">Chaos Engineering (Contributing)</a> - Internal chaos API</li>
+</ul>
+<h2 id="summary-30"><a class="header" href="#summary-30">Summary</a></h2>
+<p>Chaos testing with Renacer helps you:</p>
+<ul>
+<li><strong>Find hidden bugs</strong> that normal testing misses</li>
+<li><strong>Validate error handling</strong> under resource pressure</li>
+<li><strong>Ensure graceful degradation</strong> when things go wrong</li>
+<li><strong>Build confidence</strong> before production deployment</li>
+</ul>
+<p>Start with <code>--chaos gentle</code> for regular testing, graduate to <code>--chaos aggressive</code> for stress testing, and use custom options for targeted validation.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="single-shot-compile-tooling"><a class="header" href="#single-shot-compile-tooling">Single-Shot Compile Tooling</a></h1>
 <p>High-level performance and bug detection for transpilers and single-shot compile workflows.</p>
 <h2 id="overview-20"><a class="header" href="#overview-20">Overview</a></h2>
@@ -12575,7 +13445,7 @@ docker run -p 4317:4317 otel/opentelemetry-collector
 <li><strong>Jidoka</strong> (Automation with Human Touch): Automated analysis with actionable explanations</li>
 <li><strong>Poka-Yoke</strong> (Error-proofing): Statistical tests prevent false positives</li>
 </ul>
-<h2 id="quick-start-2"><a class="header" href="#quick-start-2">Quick Start</a></h2>
+<h2 id="quick-start-3"><a class="header" href="#quick-start-3">Quick Start</a></h2>
 <h3 id="1-collect-baseline-golden-trace"><a class="header" href="#1-collect-baseline-golden-trace">1. Collect Baseline Golden Trace</a></h3>
 <pre><code class="language-bash"># Known-good version
 renacer trace ./transpiler input.py --output baseline.trace
@@ -13357,7 +14227,7 @@ Recommendation:
 <li>Use <a href="advanced/./regression-detection.html">Regression Detection</a> for automated CI/CD validation</li>
 <li>Leverage <a href="advanced/./syscall-clustering.html">Syscall Clustering</a> for high-level analysis</li>
 </ul>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="regression-detection-1"><a class="header" href="#regression-detection-1">Regression Detection</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="regression-detection-2"><a class="header" href="#regression-detection-2">Regression Detection</a></h1>
 <p>Statistical hypothesis testing for detecting real performance regressions while filtering noise.</p>
 <h2 id="key-innovation-no-magic-numbers"><a class="header" href="#key-innovation-no-magic-numbers">Key Innovation: No Magic Numbers</a></h2>
 <p>Traditional approaches use <strong>fixed percentage thresholds</strong> (e.g., "5% slowdown = regression"). This leads to high false positives because:</p>
@@ -13581,7 +14451,7 @@ Action: Fix regression before merge.
 <li>Use <a href="advanced/./semantic-equivalence.html">Semantic Equivalence</a> to validate fixes</li>
 <li>Integrate with <a href="advanced/./syscall-clustering.html">Syscall Clustering</a> for semantic grouping</li>
 </ul>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="cli-reference"><a class="header" href="#cli-reference">CLI Reference</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="cli-reference-1"><a class="header" href="#cli-reference-1">CLI Reference</a></h1>
 <p>Complete command-line interface documentation for Renacer.</p>
 <hr />
 <h2 id="synopsis"><a class="header" href="#synopsis">Synopsis</a></h2>
@@ -14681,7 +15551,7 @@ renacer --format json -- nonexistent_command &gt; trace.json
 <p><strong>Format Identifier:</strong> <code>text</code> (default format)</p>
 <p><strong>Sprints:</strong> 3-4 (initial), 5-6 (DWARF), 9-10 (timing), 13 (function profiling), 20 (real-time anomaly)</p>
 <hr />
-<h2 id="quick-start-3"><a class="header" href="#quick-start-3">Quick Start</a></h2>
+<h2 id="quick-start-4"><a class="header" href="#quick-start-4">Quick Start</a></h2>
 <h3 id="basic-usage-14"><a class="header" href="#basic-usage-14">Basic Usage</a></h3>
 <pre><code class="language-bash"># Default format (no flag needed)
 renacer -- ls
@@ -15029,7 +15899,7 @@ renacer --source -- ls | sed 's/^[^ ]* [^ ]* //'
 renacer -- ls | sed -n '/ = [0-9]/p'
 </code></pre>
 <hr />
-<h2 id="performance-characteristics"><a class="header" href="#performance-characteristics">Performance Characteristics</a></h2>
+<h2 id="performance-characteristics-1"><a class="header" href="#performance-characteristics-1">Performance Characteristics</a></h2>
 <h3 id="overhead-1"><a class="header" href="#overhead-1">Overhead</a></h3>
 <div class="table-wrapper"><table><thead><tr><th>Feature</th><th>Overhead</th><th>Notes</th></tr></thead><tbody>
 <tr><td><strong>Basic tracing</strong></td><td>~0%</td><td>Direct stdout write</td></tr>
@@ -15203,7 +16073,7 @@ write_output                |      123  |     1 |      123
 <p><strong>Format Identifier:</strong> <code>renacer-json-v1</code></p>
 <p><strong>Sprints:</strong> 9-10 (initial), 23 (ML anomaly integration)</p>
 <hr />
-<h2 id="quick-start-4"><a class="header" href="#quick-start-4">Quick Start</a></h2>
+<h2 id="quick-start-5"><a class="header" href="#quick-start-5">Quick Start</a></h2>
 <h3 id="basic-usage-15"><a class="header" href="#basic-usage-15">Basic Usage</a></h3>
 <pre><code class="language-bash"># Output JSON to stdout
 renacer --format json -- ls
@@ -15596,7 +16466,7 @@ console.log(grouped);
   jq '.syscalls | map(select(.result &lt; 0)) | length'
 </code></pre>
 <hr />
-<h2 id="performance-characteristics-1"><a class="header" href="#performance-characteristics-1">Performance Characteristics</a></h2>
+<h2 id="performance-characteristics-2"><a class="header" href="#performance-characteristics-2">Performance Characteristics</a></h2>
 <h3 id="output-size-1"><a class="header" href="#output-size-1">Output Size</a></h3>
 <p>Approximate JSON output size (uncompressed):</p>
 <div class="table-wrapper"><table><thead><tr><th>Syscalls</th><th>Text Format</th><th>JSON Format</th><th>Ratio</th></tr></thead><tbody>
@@ -15811,7 +16681,7 @@ ajv validate -s schema.json -d trace.json
 <p><strong>Format Identifier:</strong> <code>csv</code></p>
 <p><strong>Sprints:</strong> 17 (initial CSV implementation)</p>
 <hr />
-<h2 id="quick-start-5"><a class="header" href="#quick-start-5">Quick Start</a></h2>
+<h2 id="quick-start-6"><a class="header" href="#quick-start-6">Quick Start</a></h2>
 <h3 id="basic-usage-16"><a class="header" href="#basic-usage-16">Basic Usage</a></h3>
 <pre><code class="language-bash"># Output CSV to stdout
 renacer --format csv -- ls
@@ -16236,7 +17106,7 @@ read,8,0,536us
 </ul>
 <p><strong>Calculation:</strong> Average = <code>total_time / calls</code></p>
 <hr />
-<h2 id="performance-characteristics-2"><a class="header" href="#performance-characteristics-2">Performance Characteristics</a></h2>
+<h2 id="performance-characteristics-3"><a class="header" href="#performance-characteristics-3">Performance Characteristics</a></h2>
 <h3 id="overhead-2"><a class="header" href="#overhead-2">Overhead</a></h3>
 <div class="table-wrapper"><table><thead><tr><th>Feature</th><th>Overhead vs Text</th><th>Reason</th></tr></thead><tbody>
 <tr><td><strong>Basic CSV</strong></td><td>+3-5%</td><td>CSV escaping, column formatting</td></tr>
@@ -16702,7 +17572,7 @@ renacer --format html -- ./app &gt; trace.html  # New HTML format
 <li>Integrating with CI/CD pipelines</li>
 <li>Machine parsing required</li>
 </ul>
-<h2 id="troubleshooting-19"><a class="header" href="#troubleshooting-19">Troubleshooting</a></h2>
+<h2 id="troubleshooting-20"><a class="header" href="#troubleshooting-20">Troubleshooting</a></h2>
 <h3 id="html-output-contains-child-process-output"><a class="header" href="#html-output-contains-child-process-output">HTML Output Contains Child Process Output</a></h3>
 <p><strong>Problem:</strong></p>
 <pre><code class="language-bash">$ renacer --format html -- bash -c "echo test" &gt; trace.html
@@ -16738,7 +17608,7 @@ renacer --format html -- ./app &gt; trace.html  # New HTML format
 <li>✅ 1K-10K syscalls: Good performance (some browser lag on old hardware)</li>
 <li>⚠️ &gt;10K syscalls: Consider filtering or using CSV for analysis</li>
 </ul>
-<h2 id="summary-29"><a class="header" href="#summary-29">Summary</a></h2>
+<h2 id="summary-31"><a class="header" href="#summary-31">Summary</a></h2>
 <p>HTML output format provides:</p>
 <ul>
 <li>✅ <strong>Visual trace reports</strong> with modern CSS styling</li>
@@ -16791,7 +17661,7 @@ renacer --format html -- ./app &gt; trace.html  # New HTML format
 </ul>
 <hr />
 <h2 id="running-benchmarks-1"><a class="header" href="#running-benchmarks-1">Running Benchmarks</a></h2>
-<h3 id="quick-start-6"><a class="header" href="#quick-start-6">Quick Start</a></h3>
+<h3 id="quick-start-7"><a class="header" href="#quick-start-7">Quick Start</a></h3>
 <pre><code class="language-bash"># Build release binary
 cargo build --release
 
@@ -17230,7 +18100,7 @@ Final Results:
 renacer -e trace=file -- cat /etc/hostname
 </code></pre>
 <p><strong>If an example cannot be validated by a test, it MUST NOT be in the book.</strong></p>
-<h2 id="property-based-testing"><a class="header" href="#property-based-testing">Property-Based Testing</a></h2>
+<h2 id="property-based-testing-1"><a class="header" href="#property-based-testing-1">Property-Based Testing</a></h2>
 <p>Beyond unit tests, we use <code>proptest</code> for comprehensive edge case coverage:</p>
 <pre><code class="language-rust">use proptest::prelude::*;
 
@@ -17261,7 +18131,7 @@ proptest! {
 <li>Modularity (weight: 15%)</li>
 <li>Error handling (weight: 10%)</li>
 </ul>
-<h2 id="summary-30"><a class="header" href="#summary-30">Summary</a></h2>
+<h2 id="summary-32"><a class="header" href="#summary-32">Summary</a></h2>
 <p>EXTREME TDD principles used in Renacer:</p>
 <ol>
 <li>✅ <strong>RED-GREEN-REFACTOR</strong> - Every feature, every time</li>
@@ -17364,7 +18234,7 @@ make test-tier3
 <li>Mutation tests</li>
 <li>Long-running integration tests</li>
 </ol>
-<h2 id="best-practices-15"><a class="header" href="#best-practices-15">Best Practices</a></h2>
+<h2 id="best-practices-16"><a class="header" href="#best-practices-16">Best Practices</a></h2>
 <h3 id="1-test-invariants-not-specific-behavior"><a class="header" href="#1-test-invariants-not-specific-behavior">1. Test Invariants, Not Specific Behavior</a></h3>
 <p>Good fuzz target:</p>
 <pre><code class="language-rust">fuzz_target!(|data: &amp;[u8]| {
@@ -17429,7 +18299,7 @@ llvm-cov show target/*/release/filter_parser -format=html -instr-profile=fuzz/co
 <li><strong>Nested Negations</strong>: <code>trace=!!open</code> (double negation)</li>
 <li><strong>Malformed UTF-8</strong>: Filter parser handles invalid UTF-8 gracefully</li>
 </ol>
-<h2 id="troubleshooting-20"><a class="header" href="#troubleshooting-20">Troubleshooting</a></h2>
+<h2 id="troubleshooting-21"><a class="header" href="#troubleshooting-21">Troubleshooting</a></h2>
 <h3 id="slow-fuzzing"><a class="header" href="#slow-fuzzing">Slow Fuzzing</a></h3>
 <pre><code class="language-bash"># Use more cores
 cargo fuzz run filter_parser -- -workers=8
@@ -17936,28 +18806,31 @@ fn test_tracer_under_memory_pressure() {
         assert!(e.to_string().contains("memory"));
     }
 }</code></pre>
-<h2 id="future-cli-integration"><a class="header" href="#future-cli-integration">Future CLI Integration</a></h2>
-<p>Planned for Sprint 30:</p>
+<h2 id="cli-integration-sprint-47"><a class="header" href="#cli-integration-sprint-47">CLI Integration (Sprint 47)</a></h2>
+<p>The chaos engineering CLI was implemented in Sprint 47 (Issue #17):</p>
 <pre><code class="language-bash"># Use gentle preset
-renacer --chaos gentle -- ./app
+renacer --chaos gentle -c -- ./app
 
 # Use aggressive preset
-renacer --chaos aggressive -- ./flaky-test
+renacer --chaos aggressive -c -- ./flaky-test
 
-# Custom chaos from JSON
-renacer --chaos custom:chaos.json -- ./stress-test
+# Custom memory limit
+renacer --chaos-memory-limit 128M -c -- ./app
 
-# Example chaos.json
-{
-  "memory_limit": 104857600,
-  "cpu_limit": 0.5,
-  "timeout_secs": 30,
-  "signal_injection": true,
-  "network_latency_ms": 100,
-  "packet_loss_rate": 0.1
-}
+# Custom CPU limit
+renacer --chaos-cpu-limit 0.5 -c -- ./app
+
+# Custom timeout
+renacer --chaos-timeout 30s -c -- ./app
+
+# Enable signal injection
+renacer --chaos-signals -c -- ./app
+
+# Combine preset with overrides
+renacer --chaos aggressive --chaos-memory-limit 128M -c -- ./stress-test
 </code></pre>
-<h2 id="use-cases"><a class="header" href="#use-cases">Use Cases</a></h2>
+<p>For detailed usage examples, see the <a href="contributing/../advanced/chaos-testing.html">Chaos Testing Guide</a>.</p>
+<h2 id="use-cases-1"><a class="header" href="#use-cases-1">Use Cases</a></h2>
 <h3 id="1-testing-error-handling"><a class="header" href="#1-testing-error-handling">1. Testing Error Handling</a></h3>
 <pre><code class="language-rust">// Verify tracer handles memory exhaustion
 let config = ChaosConfig::new()
@@ -17978,7 +18851,7 @@ cargo test --features chaos-basic
 # Run gentle chaos tests
 CHAOS_MODE=gentle cargo test
 </code></pre>
-<h3 id="4-flaky-test-investigation"><a class="header" href="#4-flaky-test-investigation">4. Flaky Test Investigation</a></h3>
+<h3 id="4-flaky-test-investigation-1"><a class="header" href="#4-flaky-test-investigation-1">4. Flaky Test Investigation</a></h3>
 <pre><code class="language-rust">// Reproduce timing-sensitive bugs
 let config = ChaosConfig::new()
     .with_cpu_limit(0.1)  // Slow down execution
@@ -17998,16 +18871,17 @@ let config = ChaosConfig::new()
 make fuzz      # Input fuzzing
 make chaos     # System chaos testing
 </code></pre>
-<h2 id="implementation-status-v041"><a class="header" href="#implementation-status-v041">Implementation Status (v0.4.1)</a></h2>
+<h2 id="implementation-status-v063"><a class="header" href="#implementation-status-v063">Implementation Status (v0.6.3)</a></h2>
 <ul>
 <li>✅ ChaosConfig builder pattern</li>
 <li>✅ Gentle/aggressive presets</li>
-<li>✅ Property-based tests (7 tests)</li>
+<li>✅ Property-based tests (14 tests)</li>
 <li>✅ Cargo feature gates</li>
-<li>⏳ CLI integration (planned Sprint 30)</li>
-<li>⏳ Runtime chaos injection (planned Sprint 30)</li>
-<li>⏳ Network chaos (planned Sprint 31)</li>
-<li>⏳ Byzantine faults (planned Sprint 32)</li>
+<li>✅ CLI integration (Sprint 47, Issue #17)</li>
+<li>✅ Runtime chaos injection via setrlimit</li>
+<li>✅ 67 chaos module tests total</li>
+<li>⏳ Network chaos (planned)</li>
+<li>⏳ Byzantine faults (planned)</li>
 </ul>
 <h2 id="resources-2"><a class="header" href="#resources-2">Resources</a></h2>
 <ul>
@@ -18359,7 +19233,7 @@ renacer --source -- ./myapp
 <li><strong>Fork following</strong> - <code>-f</code> adds per-process overhead</li>
 </ul>
 <p><strong>Recommendation:</strong> Acceptable for development/debugging. For production profiling, use sampling profilers (perf, flamegraph).</p>
-<h2 id="troubleshooting-21"><a class="header" href="#troubleshooting-21">Troubleshooting</a></h2>
+<h2 id="troubleshooting-22"><a class="header" href="#troubleshooting-22">Troubleshooting</a></h2>
 <h3 id="no-dwarf-debug-info-found-warning"><a class="header" href="#no-dwarf-debug-info-found-warning">"No DWARF debug info found" warning</a></h3>
 <p><strong>Cause:</strong> Binary compiled without debug symbols.</p>
 <p><strong>Solution:</strong></p>
