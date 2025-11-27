@@ -249,6 +249,31 @@ pub struct Cli {
     #[arg(long = "chaos-signals")]
     pub chaos_signals: bool,
 
+    // Sprint 48: Model Persistence CLI (Toyota Way: Muda elimination)
+    /// Save trained ML model to .apr file for reuse
+    ///
+    /// After ML anomaly detection training, saves the model to the
+    /// specified path. Enables 10-50x faster startup on subsequent runs.
+    /// Requires --ml-anomaly flag.
+    #[arg(long = "save-model", value_name = "FILE")]
+    pub save_model: Option<String>,
+
+    /// Load pre-trained ML model from .apr file
+    ///
+    /// Skips model training and loads a previously saved model.
+    /// Provides instant startup for anomaly detection.
+    /// Requires --ml-anomaly flag.
+    #[arg(long = "load-model", value_name = "FILE")]
+    pub load_model: Option<String>,
+
+    /// Compare against baseline model for regression detection
+    ///
+    /// Loads a baseline model and compares current trace against it.
+    /// Reports deviations from the baseline as potential regressions.
+    /// Requires --ml-anomaly flag.
+    #[arg(long = "baseline", value_name = "FILE")]
+    pub baseline_model: Option<String>,
+
     /// Command to trace (everything after --)
     #[arg(last = true)]
     pub command: Option<Vec<String>>,
@@ -1065,5 +1090,158 @@ mod tests {
         assert!((cli.chaos_cpu_limit.unwrap() - 0.25).abs() < f64::EPSILON);
         assert_eq!(cli.chaos_timeout.as_deref(), Some("10s"));
         assert!(cli.chaos_signals);
+    }
+
+    // Sprint 48: Model Persistence CLI Tests
+    #[test]
+    fn test_cli_save_model_flag() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "--ml-anomaly",
+            "--save-model",
+            "baseline.apr",
+            "--",
+            "echo",
+            "test",
+        ]);
+        assert!(cli.ml_anomaly);
+        assert_eq!(cli.save_model.as_deref(), Some("baseline.apr"));
+    }
+
+    #[test]
+    fn test_cli_save_model_default_none() {
+        let cli = Cli::parse_from(["renacer", "--", "echo", "test"]);
+        assert!(cli.save_model.is_none());
+    }
+
+    #[test]
+    fn test_cli_load_model_flag() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "--ml-anomaly",
+            "--load-model",
+            "baseline.apr",
+            "--",
+            "echo",
+            "test",
+        ]);
+        assert!(cli.ml_anomaly);
+        assert_eq!(cli.load_model.as_deref(), Some("baseline.apr"));
+    }
+
+    #[test]
+    fn test_cli_load_model_default_none() {
+        let cli = Cli::parse_from(["renacer", "--", "echo", "test"]);
+        assert!(cli.load_model.is_none());
+    }
+
+    #[test]
+    fn test_cli_baseline_model_flag() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "--ml-anomaly",
+            "--baseline",
+            "golden.apr",
+            "--",
+            "echo",
+            "test",
+        ]);
+        assert!(cli.ml_anomaly);
+        assert_eq!(cli.baseline_model.as_deref(), Some("golden.apr"));
+    }
+
+    #[test]
+    fn test_cli_baseline_model_default_none() {
+        let cli = Cli::parse_from(["renacer", "--", "echo", "test"]);
+        assert!(cli.baseline_model.is_none());
+    }
+
+    #[test]
+    fn test_cli_save_and_load_model_combined() {
+        // Can specify both (save new, load as starting point)
+        let cli = Cli::parse_from([
+            "renacer",
+            "--ml-anomaly",
+            "--load-model",
+            "old.apr",
+            "--save-model",
+            "new.apr",
+            "--",
+            "echo",
+            "test",
+        ]);
+        assert_eq!(cli.load_model.as_deref(), Some("old.apr"));
+        assert_eq!(cli.save_model.as_deref(), Some("new.apr"));
+    }
+
+    #[test]
+    fn test_cli_model_with_statistics() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "-c",
+            "--ml-anomaly",
+            "--save-model",
+            "model.apr",
+            "--",
+            "echo",
+            "test",
+        ]);
+        assert!(cli.statistics);
+        assert!(cli.ml_anomaly);
+        assert_eq!(cli.save_model.as_deref(), Some("model.apr"));
+    }
+
+    #[test]
+    fn test_cli_baseline_with_ml_outliers() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "--ml-outliers",
+            "--baseline",
+            "baseline.apr",
+            "--",
+            "echo",
+            "test",
+        ]);
+        assert!(cli.ml_outliers);
+        assert_eq!(cli.baseline_model.as_deref(), Some("baseline.apr"));
+    }
+
+    #[test]
+    fn test_cli_model_path_with_directory() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "--ml-anomaly",
+            "--save-model",
+            "/tmp/models/baseline.apr",
+            "--",
+            "echo",
+            "test",
+        ]);
+        assert_eq!(cli.save_model.as_deref(), Some("/tmp/models/baseline.apr"));
+    }
+
+    #[test]
+    fn test_cli_all_model_options() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "-c",
+            "--ml-anomaly",
+            "--ml-outliers",
+            "--load-model",
+            "pretrained.apr",
+            "--save-model",
+            "updated.apr",
+            "--baseline",
+            "golden.apr",
+            "--",
+            "echo",
+            "test",
+        ]);
+        assert!(cli.statistics);
+        assert!(cli.ml_anomaly);
+        assert!(cli.ml_outliers);
+        assert_eq!(cli.load_model.as_deref(), Some("pretrained.apr"));
+        assert_eq!(cli.save_model.as_deref(), Some("updated.apr"));
+        assert_eq!(cli.baseline_model.as_deref(), Some("golden.apr"));
     }
 }

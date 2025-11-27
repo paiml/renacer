@@ -11,7 +11,7 @@
 
 ## Executive Summary
 
-This specification identifies **low-hanging fruit integrations** between renacer (syscall tracer) and aprender (ML library v0.10.0) to enhance anomaly detection, performance prediction, and behavioral analysis. Following Toyota Way principles, particularly *Muda* (elimination of waste), we prioritize the `.apr` model serialization format—a critical capability that is currently **unused MUDA**.
+This specification identifies **low-hanging fruit integrations** between renacer (syscall tracer) and aprender (ML library v0.10.0) to enhance anomaly detection [^19], performance prediction, and behavioral analysis. Following Toyota Way principles, particularly *Muda* (elimination of waste), we prioritize the `.apr` model serialization format—a critical capability that is currently **unused MUDA**.
 
 **Critical Finding:** aprender v0.10.0 provides a mature `.apr` model serialization format with encryption, signatures, quantization, and cross-platform compatibility. Renacer's anomaly detection models are currently trained fresh on every run—pure waste (*Muda*).
 
@@ -23,16 +23,16 @@ This specification identifies **low-hanging fruit integrations** between renacer
 
 | Module | aprender Feature | Purpose |
 |--------|------------------|---------|
-| `ml_anomaly.rs` | `KMeans` | Syscall clustering for anomaly detection |
+| `ml_anomaly.rs` | `KMeans` | Syscall clustering for anomaly detection [^12] |
 | `ml_anomaly.rs` | `Matrix` | Feature matrix construction |
 | `regression/statistics.rs` | `DescriptiveStats` | Percentile/median computation |
-| `regression/statistics.rs` | `ttest_ind` | Statistical significance testing |
+| `regression/statistics.rs` | `ttest_ind` | Statistical significance testing [^13] |
 
 **Gap Analysis:** Renacer uses ~4% of aprender's capabilities. The v0.10.0 release adds significant ML/DL features that remain untapped, representing *Muda* (waste) in our current tooling.
 
 ### 1.2 Toyota Way Assessment
 
-Following *Jidoka* (build quality in), we assess each integration opportunity against:
+Following *Jidoka* (build quality in) [^20], we assess each integration opportunity against:
 
 1. **Value to customer** - Does it improve tracing insights?
 2. **Technical risk** - Is the algorithm well-understood?
@@ -62,9 +62,9 @@ Following *Jidoka* (build quality in), we assess each integration opportunity ag
 |---------|-------------|---------|
 | **Serialization** | `save()` / `load()` | Persist trained models |
 | **Compression** | Zstd compression | 50-80% size reduction |
-| **Encryption** | AES-256-GCM | Secure model storage |
-| **Signatures** | Ed25519 | Tamper detection |
-| **Quantization** | Q8_0, Q4_0 | 4x size reduction |
+| **Encryption** | AES-256-GCM | Secure model storage [^16] |
+| **Signatures** | Ed25519 | Tamper detection [^15] |
+| **Quantization** | Q8_0, Q4_0 | 4x size reduction [^14] |
 | **Metadata** | Training info, provenance | Model lineage |
 | **GGUF Export** | Ollama compatibility | Cross-tool sharing |
 
@@ -123,7 +123,7 @@ renacer --ml-anomaly --baseline baseline.apr -- ./my-app-v2
 
 **Benefits:**
 - **10-50x faster startup** when using pre-trained models
-- **Consistent baselines** across CI/CD runs
+- **Consistent baselines** across CI/CD runs [^21]
 - **Model versioning** for regression tracking
 - **Cross-project sharing** of "normal" syscall patterns
 - **Secure storage** with encryption and signatures
@@ -557,8 +557,8 @@ pub fn validate_anomaly_model<M: Estimator>(
 
 Each integration must satisfy these criteria, embodying *Jidoka* by building quality directly into the process and stopping for abnormalities:
 
-1. **Unit Tests:** 95%+ coverage
-2. **Property Tests:** 5+ proptest cases
+1. **Unit Tests:** 95%+ coverage [^18]
+2. **Property Tests:** 5+ proptest cases [^17]
 3. **Benchmark:** Performance comparison with baseline
 4. **Documentation:** API docs + usage example
 5. **Integration Test:** End-to-end with real syscall data
@@ -622,6 +622,26 @@ fn test_aprender_integration_quality() {
 [^10]: Stone, M. (1974). Cross-validatory choice and assessment of statistical predictions. *Journal of the Royal Statistical Society: Series B (Methodological)*, 36(2), 111-133.
 
 [^11]: Sculley, D., Holt, G., Golovin, D., Davydov, E., Phillips, T., Ebner, D., Chaudhary, V., Young, M., Crespo, J. F., & Dennison, D. (2015). Hidden technical debt in machine learning systems. In *Advances in Neural Information Processing Systems* (Vol. 28, pp. 2503-2511). NIPS.
+
+[^12]: MacQueen, J. (1967). Some methods for classification and analysis of multivariate observations. In *Proceedings of the fifth Berkeley symposium on mathematical statistics and probability* (Vol. 1, No. 14, pp. 281-297).
+
+[^13]: Student. (1908). The probable error of a mean. *Biometrika*, 6(1), 1-25.
+
+[^14]: Jacob, B., Kligys, S., Chen, B., Zhu, M., Tang, M., Howard, A., ... & Adam, H. (2018). Quantization and training of neural networks for efficient integer-arithmetic-only inference. *Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition*, 2704-2713.
+
+[^15]: Bernstein, D. J., Duif, N., Lange, T., Schwabe, P., & Yang, B. Y. (2012). High-speed high-security signatures. *Journal of Cryptographic Engineering*, 2(2), 77-89.
+
+[^16]: Daemen, J., & Rijmen, V. (2002). *The Design of Rijndael: AES - The Advanced Encryption Standard*. Springer-Verlag.
+
+[^17]: Claessen, K., & Hughes, J. (2000). QuickCheck: a lightweight tool for random testing of Haskell programs. In *Proceedings of the fifth ACM SIGPLAN international conference on Functional programming* (pp. 268-279).
+
+[^18]: Hoare, C. A. R. (1969). An axiomatic basis for computer programming. *Communications of the ACM*, 12(10), 576-580.
+
+[^19]: Forrest, S., Hofmeyr, S. A., Somayaji, A., & Longstaff, T. A. (1996). A sense of self for unix processes. In *Proceedings of the 1996 IEEE Symposium on Security and Privacy* (pp. 120-128). IEEE.
+
+[^20]: Liker, J. K. (2004). *The Toyota Way: 14 Management Principles from the World's Greatest Manufacturer*. McGraw-Hill.
+
+[^21]: Peng, R. D. (2011). Reproducible research in computational science. *Science*, 334(6060), 1226-1227.
 
 ---
 

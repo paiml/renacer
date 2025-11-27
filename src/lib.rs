@@ -31,6 +31,8 @@ pub mod json_output;
 pub mod lamport_clock; // Sprint 40: Lamport logical clocks for causal ordering (Toyota Way: Poka-Yoke)
 pub mod lazy_span; // Sprint 36: Lazy span creation for performance
 pub mod ml_anomaly;
+pub mod ml_pipeline; // Sprint 48: Enhanced ML pipeline (StandardScaler, DBSCAN, LOF, PCA)
+pub mod model_persistence; // Sprint 48: .apr model persistence (Toyota Way: Muda elimination)
 pub mod otlp_exporter;
 pub mod profiling;
 pub mod regression; // Single-Shot Compile Tooling: Statistical regression detection (Section 6.4)
