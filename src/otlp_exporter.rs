@@ -135,7 +135,7 @@ pub struct GpuKernel {
     pub duration_us: u64,
     /// GPU backend (always "wgpu" for Phase 1)
     pub backend: &'static str,
-    /// Workgroup size for compute shaders (e.g., "[256,1,1]")
+    /// Workgroup size for compute shaders (e.g., "`[256,1,1]`")
     pub workgroup_size: Option<String>,
     /// Number of elements processed (if known)
     pub elements: Option<usize>,
@@ -826,7 +826,7 @@ mod tests {
             kernel: "matrix_multiply".to_string(),
             duration_us: 150,
             backend: "wgpu",
-            workgroup_size: Some("[256,1,1]".to_string()),
+            workgroup_size: Some("`[256,1,1]`".to_string()),
             elements: Some(1000000),
             is_slow: true,
         };

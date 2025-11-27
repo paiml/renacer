@@ -28,7 +28,7 @@ pub struct RegressionConfig {
     /// - 0.10: 90% confidence level, looser (more false positives, fewer false negatives)
     ///
     /// Scientific Foundation:
-    /// [9] Heger et al. (2013): Fixed thresholds (e.g., "5%") yield high false positives.
+    /// \[9\] Heger et al. (2013): Fixed thresholds (e.g., "5%") yield high false positives.
     ///     P-values adapt to baseline variance.
     pub significance_level: f64,
 
@@ -47,7 +47,7 @@ pub struct RegressionConfig {
     /// syscalls (e.g., network I/O, random number generation).
     ///
     /// Scientific Foundation:
-    /// [7] Zeller (2002): Delta Debugging minimizes differences between
+    /// \[7\] Zeller (2002): Delta Debugging minimizes differences between
     ///     failing/passing runs by isolating noise.
     ///
     /// Default: true
@@ -60,8 +60,8 @@ pub struct RegressionConfig {
     /// - CV <= threshold: syscall is "stable", included in testing
     ///
     /// Default: 0.5 (50% CV threshold)
-    /// - CV = 0.2: baseline=[10,12,8] → std=2, mean=10, CV=0.2 (stable)
-    /// - CV = 0.8: baseline=[5,20,3] → std=9, mean=9.3, CV=0.96 (noisy)
+    /// - CV = 0.2: baseline=`[10,12,8]` → std=2, mean=10, CV=0.2 (stable)
+    /// - CV = 0.8: baseline=`[5,20,3]` → std=9, mean=9.3, CV=0.96 (noisy)
     pub noise_threshold: f64,
 }
 
