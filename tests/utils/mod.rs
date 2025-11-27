@@ -2,6 +2,8 @@
 //
 // Helper functions for testing with actual Jaeger backend
 
+#![allow(dead_code)] // Test utility functions may not all be used in every test module
+
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -200,7 +202,7 @@ pub fn verify_parent_child(
 }
 
 /// Extract trace-id from Renacer stderr output
-pub fn extract_trace_id_from_stderr(stderr: &str) -> Option<String> {
+pub fn extract_trace_id_from_stderr(_stderr: &str) -> Option<String> {
     // Look for OTLP initialization message or trace context
     // Example patterns:
     // - "[renacer: OTLP export enabled to ...]"
@@ -239,7 +241,7 @@ pub fn ensure_jaeger_running() -> Result<()> {
 
     // Start Jaeger via docker-compose
     std::process::Command::new("docker-compose")
-        .args(&["-f", "docker-compose-test.yml", "up", "-d", "jaeger"])
+        .args(["-f", "docker-compose-test.yml", "up", "-d", "jaeger"])
         .output()
         .map_err(|e| anyhow!("Failed to start Jaeger: {}", e))?;
 
@@ -254,7 +256,7 @@ pub fn stop_jaeger() -> Result<()> {
     eprintln!("[test-utils] Stopping Jaeger container...");
 
     std::process::Command::new("docker-compose")
-        .args(&["-f", "docker-compose-test.yml", "down"])
+        .args(["-f", "docker-compose-test.yml", "down"])
         .output()
         .map_err(|e| anyhow!("Failed to stop Jaeger: {}", e))?;
 

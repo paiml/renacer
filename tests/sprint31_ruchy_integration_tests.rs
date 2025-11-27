@@ -7,6 +7,8 @@
 // 2. Correlating decisions with syscall spans
 // 3. Unified trace view (Process → Syscalls → Decisions)
 
+#![allow(deprecated)] // assert_cmd::Command::cargo_bin deprecation
+
 use assert_cmd::Command;
 use std::fs;
 use tempfile::TempDir;

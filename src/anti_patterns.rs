@@ -605,7 +605,7 @@ mod tests {
         ];
 
         let mut sorted = patterns.clone();
-        sorted.sort_by(|a, b| b.severity().cmp(&a.severity()));
+        sorted.sort_by_key(|b| std::cmp::Reverse(b.severity()));
 
         // Critical should come before Medium
         assert_eq!(sorted[0].severity(), Severity::Critical);

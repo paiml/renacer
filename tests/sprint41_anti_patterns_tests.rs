@@ -345,7 +345,7 @@ fn test_multiple_anti_patterns() {
 
     // Should detect at least the Tight Loop (God Process may not trigger if spans are consecutive)
     assert!(
-        anti_patterns.len() >= 1,
+        !anti_patterns.is_empty(),
         "Expected at least 1 anti-pattern, got {}",
         anti_patterns.len()
     );

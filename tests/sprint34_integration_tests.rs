@@ -6,6 +6,8 @@
 // Run: cargo test --test sprint34_integration_tests -- --test-threads=1
 // Cleanup: docker-compose -f docker-compose-test.yml down
 
+#![allow(deprecated)] // assert_cmd::Command::cargo_bin deprecation
+
 mod utils;
 
 use assert_cmd::Command;
@@ -485,7 +487,7 @@ fn test_w3c_traceparent_validation() {
         .expect("Failed to execute renacer");
 
     // Should either fail or log a warning
-    let stderr = String::from_utf8_lossy(&output.stderr);
+    let _stderr = String::from_utf8_lossy(&output.stderr);
 
     if output.status.success() {
         // If it succeeds, should warn about invalid format

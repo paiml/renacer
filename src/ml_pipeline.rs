@@ -644,7 +644,7 @@ mod tests {
         let result = run_lof(&normalized, &data, 2, 0.25).unwrap();
 
         // Should detect outliers
-        assert!(!result.outliers.is_empty() || result.labels.iter().any(|&l| l == -1));
+        assert!(!result.outliers.is_empty() || result.labels.contains(&-1));
         assert_eq!(result.scores.len(), 4);
     }
 
@@ -724,7 +724,7 @@ mod tests {
         let optimal_k = find_optimal_k(&normalized, 2..5);
 
         // Should be 2 for two distinct groups
-        assert!(optimal_k >= 2 && optimal_k <= 4);
+        assert!((2..=4).contains(&optimal_k));
     }
 
     // ==================== FORMATTING TESTS ====================
@@ -815,7 +815,7 @@ mod tests {
         let labels = vec![0, 0, 1, 1];
 
         if let Some(score) = calculate_silhouette(&matrix, &labels) {
-            assert!(score >= -1.0 && score <= 1.0);
+            assert!((-1.0..=1.0).contains(&score));
         }
     }
 }
