@@ -159,8 +159,73 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="analysis-flags"><a class="header" href="#analysis-flags">Analysis Flags</a></h1>
-<p>📝 <strong>This chapter is under construction.</strong></p>
-<p>All content will be TDD-verified and backed by tests in <code>tests/sprint*.rs</code>.</p>
+<p>Command-line flags for ML anomaly detection and model persistence.</p>
+<h2 id="ml-anomaly-detection"><a class="header" href="#ml-anomaly-detection">ML Anomaly Detection</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Flag</th><th>Description</th><th>Default</th></tr></thead><tbody>
+<tr><td><code>--ml-anomaly</code></td><td>Enable ML-based anomaly detection</td><td>disabled</td></tr>
+<tr><td><code>--ml-clusters N</code></td><td>Number of KMeans clusters</td><td>3</td></tr>
+<tr><td><code>--ml-compare</code></td><td>Compare ML vs z-score results</td><td>disabled</td></tr>
+</tbody></table>
+</div>
+<h3 id="examples"><a class="header" href="#examples">Examples</a></h3>
+<pre><code class="language-bash"># Basic ML anomaly detection
+renacer -c --ml-anomaly -- cargo build
+
+# Custom cluster count
+renacer -c --ml-anomaly --ml-clusters 5 -- ./app
+
+# Compare with z-score
+renacer -c --ml-anomaly --ml-compare -- ./app
+</code></pre>
+<h2 id="model-persistence-sprint-48"><a class="header" href="#model-persistence-sprint-48">Model Persistence (Sprint 48)</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Flag</th><th>Description</th><th>Example</th></tr></thead><tbody>
+<tr><td><code>--save-model FILE</code></td><td>Save trained model to .apr</td><td><code>--save-model baseline.apr</code></td></tr>
+<tr><td><code>--load-model FILE</code></td><td>Load pre-trained model</td><td><code>--load-model baseline.apr</code></td></tr>
+<tr><td><code>--baseline FILE</code></td><td>Compare against baseline</td><td><code>--baseline release-1.0.apr</code></td></tr>
+</tbody></table>
+</div>
+<h3 id="examples-1"><a class="header" href="#examples-1">Examples</a></h3>
+<pre><code class="language-bash"># Save model after training
+renacer -c --ml-anomaly --save-model baseline.apr -- cargo build
+
+# Load existing model (skip training)
+renacer -c --ml-anomaly --load-model baseline.apr -- cargo test
+
+# Regression detection
+renacer -c --ml-anomaly --baseline baseline.apr -- cargo build
+</code></pre>
+<h3 id="output-with---save-model"><a class="header" href="#output-with---save-model">Output with --save-model</a></h3>
+<pre><code>=== ML Anomaly Detection Report ===
+Clusters: 3
+Silhouette Score: 0.847
+
+Model saved: baseline.apr
+  - Training samples: 47 syscalls
+  - Compression: Zstd
+  - Size: 1.2 KB
+</code></pre>
+<h3 id="output-with---baseline"><a class="header" href="#output-with---baseline">Output with --baseline</a></h3>
+<pre><code>=== Regression Analysis ===
+Baseline: baseline.apr (v0.6.3, 47 samples)
+Current:  52 syscalls
+
+New anomalies not in baseline:
+  - futex (avg: 1250µs) - REGRESSION
+
+Silhouette change: 0.847 → 0.723 (-14.6%)
+</code></pre>
+<h2 id="statistical-analysis"><a class="header" href="#statistical-analysis">Statistical Analysis</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Flag</th><th>Description</th><th>Default</th></tr></thead><tbody>
+<tr><td><code>--anomaly-realtime</code></td><td>Real-time z-score monitoring</td><td>disabled</td></tr>
+<tr><td><code>--anomaly-threshold N</code></td><td>Z-score threshold</td><td>2.0</td></tr>
+</tbody></table>
+</div>
+<h2 id="related"><a class="header" href="#related">Related</a></h2>
+<ul>
+<li><a href="../advanced/ml-pipeline.html">ML Pipeline</a> - Detailed ML documentation</li>
+<li><a href="../advanced/model-persistence.html">Model Persistence</a> - .apr format details</li>
+<li><a href="../advanced/machine-learning.html">Machine Learning</a> - KMeans basics</li>
+</ul>
 
                     </main>
 

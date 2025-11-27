@@ -11671,6 +11671,116 @@ renacer --push-model hub:paiml/syscall-anomaly -- cargo build
 renacer --load-model hub:paiml/syscall-anomaly -- cargo build
 </code></pre>
 <p>Model cards will be auto-generated with training metadata, hyperparameters, and metrics.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="model-persistence-apr-format"><a class="header" href="#model-persistence-apr-format">Model Persistence (.apr Format)</a></h1>
+<p>Eliminate MUDA (waste) by persisting trained ML models. Skip retraining on every run.</p>
+<blockquote>
+<p><strong>Toyota Way:</strong> 無駄 (Muda) - Waste elimination through model reuse</p>
+</blockquote>
+<h2 id="quick-start-1"><a class="header" href="#quick-start-1">Quick Start</a></h2>
+<pre><code class="language-bash"># Save model after training
+renacer -c --ml-anomaly --save-model baseline.apr -- cargo build
+
+# Load model (no retraining)
+renacer -c --ml-anomaly --load-model baseline.apr -- cargo test
+
+# Compare against baseline
+renacer -c --ml-anomaly --baseline baseline.apr -- cargo build
+</code></pre>
+<h2 id="the-apr-format"><a class="header" href="#the-apr-format">The .apr Format</a></h2>
+<p>aprender's binary format with:</p>
+<ul>
+<li><strong>Zstd compression</strong> - 60-80% size reduction</li>
+<li><strong>Version tracking</strong> - Detects incompatible models</li>
+<li><strong>Metadata storage</strong> - Hyperparameters, training info</li>
+</ul>
+<h3 id="file-structure"><a class="header" href="#file-structure">File Structure</a></h3>
+<pre><code>┌────────────────────────────────┐
+│ Magic: "APR\x00"               │ 4 bytes
+├────────────────────────────────┤
+│ Version: u32                   │ 4 bytes
+├────────────────────────────────┤
+│ Model Type: u8                 │ 1 byte
+├────────────────────────────────┤
+│ Compression: u8                │ 1 byte
+├────────────────────────────────┤
+│ Metadata Length: u32           │ 4 bytes
+├────────────────────────────────┤
+│ Metadata (JSON)                │ variable
+├────────────────────────────────┤
+│ Model Data (compressed)        │ variable
+└────────────────────────────────┘
+</code></pre>
+<h2 id="api-reference"><a class="header" href="#api-reference">API Reference</a></h2>
+<h3 id="modelmetadata"><a class="header" href="#modelmetadata">ModelMetadata</a></h3>
+<pre><code class="language-rust">let metadata = ModelMetadata::new(1000)  // training samples
+    .with_hyperparameter("n_clusters", "5")
+    .with_hyperparameter("eps", "0.5")
+    .with_description("Production baseline v1.0");</code></pre>
+<div class="table-wrapper"><table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>renacer_version</code></td><td>String</td><td>Auto-populated</td></tr>
+<tr><td><code>trained_at</code></td><td>String</td><td>Unix timestamp</td></tr>
+<tr><td><code>training_samples</code></td><td>usize</td><td>Sample count</td></tr>
+<tr><td><code>hyperparameters</code></td><td>HashMap</td><td>Model config</td></tr>
+<tr><td><code>description</code></td><td>Option</td><td>User notes</td></tr>
+</tbody></table>
+</div>
+<h3 id="persistenceoptions"><a class="header" href="#persistenceoptions">PersistenceOptions</a></h3>
+<pre><code class="language-rust">let options = PersistenceOptions::new()
+    .with_compression(true)      // default: true
+    .with_name("baseline-v1")
+    .with_description("Release candidate");</code></pre>
+<h3 id="saveload-functions"><a class="header" href="#saveload-functions">Save/Load Functions</a></h3>
+<pre><code class="language-rust">// KMeans
+save_kmeans_model(&amp;model, "model.apr", options)?;
+let model = load_kmeans_model("model.apr")?;
+
+// IsolationForest
+save_isolation_forest_model(&amp;model, "iforest.apr", options)?;
+let model = load_isolation_forest_model("iforest.apr")?;
+
+// Validation only
+let metadata = validate_model_file("model.apr")?;</code></pre>
+<h2 id="error-handling"><a class="header" href="#error-handling">Error Handling</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Error</th><th>Cause</th><th>Solution</th></tr></thead><tbody>
+<tr><td><code>FileNotFound</code></td><td>Path doesn't exist</td><td>Check path</td></tr>
+<tr><td><code>InvalidFormat</code></td><td>Not .apr file</td><td>Use correct file</td></tr>
+<tr><td><code>VersionMismatch</code></td><td>Old model format</td><td>Retrain model</td></tr>
+<tr><td><code>LoadError</code></td><td>Corrupted file</td><td>Retrain model</td></tr>
+</tbody></table>
+</div>
+<h2 id="performance-7"><a class="header" href="#performance-7">Performance</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Model Size</th><th>Save Time</th><th>Load Time</th><th>Compressed Size</th></tr></thead><tbody>
+<tr><td>10 clusters</td><td>&lt;1ms</td><td>&lt;1ms</td><td>~500 bytes</td></tr>
+<tr><td>100 clusters</td><td>~2ms</td><td>~1ms</td><td>~5 KB</td></tr>
+<tr><td>1000 clusters</td><td>~10ms</td><td>~5ms</td><td>~50 KB</td></tr>
+</tbody></table>
+</div>
+<h2 id="workflow-cicd-integration"><a class="header" href="#workflow-cicd-integration">Workflow: CI/CD Integration</a></h2>
+<pre><code class="language-yaml"># .github/workflows/perf.yml
+jobs:
+  performance:
+    steps:
+      - name: Download baseline
+        uses: actions/download-artifact@v3
+        with:
+          name: baseline-model
+
+      - name: Run regression check
+        run: |
+          renacer -c --ml-anomaly --baseline baseline.apr \
+            -- cargo build 2&gt;&amp;1 | tee results.txt
+
+          if grep -q "REGRESSION" results.txt; then
+            echo "::error::Performance regression detected"
+            exit 1
+          fi
+</code></pre>
+<h2 id="related-18"><a class="header" href="#related-18">Related</a></h2>
+<ul>
+<li><a href="advanced/./ml-pipeline.html">ML Pipeline with EXTREME TDD</a></li>
+<li><a href="advanced/./machine-learning.html">Machine Learning</a></li>
+<li><a href="advanced/./anomaly-detection.html">Anomaly Detection</a></li>
+</ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="opentelemetry-integration"><a class="header" href="#opentelemetry-integration">OpenTelemetry Integration</a></h1>
 <p>Renacer integrates with OpenTelemetry (OTLP) to export syscall traces as distributed tracing spans. This enables seamless integration with observability backends like Jaeger, Grafana Tempo, Elastic APM, and Honeycomb.</p>
 <h2 id="overview-17"><a class="header" href="#overview-17">Overview</a></h2>
@@ -11681,7 +11791,7 @@ renacer --load-model hub:paiml/syscall-anomaly -- cargo build
 <li>Correlate system calls with application traces</li>
 <li>Build end-to-end observability across your stack</li>
 </ul>
-<h2 id="quick-start-1"><a class="header" href="#quick-start-1">Quick Start</a></h2>
+<h2 id="quick-start-2"><a class="header" href="#quick-start-2">Quick Start</a></h2>
 <h3 id="1-start-jaeger-for-local-testing"><a class="header" href="#1-start-jaeger-for-local-testing">1. Start Jaeger (for local testing)</a></h3>
 <pre><code class="language-bash">docker run -d --name jaeger \
   -p 16686:16686 \
@@ -13105,7 +13215,7 @@ docker run -p 4317:4317 otel/opentelemetry-collector
 <li>How does it respond to unexpected signals?</li>
 <li>Will it timeout properly under load?</li>
 </ul>
-<h2 id="quick-start-2"><a class="header" href="#quick-start-2">Quick Start</a></h2>
+<h2 id="quick-start-3"><a class="header" href="#quick-start-3">Quick Start</a></h2>
 <h3 id="using-presets"><a class="header" href="#using-presets">Using Presets</a></h3>
 <p>The easiest way to get started is with presets:</p>
 <pre><code class="language-bash"># Gentle chaos - suitable for CI/CD
@@ -13445,7 +13555,7 @@ renacer --chaos-timeout 60s --chaos-memory-limit 64M -c -- ./slow-starter
 <li><strong>Jidoka</strong> (Automation with Human Touch): Automated analysis with actionable explanations</li>
 <li><strong>Poka-Yoke</strong> (Error-proofing): Statistical tests prevent false positives</li>
 </ul>
-<h2 id="quick-start-3"><a class="header" href="#quick-start-3">Quick Start</a></h2>
+<h2 id="quick-start-4"><a class="header" href="#quick-start-4">Quick Start</a></h2>
 <h3 id="1-collect-baseline-golden-trace"><a class="header" href="#1-collect-baseline-golden-trace">1. Collect Baseline Golden Trace</a></h3>
 <pre><code class="language-bash"># Known-good version
 renacer trace ./transpiler input.py --output baseline.trace
@@ -13700,7 +13810,7 @@ impl ClusterRegistry {
     /// Simple classification (no context)
     pub fn classify_simple(&amp;self, syscall: &amp;str, args: &amp;[String]) -&gt; Option&lt;String&gt;;
 }</code></pre>
-<h3 id="performance-7"><a class="header" href="#performance-7">Performance</a></h3>
+<h3 id="performance-8"><a class="header" href="#performance-8">Performance</a></h3>
 <ul>
 <li><strong>Lookup</strong>: O(1) HashMap lookup</li>
 <li><strong>Memory</strong>: ~5KB for default cluster pack</li>
@@ -13994,7 +14104,7 @@ MemoryAllocation: 10ms (10%)
 <li><strong>Tests</strong>: 22/22 passing (100%)</li>
 <li><strong>Performance</strong>: O(n) where n = number of syscalls</li>
 </ul>
-<h2 id="api-reference"><a class="header" href="#api-reference">API Reference</a></h2>
+<h2 id="api-reference-1"><a class="header" href="#api-reference-1">API Reference</a></h2>
 <h3 id="timeattribution"><a class="header" href="#timeattribution">TimeAttribution</a></h3>
 <pre><code class="language-rust">pub struct TimeAttribution {
     pub cluster: String,
@@ -14398,7 +14508,7 @@ fn test_no_performance_regression() {
 <li><strong>Dependencies</strong>: aprender 0.7.1, trueno 0.7.0 (SIMD-optimized)</li>
 <li><strong>Zero Custom Implementations</strong>: Uses established libraries</li>
 </ul>
-<h2 id="api-reference-1"><a class="header" href="#api-reference-1">API Reference</a></h2>
+<h2 id="api-reference-2"><a class="header" href="#api-reference-2">API Reference</a></h2>
 <h3 id="regressionconfig"><a class="header" href="#regressionconfig">RegressionConfig</a></h3>
 <pre><code class="language-rust">pub struct RegressionConfig {
     pub significance_level: f64,     // p-value threshold (default: 0.05)
@@ -14813,7 +14923,7 @@ renacer --format html -c -- ls &gt; report.html
 </div>
 <p>See <a href="reference/./exit-codes.html">Exit Codes</a> for detailed codes.</p>
 <hr />
-<h2 id="related-18"><a class="header" href="#related-18">Related</a></h2>
+<h2 id="related-19"><a class="header" href="#related-19">Related</a></h2>
 <ul>
 <li><a href="reference/./filter-syntax.html">Filter Syntax</a> - Complete filtering reference</li>
 <li><a href="reference/./output-formats.html">Output Formats</a> - Format specifications</li>
@@ -15102,7 +15212,7 @@ renacer -e 'trace=file,!close,/^stat.*/,socket' -- ./myapp
 </code></pre>
 <p><strong>Behavior:</strong> Trace <strong>all syscalls EXCEPT</strong> <code>read</code> and <code>write</code></p>
 <hr />
-<h2 id="error-handling"><a class="header" href="#error-handling">Error Handling</a></h2>
+<h2 id="error-handling-1"><a class="header" href="#error-handling-1">Error Handling</a></h2>
 <h3 id="invalid-regex-pattern"><a class="header" href="#invalid-regex-pattern">Invalid Regex Pattern</a></h3>
 <pre><code class="language-bash">renacer -e 'trace=/^open(/' -- ls
 # Error: Invalid regex pattern: unclosed group
@@ -15201,7 +15311,7 @@ renacer -e 'trace=/.*at$/' -- ls
 renacer -e trace=process -- make
 </code></pre>
 <hr />
-<h2 id="related-19"><a class="header" href="#related-19">Related</a></h2>
+<h2 id="related-20"><a class="header" href="#related-20">Related</a></h2>
 <ul>
 <li><a href="reference/./cli.html">CLI Reference</a> - Complete command-line options</li>
 <li><a href="reference/../core-concepts/filtering-classes.html">Filtering Classes</a> - Syscall class details</li>
@@ -15212,8 +15322,73 @@ renacer -e trace=process -- make
 <p>📝 <strong>This chapter is under construction.</strong></p>
 <p>All content will be TDD-verified and backed by tests in <code>tests/sprint*.rs</code>.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="analysis-flags"><a class="header" href="#analysis-flags">Analysis Flags</a></h1>
-<p>📝 <strong>This chapter is under construction.</strong></p>
-<p>All content will be TDD-verified and backed by tests in <code>tests/sprint*.rs</code>.</p>
+<p>Command-line flags for ML anomaly detection and model persistence.</p>
+<h2 id="ml-anomaly-detection"><a class="header" href="#ml-anomaly-detection">ML Anomaly Detection</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Flag</th><th>Description</th><th>Default</th></tr></thead><tbody>
+<tr><td><code>--ml-anomaly</code></td><td>Enable ML-based anomaly detection</td><td>disabled</td></tr>
+<tr><td><code>--ml-clusters N</code></td><td>Number of KMeans clusters</td><td>3</td></tr>
+<tr><td><code>--ml-compare</code></td><td>Compare ML vs z-score results</td><td>disabled</td></tr>
+</tbody></table>
+</div>
+<h3 id="examples-1"><a class="header" href="#examples-1">Examples</a></h3>
+<pre><code class="language-bash"># Basic ML anomaly detection
+renacer -c --ml-anomaly -- cargo build
+
+# Custom cluster count
+renacer -c --ml-anomaly --ml-clusters 5 -- ./app
+
+# Compare with z-score
+renacer -c --ml-anomaly --ml-compare -- ./app
+</code></pre>
+<h2 id="model-persistence-sprint-48"><a class="header" href="#model-persistence-sprint-48">Model Persistence (Sprint 48)</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Flag</th><th>Description</th><th>Example</th></tr></thead><tbody>
+<tr><td><code>--save-model FILE</code></td><td>Save trained model to .apr</td><td><code>--save-model baseline.apr</code></td></tr>
+<tr><td><code>--load-model FILE</code></td><td>Load pre-trained model</td><td><code>--load-model baseline.apr</code></td></tr>
+<tr><td><code>--baseline FILE</code></td><td>Compare against baseline</td><td><code>--baseline release-1.0.apr</code></td></tr>
+</tbody></table>
+</div>
+<h3 id="examples-2"><a class="header" href="#examples-2">Examples</a></h3>
+<pre><code class="language-bash"># Save model after training
+renacer -c --ml-anomaly --save-model baseline.apr -- cargo build
+
+# Load existing model (skip training)
+renacer -c --ml-anomaly --load-model baseline.apr -- cargo test
+
+# Regression detection
+renacer -c --ml-anomaly --baseline baseline.apr -- cargo build
+</code></pre>
+<h3 id="output-with---save-model"><a class="header" href="#output-with---save-model">Output with --save-model</a></h3>
+<pre><code>=== ML Anomaly Detection Report ===
+Clusters: 3
+Silhouette Score: 0.847
+
+Model saved: baseline.apr
+  - Training samples: 47 syscalls
+  - Compression: Zstd
+  - Size: 1.2 KB
+</code></pre>
+<h3 id="output-with---baseline"><a class="header" href="#output-with---baseline">Output with --baseline</a></h3>
+<pre><code>=== Regression Analysis ===
+Baseline: baseline.apr (v0.6.3, 47 samples)
+Current:  52 syscalls
+
+New anomalies not in baseline:
+  - futex (avg: 1250µs) - REGRESSION
+
+Silhouette change: 0.847 → 0.723 (-14.6%)
+</code></pre>
+<h2 id="statistical-analysis-1"><a class="header" href="#statistical-analysis-1">Statistical Analysis</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Flag</th><th>Description</th><th>Default</th></tr></thead><tbody>
+<tr><td><code>--anomaly-realtime</code></td><td>Real-time z-score monitoring</td><td>disabled</td></tr>
+<tr><td><code>--anomaly-threshold N</code></td><td>Z-score threshold</td><td>2.0</td></tr>
+</tbody></table>
+</div>
+<h2 id="related-21"><a class="header" href="#related-21">Related</a></h2>
+<ul>
+<li><a href="reference/../advanced/ml-pipeline.html">ML Pipeline</a> - Detailed ML documentation</li>
+<li><a href="reference/../advanced/model-persistence.html">Model Persistence</a> - .apr format details</li>
+<li><a href="reference/../advanced/machine-learning.html">Machine Learning</a> - KMeans basics</li>
+</ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="output-formats-2"><a class="header" href="#output-formats-2">Output Formats</a></h1>
 <p>Overview of Renacer's output format system and when to use each format.</p>
 <hr />
@@ -15427,7 +15602,7 @@ renacer -- ./myapp | less
   jq '.syscalls[] | select(.name == "openat" and .return_value &lt; 0)'
 </code></pre>
 <hr />
-<h4 id="statistical-analysis-1"><a class="header" href="#statistical-analysis-1">Statistical Analysis</a></h4>
+<h4 id="statistical-analysis-2"><a class="header" href="#statistical-analysis-2">Statistical Analysis</a></h4>
 <p><strong>Best Format:</strong> <code>csv</code></p>
 <pre><code class="language-bash">renacer --format csv -c -- ./myapp &gt; trace.csv
 # Import into Excel, create pivot table
@@ -15537,7 +15712,7 @@ renacer --format json -- nonexistent_command &gt; trace.json
 <li><a href="reference/./format-html.html">HTML Format</a> - HTML template and interactivity</li>
 </ul>
 <hr />
-<h2 id="related-20"><a class="header" href="#related-20">Related</a></h2>
+<h2 id="related-22"><a class="header" href="#related-22">Related</a></h2>
 <ul>
 <li><a href="reference/./cli.html">CLI Reference</a> - <code>--format</code> flag documentation</li>
 <li><a href="reference/../core-concepts/statistics.html">Statistics Mode</a> - Use with <code>-c</code> flag</li>
@@ -15551,7 +15726,7 @@ renacer --format json -- nonexistent_command &gt; trace.json
 <p><strong>Format Identifier:</strong> <code>text</code> (default format)</p>
 <p><strong>Sprints:</strong> 3-4 (initial), 5-6 (DWARF), 9-10 (timing), 13 (function profiling), 20 (real-time anomaly)</p>
 <hr />
-<h2 id="quick-start-4"><a class="header" href="#quick-start-4">Quick Start</a></h2>
+<h2 id="quick-start-5"><a class="header" href="#quick-start-5">Quick Start</a></h2>
 <h3 id="basic-usage-14"><a class="header" href="#basic-usage-14">Basic Usage</a></h3>
 <pre><code class="language-bash"># Default format (no flag needed)
 renacer -- ls
@@ -15933,7 +16108,7 @@ fsync(3) = 0
 close(3) = 0
 </code></pre>
 <hr />
-<h3 id="error-handling-1"><a class="header" href="#error-handling-1">Error Handling</a></h3>
+<h3 id="error-handling-2"><a class="header" href="#error-handling-2">Error Handling</a></h3>
 <pre><code>openat(AT_FDCWD, "/nonexistent", O_RDONLY) = -1 ENOENT (No such file or directory)
 access("/etc/shadow", R_OK) = -1 EACCES (Permission denied)
 read(99, ..., 4096) = -1 EBADF (Bad file descriptor)
@@ -16057,7 +16232,7 @@ write_output                |      123  |     1 |      123
 </code></pre>
 <p><strong>See Also:</strong> <a href="reference/../advanced/function-profiling.html">Function Profiling</a></p>
 <hr />
-<h2 id="related-21"><a class="header" href="#related-21">Related</a></h2>
+<h2 id="related-23"><a class="header" href="#related-23">Related</a></h2>
 <ul>
 <li><a href="reference/./output-formats.html">Output Formats Overview</a> - Format selection guide</li>
 <li><a href="reference/./format-json.html">JSON Format</a> - Machine-parseable JSON output</li>
@@ -16073,7 +16248,7 @@ write_output                |      123  |     1 |      123
 <p><strong>Format Identifier:</strong> <code>renacer-json-v1</code></p>
 <p><strong>Sprints:</strong> 9-10 (initial), 23 (ML anomaly integration)</p>
 <hr />
-<h2 id="quick-start-5"><a class="header" href="#quick-start-5">Quick Start</a></h2>
+<h2 id="quick-start-6"><a class="header" href="#quick-start-6">Quick Start</a></h2>
 <h3 id="basic-usage-15"><a class="header" href="#basic-usage-15">Basic Usage</a></h3>
 <pre><code class="language-bash"># Output JSON to stdout
 renacer --format json -- ls
@@ -16555,7 +16730,7 @@ renacer --format json -- make | gzip &gt; trace.json.gz
 </ol>
 <p><strong>Note:</strong> These are <strong>future considerations only</strong> - current format is stable.</p>
 <hr />
-<h2 id="error-handling-2"><a class="header" href="#error-handling-2">Error Handling</a></h2>
+<h2 id="error-handling-3"><a class="header" href="#error-handling-3">Error Handling</a></h2>
 <h3 id="invalid-json"><a class="header" href="#invalid-json">Invalid JSON</a></h3>
 <p>If Renacer generates invalid JSON (bug), use <code>jq</code> to validate:</p>
 <pre><code class="language-bash">renacer --format json -- ls | jq '.' &gt; /dev/null
@@ -16665,7 +16840,7 @@ renacer --format json -- ls &gt; trace.json
 ajv validate -s schema.json -d trace.json
 </code></pre>
 <hr />
-<h2 id="related-22"><a class="header" href="#related-22">Related</a></h2>
+<h2 id="related-24"><a class="header" href="#related-24">Related</a></h2>
 <ul>
 <li><a href="reference/./output-formats.html">Output Formats Overview</a> - Format selection guide</li>
 <li><a href="reference/./cli.html">CLI Reference</a> - <code>--format json</code> flag documentation</li>
@@ -16681,7 +16856,7 @@ ajv validate -s schema.json -d trace.json
 <p><strong>Format Identifier:</strong> <code>csv</code></p>
 <p><strong>Sprints:</strong> 17 (initial CSV implementation)</p>
 <hr />
-<h2 id="quick-start-6"><a class="header" href="#quick-start-6">Quick Start</a></h2>
+<h2 id="quick-start-7"><a class="header" href="#quick-start-7">Quick Start</a></h2>
 <h3 id="basic-usage-16"><a class="header" href="#basic-usage-16">Basic Usage</a></h3>
 <pre><code class="language-bash"># Output CSV to stdout
 renacer --format csv -- ls
@@ -17298,7 +17473,7 @@ csvlint trace.csv
 </div>
 <p><strong>Parsing Tip:</strong> Always read header row to determine schema dynamically.</p>
 <hr />
-<h2 id="related-23"><a class="header" href="#related-23">Related</a></h2>
+<h2 id="related-25"><a class="header" href="#related-25">Related</a></h2>
 <ul>
 <li><a href="reference/./output-formats.html">Output Formats Overview</a> - Format selection guide</li>
 <li><a href="reference/./format-text.html">Text Format</a> - Human-readable text output</li>
@@ -17596,7 +17771,7 @@ renacer --format html -- ./app &gt; trace.html  # New HTML format
 <pre><code class="language-bash">renacer --format html -c -- ./app &gt; with-stats.html
 </code></pre>
 <p><strong>Tested by:</strong> <code>test_html_output_with_statistics</code></p>
-<h2 id="performance-8"><a class="header" href="#performance-8">Performance</a></h2>
+<h2 id="performance-9"><a class="header" href="#performance-9">Performance</a></h2>
 <ul>
 <li><strong>Generation time:</strong> &lt;1ms for typical traces (&lt;1000 syscalls)</li>
 <li><strong>File size:</strong> ~2-5KB base HTML + ~50-100 bytes per syscall</li>
@@ -17621,7 +17796,7 @@ renacer --format html -- ./app &gt; trace.html  # New HTML format
 <li>✅ <strong>Professional presentation</strong> for non-technical audiences</li>
 </ul>
 <p><strong>All examples tested in:</strong> <a href="reference/../../../tests/sprint22_html_output_tests.rs"><code>tests/sprint22_html_output_tests.rs</code></a></p>
-<h2 id="related-24"><a class="header" href="#related-24">Related</a></h2>
+<h2 id="related-26"><a class="header" href="#related-26">Related</a></h2>
 <ul>
 <li><a href="reference/./format-json.html">JSON Output Format</a> - Machine-readable output</li>
 <li><a href="reference/./format-csv.html">CSV Output Format</a> - Spreadsheet-compatible output</li>
@@ -17661,7 +17836,7 @@ renacer --format html -- ./app &gt; trace.html  # New HTML format
 </ul>
 <hr />
 <h2 id="running-benchmarks-1"><a class="header" href="#running-benchmarks-1">Running Benchmarks</a></h2>
-<h3 id="quick-start-7"><a class="header" href="#quick-start-7">Quick Start</a></h3>
+<h3 id="quick-start-8"><a class="header" href="#quick-start-8">Quick Start</a></h3>
 <pre><code class="language-bash"># Build release binary
 cargo build --release
 
@@ -17905,7 +18080,7 @@ renacer -- ./myapp  # Faster
 cargo test --release --test benchmark_vs_strace -- --ignored --nocapture
 </code></pre>
 <hr />
-<h2 id="related-25"><a class="header" href="#related-25">Related</a></h2>
+<h2 id="related-27"><a class="header" href="#related-27">Related</a></h2>
 <ul>
 <li><a href="reference/../appendix/performance-tables.html">Performance Tables</a> - Comprehensive benchmark data and analysis</li>
 <li><a href="reference/../appendix/changelog.html">CHANGELOG</a> - Sprint 11-12: benchmark infrastructure</li>
@@ -19483,7 +19658,7 @@ make coverage
 make mutants-quick
 </code></pre>
 <p>See <a href="appendix/../contributing/quality-gates.html">Quality Gates</a>.</p>
-<h2 id="related-26"><a class="header" href="#related-26">Related</a></h2>
+<h2 id="related-28"><a class="header" href="#related-28">Related</a></h2>
 <ul>
 <li><a href="appendix/./glossary.html">Glossary</a> - Technical terms and definitions</li>
 <li><a href="appendix/./changelog.html">CHANGELOG</a> - Sprint history and release notes</li>
@@ -20079,7 +20254,7 @@ renacer -e trace=file,network,mmap -- ./myapp
 <li>BPF CO-RE support</li>
 </ul>
 <hr />
-<h2 id="related-27"><a class="header" href="#related-27">Related</a></h2>
+<h2 id="related-29"><a class="header" href="#related-29">Related</a></h2>
 <ul>
 <li><a href="appendix/./glossary.html">Glossary</a> - Technical terms and definitions</li>
 <li><a href="appendix/./faq.html">FAQ</a> - Frequently asked questions</li>
@@ -20439,7 +20614,7 @@ cargo test --release bench_minimal_syscalls -- --ignored --nocapture
 <li><strong>Tools:</strong> strace, cargo, python3 (optional for HPU)</li>
 </ul>
 <hr />
-<h2 id="related-28"><a class="header" href="#related-28">Related</a></h2>
+<h2 id="related-30"><a class="header" href="#related-30">Related</a></h2>
 <ul>
 <li><a href="appendix/../reference/benchmarks.html">Benchmarks</a> - Benchmark methodology and results</li>
 <li><a href="appendix/./changelog.html">CHANGELOG</a> - Sprint history (Sprint 11-12 introduced benchmarks)</li>
