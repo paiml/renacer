@@ -412,11 +412,11 @@ impl ChaosConfig {
     /// use renacer::chaos::ChaosConfig;
     ///
     /// // Use preset
-    /// let config = ChaosConfig::from_cli(Some("aggressive"), None, None, None, false).unwrap();
+    /// let config = ChaosConfig::from_cli(Some("aggressive"), None, None, None, false).unwrap().unwrap();
     /// assert!(config.signal_injection);
     ///
     /// // Custom values
-    /// let config = ChaosConfig::from_cli(None, Some("128M"), Some(0.5), Some("30s"), true).unwrap();
+    /// let config = ChaosConfig::from_cli(None, Some("128M"), Some(0.5), Some("30s"), true).unwrap().unwrap();
     /// assert_eq!(config.memory_limit, 128 * 1024 * 1024);
     /// ```
     pub fn from_cli(
