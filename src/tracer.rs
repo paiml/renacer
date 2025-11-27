@@ -44,6 +44,7 @@ pub struct TracerConfig {
     pub otlp_endpoint: Option<String>, // Sprint 30: OpenTelemetry OTLP endpoint
     pub otlp_service_name: String,     // Sprint 30: Service name for OTLP traces
     pub trace_parent: Option<String>,  // Sprint 33: W3C Trace Context for distributed tracing
+    pub chaos_config: Option<crate::chaos::ChaosConfig>, // Sprint 47: Chaos engineering (Issue #17)
 }
 
 /// Attach to a running process by PID and trace syscalls
@@ -92,6 +93,9 @@ pub fn trace_command(command: &[String], config: TracerConfig) -> Result<()> {
     let program = &command[0];
     let args = &command[1..];
 
+    // Sprint 47: Clone chaos config for child process (Issue #17)
+    let chaos_config = config.chaos_config.clone();
+
     // Fork: parent will trace, child will exec
     match unsafe { fork() }.context("Failed to fork")? {
         ForkResult::Parent { child } => {
@@ -101,6 +105,13 @@ pub fn trace_command(command: &[String], config: TracerConfig) -> Result<()> {
         ForkResult::Child => {
             // Child: allow tracing and exec target program
             ptrace::traceme().context("Failed to PTRACE_TRACEME")?;
+
+            // Sprint 47: Apply chaos resource limits before exec (Issue #17)
+            if let Some(ref chaos) = chaos_config {
+                if let Err(e) = chaos.apply_limits() {
+                    eprintln!("[renacer: Warning: Failed to apply chaos limits: {}]", e);
+                }
+            }
 
             // Use std::process::Command for exec
             let err = Command::new(program).args(args).exec();
@@ -1996,6 +2007,7 @@ mod tests {
             otlp_endpoint: None,                      // Sprint 30
             otlp_service_name: "renacer".to_string(), // Sprint 30
             trace_parent: None,                       // Sprint 33
+            chaos_config: None,                       // Sprint 47
         };
         let result = trace_command(&empty, config);
         assert!(result.is_err());
@@ -2037,6 +2049,7 @@ mod tests {
             otlp_endpoint: None,                      // Sprint 30
             otlp_service_name: "renacer".to_string(), // Sprint 30
             trace_parent: None,                       // Sprint 33
+            chaos_config: None,                       // Sprint 47
         };
         let result = trace_command(&cmd, config);
         assert!(result.is_err());
@@ -2120,6 +2133,7 @@ mod tests {
             otlp_endpoint: None,                      // Sprint 30
             otlp_service_name: "renacer".to_string(), // Sprint 30
             trace_parent: None,                       // Sprint 33
+            chaos_config: None,                       // Sprint 47
         };
         let result = attach_to_pid(999999, config);
         assert!(result.is_err());

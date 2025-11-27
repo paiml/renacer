@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
-use renacer::{cli::Cli, filter, tracer, transpiler_map};
+use renacer::{chaos::ChaosConfig, cli::Cli, filter, tracer, transpiler_map};
 use tracing_subscriber::EnvFilter;
 
 /// Initialize tracing subscriber for debug output
@@ -173,6 +173,21 @@ fn main() -> Result<()> {
         filter::SyscallFilter::all()
     };
 
+    // Sprint 47: Parse chaos configuration (Issue #17)
+    let chaos_config = ChaosConfig::from_cli(
+        args.chaos_preset.as_deref(),
+        args.chaos_memory_limit.as_deref(),
+        args.chaos_cpu_limit,
+        args.chaos_timeout.as_deref(),
+        args.chaos_signals,
+    )
+    .map_err(|e| anyhow::anyhow!("Chaos config error: {}", e))?;
+
+    // Display chaos mode status if enabled
+    if let Some(ref chaos) = chaos_config {
+        eprintln!("⚠️  Chaos mode enabled: {}", chaos.status_line());
+    }
+
     // Create tracer configuration
     let config = tracer::TracerConfig {
         enable_source: args.source,
@@ -205,6 +220,7 @@ fn main() -> Result<()> {
         otlp_endpoint: args.otlp_endpoint,         // Sprint 30
         otlp_service_name: args.otlp_service_name, // Sprint 30
         trace_parent: args.trace_parent,           // Sprint 33
+        chaos_config,                              // Sprint 47
     };
 
     // Either attach to PID or trace command (mutually exclusive)
