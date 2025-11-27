@@ -212,6 +212,43 @@ pub struct Cli {
     #[arg(long = "debug")]
     pub debug: bool,
 
+    // Sprint 47: Chaos Engineering CLI (Issue #17)
+    /// Chaos engineering preset (gentle, aggressive)
+    ///
+    /// Presets configure resource limits for robustness testing:
+    /// - gentle: memory=512MB, cpu=80%, timeout=120s
+    /// - aggressive: memory=64MB, cpu=25%, timeout=10s, signals=on
+    #[arg(long = "chaos", value_name = "PRESET")]
+    pub chaos_preset: Option<String>,
+
+    /// Memory limit for chaos testing (e.g., 64M, 512M, 1G, or bytes)
+    ///
+    /// Limits the traced process's virtual memory using setrlimit.
+    /// Supports suffixes: K (kilobytes), M (megabytes), G (gigabytes).
+    #[arg(long = "chaos-memory-limit", value_name = "SIZE")]
+    pub chaos_memory_limit: Option<String>,
+
+    /// CPU limit as fraction (0.0-1.0) for chaos testing
+    ///
+    /// Limits CPU time relative to real time. For example, 0.5 means
+    /// the process gets 50% of CPU time.
+    #[arg(long = "chaos-cpu-limit", value_name = "FRACTION")]
+    pub chaos_cpu_limit: Option<f64>,
+
+    /// Execution timeout for chaos testing (e.g., 10s, 2m, 1h)
+    ///
+    /// Terminates the traced process after the specified duration.
+    /// Supports suffixes: s (seconds), m (minutes), h (hours).
+    #[arg(long = "chaos-timeout", value_name = "DURATION")]
+    pub chaos_timeout: Option<String>,
+
+    /// Enable random signal injection for chaos testing
+    ///
+    /// Periodically injects signals (SIGALRM, SIGUSR1) to test
+    /// signal handling robustness.
+    #[arg(long = "chaos-signals")]
+    pub chaos_signals: bool,
+
     /// Command to trace (everything after --)
     #[arg(last = true)]
     pub command: Option<Vec<String>>,
@@ -886,5 +923,147 @@ mod tests {
             "test",
         ]);
         assert!(result.is_err());
+    }
+
+    // Sprint 47: Chaos Engineering CLI Tests (Issue #17)
+    #[test]
+    fn test_cli_chaos_preset_gentle() {
+        let cli = Cli::parse_from(["renacer", "--chaos", "gentle", "--", "echo", "test"]);
+        assert_eq!(cli.chaos_preset.as_deref(), Some("gentle"));
+    }
+
+    #[test]
+    fn test_cli_chaos_preset_aggressive() {
+        let cli = Cli::parse_from(["renacer", "--chaos", "aggressive", "--", "echo", "test"]);
+        assert_eq!(cli.chaos_preset.as_deref(), Some("aggressive"));
+    }
+
+    #[test]
+    fn test_cli_chaos_preset_default_none() {
+        let cli = Cli::parse_from(["renacer", "--", "echo", "test"]);
+        assert!(cli.chaos_preset.is_none());
+    }
+
+    #[test]
+    fn test_cli_chaos_memory_limit() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "--chaos-memory-limit",
+            "64M",
+            "--",
+            "echo",
+            "test",
+        ]);
+        assert_eq!(cli.chaos_memory_limit.as_deref(), Some("64M"));
+    }
+
+    #[test]
+    fn test_cli_chaos_memory_limit_bytes() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "--chaos-memory-limit",
+            "67108864",
+            "--",
+            "echo",
+            "test",
+        ]);
+        assert_eq!(cli.chaos_memory_limit.as_deref(), Some("67108864"));
+    }
+
+    #[test]
+    fn test_cli_chaos_memory_limit_default_none() {
+        let cli = Cli::parse_from(["renacer", "--", "echo", "test"]);
+        assert!(cli.chaos_memory_limit.is_none());
+    }
+
+    #[test]
+    fn test_cli_chaos_cpu_limit() {
+        let cli = Cli::parse_from(["renacer", "--chaos-cpu-limit", "0.5", "--", "echo", "test"]);
+        assert!((cli.chaos_cpu_limit.unwrap() - 0.5).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_cli_chaos_cpu_limit_default_none() {
+        let cli = Cli::parse_from(["renacer", "--", "echo", "test"]);
+        assert!(cli.chaos_cpu_limit.is_none());
+    }
+
+    #[test]
+    fn test_cli_chaos_timeout() {
+        let cli = Cli::parse_from(["renacer", "--chaos-timeout", "10s", "--", "echo", "test"]);
+        assert_eq!(cli.chaos_timeout.as_deref(), Some("10s"));
+    }
+
+    #[test]
+    fn test_cli_chaos_timeout_default_none() {
+        let cli = Cli::parse_from(["renacer", "--", "echo", "test"]);
+        assert!(cli.chaos_timeout.is_none());
+    }
+
+    #[test]
+    fn test_cli_chaos_signals_flag() {
+        let cli = Cli::parse_from(["renacer", "--chaos-signals", "--", "echo", "test"]);
+        assert!(cli.chaos_signals);
+    }
+
+    #[test]
+    fn test_cli_chaos_signals_default_false() {
+        let cli = Cli::parse_from(["renacer", "--", "echo", "test"]);
+        assert!(!cli.chaos_signals);
+    }
+
+    #[test]
+    fn test_cli_chaos_combined_with_tracing() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "-c",
+            "--chaos",
+            "aggressive",
+            "--",
+            "echo",
+            "test",
+        ]);
+        assert!(cli.statistics);
+        assert_eq!(cli.chaos_preset.as_deref(), Some("aggressive"));
+    }
+
+    #[test]
+    fn test_cli_chaos_preset_with_custom_memory() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "--chaos",
+            "gentle",
+            "--chaos-memory-limit",
+            "128M",
+            "--",
+            "echo",
+            "test",
+        ]);
+        assert_eq!(cli.chaos_preset.as_deref(), Some("gentle"));
+        assert_eq!(cli.chaos_memory_limit.as_deref(), Some("128M"));
+    }
+
+    #[test]
+    fn test_cli_chaos_all_options() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "--chaos",
+            "aggressive",
+            "--chaos-memory-limit",
+            "64M",
+            "--chaos-cpu-limit",
+            "0.25",
+            "--chaos-timeout",
+            "10s",
+            "--chaos-signals",
+            "--",
+            "echo",
+            "test",
+        ]);
+        assert_eq!(cli.chaos_preset.as_deref(), Some("aggressive"));
+        assert_eq!(cli.chaos_memory_limit.as_deref(), Some("64M"));
+        assert!((cli.chaos_cpu_limit.unwrap() - 0.25).abs() < f64::EPSILON);
+        assert_eq!(cli.chaos_timeout.as_deref(), Some("10s"));
+        assert!(cli.chaos_signals);
     }
 }
