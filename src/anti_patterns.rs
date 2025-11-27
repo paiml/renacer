@@ -90,6 +90,32 @@ pub enum Severity {
     Critical,
 }
 
+impl Severity {
+    /// Determine severity from tight loop repetition count
+    #[inline]
+    fn from_repetition_count(count: usize) -> Self {
+        if count > 100_000 {
+            Severity::Critical
+        } else if count > 10_000 {
+            Severity::High
+        } else {
+            Severity::Medium
+        }
+    }
+
+    /// Determine severity from PCIe transfer percentage
+    #[inline]
+    fn from_transfer_percentage(percentage: f64) -> Self {
+        if percentage > 200.0 {
+            Severity::Critical // More transfer time than compute!
+        } else if percentage > 100.0 {
+            Severity::High
+        } else {
+            Severity::Medium
+        }
+    }
+}
+
 /// Detected anti-pattern
 #[derive(Debug, Clone, PartialEq)]
 pub enum AntiPattern {
@@ -355,20 +381,12 @@ fn detect_tight_loops(graph: &CausalGraph) -> Result<Vec<AntiPattern>> {
                 if let (Some(current_name), Some(start), Some(end)) =
                     (&current_syscall, start_node, end_node)
                 {
-                    let severity = if current_count > 100_000 {
-                        Severity::Critical
-                    } else if current_count > 10_000 {
-                        Severity::High
-                    } else {
-                        Severity::Medium
-                    };
-
                     patterns.push(AntiPattern::TightLoop {
                         syscall_name: current_name.clone(),
                         repetition_count: current_count,
                         total_duration: current_duration,
                         node_range: (start, end),
-                        severity,
+                        severity: Severity::from_repetition_count(current_count),
                     });
                 }
             }
@@ -387,20 +405,12 @@ fn detect_tight_loops(graph: &CausalGraph) -> Result<Vec<AntiPattern>> {
         if let (Some(current_name), Some(start), Some(end)) =
             (current_syscall, start_node, end_node)
         {
-            let severity = if current_count > 100_000 {
-                Severity::Critical
-            } else if current_count > 10_000 {
-                Severity::High
-            } else {
-                Severity::Medium
-            };
-
             patterns.push(AntiPattern::TightLoop {
                 syscall_name: current_name,
                 repetition_count: current_count,
                 total_duration: current_duration,
                 node_range: (start, end),
-                severity,
+                severity: Severity::from_repetition_count(current_count),
             });
         }
     }
@@ -439,19 +449,11 @@ fn detect_pcie_bottleneck(graph: &CausalGraph) -> Result<Option<AntiPattern>> {
 
     // Threshold: >50% is PCIe bottleneck
     if transfer_percentage > 50.0 {
-        let severity = if transfer_percentage > 200.0 {
-            Severity::Critical // More transfer time than compute!
-        } else if transfer_percentage > 100.0 {
-            Severity::High
-        } else {
-            Severity::Medium
-        };
-
         Ok(Some(AntiPattern::PcieBottleneck {
             transfer_time: total_transfer_time,
             kernel_time: total_kernel_time,
             transfer_percentage,
-            severity,
+            severity: Severity::from_transfer_percentage(transfer_percentage),
         }))
     } else {
         Ok(None)
