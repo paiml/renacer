@@ -328,7 +328,7 @@ pub struct DecisionManifest {
 /// security. The 64-bit hash space (2^64 = 18 quintillion) makes collisions
 /// extremely unlikely in practice.
 ///
-/// Reference: http://www.isthe.com/chongo/tech/comp/fnv/
+/// Reference: <http://www.isthe.com/chongo/tech/comp/fnv/>
 pub fn generate_decision_id(category: &str, name: &str, file: &str, line: u32) -> u64 {
     let mut hasher = fnv::FnvHasher::default();
 
