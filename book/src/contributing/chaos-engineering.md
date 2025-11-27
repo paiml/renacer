@@ -209,30 +209,34 @@ fn test_tracer_under_memory_pressure() {
 }
 ```
 
-## Future CLI Integration
+## CLI Integration (Sprint 47)
 
-Planned for Sprint 30:
+The chaos engineering CLI was implemented in Sprint 47 (Issue #17):
 
 ```bash
 # Use gentle preset
-renacer --chaos gentle -- ./app
+renacer --chaos gentle -c -- ./app
 
 # Use aggressive preset
-renacer --chaos aggressive -- ./flaky-test
+renacer --chaos aggressive -c -- ./flaky-test
 
-# Custom chaos from JSON
-renacer --chaos custom:chaos.json -- ./stress-test
+# Custom memory limit
+renacer --chaos-memory-limit 128M -c -- ./app
 
-# Example chaos.json
-{
-  "memory_limit": 104857600,
-  "cpu_limit": 0.5,
-  "timeout_secs": 30,
-  "signal_injection": true,
-  "network_latency_ms": 100,
-  "packet_loss_rate": 0.1
-}
+# Custom CPU limit
+renacer --chaos-cpu-limit 0.5 -c -- ./app
+
+# Custom timeout
+renacer --chaos-timeout 30s -c -- ./app
+
+# Enable signal injection
+renacer --chaos-signals -c -- ./app
+
+# Combine preset with overrides
+renacer --chaos aggressive --chaos-memory-limit 128M -c -- ./stress-test
 ```
+
+For detailed usage examples, see the [Chaos Testing Guide](../advanced/chaos-testing.md).
 
 ## Use Cases
 
@@ -295,16 +299,17 @@ make fuzz      # Input fuzzing
 make chaos     # System chaos testing
 ```
 
-## Implementation Status (v0.4.1)
+## Implementation Status (v0.6.3)
 
 - ✅ ChaosConfig builder pattern
 - ✅ Gentle/aggressive presets
-- ✅ Property-based tests (7 tests)
+- ✅ Property-based tests (14 tests)
 - ✅ Cargo feature gates
-- ⏳ CLI integration (planned Sprint 30)
-- ⏳ Runtime chaos injection (planned Sprint 30)
-- ⏳ Network chaos (planned Sprint 31)
-- ⏳ Byzantine faults (planned Sprint 32)
+- ✅ CLI integration (Sprint 47, Issue #17)
+- ✅ Runtime chaos injection via setrlimit
+- ✅ 67 chaos module tests total
+- ⏳ Network chaos (planned)
+- ⏳ Byzantine faults (planned)
 
 ## Resources
 
