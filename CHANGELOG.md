@@ -5,6 +5,50 @@ All notable changes to Renacer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.4] - 2025-11-27
+
+### Added
+
+#### Machine Learning Pipeline (Sprint 48)
+
+**ML Pipeline Integration** (`src/ml_pipeline.rs`):
+- Feature extraction from syscall data (avg_duration, log_count, log_total_duration)
+- StandardScaler normalization via aprender
+- DBSCAN clustering for density-based anomaly detection
+- Local Outlier Factor (LOF) for outlier identification
+- PCA dimensionality reduction
+- Silhouette score for cluster quality assessment
+- Optimal k-selection via silhouette method
+- 21 new tests with property-based testing
+
+**Model Persistence** (`src/model_persistence.rs`):
+- .apr format save/load for KMeans and IsolationForest models
+- Zstd compression support
+- ModelMetadata tracking (version, timestamp, hyperparameters)
+- 14 new tests including roundtrip property tests
+
+**CLI Flags**:
+- `--save-model FILE` - Persist trained model to .apr format
+- `--load-model FILE` - Load pre-trained model (skip retraining)
+- `--baseline FILE` - Compare against baseline for regression detection
+
+#### Documentation
+
+**Book Chapters**:
+- ML Pipeline with EXTREME TDD (`book/src/advanced/ml-pipeline.md`)
+- Model Persistence (`book/src/advanced/model-persistence.md`)
+- Analysis Flags reference (`book/src/reference/analysis-flags.md`)
+
+### Fixed
+
+- Clippy warnings: range contains, sort_by_key, unnecessary borrows
+- Doctest for ChaosConfig::from_cli Result<Option<Self>> unwrapping
+
+### Changed
+
+- Total tests: 885 (up from 787)
+- All quality gates passing (format, clippy, tests, security)
+
 ## [0.6.1] - 2025-11-21
 
 ### Added
