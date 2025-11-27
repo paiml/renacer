@@ -1,0 +1,498 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Chaos Testing - The Renacer Book - Pure Rust System Call Tracing</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="A comprehensive guide to renacer: syscall tracing, DWARF correlation, and performance analysis">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "rust";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The Renacer Book - Pure Rust System Call Tracing</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/paiml/renacer/edit/main/book/src/advanced/chaos-testing.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="chaos-testing-with-renacer"><a class="header" href="#chaos-testing-with-renacer">Chaos Testing with Renacer</a></h1>
+<p>Renacer includes built-in <strong>chaos engineering</strong> capabilities for robustness testing. Use chaos mode to test how your applications behave under resource pressure, timeouts, and signal interruptions.</p>
+<h2 id="why-chaos-testing"><a class="header" href="#why-chaos-testing">Why Chaos Testing?</a></h2>
+<p>Normal testing verifies your application works under ideal conditions. Chaos testing answers harder questions:</p>
+<ul>
+<li>What happens when memory is scarce?</li>
+<li>Does your app handle CPU throttling gracefully?</li>
+<li>How does it respond to unexpected signals?</li>
+<li>Will it timeout properly under load?</li>
+</ul>
+<h2 id="quick-start"><a class="header" href="#quick-start">Quick Start</a></h2>
+<h3 id="using-presets"><a class="header" href="#using-presets">Using Presets</a></h3>
+<p>The easiest way to get started is with presets:</p>
+<pre><code class="language-bash"># Gentle chaos - suitable for CI/CD
+renacer --chaos gentle -c -- ./my-app
+
+# Aggressive chaos - stress testing
+renacer --chaos aggressive -c -- ./my-app
+</code></pre>
+<p><strong>Preset configurations:</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Preset</th><th>Memory</th><th>CPU</th><th>Timeout</th><th>Signals</th></tr></thead><tbody>
+<tr><td><code>gentle</code></td><td>512MB</td><td>80%</td><td>120s</td><td>off</td></tr>
+<tr><td><code>aggressive</code></td><td>64MB</td><td>25%</td><td>10s</td><td>on</td></tr>
+</tbody></table>
+</div>
+<h3 id="custom-configuration"><a class="header" href="#custom-configuration">Custom Configuration</a></h3>
+<p>Fine-tune chaos parameters for your specific needs:</p>
+<pre><code class="language-bash"># Custom memory limit
+renacer --chaos-memory-limit 128M -c -- ./my-app
+
+# Custom CPU limit (50% of CPU time)
+renacer --chaos-cpu-limit 0.5 -c -- ./my-app
+
+# Custom timeout
+renacer --chaos-timeout 30s -c -- ./my-app
+
+# Enable signal injection
+renacer --chaos-signals -c -- ./my-app
+</code></pre>
+<h3 id="combined-options"><a class="header" href="#combined-options">Combined Options</a></h3>
+<p>Mix presets with custom overrides:</p>
+<pre><code class="language-bash"># Start with aggressive preset, but increase memory limit
+renacer --chaos aggressive --chaos-memory-limit 128M -c -- ./my-app
+
+# Gentle preset with signals enabled
+renacer --chaos gentle --chaos-signals -c -- ./my-app
+</code></pre>
+<h2 id="cli-reference"><a class="header" href="#cli-reference">CLI Reference</a></h2>
+<h3 id="--chaos-preset"><a class="header" href="#--chaos-preset"><code>--chaos &lt;PRESET&gt;</code></a></h3>
+<p>Use a named chaos preset. Available presets:</p>
+<ul>
+<li>
+<p><strong><code>gentle</code></strong>: Conservative limits for regular testing</p>
+<ul>
+<li>Memory: 512MB</li>
+<li>CPU: 80%</li>
+<li>Timeout: 120 seconds</li>
+<li>Signals: disabled</li>
+</ul>
+</li>
+<li>
+<p><strong><code>aggressive</code></strong>: Strict limits for stress testing</p>
+<ul>
+<li>Memory: 64MB</li>
+<li>CPU: 25%</li>
+<li>Timeout: 10 seconds</li>
+<li>Signals: enabled</li>
+</ul>
+</li>
+</ul>
+<h3 id="--chaos-memory-limit-size"><a class="header" href="#--chaos-memory-limit-size"><code>--chaos-memory-limit &lt;SIZE&gt;</code></a></h3>
+<p>Set the maximum virtual memory for the traced process.</p>
+<p><strong>Formats supported:</strong></p>
+<ul>
+<li>Bytes: <code>67108864</code></li>
+<li>Kilobytes: <code>64K</code> or <code>64k</code></li>
+<li>Megabytes: <code>64M</code> or <code>64m</code></li>
+<li>Gigabytes: <code>1G</code> or <code>1g</code></li>
+</ul>
+<p><strong>Examples:</strong></p>
+<pre><code class="language-bash">renacer --chaos-memory-limit 64M -- ./my-app
+renacer --chaos-memory-limit 1G -- ./memory-heavy-app
+renacer --chaos-memory-limit 512K -- ./small-app
+</code></pre>
+<h3 id="--chaos-cpu-limit-fraction"><a class="header" href="#--chaos-cpu-limit-fraction"><code>--chaos-cpu-limit &lt;FRACTION&gt;</code></a></h3>
+<p>Limit CPU time as a fraction of real time (0.0 to 1.0).</p>
+<ul>
+<li><code>0.5</code> = 50% of CPU time</li>
+<li><code>0.25</code> = 25% of CPU time</li>
+<li><code>1.0</code> = no limit (100%)</li>
+</ul>
+<p><strong>Examples:</strong></p>
+<pre><code class="language-bash"># Half CPU speed
+renacer --chaos-cpu-limit 0.5 -- ./my-app
+
+# Quarter CPU speed (stress test)
+renacer --chaos-cpu-limit 0.25 -- ./my-app
+</code></pre>
+<h3 id="--chaos-timeout-duration"><a class="header" href="#--chaos-timeout-duration"><code>--chaos-timeout &lt;DURATION&gt;</code></a></h3>
+<p>Set maximum execution time before termination.</p>
+<p><strong>Formats supported:</strong></p>
+<ul>
+<li>Seconds: <code>30</code> or <code>30s</code></li>
+<li>Minutes: <code>2m</code></li>
+<li>Hours: <code>1h</code></li>
+</ul>
+<p><strong>Examples:</strong></p>
+<pre><code class="language-bash">renacer --chaos-timeout 10s -- ./quick-app
+renacer --chaos-timeout 2m -- ./longer-app
+renacer --chaos-timeout 1h -- ./batch-job
+</code></pre>
+<h3 id="--chaos-signals"><a class="header" href="#--chaos-signals"><code>--chaos-signals</code></a></h3>
+<p>Enable random signal injection. Periodically sends signals to test signal handling:</p>
+<ul>
+<li><code>SIGALRM</code> - alarm timer signal</li>
+<li><code>SIGUSR1</code> - user-defined signal</li>
+</ul>
+<p><strong>Example:</strong></p>
+<pre><code class="language-bash">renacer --chaos-signals -- ./signal-handler-test
+</code></pre>
+<h2 id="use-cases"><a class="header" href="#use-cases">Use Cases</a></h2>
+<h3 id="1-memory-leak-detection"><a class="header" href="#1-memory-leak-detection">1. Memory Leak Detection</a></h3>
+<p>Test if your application handles memory pressure gracefully:</p>
+<pre><code class="language-bash"># Strict memory limit
+renacer --chaos-memory-limit 32M -c -- ./my-app
+
+# Watch for these patterns:
+# - Graceful error messages
+# - Proper cleanup on OOM
+# - No zombie processes
+</code></pre>
+<p><strong>What to look for:</strong></p>
+<ul>
+<li>Does the app exit cleanly?</li>
+<li>Are resources properly released?</li>
+<li>Is the error message helpful?</li>
+</ul>
+<h3 id="2-timeout-validation"><a class="header" href="#2-timeout-validation">2. Timeout Validation</a></h3>
+<p>Ensure your application respects timeouts:</p>
+<pre><code class="language-bash"># Short timeout for quick validation
+renacer --chaos-timeout 5s -c -- ./network-client
+
+# Expected: App should handle timeout gracefully
+# Red flag: Hanging processes, no timeout handling
+</code></pre>
+<h3 id="3-cicd-integration"><a class="header" href="#3-cicd-integration">3. CI/CD Integration</a></h3>
+<p>Add chaos testing to your CI pipeline:</p>
+<pre><code class="language-bash">#!/bin/bash
+# ci-chaos-test.sh
+
+echo "Running gentle chaos tests..."
+renacer --chaos gentle -c -- ./target/release/my-app
+if [ $? -ne 0 ]; then
+    echo "Failed gentle chaos test"
+    exit 1
+fi
+
+echo "Running aggressive chaos tests..."
+renacer --chaos aggressive -c -- ./target/release/my-app
+# May fail - that's expected for stress testing
+# Check for graceful failures, not crashes
+</code></pre>
+<h3 id="4-flaky-test-investigation"><a class="header" href="#4-flaky-test-investigation">4. Flaky Test Investigation</a></h3>
+<p>Reproduce timing-sensitive bugs:</p>
+<pre><code class="language-bash"># Slow down execution to expose race conditions
+renacer --chaos-cpu-limit 0.1 --chaos-signals -c -- ./flaky-test
+
+# If test fails under chaos but passes normally,
+# you likely have a race condition
+</code></pre>
+<h3 id="5-robustness-testing-before-deployment"><a class="header" href="#5-robustness-testing-before-deployment">5. Robustness Testing Before Deployment</a></h3>
+<p>Final validation before production:</p>
+<pre><code class="language-bash"># Full chaos suite
+renacer --chaos aggressive \
+    --chaos-memory-limit 64M \
+    --chaos-cpu-limit 0.25 \
+    --chaos-timeout 30s \
+    --chaos-signals \
+    -c -- ./production-binary
+
+# If it survives this, it's production-ready!
+</code></pre>
+<h2 id="example-session"><a class="header" href="#example-session">Example Session</a></h2>
+<p>Here's a complete chaos testing session:</p>
+<pre><code class="language-bash">$ renacer --chaos aggressive -c -- aprender-shell suggest "git "
+⚠️  Chaos mode enabled: memory=64MB, cpu=25%, timeout=10s, signals=on
+
+git status  1.000
+
+% time     seconds  usecs/call     calls    errors syscall
+------ ----------- ----------- --------- --------- ----------------
+ 45.23    0.012345         123       100           read
+ 30.12    0.008234          82       100           write
+ 15.45    0.004234          42       100           mmap
+  5.20    0.001423          14       100           close
+  4.00    0.001092          10       100           fstat
+------ ----------- ----------- --------- --------- ----------------
+100.00    0.027328                   500           total
+</code></pre>
+<h2 id="interpreting-results"><a class="header" href="#interpreting-results">Interpreting Results</a></h2>
+<h3 id="success-under-chaos"><a class="header" href="#success-under-chaos">Success Under Chaos</a></h3>
+<p>If your application completes successfully under aggressive chaos:</p>
+<ul>
+<li>Memory management is efficient</li>
+<li>Timeouts are handled properly</li>
+<li>Signal handlers are robust</li>
+</ul>
+<h3 id="graceful-failures"><a class="header" href="#graceful-failures">Graceful Failures</a></h3>
+<p>Some failures are expected and acceptable:</p>
+<ul>
+<li>Clean exit with error message</li>
+<li>Proper resource cleanup</li>
+<li>Meaningful exit codes</li>
+</ul>
+<h3 id="red-flags"><a class="header" href="#red-flags">Red Flags</a></h3>
+<p>Watch out for these warning signs:</p>
+<ul>
+<li><strong>Segmentation faults</strong> - memory corruption</li>
+<li><strong>Hanging processes</strong> - missing timeout handling</li>
+<li><strong>Zombie processes</strong> - improper cleanup</li>
+<li><strong>Cryptic errors</strong> - poor error handling</li>
+</ul>
+<h2 id="best-practices"><a class="header" href="#best-practices">Best Practices</a></h2>
+<h3 id="1-start-gentle-then-aggressive"><a class="header" href="#1-start-gentle-then-aggressive">1. Start Gentle, Then Aggressive</a></h3>
+<pre><code class="language-bash"># First, validate basic functionality
+renacer --chaos gentle -c -- ./my-app
+
+# Then stress test
+renacer --chaos aggressive -c -- ./my-app
+</code></pre>
+<h3 id="2-test-specific-failure-modes"><a class="header" href="#2-test-specific-failure-modes">2. Test Specific Failure Modes</a></h3>
+<pre><code class="language-bash"># Memory-only stress
+renacer --chaos-memory-limit 16M -c -- ./my-app
+
+# CPU-only stress
+renacer --chaos-cpu-limit 0.1 -c -- ./my-app
+
+# Timeout-only stress
+renacer --chaos-timeout 5s -c -- ./my-app
+</code></pre>
+<h3 id="3-combine-with-statistics-mode"><a class="header" href="#3-combine-with-statistics-mode">3. Combine with Statistics Mode</a></h3>
+<p>Always use <code>-c</code> (statistics mode) for better insights:</p>
+<pre><code class="language-bash">renacer --chaos aggressive -c --stats-extended -- ./my-app
+</code></pre>
+<h3 id="4-use-with-anomaly-detection"><a class="header" href="#4-use-with-anomaly-detection">4. Use with Anomaly Detection</a></h3>
+<p>Combine chaos with ML-based anomaly detection:</p>
+<pre><code class="language-bash">renacer --chaos gentle -c --ml-anomaly -- ./my-app
+</code></pre>
+<h2 id="troubleshooting"><a class="header" href="#troubleshooting">Troubleshooting</a></h2>
+<h3 id="permission-denied-errors"><a class="header" href="#permission-denied-errors">"Permission denied" Errors</a></h3>
+<p>Resource limits require appropriate permissions. Run without sudo first; some limits work without elevated privileges.</p>
+<h3 id="app-killed-immediately"><a class="header" href="#app-killed-immediately">App Killed Immediately</a></h3>
+<p>Memory limit may be too low. Start higher and decrease:</p>
+<pre><code class="language-bash"># Start high
+renacer --chaos-memory-limit 256M -c -- ./my-app
+
+# Decrease until failure
+renacer --chaos-memory-limit 128M -c -- ./my-app
+renacer --chaos-memory-limit 64M -c -- ./my-app
+</code></pre>
+<h3 id="timeout-too-short"><a class="header" href="#timeout-too-short">Timeout Too Short</a></h3>
+<p>Some applications need warm-up time:</p>
+<pre><code class="language-bash"># Increase timeout for initialization
+renacer --chaos-timeout 60s --chaos-memory-limit 64M -c -- ./slow-starter
+</code></pre>
+<h2 id="related-topics"><a class="header" href="#related-topics">Related Topics</a></h2>
+<ul>
+<li><a href="./statistical-analysis.html">Statistical Analysis</a> - Analyze syscall patterns</li>
+<li><a href="./anomaly-detection.html">Anomaly Detection</a> - Find outliers automatically</li>
+<li><a href="./performance-optimization.html">Performance Optimization</a> - Reduce overhead</li>
+<li><a href="../contributing/chaos-engineering.html">Chaos Engineering (Contributing)</a> - Internal chaos API</li>
+</ul>
+<h2 id="summary"><a class="header" href="#summary">Summary</a></h2>
+<p>Chaos testing with Renacer helps you:</p>
+<ul>
+<li><strong>Find hidden bugs</strong> that normal testing misses</li>
+<li><strong>Validate error handling</strong> under resource pressure</li>
+<li><strong>Ensure graceful degradation</strong> when things go wrong</li>
+<li><strong>Build confidence</strong> before production deployment</li>
+</ul>
+<p>Start with <code>--chaos gentle</code> for regular testing, graduate to <code>--chaos aggressive</code> for stress testing, and use custom options for targeted validation.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../advanced/performance-optimization.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../advanced/single-shot-compile.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../advanced/performance-optimization.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../advanced/single-shot-compile.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../ace.js"></script>
+        <script src="../editor.js"></script>
+        <script src="../mode-rust.js"></script>
+        <script src="../theme-dawn.js"></script>
+        <script src="../theme-tomorrow_night.js"></script>
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

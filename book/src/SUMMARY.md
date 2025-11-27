@@ -47,6 +47,7 @@
   - [Correlation Matrix](./advanced/correlation-matrix.md)
   - [K-means Clustering](./advanced/kmeans-clustering.md)
 - [Machine Learning](./advanced/machine-learning.md)
+  - [ML Pipeline with EXTREME TDD](./advanced/ml-pipeline.md)
 - [OpenTelemetry Integration](./advanced/opentelemetry.md)
 - [Distributed Tracing](./advanced/distributed-tracing.md)
 - [Transpiler Integration](./advanced/transpiler-integration.md)

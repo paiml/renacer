@@ -331,27 +331,30 @@ fn test_tracer_under_memory_pressure() {
         assert!(e.to_string().contains("memory"));
     }
 }</code></pre>
-<h2 id="future-cli-integration"><a class="header" href="#future-cli-integration">Future CLI Integration</a></h2>
-<p>Planned for Sprint 30:</p>
+<h2 id="cli-integration-sprint-47"><a class="header" href="#cli-integration-sprint-47">CLI Integration (Sprint 47)</a></h2>
+<p>The chaos engineering CLI was implemented in Sprint 47 (Issue #17):</p>
 <pre><code class="language-bash"># Use gentle preset
-renacer --chaos gentle -- ./app
+renacer --chaos gentle -c -- ./app
 
 # Use aggressive preset
-renacer --chaos aggressive -- ./flaky-test
+renacer --chaos aggressive -c -- ./flaky-test
 
-# Custom chaos from JSON
-renacer --chaos custom:chaos.json -- ./stress-test
+# Custom memory limit
+renacer --chaos-memory-limit 128M -c -- ./app
 
-# Example chaos.json
-{
-  "memory_limit": 104857600,
-  "cpu_limit": 0.5,
-  "timeout_secs": 30,
-  "signal_injection": true,
-  "network_latency_ms": 100,
-  "packet_loss_rate": 0.1
-}
+# Custom CPU limit
+renacer --chaos-cpu-limit 0.5 -c -- ./app
+
+# Custom timeout
+renacer --chaos-timeout 30s -c -- ./app
+
+# Enable signal injection
+renacer --chaos-signals -c -- ./app
+
+# Combine preset with overrides
+renacer --chaos aggressive --chaos-memory-limit 128M -c -- ./stress-test
 </code></pre>
+<p>For detailed usage examples, see the <a href="../advanced/chaos-testing.html">Chaos Testing Guide</a>.</p>
 <h2 id="use-cases"><a class="header" href="#use-cases">Use Cases</a></h2>
 <h3 id="1-testing-error-handling"><a class="header" href="#1-testing-error-handling">1. Testing Error Handling</a></h3>
 <pre><code class="language-rust">// Verify tracer handles memory exhaustion
@@ -393,16 +396,17 @@ let config = ChaosConfig::new()
 make fuzz      # Input fuzzing
 make chaos     # System chaos testing
 </code></pre>
-<h2 id="implementation-status-v041"><a class="header" href="#implementation-status-v041">Implementation Status (v0.4.1)</a></h2>
+<h2 id="implementation-status-v063"><a class="header" href="#implementation-status-v063">Implementation Status (v0.6.3)</a></h2>
 <ul>
 <li>✅ ChaosConfig builder pattern</li>
 <li>✅ Gentle/aggressive presets</li>
-<li>✅ Property-based tests (7 tests)</li>
+<li>✅ Property-based tests (14 tests)</li>
 <li>✅ Cargo feature gates</li>
-<li>⏳ CLI integration (planned Sprint 30)</li>
-<li>⏳ Runtime chaos injection (planned Sprint 30)</li>
-<li>⏳ Network chaos (planned Sprint 31)</li>
-<li>⏳ Byzantine faults (planned Sprint 32)</li>
+<li>✅ CLI integration (Sprint 47, Issue #17)</li>
+<li>✅ Runtime chaos injection via setrlimit</li>
+<li>✅ 67 chaos module tests total</li>
+<li>⏳ Network chaos (planned)</li>
+<li>⏳ Byzantine faults (planned)</li>
 </ul>
 <h2 id="resources"><a class="header" href="#resources">Resources</a></h2>
 <ul>
