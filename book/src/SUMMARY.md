@@ -51,6 +51,7 @@
 - [Distributed Tracing](./advanced/distributed-tracing.md)
 - [Transpiler Integration](./advanced/transpiler-integration.md)
 - [Performance Optimization](./advanced/performance-optimization.md)
+- [Chaos Testing](./advanced/chaos-testing.md)
 - [Single-Shot Compile Tooling](./advanced/single-shot-compile.md)
   - [Syscall Clustering](./advanced/syscall-clustering.md)
   - [Sequence Mining](./advanced/sequence-mining.md)
