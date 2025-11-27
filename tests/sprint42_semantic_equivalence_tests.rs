@@ -396,10 +396,7 @@ fn test_validation_confidence_scoring() {
 
     match result {
         ValidationResult::Pass { confidence, .. } => {
-            assert!(
-                confidence >= 0.0 && confidence <= 1.0,
-                "Confidence out of range"
-            );
+            assert!((0.0..=1.0).contains(&confidence), "Confidence out of range");
             assert!(confidence > 0.5, "Expected reasonable confidence");
         }
         ValidationResult::Fail { .. } => {

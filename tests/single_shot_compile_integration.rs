@@ -47,7 +47,7 @@ fn test_complete_workflow_baseline() {
 
     // 1. Clustering analysis
     let attributions = calculate_time_attribution(&spans, &registry);
-    assert!(attributions.len() > 0, "Should identify clusters");
+    assert!(!attributions.is_empty(), "Should identify clusters");
 
     let hotspots = identify_hotspots(&attributions);
     assert!(
@@ -62,7 +62,7 @@ fn test_complete_workflow_baseline() {
     // 2. Sequence analysis
     let syscall_names: Vec<String> = spans.iter().map(|s| s.name.to_string()).collect();
     let ngrams = extract_ngrams(&syscall_names, 3);
-    assert!(ngrams.len() > 0, "Should extract N-grams");
+    assert!(!ngrams.is_empty(), "Should extract N-grams");
 
     // 3. Regression detection (baseline vs baseline = no regression)
     let mut baseline_data = HashMap::new();
@@ -113,7 +113,7 @@ fn test_anomaly_unexpected_networking() {
     let registry = ClusterRegistry::default_transpiler_clusters().unwrap();
 
     // Baseline: Normal transpiler (no networking)
-    let baseline_spans = vec![
+    let baseline_spans = [
         make_span("open", 1_000_000),
         make_span("read", 50_000_000),
         make_span("write", 10_000_000),
@@ -288,7 +288,7 @@ fn test_hotspot_identification_accuracy() {
     // FileIO: 80ms + 10ms = 90ms (90%)
     // MemoryAllocation: 10ms (10%)
     assert!(
-        hotspots.len() >= 1,
+        !hotspots.is_empty(),
         "Should identify hotspots (>5% threshold)"
     );
 

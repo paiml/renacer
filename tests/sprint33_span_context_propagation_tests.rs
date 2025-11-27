@@ -4,6 +4,8 @@
 // Goal: Enable distributed tracing by propagating W3C Trace Context
 //       from instrumented applications to Renacer's syscall traces
 
+#![allow(deprecated)] // assert_cmd::Command::cargo_bin deprecation
+
 use assert_cmd::Command;
 
 /// Test 1: --trace-parent CLI flag is accepted

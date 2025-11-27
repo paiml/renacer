@@ -485,7 +485,7 @@ mod tests {
     #[test]
     fn test_get_span_metadata() {
         let root = create_test_span(1, None, 0, 1000);
-        let graph = CausalGraph::from_spans(&[root.clone()]).unwrap();
+        let graph = CausalGraph::from_spans(std::slice::from_ref(&root)).unwrap();
 
         let span = graph.get_span(NodeId(0)).unwrap();
         assert_eq!(span.span_name, "span_1");

@@ -127,7 +127,7 @@ fn test_ring_buffer_backpressure() {
     // Push many spans quickly to overflow buffer
     for i in 0..1000 {
         let span = create_test_span([1; 16], [(i as u8); 8], None, &format!("span_{}", i), i);
-        let _ = buffer.push(span);
+        buffer.push(span);
         // Don't give sidecar time to drain - force backpressure
     }
 
