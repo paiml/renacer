@@ -1,0 +1,20 @@
+# Clippy configuration for renacer
+# See: https://rust-lang.github.io/rust-clippy/master/index.html
+
+# Complexity thresholds
+cognitive-complexity-threshold = 25
+too-many-arguments-threshold = 10
+
+# Type complexity
+type-complexity-threshold = 350
+
+# Disallowed methods - prevent common footguns
+# Note: These are warnings, not errors, to allow test code flexibility
+disallowed-methods = [
+    # Prefer .expect() with context over .unwrap() in production
+    # { path = "core::result::Result::unwrap", reason = "Use .expect() with context or proper error handling" },
+    # { path = "core::option::Option::unwrap", reason = "Use .expect() with context or .unwrap_or_default()" },
+]
+
+# Allow certain patterns in test code
+allow-unwrap-in-tests = true
