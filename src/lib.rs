@@ -19,7 +19,9 @@ pub mod cluster; // Single-Shot Compile Tooling: TOML-based syscall clustering (
 pub mod critical_path; // Sprint 41: Critical path analysis (longest path in DAG)
 pub mod csv_output;
 pub mod cuda_tracer; // Sprint 38: CUDA kernel-level tracing via CUPTI
+pub mod decision_export; // Sprint 49: Decision trace OTLP export (Ticket #19)
 pub mod decision_trace;
+pub mod depyler_ingest; // Sprint 49: Depyler decision trace ingestion (Ticket #18)
 pub mod dwarf;
 pub mod filter;
 pub mod function_profiler;
