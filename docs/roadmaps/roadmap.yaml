@@ -417,3 +417,37 @@ roadmap:
   estimated_effort: null
   labels: []
   notes: null
+- id: REN-001
+  github_issue: 20
+  item_type: task
+  title: 'Add experiment span type to Renacer'
+  status: completed
+  priority: high
+  assigned_to: claude
+  created: 2025-11-30T12:00:00.000000000+00:00
+  updated: 2025-11-30T12:47:00.000000000+00:00
+  spec: null
+  acceptance_criteria:
+  - SpanType::Experiment variant added
+  - Experiment metadata fields supported (model_name, epoch, loss)
+  - Golden trace comparison API for behavioral equivalence
+  phases: []
+  subtasks: []
+  estimated_effort: small
+  labels:
+  - entrenar
+  - experiment-tracking
+  - phase-5
+  notes: |
+    Cross-project: ENT-EPIC-001 (entrenar experiment tracking spec v1.8.0 §5)
+
+    Implementation (2025-11-30):
+    - Added src/experiment_span.rs with:
+      - SpanType enum (Syscall, Gpu, Experiment)
+      - ExperimentMetadata struct (model_name, epoch, step, loss, metrics)
+      - ExperimentSpan::new_experiment() constructor
+      - EquivalenceScore struct (syscall_match, timing_variance, semantic_equiv)
+      - compare_traces() function using LCS algorithm for syscall matching
+    - 28 tests (10 unit + 18 integration) all passing
+    - cargo clippy -- -D warnings passes
+    - TDD workflow followed: RED → GREEN → REFACTOR
