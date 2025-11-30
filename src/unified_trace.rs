@@ -362,6 +362,37 @@ impl UnifiedTrace {
     pub fn total_duration_nanos(&self) -> Option<u64> {
         self.process_span.duration_nanos()
     }
+
+    /// Analyze trace for architectural quality and anti-patterns (§27)
+    ///
+    /// Returns an optional `ArchitecturalQuality` assessment. Returns `None` if
+    /// the trace has no data to analyze.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use renacer::unified_trace::UnifiedTrace;
+    ///
+    /// let trace = UnifiedTrace::new(1234, "my_app".to_string());
+    /// if let Some(quality) = trace.architectural_quality() {
+    ///     println!("Quality score: {}", quality.score);
+    ///     for pattern in &quality.anti_patterns {
+    ///         println!("Anti-pattern detected: {:?}", pattern);
+    ///     }
+    /// }
+    /// ```
+    pub fn architectural_quality(
+        &self,
+    ) -> Option<crate::analysis::anti_pattern::ArchitecturalQuality> {
+        // Return None for empty traces (no data to analyze)
+        if self.syscall_spans.is_empty() && self.gpu_spans.is_empty() && self.simd_spans.is_empty()
+        {
+            return None;
+        }
+
+        let detector = crate::analysis::anti_pattern::AntiPatternDetector::default();
+        Some(detector.analyze(self))
+    }
 }
 
 // ============================================================================
@@ -1093,5 +1124,87 @@ mod tests {
         let retrieved_parent = trace.get_parent_span_id(syscall_id);
         assert!(retrieved_parent.is_some());
         assert_eq!(retrieved_parent.unwrap(), parent_id);
+    }
+
+    // ========================================================================
+    // ARCHITECTURAL QUALITY TESTS (§27)
+    // ========================================================================
+
+    // Test 32: Empty trace returns None for architectural quality
+    #[test]
+    fn test_architectural_quality_empty_trace() {
+        let trace = UnifiedTrace::new(27000, "empty_quality".to_string());
+
+        let quality = trace.architectural_quality();
+        assert!(
+            quality.is_none(),
+            "Empty trace should return None for architectural quality"
+        );
+    }
+
+    // Test 33: Trace with syscalls returns Some for architectural quality
+    #[test]
+    fn test_architectural_quality_with_syscalls() {
+        let mut trace = UnifiedTrace::new(28000, "quality_test".to_string());
+        let parent_id = trace.process_span.span_id;
+
+        // Add some syscalls
+        for _ in 0..10 {
+            let syscall = SyscallSpan::new(
+                parent_id,
+                Cow::Borrowed("read"),
+                vec![],
+                100,
+                trace.clock.now(),
+                1000,
+                None,
+                &trace.clock,
+            );
+            trace.add_syscall(syscall);
+        }
+
+        let quality = trace.architectural_quality();
+        assert!(
+            quality.is_some(),
+            "Trace with syscalls should return Some for architectural quality"
+        );
+
+        let quality = quality.unwrap();
+        // Should have a quality score between 0 and 1
+        assert!(
+            quality.score >= 0.0 && quality.score <= 1.0,
+            "Quality score should be between 0 and 1, got {}",
+            quality.score
+        );
+    }
+
+    // Test 34: Architectural quality detects anti-patterns
+    #[test]
+    fn test_architectural_quality_detects_antipatterns() {
+        let mut trace = UnifiedTrace::new(29000, "antipattern_test".to_string());
+        let parent_id = trace.process_span.span_id;
+
+        // Create 100 syscalls (should trigger God Process detection)
+        for _ in 0..100 {
+            let syscall = SyscallSpan::new(
+                parent_id,
+                Cow::Borrowed("write"),
+                vec![],
+                50,
+                trace.clock.now(),
+                500,
+                None,
+                &trace.clock,
+            );
+            trace.add_syscall(syscall);
+        }
+
+        let quality = trace.architectural_quality().expect("Should have quality");
+
+        // With 100% syscalls from one process, should detect God Process
+        assert!(
+            !quality.anti_patterns.is_empty(),
+            "Should detect at least one anti-pattern"
+        );
     }
 }

@@ -6,6 +6,7 @@
 
 pub mod adaptive_backend; // Sprint 40: Adaptive Backend Selection (Specification Section 5.2)
 pub mod adaptive_sampler; // Sprint 40: Adaptive Sampling (Specification Section 7.3)
+pub mod analysis; // REN-002: Architectural anti-pattern detection (§27)
 pub mod anomaly;
 pub mod anti_patterns; // Sprint 41: Anti-pattern detection (God Process, Tight Loop, PCIe)
 pub mod assertion_dsl; // Sprint 44: renacer.toml parser for build-time assertions
