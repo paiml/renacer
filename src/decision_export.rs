@@ -335,6 +335,18 @@ pub fn print_stats(path: &std::path::Path) -> Result<(), String> {
 mod tests {
     use super::*;
 
+    fn make_decision(id: u64) -> DecisionTrace {
+        DecisionTrace {
+            timestamp_us: id * 1000,
+            category: "Test".to_string(),
+            name: format!("test_{}", id),
+            input: serde_json::json!({"id": id}),
+            result: None,
+            source_location: None,
+            decision_id: Some(id),
+        }
+    }
+
     #[test]
     fn test_retry_config_default() {
         let config = RetryConfig::default();
@@ -357,10 +369,51 @@ mod tests {
     }
 
     #[test]
+    fn test_retry_backoff_capped() {
+        let config = RetryConfig {
+            max_attempts: 10,
+            initial_backoff_ms: 100,
+            max_backoff_ms: 1000,
+            queue_size: 100,
+        };
+
+        // At attempt 5, backoff would be 100 * 32 = 3200, but capped at 1000
+        assert_eq!(config.backoff_ms(5), 1000);
+    }
+
+    #[test]
     fn test_export_config_default() {
         let config = DecisionExportConfig::default();
         assert_eq!(config.otlp_endpoint, "http://localhost:4317");
         assert_eq!(config.batch_size, 100);
+    }
+
+    #[test]
+    fn test_export_config_from_env() {
+        // Set env vars
+        std::env::set_var("RENACER_OTLP_ENDPOINT", "http://test:4317");
+        std::env::set_var("RENACER_AUTH_TOKEN", "test_token_123");
+
+        let config = DecisionExportConfig::from_env();
+
+        assert_eq!(config.otlp_endpoint, "http://test:4317");
+        assert_eq!(config.auth_token, Some("test_token_123".to_string()));
+
+        // Clean up
+        std::env::remove_var("RENACER_OTLP_ENDPOINT");
+        std::env::remove_var("RENACER_AUTH_TOKEN");
+    }
+
+    #[test]
+    fn test_export_config_from_env_defaults() {
+        // Ensure env vars are not set
+        std::env::remove_var("RENACER_OTLP_ENDPOINT");
+        std::env::remove_var("RENACER_AUTH_TOKEN");
+
+        let config = DecisionExportConfig::from_env();
+
+        assert_eq!(config.otlp_endpoint, "http://localhost:4317");
+        assert_eq!(config.auth_token, None);
     }
 
     #[test]
@@ -380,5 +433,133 @@ mod tests {
 
         exporter.queue(decision);
         assert_eq!(exporter.queue_len(), 1);
+    }
+
+    #[test]
+    fn test_exporter_is_empty() {
+        let config = DecisionExportConfig::default();
+        let mut exporter = DecisionExporter::new(config).unwrap();
+
+        assert!(exporter.is_empty());
+
+        exporter.queue(make_decision(1));
+        assert!(!exporter.is_empty());
+    }
+
+    #[test]
+    fn test_exporter_queue_overflow() {
+        let config = DecisionExportConfig {
+            queue_size: 3,
+            ..Default::default()
+        };
+        let mut exporter = DecisionExporter::new(config).unwrap();
+
+        // Queue 5 decisions (exceeds queue_size of 3)
+        for i in 1..=5 {
+            exporter.queue(make_decision(i));
+        }
+
+        // Should only have 3 decisions
+        assert_eq!(exporter.queue_len(), 3);
+
+        // 2 should have been dropped
+        assert_eq!(exporter.stats().decisions_dropped, 2);
+
+        // 5 should have been queued
+        assert_eq!(exporter.stats().decisions_queued, 5);
+    }
+
+    #[test]
+    fn test_exporter_queue_all() {
+        let config = DecisionExportConfig::default();
+        let mut exporter = DecisionExporter::new(config).unwrap();
+
+        let decisions: Vec<_> = (1..=5).map(make_decision).collect();
+        exporter.queue_all(decisions);
+
+        assert_eq!(exporter.queue_len(), 5);
+        assert_eq!(exporter.stats().decisions_queued, 5);
+    }
+
+    #[test]
+    fn test_exporter_next_batch() {
+        let config = DecisionExportConfig {
+            batch_size: 3,
+            ..Default::default()
+        };
+        let mut exporter = DecisionExporter::new(config).unwrap();
+
+        // Queue 5 decisions
+        for i in 1..=5 {
+            exporter.queue(make_decision(i));
+        }
+
+        // Get first batch (should be 3)
+        let batch1 = exporter.next_batch();
+        assert_eq!(batch1.len(), 3);
+        assert_eq!(exporter.queue_len(), 2);
+
+        // Get second batch (should be 2)
+        let batch2 = exporter.next_batch();
+        assert_eq!(batch2.len(), 2);
+        assert_eq!(exporter.queue_len(), 0);
+
+        // Get third batch (should be empty)
+        let batch3 = exporter.next_batch();
+        assert!(batch3.is_empty());
+    }
+
+    #[test]
+    fn test_exporter_record_stats() {
+        let config = DecisionExportConfig::default();
+        let mut exporter = DecisionExporter::new(config).unwrap();
+
+        exporter.record_batch_success(10);
+        assert_eq!(exporter.stats().decisions_exported, 10);
+        assert_eq!(exporter.stats().batches_sent, 1);
+
+        exporter.record_batch_failure();
+        assert_eq!(exporter.stats().batches_failed, 1);
+
+        exporter.record_retry();
+        assert_eq!(exporter.stats().retry_attempts, 1);
+    }
+
+    #[test]
+    fn test_exporter_accessors() {
+        let config = DecisionExportConfig {
+            otlp_endpoint: "http://custom:8080".to_string(),
+            auth_token: Some("secret123".to_string()),
+            flush_interval_ms: 2000,
+            ..Default::default()
+        };
+        let exporter = DecisionExporter::new(config).unwrap();
+
+        assert_eq!(exporter.endpoint(), "http://custom:8080");
+        assert_eq!(exporter.auth_token(), Some("secret123"));
+        assert_eq!(
+            exporter.flush_interval(),
+            std::time::Duration::from_millis(2000)
+        );
+        assert_eq!(exporter.retry_config().max_attempts, 5);
+    }
+
+    #[test]
+    fn test_exporter_no_auth_token() {
+        let config = DecisionExportConfig::default();
+        let exporter = DecisionExporter::new(config).unwrap();
+
+        assert_eq!(exporter.auth_token(), None);
+    }
+
+    #[test]
+    fn test_export_stats_default() {
+        let stats = ExportStats::default();
+        assert_eq!(stats.decisions_queued, 0);
+        assert_eq!(stats.decisions_exported, 0);
+        assert_eq!(stats.decisions_dropped, 0);
+        assert_eq!(stats.batches_sent, 0);
+        assert_eq!(stats.batches_failed, 0);
+        assert_eq!(stats.retry_attempts, 0);
     }
 }
