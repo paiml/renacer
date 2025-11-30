@@ -274,4 +274,109 @@ mod tests {
         let report = hotspot.to_report_string();
         assert!(report.contains("⚠️")); // Unexpected marker
     }
+
+    #[test]
+    fn test_explain_hotspot_memory_allocation() {
+        let explanation = explain_hotspot("MemoryAllocation", 25.0);
+        assert!(explanation.contains("Memory allocation"));
+        assert!(explanation.contains("25.0%"));
+    }
+
+    #[test]
+    fn test_explain_hotspot_dynamic_linking_high() {
+        let explanation = explain_hotspot("DynamicLinking", 30.0);
+        assert!(explanation.contains("high"));
+        assert!(explanation.contains("static linking"));
+    }
+
+    #[test]
+    fn test_explain_hotspot_dynamic_linking_low() {
+        let explanation = explain_hotspot("DynamicLinking", 10.0);
+        assert!(explanation.contains("Normal startup"));
+    }
+
+    #[test]
+    fn test_explain_hotspot_synchronization_high() {
+        let explanation = explain_hotspot("Synchronization", 15.0);
+        assert!(explanation.contains("UNEXPECTED"));
+        assert!(explanation.contains("single-threaded"));
+    }
+
+    #[test]
+    fn test_explain_hotspot_synchronization_low() {
+        let explanation = explain_hotspot("Synchronization", 3.0);
+        assert!(explanation.contains("threading"));
+        assert!(!explanation.contains("UNEXPECTED"));
+    }
+
+    #[test]
+    fn test_explain_hotspot_process_control() {
+        let explanation = explain_hotspot("ProcessControl", 8.0);
+        assert!(explanation.contains("Process control"));
+        assert!(explanation.contains("fork/exec"));
+    }
+
+    #[test]
+    fn test_explain_hotspot_randomness() {
+        let explanation = explain_hotspot("Randomness", 5.5);
+        assert!(explanation.contains("Random number"));
+        assert!(explanation.contains("deterministic"));
+    }
+
+    #[test]
+    fn test_explain_hotspot_unclassified() {
+        let explanation = explain_hotspot("Unclassified", 12.0);
+        assert!(explanation.contains("Unclassified"));
+        assert!(explanation.contains("clusters.toml"));
+    }
+
+    #[test]
+    fn test_explain_hotspot_file_io_moderate() {
+        let explanation = explain_hotspot("FileIO", 30.0);
+        assert!(explanation.contains("30.0%"));
+        assert!(explanation.contains("Typical"));
+    }
+
+    #[test]
+    fn test_explain_hotspot_unknown_cluster() {
+        let explanation = explain_hotspot("CustomCluster", 20.0);
+        assert!(explanation.contains("CustomCluster"));
+        assert!(explanation.contains("20.0%"));
+    }
+
+    #[test]
+    fn test_is_expected_complete_coverage() {
+        // Expected clusters
+        assert!(is_expected_for_transpiler("FileIO"));
+        assert!(is_expected_for_transpiler("MemoryAllocation"));
+        assert!(is_expected_for_transpiler("DynamicLinking"));
+        assert!(is_expected_for_transpiler("ProcessControl"));
+        assert!(is_expected_for_transpiler("Randomness"));
+
+        // Unexpected clusters
+        assert!(!is_expected_for_transpiler("Networking"));
+        assert!(!is_expected_for_transpiler("GPU"));
+        assert!(!is_expected_for_transpiler("Synchronization"));
+        assert!(!is_expected_for_transpiler("Unclassified"));
+        assert!(!is_expected_for_transpiler("CustomCluster"));
+    }
+
+    #[test]
+    fn test_identify_hotspots_empty() {
+        let attributions: Vec<TimeAttribution> = vec![];
+        let hotspots = identify_hotspots(&attributions);
+        assert!(hotspots.is_empty());
+    }
+
+    #[test]
+    fn test_identify_hotspots_all_below_threshold() {
+        let attributions = vec![
+            make_attribution("FileIO", 2.0),
+            make_attribution("MemoryAllocation", 3.0),
+            make_attribution("Other", 4.0),
+        ];
+
+        let hotspots = identify_hotspots(&attributions);
+        assert!(hotspots.is_empty());
+    }
 }

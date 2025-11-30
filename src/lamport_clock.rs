@@ -439,4 +439,99 @@ mod tests {
         assert!(child_clock.now() > current);
         assert_eq!(child_clock.now(), 43); // max(0, 42) + 1
     }
+
+    #[test]
+    fn test_default_trait() {
+        let clock = LamportClock::default();
+        assert_eq!(clock.now(), 0);
+        assert_eq!(clock.tick(), 0);
+        assert_eq!(clock.now(), 1);
+    }
+
+    #[test]
+    fn test_propagate_to_env() {
+        // Reset global clock for test isolation
+        GLOBAL_CLOCK.reset();
+
+        // Tick a few times
+        GLOBAL_CLOCK.tick();
+        GLOBAL_CLOCK.tick();
+        GLOBAL_CLOCK.tick();
+
+        // Propagate to env
+        propagate_to_env();
+
+        // Verify env var was set
+        let env_val = std::env::var("RENACER_LOGICAL_CLOCK").unwrap();
+        assert_eq!(env_val, "3");
+    }
+
+    #[test]
+    fn test_init_from_env_with_valid_clock() {
+        // Reset global clock for test isolation
+        GLOBAL_CLOCK.reset();
+
+        // Set env var simulating parent clock
+        std::env::set_var("RENACER_LOGICAL_CLOCK", "50");
+
+        // Init from env
+        init_from_env();
+
+        // Global clock should be synced: max(0, 50) + 1 = 51
+        assert_eq!(GLOBAL_CLOCK.now(), 51);
+
+        // Clean up
+        std::env::remove_var("RENACER_LOGICAL_CLOCK");
+        GLOBAL_CLOCK.reset();
+    }
+
+    #[test]
+    fn test_init_from_env_with_missing_env() {
+        // Reset global clock for test isolation
+        GLOBAL_CLOCK.reset();
+
+        // Ensure env var is not set
+        std::env::remove_var("RENACER_LOGICAL_CLOCK");
+
+        // Init from env - should do nothing
+        init_from_env();
+
+        // Global clock should remain at 0
+        assert_eq!(GLOBAL_CLOCK.now(), 0);
+    }
+
+    #[test]
+    fn test_init_from_env_with_invalid_value() {
+        // Reset global clock for test isolation
+        GLOBAL_CLOCK.reset();
+
+        // Set env var to invalid value
+        std::env::set_var("RENACER_LOGICAL_CLOCK", "not_a_number");
+
+        // Init from env - should do nothing due to parse error
+        init_from_env();
+
+        // Global clock should remain at 0
+        assert_eq!(GLOBAL_CLOCK.now(), 0);
+
+        // Clean up
+        std::env::remove_var("RENACER_LOGICAL_CLOCK");
+    }
+
+    #[test]
+    fn test_global_clock_tick() {
+        // Reset for isolation
+        GLOBAL_CLOCK.reset();
+
+        let t1 = GLOBAL_CLOCK.tick();
+        let t2 = GLOBAL_CLOCK.tick();
+        let t3 = GLOBAL_CLOCK.tick();
+
+        assert_eq!(t1, 0);
+        assert_eq!(t2, 1);
+        assert_eq!(t3, 2);
+        assert_eq!(GLOBAL_CLOCK.now(), 3);
+
+        GLOBAL_CLOCK.reset();
+    }
 }
