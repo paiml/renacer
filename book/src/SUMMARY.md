@@ -54,6 +54,7 @@
 - [Transpiler Integration](./advanced/transpiler-integration.md)
   - [Decision Trace Export](./advanced/decision-trace-export.md)
   - [CITL Integration](./advanced/citl-integration.md)
+  - [Experiment Tracking](./advanced/experiment-tracking.md)
 - [Performance Optimization](./advanced/performance-optimization.md)
 - [Chaos Testing](./advanced/chaos-testing.md)
 - [Single-Shot Compile Tooling](./advanced/single-shot-compile.md)

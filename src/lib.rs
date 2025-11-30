@@ -23,6 +23,7 @@ pub mod decision_export; // Sprint 49: Decision trace OTLP export (Ticket #19)
 pub mod decision_trace;
 pub mod depyler_ingest; // Sprint 49: Depyler decision trace ingestion (Ticket #18)
 pub mod dwarf;
+pub mod experiment_span; // REN-001: Experiment span types for entrenar integration
 pub mod filter;
 pub mod function_profiler;
 pub mod gpu_tracer; // Sprint 37: GPU kernel-level tracing for wgpu
