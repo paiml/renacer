@@ -63,6 +63,7 @@
   - [Time-Weighted Attribution](./advanced/time-attribution.md)
   - [Semantic Equivalence](./advanced/semantic-equivalence.md)
   - [Regression Detection](./advanced/regression-detection.md)
+  - [Anti-Pattern Detection](./advanced/anti-pattern-detection.md)
 
 # Reference
 
