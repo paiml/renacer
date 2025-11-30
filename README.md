@@ -1,17 +1,34 @@
-# Renacer
+<p align="center">
+  <img src="docs/images/renacer-hero.svg" alt="renacer - Pure Rust System Call Tracer" width="800">
+</p>
 
-**Pure Rust system call tracer with source-aware correlation for Rust binaries**
+<h1 align="center">renacer</h1>
+
+<p align="center">
+  <b>Pure Rust system call tracer with source-aware correlation for Rust binaries</b>
+</p>
+
+<p align="center">
+  <a href="https://crates.io/crates/renacer"><img src="https://img.shields.io/crates/v/renacer.svg" alt="Crates.io"></a>
+  <a href="https://docs.rs/renacer"><img src="https://docs.rs/renacer/badge.svg" alt="Documentation"></a>
+  <a href="https://github.com/paiml/renacer/actions/workflows/ci.yml"><img src="https://github.com/paiml/renacer/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License"></a>
+</p>
+
+---
 
 Renacer (Spanish: "to be reborn") is a next-generation binary inspection and tracing framework built following Toyota Way principles and EXTREME TDD methodology.
 
 ## Project Status
 
-**Current Version:** 0.5.0 (Sprint 36 complete - Performance Optimization)
-**Status:** Production-Ready + Performance Optimized + SIMD Statistics + Anomaly Detection + HPU Analysis + Distributed Tracing + Compute Tracing + Integration Tested
-**TDG Score:** 95.1/100 (A+ grade)
-**Test Coverage:** 400+ tests (all passing - includes 14 Jaeger integration, 18 performance tests)
-**Performance:** <5% overhead (basic), <10% overhead (full stack), 30-40% allocation reduction
-**Specification:** [docs/specifications/deep-strace-rust-wasm-binary-spec.md](docs/specifications/deep-strace-rust-wasm-binary-spec.md)
+| Metric | Value |
+|--------|-------|
+| **Current Version** | 0.6.6 |
+| **Status** | Production-Ready |
+| **Test Coverage** | 849+ tests (all passing) |
+| **TDG Score** | 95.1/100 (A+ grade) |
+| **Performance** | <5% overhead (basic), <10% overhead (full stack) |
+| **Specification** | [deep-strace-rust-wasm-binary-spec.md](docs/specifications/deep-strace-rust-wasm-binary-spec.md) |
 
 ## Features
 
@@ -132,7 +149,7 @@ Renacer (Spanish: "to be reborn") is a next-generation binary inspection and tra
 - ✅ **Zero Overhead** - No impact when disabled (opt-in via `--trace-compute`)
 - ✅ **Full Integration** - Compatible with OTLP export, transpiler decisions, source correlation
 
-### W3C Trace Context Propagation (Sprint 33) 🆕
+### W3C Trace Context Propagation (Sprint 33)
 - ✅ **Distributed Tracing** - Propagate trace context across process boundaries
 - ✅ **W3C Standard** - Full W3C Trace Context specification compliance (traceparent format)
 - ✅ **Context Injection** - Explicit context via `--trace-parent` CLI flag
@@ -142,7 +159,15 @@ Renacer (Spanish: "to be reborn") is a next-generation binary inspection and tra
 - ✅ **Trace ID Preservation** - Maintain trace continuity across service boundaries
 - ✅ **Backward Compatible** - Works with or without trace context (auto-generates if absent)
 
-### Integration Testing Infrastructure (Sprint 34) 🆕
+### Experiment Tracking (REN-001) 🆕
+- ✅ **SpanType::Experiment** - Specialized span type for ML experiment tracking
+- ✅ **ExperimentMetadata** - Structured metadata (model_name, epoch, step, loss, metrics)
+- ✅ **Golden Trace Comparison** - Compare traces for behavioral equivalence
+- ✅ **EquivalenceScore** - Syscall match, timing variance, semantic equivalence metrics
+- ✅ **LCS-Based Matching** - Longest common subsequence algorithm for syscall alignment
+- ✅ **entrenar Integration** - Cross-project support for ML experiment tracking (ENT-EPIC-001)
+
+### Integration Testing Infrastructure (Sprint 34)
 - ✅ **Jaeger Backend Tests** - 14 integration tests against actual Jaeger All-in-One
 - ✅ **Compute Tracing Tests** - Verify adaptive sampling, span attributes, parent-child relationships
 - ✅ **Distributed Tracing Tests** - Validate W3C context propagation, trace ID preservation
@@ -540,6 +565,7 @@ cargo deny check
 - `autoencoder` - Autoencoder anomaly detection (Sprint 23)
 - `transpiler_map` - Transpiler source mapping (Sprint 24-28)
 - `decision_trace` - Decision trace capture (Sprint 26-27)
+- `experiment_span` - ML experiment tracking spans (REN-001)
 - `otlp_exporter` - OpenTelemetry OTLP export (Sprint 30)
 
 ### Dependencies
@@ -557,13 +583,20 @@ cargo deny check
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
-### v0.6.0 ✅ (Current - 2025-11-20)
+### v0.6.6 ✅ (Current - 2025-11-30)
+- Experiment Span Tracking - ML experiment integration with entrenar (REN-001)
+- SpanType::Experiment variant for ML training spans
+- ExperimentMetadata struct (model_name, epoch, step, loss, metrics)
+- Golden trace comparison API with EquivalenceScore
+- Decision trace export and CITL integration (Sprint 49)
+
+### v0.6.0 ✅ (2025-11-20)
 - Ruchy Runtime Integration - Link OTLP traces with transpiler decisions (Sprint 31)
 - Block-Level Compute Tracing - Trueno SIMD operations as OTLP spans (Sprint 32)
 - W3C Trace Context Propagation - Distributed tracing support (Sprint 33)
 - Full observability stack: syscalls + decisions + compute + app traces
 
-### v0.5.0 ✅ (2025-11-20)
+### v0.5.0 ✅ (2025-11-18)
 - OpenTelemetry OTLP integration (Sprint 30)
 - Distributed tracing with Jaeger, Tempo, and OTLP-compatible backends
 - Docker compose examples for observability stacks
