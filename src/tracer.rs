@@ -1449,15 +1449,11 @@ fn extract_function_names(
             find_user_function_with_caller(child, ctx)
                 .map_or((None, None), |(func, caller)| (Some(func), caller))
         } else {
-            let func = source_info
-                .as_ref()
-                .and_then(|src| src.function.clone().map(|s| s.clone()));
+            let func = source_info.as_ref().and_then(|src| src.function.clone());
             (func, None)
         }
     } else {
-        let func = source_info
-            .as_ref()
-            .and_then(|src| src.function.clone().map(|s| s.clone()));
+        let func = source_info.as_ref().and_then(|src| src.function.clone());
         (func, None)
     }
 }
@@ -1530,7 +1526,7 @@ fn handle_syscall_entry(
         .map(|src| crate::json_output::JsonSourceLocation {
             file: src.file.clone(),
             line: src.line,
-            function: src.function.clone().map(|s| s.clone()),
+            function: src.function.clone(),
         });
 
     // Return syscall entry data

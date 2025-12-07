@@ -79,7 +79,7 @@ impl Default for CudaTracerConfig {
 /// Renacer's OTLP export infrastructure. It follows Sprint 37's wgpu pattern
 /// and Sprint 32's Toyota Way principles:
 /// - **Genchi Genbutsu**: Reuse proven CUPTI Activity API infrastructure
-/// - **Jidoka**: Mandatory adaptive sampling (cannot DoS tracing backend)
+/// - **Jidoka**: Mandatory adaptive sampling (cannot `DoS` tracing backend)
 /// - **Muda**: Kernel-level tracing (no per-instruction overhead)
 /// - **Poka-Yoke**: Feature flag prevents accidental overhead
 #[cfg(feature = "cuda-tracing")]
@@ -164,7 +164,7 @@ impl CudaTracerWrapper {
     /// Initialize CUPTI Activity API
     ///
     /// This method:
-    /// 1. Enables CUPTI_ACTIVITY_KIND_KERNEL activity recording
+    /// 1. Enables `CUPTI_ACTIVITY_KIND_KERNEL` activity recording
     /// 2. Registers activity buffer callbacks
     /// 3. Sets up asynchronous profiling
     ///
@@ -199,7 +199,7 @@ impl CudaTracerWrapper {
     /// Process CUPTI activity buffer and export to OTLP
     ///
     /// Called when CUPTI activity buffer is full or flushed.
-    /// Parses activity records and converts them to GpuKernel structs.
+    /// Parses activity records and converts them to `GpuKernel` structs.
     ///
     /// # Arguments
     ///
@@ -210,7 +210,7 @@ impl CudaTracerWrapper {
     /// Only kernels with `duration >= threshold_us` (default 100μs) are exported,
     /// unless `config.trace_all = true` (debug mode).
     ///
-    /// This prevents DoS on the tracing backend (Toyota Way: Jidoka).
+    /// This prevents `DoS` on the tracing backend (Toyota Way: Jidoka).
     pub fn process_activity_buffer(&mut self, buffer: &[u8]) {
         if buffer.is_empty() {
             return;
@@ -247,9 +247,9 @@ impl CudaTracerWrapper {
         );
     }
 
-    /// Convert CUPTI activity record to GpuKernel struct
+    /// Convert CUPTI activity record to `GpuKernel` struct
     ///
-    /// This is a helper method that would be called from process_activity_buffer()
+    /// This is a helper method that would be called from `process_activity_buffer()`
     /// once CUPTI FFI bindings are implemented.
     ///
     /// # Example
