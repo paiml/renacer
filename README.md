@@ -1,5 +1,7 @@
+<div align="center">
+
 <p align="center">
-  <img src="docs/images/renacer-hero.svg" alt="renacer - Pure Rust System Call Tracer" width="800">
+  <img src=".github/renacer-hero.svg" alt="renacer" width="800">
 </p>
 
 <h1 align="center">renacer</h1>
@@ -15,9 +17,31 @@
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License"></a>
 </p>
 
+</div>
+
 ---
 
+## Overview
+
 Renacer (Spanish: "to be reborn") is a next-generation binary inspection and tracing framework built following Toyota Way principles and EXTREME TDD methodology.
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Project Status](#project-status)
+- [Features](#features)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Examples](#examples)
+- [Performance](#performance)
+- [Quality Standards](#quality-standards)
+- [Development](#development)
+- [Architecture](#architecture)
+- [Roadmap](#roadmap)
+- [License](#license)
+- [Documentation](#documentation)
+- [Contributing](#contributing)
+- [Credits](#credits)
 
 ## Project Status
 
