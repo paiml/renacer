@@ -205,7 +205,7 @@ impl FdTable {
     }
 
     pub fn get_path(&self, fd: i32) -> Option<&str> {
-        self.table.get(&fd).map(|s| s.as_str())
+        self.table.get(&fd).map(std::string::String::as_str)
     }
 }
 

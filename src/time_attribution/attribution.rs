@@ -12,7 +12,7 @@ use std::time::Duration;
 /// Time attribution for a semantic cluster
 #[derive(Debug, Clone)]
 pub struct TimeAttribution {
-    /// Cluster name (e.g., "MemoryAllocation", "FileIO")
+    /// Cluster name (e.g., "`MemoryAllocation`", "`FileIO`")
     pub cluster: String,
 
     /// Total time spent in this cluster
@@ -48,7 +48,7 @@ impl fmt::Display for TimeAttribution {
 /// * `registry` - Cluster registry for classification
 ///
 /// # Returns
-/// Vector of TimeAttribution sorted by total_time (descending)
+/// Vector of `TimeAttribution` sorted by `total_time` (descending)
 ///
 /// # Example
 /// ```

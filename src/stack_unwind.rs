@@ -38,7 +38,7 @@ pub struct StackFrame {
 ///
 /// # Note
 ///
-/// This uses the traditional x86_64 frame pointer convention. It may not
+/// This uses the traditional `x86_64` frame pointer convention. It may not
 /// work correctly with binaries compiled with `-fomit-frame-pointer`.
 pub fn unwind_stack(pid: Pid) -> Result<Vec<StackFrame>> {
     let mut frames = Vec::with_capacity(16);
@@ -97,7 +97,7 @@ fn read_u64_from_process(pid: Pid, addr: u64) -> Result<u64> {
     }];
 
     process_vm_readv(pid, &mut local_iov, &remote_iov)
-        .context(format!("Failed to read memory at address 0x{:x}", addr))?;
+        .context(format!("Failed to read memory at address 0x{addr:x}"))?;
 
     Ok(u64::from_ne_bytes(buffer))
 }

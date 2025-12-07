@@ -1,7 +1,7 @@
 //! ML Pipeline for Enhanced Anomaly Detection (Sprint 48)
 //!
 //! Integrates aprender v0.10.0 algorithms for comprehensive syscall analysis:
-//! - StandardScaler for feature normalization
+//! - `StandardScaler` for feature normalization
 //! - Silhouette Score for cluster quality assessment
 //! - DBSCAN for density-based clustering
 //! - LOF for local outlier factor analysis
@@ -45,7 +45,7 @@ pub type Result<T> = std::result::Result<T, PipelineError>;
 /// Normalized syscall features
 #[derive(Debug, Clone)]
 pub struct NormalizedFeatures {
-    /// Feature matrix (n_samples x n_features)
+    /// Feature matrix (`n_samples` x `n_features`)
     pub data: Matrix<f32>,
     /// Syscall names corresponding to each row
     pub syscall_names: Vec<String>,
@@ -150,7 +150,7 @@ pub fn extract_features(
     Ok((syscall_names, matrix))
 }
 
-/// Normalize features using StandardScaler
+/// Normalize features using `StandardScaler`
 pub fn normalize_features(
     syscall_names: Vec<String>,
     features: Matrix<f32>,
@@ -316,7 +316,7 @@ pub fn run_pca(features: &NormalizedFeatures, n_components: usize) -> Result<PCA
 
     let explained_variance_ratio = pca
         .explained_variance_ratio()
-        .map(|v| v.to_vec())
+        .map(<[f32]>::to_vec)
         .unwrap_or_default();
 
     let total_variance_explained: f32 = explained_variance_ratio.iter().sum();
@@ -329,7 +329,7 @@ pub fn run_pca(features: &NormalizedFeatures, n_components: usize) -> Result<PCA
     })
 }
 
-/// Find optimal k for KMeans using silhouette score
+/// Find optimal k for `KMeans` using silhouette score
 pub fn find_optimal_k(features: &NormalizedFeatures, k_range: std::ops::Range<usize>) -> usize {
     use aprender::cluster::KMeans;
     use aprender::traits::UnsupervisedEstimator;
@@ -374,7 +374,7 @@ impl DBSCANResult {
         ));
 
         if let Some(sil) = self.silhouette {
-            output.push_str(&format!("Silhouette score: {:.3}\n", sil));
+            output.push_str(&format!("Silhouette score: {sil:.3}\n"));
         }
 
         // List noise points
@@ -422,8 +422,7 @@ impl PCAResult {
         output.push_str("\n=== PCA Dimensionality Reduction ===\n");
         let (n_samples, n_components) = self.reduced_data.shape();
         output.push_str(&format!(
-            "Reduced: {} samples x {} components\n",
-            n_samples, n_components
+            "Reduced: {n_samples} samples x {n_components} components\n"
         ));
         output.push_str(&format!(
             "Total variance explained: {:.1}%\n",

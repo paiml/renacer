@@ -157,7 +157,7 @@ pub struct CriticalPathAssertion {
 /// Anti-pattern detection assertion
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AntiPatternAssertion {
-    /// Anti-pattern type: GodProcess, TightLoop, PcieBottleneck
+    /// Anti-pattern type: `GodProcess`, `TightLoop`, `PcieBottleneck`
     pub pattern: AntiPatternType,
 
     /// Confidence threshold (0.0 - 1.0)
@@ -178,7 +178,7 @@ pub enum AntiPatternType {
     /// Tight Loop: Excessive iterations with minimal progress
     TightLoop,
 
-    /// PCIe Bottleneck: GPU transfer overhead dominates computation
+    /// `PCIe` Bottleneck: GPU transfer overhead dominates computation
     PcieBottleneck,
 }
 
@@ -289,11 +289,11 @@ pub enum AssertionValue {
 impl std::fmt::Display for AssertionValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            AssertionValue::Duration(ms) => write!(f, "{}ms", ms),
-            AssertionValue::Count(n) => write!(f, "{} spans", n),
-            AssertionValue::Bytes(b) => write!(f, "{} bytes", b),
+            AssertionValue::Duration(ms) => write!(f, "{ms}ms"),
+            AssertionValue::Count(n) => write!(f, "{n} spans"),
+            AssertionValue::Bytes(b) => write!(f, "{b} bytes"),
             AssertionValue::Percentage(p) => write!(f, "{:.1}%", p * 100.0),
-            AssertionValue::String(s) => write!(f, "{}", s),
+            AssertionValue::String(s) => write!(f, "{s}"),
         }
     }
 }

@@ -1,9 +1,9 @@
-//! ValidationEngine for Batuta Transpilation Validation
+//! `ValidationEngine` for Batuta Transpilation Validation
 //!
 //! Orchestrates end-to-end validation of transpiled programs by:
 //! 1. Tracing both original and transpiled binaries
 //! 2. Extracting unified traces with all observability layers
-//! 3. Comparing semantic equivalence using SemanticValidator
+//! 3. Comparing semantic equivalence using `SemanticValidator`
 //! 4. Generating comprehensive validation reports
 //!
 //! This enables Batuta Phase 4 to verify that Python→Rust (or other)
@@ -57,7 +57,7 @@ impl Default for ValidationEngine {
 }
 
 impl ValidationEngine {
-    /// Create a new ValidationEngine with default settings
+    /// Create a new `ValidationEngine` with default settings
     pub fn new() -> Self {
         Self {
             validator: SemanticValidator::new(),
@@ -65,7 +65,7 @@ impl ValidationEngine {
         }
     }
 
-    /// Create a ValidationEngine with custom tolerance
+    /// Create a `ValidationEngine` with custom tolerance
     pub fn with_tolerance(tolerance: f64) -> Self {
         Self {
             validator: SemanticValidator::with_tolerance(tolerance),
@@ -89,7 +89,7 @@ impl ValidationEngine {
     /// * `args` - Command-line arguments to pass to both programs
     ///
     /// # Returns
-    /// ValidationReport containing the comparison results
+    /// `ValidationReport` containing the comparison results
     ///
     /// # Errors
     /// Returns error if tracing fails or binaries cannot be executed
@@ -117,7 +117,7 @@ impl ValidationEngine {
         })
     }
 
-    /// Trace a binary and return a UnifiedTrace
+    /// Trace a binary and return a `UnifiedTrace`
     ///
     /// This would integrate with the existing Renacer tracer infrastructure.
     /// For now, this is a placeholder that returns a mock trace for testing.
@@ -201,13 +201,13 @@ impl std::fmt::Display for ValidationError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ValidationError::BinaryNotFound { path } => {
-                write!(f, "Binary not found: {}", path)
+                write!(f, "Binary not found: {path}")
             }
             ValidationError::NotExecutable { path } => {
-                write!(f, "Binary is not executable: {}", path)
+                write!(f, "Binary is not executable: {path}")
             }
             ValidationError::TracingFailed { binary, error } => {
-                write!(f, "Tracing failed for {}: {}", binary, error)
+                write!(f, "Tracing failed for {binary}: {error}")
             }
             ValidationError::TracerTimeout {
                 binary,
@@ -215,8 +215,7 @@ impl std::fmt::Display for ValidationError {
             } => {
                 write!(
                     f,
-                    "Tracer timeout exceeded for {} after {} seconds",
-                    binary, timeout_secs
+                    "Tracer timeout exceeded for {binary} after {timeout_secs} seconds"
                 )
             }
             ValidationError::TracingNotImplemented => {

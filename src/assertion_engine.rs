@@ -29,7 +29,7 @@ use crate::unified_trace::UnifiedTrace;
 /// # Note
 ///
 /// Sprint 44 implementation uses simplified evaluation logic.
-/// Full integration with CausalGraph and AntiPatternDetector
+/// Full integration with `CausalGraph` and `AntiPatternDetector`
 /// will be completed in a future sprint.
 pub struct AssertionEngine {}
 

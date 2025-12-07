@@ -49,10 +49,7 @@ impl SyscallFilter {
         if let Some(trace_spec) = expr.strip_prefix("trace=") {
             Self::from_trace_spec(trace_spec)
         } else {
-            bail!(
-                "Invalid filter expression: {}. Expected format: trace=SPEC",
-                expr
-            );
+            bail!("Invalid filter expression: {expr}. Expected format: trace=SPEC");
         }
     }
 
@@ -135,7 +132,7 @@ fn validate_trace_spec(spec: &str) -> Result<()> {
 }
 
 /// Parse result for syscall sets
-/// Sprint 16: Type alias to satisfy clippy::type_complexity
+/// Sprint 16: Type alias to satisfy `clippy::type_complexity`
 type ParseResult = (
     HashSet<String>, // include_set
     HashSet<String>, // exclude_set
@@ -147,7 +144,7 @@ type ParseResult = (
 /// Parse syscall sets from trace specification
 /// Sprint 15: Extracted to reduce complexity
 /// Sprint 16: Extended to support regex patterns
-/// Returns (include_set, exclude_set, include_regex, exclude_regex, has_includes)
+/// Returns (`include_set`, `exclude_set`, `include_regex`, `exclude_regex`, `has_includes`)
 fn parse_syscall_sets(spec: &str) -> Result<ParseResult> {
     let mut include_syscalls = HashSet::new();
     let mut exclude_syscalls = HashSet::new();
@@ -217,7 +214,7 @@ fn parse_regex_pattern(input: &str) -> Result<Option<Regex>> {
         // Compile regex, propagating errors
         match Regex::new(pattern) {
             Ok(regex) => Ok(Some(regex)),
-            Err(e) => bail!("Invalid regex pattern '{}': {}", pattern, e),
+            Err(e) => bail!("Invalid regex pattern '{pattern}': {e}"),
         }
     } else {
         Ok(None)
@@ -244,7 +241,7 @@ fn expand_syscall_class(name: &str) -> Vec<String> {
             "unlink",
         ]
         .iter()
-        .map(|s| s.to_string())
+        .map(std::string::ToString::to_string)
         .collect(),
         "network" => [
             "socket",
@@ -260,7 +257,7 @@ fn expand_syscall_class(name: &str) -> Vec<String> {
             "getsockopt",
         ]
         .iter()
-        .map(|s| s.to_string())
+        .map(std::string::ToString::to_string)
         .collect(),
         "process" => [
             "fork",
@@ -276,11 +273,11 @@ fn expand_syscall_class(name: &str) -> Vec<String> {
             "tgkill",
         ]
         .iter()
-        .map(|s| s.to_string())
+        .map(std::string::ToString::to_string)
         .collect(),
         "memory" => ["mmap", "munmap", "mprotect", "mremap", "brk", "sbrk"]
             .iter()
-            .map(|s| s.to_string())
+            .map(std::string::ToString::to_string)
             .collect(),
         _ => vec![name.to_string()],
     }

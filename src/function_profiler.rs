@@ -126,7 +126,7 @@ impl FunctionProfiler {
 
             // Add caller->callee relationships
             for (callee, count) in &stats.callees {
-                writeln!(writer, "{};{} {}", function, callee, count)?;
+                writeln!(writer, "{function};{callee} {count}")?;
             }
         }
 
@@ -250,7 +250,7 @@ impl FunctionProfiler {
 
             for (function, stats) in &sorted {
                 if !stats.callees.is_empty() {
-                    eprintln!("{} calls:", function);
+                    eprintln!("{function} calls:");
 
                     // Sort callees by call count (descending)
                     let mut callees: Vec<_> = stats.callees.iter().collect();

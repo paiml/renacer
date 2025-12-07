@@ -57,7 +57,7 @@ use crate::otlp_exporter::OtlpExporter;
 ///
 /// Follows Sprint 32's adaptive sampling pattern:
 /// - Default threshold: 100μs (same as SIMD compute tracing)
-/// - trace_all: false (safe by default, only trace slow kernels)
+/// - `trace_all`: false (safe by default, only trace slow kernels)
 #[derive(Debug, Clone)]
 pub struct GpuTracerConfig {
     /// Minimum duration to trace (default: 100μs, same as Sprint 32 SIMD tracing)

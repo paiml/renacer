@@ -48,7 +48,7 @@ impl HtmlOutput {
 
     /// Generate embedded CSS styles
     fn generate_styles() -> &'static str {
-        r#"
+        r"
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             margin: 20px;
@@ -116,7 +116,7 @@ impl HtmlOutput {
             color: #888;
             text-align: center;
         }
-        "#
+        "
     }
 
     /// Generate HTML table header
@@ -131,7 +131,7 @@ impl HtmlOutput {
             headers.push("Source");
         }
 
-        let header_cells: Vec<String> = headers.iter().map(|h| format!("<th>{}</th>", h)).collect();
+        let header_cells: Vec<String> = headers.iter().map(|h| format!("<th>{h}</th>")).collect();
 
         format!("<tr>{}</tr>", header_cells.join(""))
     }
@@ -158,7 +158,7 @@ impl HtmlOutput {
 
         if self.include_timing {
             let duration_text = match syscall.duration_us {
-                Some(d) => format!("{} us", d),
+                Some(d) => format!("{d} us"),
                 None => String::new(),
             };
             cells.push(format!(

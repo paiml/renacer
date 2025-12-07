@@ -11,7 +11,7 @@
 //! ∀ inputs I: Obs(P₁(I)) ≡ Obs(P₂(I))
 //! ```
 //!
-//! Where Obs(P) = {syscall_sequence, file_contents, network_messages}
+//! Where Obs(P) = {`syscall_sequence`, `file_contents`, `network_messages`}
 //!
 //! # Relaxed Equivalence
 //!
@@ -130,7 +130,7 @@ pub struct ObservableSyscall {
 }
 
 impl ObservableSyscall {
-    /// Create from a SyscallSpan
+    /// Create from a `SyscallSpan`
     pub fn from_syscall_span(span: &SyscallSpan) -> Self {
         ObservableSyscall {
             name: span.name.to_string(),
@@ -161,7 +161,7 @@ impl ObservableSyscall {
 
 /// Semantic equivalence validator
 ///
-/// Compares two UnifiedTrace instances to determine if they represent
+/// Compares two `UnifiedTrace` instances to determine if they represent
 /// semantically equivalent programs.
 pub struct SemanticValidator {
     /// Tolerance for fuzzy matching (default: 0.05 = 5%)
@@ -199,7 +199,7 @@ impl SemanticValidator {
     ///
     /// # Returns
     ///
-    /// ValidationResult indicating whether traces are semantically equivalent
+    /// `ValidationResult` indicating whether traces are semantically equivalent
     pub fn validate(&self, original: &UnifiedTrace, transpiled: &UnifiedTrace) -> ValidationResult {
         // Extract observable syscalls (I/O operations only)
         let obs_original = self.filter_observable_syscalls(original);
@@ -238,7 +238,7 @@ impl SemanticValidator {
     ///
     /// Filtered out (non-observable):
     /// - Memory operations: mmap, munmap, brk (allocator internals)
-    /// - Internal syscalls: futex, clock_gettime (implementation details)
+    /// - Internal syscalls: futex, `clock_gettime` (implementation details)
     fn filter_observable_syscalls(&self, trace: &UnifiedTrace) -> Vec<ObservableSyscall> {
         let observable_syscalls = [
             // File I/O
@@ -333,12 +333,11 @@ impl SemanticValidator {
                 matched_count: 0,
                 divergence_point: Some(DivergencePoint {
                     syscall_index: orig_len.min(trans_len),
-                    original_syscall: format!("<end of trace, {} syscalls>", orig_len),
-                    transpiled_syscall: format!("<end of trace, {} syscalls>", trans_len),
+                    original_syscall: format!("<end of trace, {orig_len} syscalls>"),
+                    transpiled_syscall: format!("<end of trace, {trans_len} syscalls>"),
                 }),
                 explanation: format!(
-                    "Length mismatch: original={}, transpiled={} (diff={})",
-                    orig_len, trans_len, length_diff
+                    "Length mismatch: original={orig_len}, transpiled={trans_len} (diff={length_diff})"
                 ),
             };
         }

@@ -228,19 +228,19 @@ impl std::fmt::Display for ChaosError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ChaosError::MemoryLimitExceeded { limit, used } => {
-                write!(f, "Memory limit exceeded: {} > {} bytes", used, limit)
+                write!(f, "Memory limit exceeded: {used} > {limit} bytes")
             }
             ChaosError::Timeout { elapsed, limit } => {
-                write!(f, "Timeout: {:?} > {:?}", elapsed, limit)
+                write!(f, "Timeout: {elapsed:?} > {limit:?}")
             }
             ChaosError::SignalInjectionFailed { signal, reason } => {
-                write!(f, "Signal injection failed ({}): {}", signal, reason)
+                write!(f, "Signal injection failed ({signal}): {reason}")
             }
             ChaosError::ParseError { input, reason } => {
-                write!(f, "Parse error for '{}': {}", input, reason)
+                write!(f, "Parse error for '{input}': {reason}")
             }
             ChaosError::ResourceLimitFailed { resource, reason } => {
-                write!(f, "Failed to set {}: {}", resource, reason)
+                write!(f, "Failed to set {resource}: {reason}")
             }
             #[cfg(feature = "chaos-byzantine")]
             ChaosError::ByzantineFaultFailed { syscall, reason } => {
@@ -274,9 +274,9 @@ impl ChaosConfig {
     /// Apply resource limits to the current process
     ///
     /// Applies:
-    /// - RLIMIT_AS (address space / virtual memory) if memory_limit > 0
-    /// - RLIMIT_CPU (CPU time) derived from cpu_limit fraction
-    /// - RLIMIT_RTTIME (soft timeout hint) from timeout
+    /// - `RLIMIT_AS` (address space / virtual memory) if `memory_limit` > 0
+    /// - `RLIMIT_CPU` (CPU time) derived from `cpu_limit` fraction
+    /// - `RLIMIT_RTTIME` (soft timeout hint) from timeout
     pub fn apply_limits(&self) -> Result<(), ChaosError> {
         use nix::sys::resource::{setrlimit, Resource};
 
@@ -398,7 +398,7 @@ pub fn parse_duration(s: &str) -> Result<Duration, ChaosError> {
 }
 
 impl ChaosConfig {
-    /// Create a ChaosConfig from CLI arguments
+    /// Create a `ChaosConfig` from CLI arguments
     ///
     /// # Arguments
     /// * `preset` - Optional preset name ("gentle" or "aggressive")
@@ -483,7 +483,7 @@ impl ChaosConfig {
             } else {
                 format!("{}B", self.memory_limit)
             };
-            parts.push(format!("memory={}", mem_str));
+            parts.push(format!("memory={mem_str}"));
         }
 
         if self.cpu_limit > 0.0 {

@@ -8,7 +8,7 @@
 //! # Architecture
 //!
 //! - Integrates with Trueno's backend selection system
-//! - Tracks performance metrics per operation+input_size
+//! - Tracks performance metrics per `operation+input_size`
 //! - Applies adaptive sampling (>100μs threshold by default)
 //! - Exports backend selection decisions to OTLP
 //!
@@ -86,7 +86,7 @@ pub struct AdaptiveBackend {
     #[cfg(not(feature = "otlp"))]
     otlp_exporter: Option<Arc<OtlpExporter>>,
 
-    /// Performance history: (operation, input_size) → metrics
+    /// Performance history: (operation, `input_size`) → metrics
     #[allow(clippy::type_complexity)]
     performance_history: Arc<Mutex<HashMap<(String, usize), Vec<PerformanceMetrics>>>>,
 
@@ -122,7 +122,7 @@ impl AdaptiveBackend {
     ///
     /// # Arguments
     ///
-    /// * `operation` - Operation name (e.g., "matrix_multiply")
+    /// * `operation` - Operation name (e.g., "`matrix_multiply`")
     /// * `input_size` - Input data size in elements
     ///
     /// # Returns
@@ -350,7 +350,7 @@ impl AdaptiveBackend {
 
 // Add rand dependency stub for 1% sampling
 mod rand {
-    pub fn random<T>() -> T
+    pub(super) fn random<T>() -> T
     where
         T: From<f64>,
     {

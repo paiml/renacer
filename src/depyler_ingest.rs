@@ -153,7 +153,7 @@ impl DepylerWatcher {
 
         // Get current mtime
         let metadata = std::fs::metadata(path)
-            .map_err(|e| format!("Failed to get metadata for {:?}: {}", path, e))?;
+            .map_err(|e| format!("Failed to get metadata for {path:?}: {e}"))?;
         let mtime = metadata.modified().ok();
 
         // Get or create file state
@@ -201,7 +201,7 @@ impl DepylerWatcher {
 
     /// Poll for new decisions with circuit breaker applied
     ///
-    /// Returns decisions up to the max_remote_rate limit.
+    /// Returns decisions up to the `max_remote_rate` limit.
     pub fn poll_with_circuit_breaker(&mut self) -> Result<Vec<DecisionTrace>, String> {
         let all_decisions = self.poll()?;
 

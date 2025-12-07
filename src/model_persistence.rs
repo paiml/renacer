@@ -89,10 +89,10 @@ fn chrono_lite_timestamp() -> String {
     format!("{}", duration.as_secs())
 }
 
-/// Serializable wrapper for KMeans model data
+/// Serializable wrapper for `KMeans` model data
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct SerializableKMeansModel {
-    /// Cluster centroids (k x n_features)
+    /// Cluster centroids (k x `n_features`)
     pub centroids: Vec<Vec<f32>>,
     /// Number of clusters
     pub n_clusters: usize,
@@ -102,7 +102,7 @@ pub struct SerializableKMeansModel {
     pub metadata: ModelMetadata,
 }
 
-/// Serializable wrapper for IsolationForest model data
+/// Serializable wrapper for `IsolationForest` model data
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct SerializableIsolationForestModel {
     /// Number of trees in the forest
@@ -161,7 +161,7 @@ impl PersistenceOptions {
     }
 }
 
-/// Save a KMeans model to .apr format
+/// Save a `KMeans` model to .apr format
 pub fn save_kmeans_model(
     model: &SerializableKMeansModel,
     path: impl AsRef<Path>,
@@ -188,7 +188,7 @@ pub fn save_kmeans_model(
         .map_err(|e| ModelPersistenceError::SaveError(e.to_string()))
 }
 
-/// Load a KMeans model from .apr format
+/// Load a `KMeans` model from .apr format
 pub fn load_kmeans_model(path: impl AsRef<Path>) -> Result<SerializableKMeansModel> {
     use aprender::format::{load, ModelType};
 
@@ -202,14 +202,14 @@ pub fn load_kmeans_model(path: impl AsRef<Path>) -> Result<SerializableKMeansMod
         .map_err(|e| ModelPersistenceError::LoadError(e.to_string()))
 }
 
-/// Load a KMeans model with memory mapping (zero-copy for large models)
+/// Load a `KMeans` model with memory mapping (zero-copy for large models)
 /// Falls back to regular load if mmap is not available
 pub fn load_kmeans_model_mmap(path: impl AsRef<Path>) -> Result<SerializableKMeansModel> {
     // Memory mapping not yet available in aprender, fall back to regular load
     load_kmeans_model(path)
 }
 
-/// Save an IsolationForest model to .apr format
+/// Save an `IsolationForest` model to .apr format
 pub fn save_isolation_forest_model(
     model: &SerializableIsolationForestModel,
     path: impl AsRef<Path>,
@@ -237,7 +237,7 @@ pub fn save_isolation_forest_model(
         .map_err(|e| ModelPersistenceError::SaveError(e.to_string()))
 }
 
-/// Load an IsolationForest model from .apr format
+/// Load an `IsolationForest` model from .apr format
 pub fn load_isolation_forest_model(
     path: impl AsRef<Path>,
 ) -> Result<SerializableIsolationForestModel> {

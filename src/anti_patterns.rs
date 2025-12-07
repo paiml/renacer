@@ -12,14 +12,14 @@
 //! - **Fix:** Decompose into smaller services, load balance
 //!
 //! ## 2. Tight Loop
-//! Syscall repeated many times (e.g., read() × 100,000)
+//! Syscall repeated many times (e.g., `read()` × 100,000)
 //! - **Detection:** Same syscall repeated >1000× consecutively
 //! - **Impact:** High syscall overhead, poor batching
 //! - **Fix:** Use vectorized I/O (readv/writev), buffer aggregation
 //! - **Compression opportunity:** RLE can compress 262,144×
 //!
-//! ## 3. PCIe Bottleneck
-//! Excessive GPU ↔ CPU memory transfers saturate PCIe bandwidth
+//! ## 3. `PCIe` Bottleneck
+//! Excessive GPU ↔ CPU memory transfers saturate `PCIe` bandwidth
 //! - **Detection:** Memory transfer time >50% of GPU kernel time
 //! - **Impact:** GPU underutilization, memory bandwidth waste
 //! - **Fix:** Fuse kernels, use persistent kernels, minimize transfers
@@ -35,8 +35,8 @@
 //!   - Application: God Process detection prevents resource hogging
 //!
 //! - **Jeon et al. (2019). "Analysis of Large-Scale Multi-Tenant GPU Clusters."**
-//!   - Finding: PCIe bandwidth saturation in 40% of GPU workloads
-//!   - Application: PCIe bottleneck detection
+//!   - Finding: `PCIe` bandwidth saturation in 40% of GPU workloads
+//!   - Application: `PCIe` bottleneck detection
 //!
 //! # Example
 //!
@@ -103,7 +103,7 @@ impl Severity {
         }
     }
 
-    /// Determine severity from PCIe transfer percentage
+    /// Determine severity from `PCIe` transfer percentage
     #[inline]
     fn from_transfer_percentage(percentage: f64) -> Self {
         if percentage > 200.0 {
@@ -136,7 +136,7 @@ pub enum AntiPattern {
         severity: Severity,
     },
 
-    /// PCIe Bottleneck: Excessive GPU memory transfers
+    /// `PCIe` Bottleneck: Excessive GPU memory transfers
     PcieBottleneck {
         transfer_time: u64,
         kernel_time: u64,
@@ -174,9 +174,8 @@ impl AntiPattern {
                 ..
             } => {
                 format!(
-                    "Process {} dominates critical path ({:.1}% of total, {}ns). \
-                     Consider decomposing or load balancing.",
-                    process_id, critical_path_percentage, total_duration
+                    "Process {process_id} dominates critical path ({critical_path_percentage:.1}% of total, {total_duration}ns). \
+                     Consider decomposing or load balancing."
                 )
             }
             AntiPattern::TightLoop {
@@ -186,9 +185,8 @@ impl AntiPattern {
                 ..
             } => {
                 format!(
-                    "Syscall '{}' repeated {} times (total {}ns). \
-                     Consider batching with vectorized I/O (readv/writev).",
-                    syscall_name, repetition_count, total_duration
+                    "Syscall '{syscall_name}' repeated {repetition_count} times (total {total_duration}ns). \
+                     Consider batching with vectorized I/O (readv/writev)."
                 )
             }
             AntiPattern::PcieBottleneck {
@@ -198,9 +196,8 @@ impl AntiPattern {
                 ..
             } => {
                 format!(
-                    "GPU memory transfers ({:.1}% of kernel time) saturate PCIe: \
-                     {}ns transfers vs {}ns compute. Consider kernel fusion.",
-                    transfer_percentage, transfer_time, kernel_time
+                    "GPU memory transfers ({transfer_percentage:.1}% of kernel time) saturate PCIe: \
+                     {transfer_time}ns transfers vs {kernel_time}ns compute. Consider kernel fusion."
                 )
             }
         }
@@ -418,7 +415,7 @@ fn detect_tight_loops(graph: &CausalGraph) -> Result<Vec<AntiPattern>> {
     Ok(patterns)
 }
 
-/// Detect PCIe Bottleneck anti-pattern
+/// Detect `PCIe` Bottleneck anti-pattern
 ///
 /// Detected when GPU memory transfer time >50% of kernel execution time.
 fn detect_pcie_bottleneck(graph: &CausalGraph) -> Result<Option<AntiPattern>> {

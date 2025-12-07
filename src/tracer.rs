@@ -51,17 +51,17 @@ pub struct TracerConfig {
 ///
 /// # Sprint 9-10 Scope
 /// - `-p PID` flag to attach to running processes
-/// - Uses PTRACE_ATTACH instead of fork() + PTRACE_TRACEME
+/// - Uses `PTRACE_ATTACH` instead of `fork()` + `PTRACE_TRACEME`
 pub fn attach_to_pid(pid: i32, config: TracerConfig) -> Result<()> {
     let pid = Pid::from_raw(pid);
 
     // Attach to the running process
-    ptrace::attach(pid).context(format!("Failed to attach to PID {}", pid))?;
+    ptrace::attach(pid).context(format!("Failed to attach to PID {pid}"))?;
 
     // Wait for SIGSTOP from PTRACE_ATTACH
     waitpid(pid, None).context("Failed to wait for attach signal")?;
 
-    eprintln!("[renacer: Attached to process {}]", pid);
+    eprintln!("[renacer: Attached to process {pid}]");
 
     // Use the same tracing logic as trace_command
     trace_child(pid, config)?;
@@ -109,7 +109,7 @@ pub fn trace_command(command: &[String], config: TracerConfig) -> Result<()> {
             // Sprint 47: Apply chaos resource limits before exec (Issue #17)
             if let Some(ref chaos) = chaos_config {
                 if let Err(e) = chaos.apply_limits() {
-                    eprintln!("[renacer: Warning: Failed to apply chaos limits: {}]", e);
+                    eprintln!("[renacer: Warning: Failed to apply chaos limits: {e}]");
                 }
             }
 
@@ -117,7 +117,7 @@ pub fn trace_command(command: &[String], config: TracerConfig) -> Result<()> {
             let err = Command::new(program).args(args).exec();
 
             // If we get here, exec failed
-            eprintln!("Failed to exec {}: {}", program, err);
+            eprintln!("Failed to exec {program}: {err}");
             std::process::exit(1);
         }
     }
@@ -265,11 +265,11 @@ fn initialize_tracers(config: &TracerConfig) -> Tracers {
             trace_context,
         ) {
             Ok(exporter) => {
-                eprintln!("[renacer: OTLP export enabled to {}]", endpoint);
+                eprintln!("[renacer: OTLP export enabled to {endpoint}]");
                 Some(exporter)
             }
             Err(e) => {
-                eprintln!("[renacer: OTLP initialization failed: {}]", e);
+                eprintln!("[renacer: OTLP initialization failed: {e}]");
                 None
             }
         }
@@ -330,7 +330,7 @@ fn setup_ptrace_options_internal(child: Pid, follow_forks: bool, wait_first: boo
 
 /// Load DWARF debug info for source correlation
 fn load_dwarf_context(child: Pid) -> Option<crate::dwarf::DwarfContext> {
-    if let Ok(exe_path) = std::fs::read_link(format!("/proc/{}/exe", child)) {
+    if let Ok(exe_path) = std::fs::read_link(format!("/proc/{child}/exe")) {
         match crate::dwarf::DwarfContext::load(&exe_path) {
             Ok(ctx) => {
                 eprintln!(
@@ -340,7 +340,7 @@ fn load_dwarf_context(child: Pid) -> Option<crate::dwarf::DwarfContext> {
                 Some(ctx)
             }
             Err(e) => {
-                eprintln!("[renacer: Warning - failed to load DWARF: {}]", e);
+                eprintln!("[renacer: Warning - failed to load DWARF: {e}]");
                 eprintln!("[renacer: Continuing without source correlation]");
                 None
             }
@@ -374,10 +374,7 @@ fn handle_ptrace_event(
             match wait_status {
                 WaitStatus::Exited(_, _) | WaitStatus::Signaled(_, _, _) => {
                     // Child already exited, nothing to continue
-                    eprintln!(
-                        "[renacer: Process {} forked child {} (already exited)]",
-                        pid, new_pid
-                    );
+                    eprintln!("[renacer: Process {pid} forked child {new_pid} (already exited)]");
                 }
                 _ => {
                     // Setup ptrace options for the new child (already waited)
@@ -398,19 +395,18 @@ fn handle_ptrace_event(
                     // Continue the new child process
                     // Handle ESRCH gracefully - child may have exited between waitpid and syscall
                     match ptrace::syscall(new_pid, None) {
-                        Ok(_) => {
-                            eprintln!("[renacer: Process {} forked child {}]", pid, new_pid);
+                        Ok(()) => {
+                            eprintln!("[renacer: Process {pid} forked child {new_pid}]");
                         }
                         Err(nix::errno::Errno::ESRCH) => {
                             // Child already exited, remove from tracking
                             processes.remove(&new_pid);
                             eprintln!(
-                                "[renacer: Process {} forked child {} (exited immediately)]",
-                                pid, new_pid
+                                "[renacer: Process {pid} forked child {new_pid} (exited immediately)]"
                             );
                         }
                         Err(e) => {
-                            return Err(anyhow::anyhow!("Failed to continue new child: {}", e));
+                            return Err(anyhow::anyhow!("Failed to continue new child: {e}"));
                         }
                     }
                 }
@@ -440,21 +436,7 @@ fn handle_syscall_event(
     let in_html_mode = tracers.html_output.is_some();
     let structured_output = in_json_mode || in_csv_mode || in_html_mode;
 
-    if !*in_syscall {
-        // Syscall entry - record start time if timing enabled
-        if config.timing_mode || config.statistics_mode || structured_output {
-            *syscall_entry_time = Some(std::time::Instant::now());
-        }
-
-        *current_syscall_entry = process_syscall_entry(
-            child,
-            dwarf_ctx,
-            config,
-            tracers.profiling_ctx.as_mut(),
-            structured_output,
-        )?;
-        *in_syscall = true;
-    } else {
+    if *in_syscall {
         // Syscall exit - calculate duration
         let duration_us = syscall_entry_time
             .map(|start| start.elapsed().as_micros() as u64)
@@ -471,6 +453,20 @@ fn handle_syscall_event(
         *current_syscall_entry = None;
         *syscall_entry_time = None;
         *in_syscall = false;
+    } else {
+        // Syscall entry - record start time if timing enabled
+        if config.timing_mode || config.statistics_mode || structured_output {
+            *syscall_entry_time = Some(std::time::Instant::now());
+        }
+
+        *current_syscall_entry = process_syscall_entry(
+            child,
+            dwarf_ctx,
+            config,
+            tracers.profiling_ctx.as_mut(),
+            structured_output,
+        )?;
+        *in_syscall = true;
     }
     Ok(())
 }
@@ -545,7 +541,7 @@ fn process_syscall_exit(
 
 /// Print text statistics summary
 ///
-/// Sprint 32: Now accepts optional OtlpExporter for compute block tracing
+/// Sprint 32: Now accepts optional `OtlpExporter` for compute block tracing
 fn print_text_stats(
     stats_tracker: &Option<crate::stats::StatsTracker>,
     stats_extended: bool,
@@ -568,8 +564,8 @@ fn print_text_stats(
 fn print_json_output(mut output: crate::json_output::JsonOutput, exit_code: i32) {
     output.set_exit_code(exit_code);
     match output.to_json() {
-        Ok(json) => println!("{}", json),
-        Err(e) => eprintln!("Failed to serialize JSON: {}", e),
+        Ok(json) => println!("{json}"),
+        Err(e) => eprintln!("Failed to serialize JSON: {e}"),
     }
 }
 
@@ -718,7 +714,7 @@ fn print_ml_analysis(
                     if extended.stddev > 0.0 {
                         let z_score = (extended.max - extended.mean) / extended.stddev;
                         if z_score > anomaly_threshold {
-                            zscore_anomalies.push((syscall_name.clone(), z_score as f64));
+                            zscore_anomalies.push((syscall_name.clone(), f64::from(z_score)));
                         }
                     }
                 }
@@ -773,7 +769,7 @@ fn print_isolation_forest_analysis(
                 if explain && !outlier.feature_importance.is_empty() {
                     eprintln!("    Feature Importance:");
                     for (feature, importance) in &outlier.feature_importance {
-                        eprintln!("      {}: {:.1}%", feature, importance);
+                        eprintln!("      {feature}: {importance:.1}%");
                     }
                 }
                 eprintln!();
@@ -802,7 +798,7 @@ fn print_autoencoder_analysis(
             &data,
             hidden_size,
             epochs,
-            threshold as f64,
+            f64::from(threshold),
             explain,
         );
 
@@ -834,7 +830,7 @@ fn print_autoencoder_analysis(
                 if explain && !anomaly.feature_contributions.is_empty() {
                     eprintln!("    Feature Contributions to Error:");
                     for (feature, contribution) in &anomaly.feature_contributions {
-                        eprintln!("      {}: {:.1}%", feature, contribution);
+                        eprintln!("      {feature}: {contribution:.1}%");
                     }
                 }
                 eprintln!();
@@ -844,7 +840,7 @@ fn print_autoencoder_analysis(
     }
 }
 
-/// Analysis configuration for print_summaries
+/// Analysis configuration for `print_summaries`
 struct AnalysisConfig {
     stats_extended: bool,
     anomaly_threshold: f32,
@@ -892,7 +888,7 @@ fn print_decision_trace_summary(decision_tracer: Option<crate::decision_trace::D
 
         // Write MessagePack file
         match tracer.write_to_msgpack(mmap_path) {
-            Ok(_) => {
+            Ok(()) => {
                 println!("\n✅ Decision traces written to: {}", mmap_path.display());
             }
             Err(e) => {
@@ -911,7 +907,7 @@ fn print_decision_trace_summary(decision_tracer: Option<crate::decision_trace::D
             None, // git_commit (could add via git2 crate)
             Some(env!("CARGO_PKG_VERSION")),
         ) {
-            Ok(_) => {
+            Ok(()) => {
                 println!(
                     "✅ Decision manifest written to: {}",
                     manifest_path.display()
@@ -938,12 +934,12 @@ fn print_decision_trace_summary(decision_tracer: Option<crate::decision_trace::D
 
             // Print result if available
             if let Some(ref result) = trace.result {
-                print!(" result={}", result);
+                print!(" result={result}");
             }
 
             // Print decision_id if available (Sprint 27)
             if let Some(decision_id) = trace.decision_id {
-                print!(" id=0x{:X}", decision_id);
+                print!(" id=0x{decision_id:X}");
             }
 
             println!();
@@ -1073,7 +1069,7 @@ fn print_summaries(tracers: Tracers, timing_mode: bool, exit_code: i32, analysis
                 &stats_tracker,
                 analysis.dl_hidden_size,
                 analysis.dl_epochs,
-                analysis.dl_threshold as f64,
+                f64::from(analysis.dl_threshold),
                 analysis.explain,
             ) {
                 output.set_autoencoder_analysis(report, analysis.dl_threshold, analysis.explain);
@@ -1152,7 +1148,7 @@ fn handle_traced_process_status(
             Ok(None)
         }
         WaitStatus::Signaled(p, sig, _) => {
-            eprintln!("Process {} killed by signal: {:?}", p, sig);
+            eprintln!("Process {p} killed by signal: {sig:?}");
             processes.remove(&p);
             if p == main_pid {
                 *main_exit_code = 128 + sig as i32;
@@ -1181,12 +1177,11 @@ fn process_syscall_for_pid(
     config: &TracerConfig,
     tracers: &mut Tracers,
 ) -> Result<()> {
-    let state = match processes.get_mut(&pid) {
-        Some(s) => s,
-        None => {
-            ptrace::syscall(pid, None).ok();
-            return Ok(());
-        }
+    let state = if let Some(s) = processes.get_mut(&pid) {
+        s
+    } else {
+        ptrace::syscall(pid, None).ok();
+        return Ok(());
     };
 
     // Load DWARF context on first syscall if needed
@@ -1220,10 +1215,10 @@ fn trace_child(child: Pid, config: TracerConfig) -> Result<i32> {
     #[cfg(feature = "otlp")]
     if let Some(ref mut exporter) = tracers.otlp_exporter {
         // Get program name from /proc/{pid}/cmdline
-        let program_name = std::fs::read_to_string(format!("/proc/{}/cmdline", child))
+        let program_name = std::fs::read_to_string(format!("/proc/{child}/cmdline"))
             .ok()
-            .and_then(|s| s.split('\0').next().map(|s| s.to_string()))
-            .unwrap_or_else(|| format!("pid:{}", child));
+            .and_then(|s| s.split('\0').next().map(std::string::ToString::to_string))
+            .unwrap_or_else(|| format!("pid:{child}"));
 
         exporter.start_root_span(&program_name, child.as_raw());
     }
@@ -1263,21 +1258,18 @@ fn trace_child(child: Pid, config: TracerConfig) -> Result<i32> {
             }
         };
 
-        let pid = match handle_traced_process_status(
+        let pid = if let Some(p) = handle_traced_process_status(
             status,
             &mut processes,
             main_pid,
             &mut main_exit_code,
             &config,
         )? {
-            Some(p) => {
-                trace!(pid = %p, "handle_traced_process_status returned pid");
-                p
-            }
-            None => {
-                trace!("handle_traced_process_status returned None, continuing");
-                continue;
-            }
+            trace!(pid = %p, "handle_traced_process_status returned pid");
+            p
+        } else {
+            trace!("handle_traced_process_status returned None, continuing");
+            continue;
         };
 
         trace!(pid = %pid, "calling process_syscall_for_pid");
@@ -1343,7 +1335,7 @@ fn find_user_function_via_unwinding(
 }
 
 /// Find user function and its caller from stack unwinding
-/// Returns (current_function, caller_function)
+/// Returns (`current_function`, `caller_function`)
 fn find_user_function_with_caller(
     child: Pid,
     dwarf_ctx: &crate::dwarf::DwarfContext,
@@ -1368,7 +1360,7 @@ fn find_user_function_with_caller(
                     || func_name.contains("@@GLIBC");
 
                 if !is_libc {
-                    user_functions.push(func_name.to_string());
+                    user_functions.push(func_name.clone());
                 }
             }
         }
@@ -1393,7 +1385,7 @@ fn format_syscall_args_for_json(
     match name {
         "openat" => {
             let filename =
-                read_string(child, arg2 as usize).unwrap_or_else(|_| format!("{:#x}", arg2));
+                read_string(child, arg2 as usize).unwrap_or_else(|_| format!("{arg2:#x}"));
             vec![
                 format!("{:#x}", arg1),
                 format!("\"{}\"", filename),
@@ -1425,12 +1417,12 @@ fn print_syscall_entry(
         // Try to map to transpiler source first
         if let Some(transpiled_source) = map_to_transpiler_source(src, transpiler_map) {
             // Show both Rust and original source
-            print!("{} ", transpiled_source);
+            print!("{transpiled_source} ");
         } else {
             // Show just Rust source from DWARF
             print!("{}:{} ", src.file, src.line);
             if let Some(func) = &src.function {
-                print!("{} ", func);
+                print!("{func} ");
             }
         }
     }
@@ -1439,17 +1431,14 @@ fn print_syscall_entry(
     match name {
         "openat" => {
             let filename =
-                read_string(child, arg2 as usize).unwrap_or_else(|_| format!("{:#x}", arg2));
-            print!("{}({:#x}, \"{}\", {:#x}) = ", name, arg1, filename, arg3);
+                read_string(child, arg2 as usize).unwrap_or_else(|_| format!("{arg2:#x}"));
+            print!("{name}({arg1:#x}, \"{filename}\", {arg3:#x}) = ");
         }
         "unknown" => {
-            print!(
-                "syscall_{}({:#x}, {:#x}, {:#x}) = ",
-                syscall_num, arg1, arg2, arg3
-            );
+            print!("syscall_{syscall_num}({arg1:#x}, {arg2:#x}, {arg3:#x}) = ");
         }
         _ => {
-            print!("{}({:#x}, {:#x}, {:#x}) = ", name, arg1, arg2, arg3);
+            print!("{name}({arg1:#x}, {arg2:#x}, {arg3:#x}) = ");
         }
     }
     std::io::Write::flush(&mut std::io::stdout()).ok();
@@ -1469,13 +1458,13 @@ fn extract_function_names(
         } else {
             let func = source_info
                 .as_ref()
-                .and_then(|src| src.function.clone().map(|s| s.to_string()));
+                .and_then(|src| src.function.clone().map(|s| s.clone()));
             (func, None)
         }
     } else {
         let func = source_info
             .as_ref()
-            .and_then(|src| src.function.clone().map(|s| s.to_string()));
+            .and_then(|src| src.function.clone().map(|s| s.clone()));
         (func, None)
     }
 }
@@ -1546,9 +1535,9 @@ fn handle_syscall_entry(
     let json_source = source_info
         .as_ref()
         .map(|src| crate::json_output::JsonSourceLocation {
-            file: src.file.to_string(),
+            file: src.file.clone(),
             line: src.line,
-            function: src.function.clone().map(|s| s.to_string()),
+            function: src.function.clone().map(|s| s.clone()),
         });
 
     // Return syscall entry data
@@ -1751,7 +1740,7 @@ fn print_syscall_result(result: i64, timing_mode: bool, duration_us: u64) {
     if timing_mode && duration_us > 0 {
         println!("{} <{:.6}>", result, duration_us as f64 / 1_000_000.0);
     } else {
-        println!("{}", result);
+        println!("{result}");
     }
 }
 
@@ -1793,7 +1782,7 @@ fn should_print_result(
     syscall_entry.is_some() && !in_stats_mode && !in_json_mode && !in_csv_mode && !in_html_mode
 }
 
-/// Sprint 26: Capture decision traces from write() syscalls to stderr
+/// Sprint 26: Capture decision traces from `write()` syscalls to stderr
 ///
 /// Intercepts write(2, buffer, count) calls and parses [DECISION] and [RESULT] lines
 fn capture_decision_trace(
@@ -1820,7 +1809,7 @@ fn capture_decision_trace(
     // Check if writing to stderr (fd = 2)
     if entry.raw_arg1 != Some(2) {
         return;
-    };
+    }
 
     // Only process successful writes
     if bytes_written <= 0 {

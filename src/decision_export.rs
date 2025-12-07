@@ -77,7 +77,7 @@ impl RetryConfig {
     ///
     /// # Returns
     ///
-    /// Backoff duration in milliseconds, capped at max_backoff_ms
+    /// Backoff duration in milliseconds, capped at `max_backoff_ms`
     pub fn backoff_ms(&self, attempt: u32) -> u64 {
         let backoff = self.initial_backoff_ms.saturating_mul(1 << attempt.min(16));
         backoff.min(self.max_backoff_ms)
@@ -146,8 +146,8 @@ impl DecisionExportConfig {
     /// Create config from environment variables
     ///
     /// Looks for:
-    /// - RENACER_OTLP_ENDPOINT
-    /// - RENACER_AUTH_TOKEN
+    /// - `RENACER_OTLP_ENDPOINT`
+    /// - `RENACER_AUTH_TOKEN`
     pub fn from_env() -> Self {
         let mut config = Self::default();
 
@@ -230,7 +230,7 @@ impl DecisionExporter {
 
     /// Get the next batch of decisions for export
     ///
-    /// Removes decisions from the queue up to batch_size.
+    /// Removes decisions from the queue up to `batch_size`.
     pub fn next_batch(&mut self) -> Vec<DecisionTrace> {
         let batch_size = self.config.batch_size.min(self.queue.len());
         let mut batch = Vec::with_capacity(batch_size);
@@ -293,7 +293,7 @@ pub fn print_stats(path: &std::path::Path) -> Result<(), String> {
 
     let decisions = read_decisions_from_msgpack(path)?;
 
-    println!("Decision Trace Statistics for: {:?}", path);
+    println!("Decision Trace Statistics for: {path:?}");
     println!("========================================");
     println!("Total decisions: {}", decisions.len());
     println!();
@@ -308,7 +308,7 @@ pub fn print_stats(path: &std::path::Path) -> Result<(), String> {
     let mut categories: Vec<_> = by_category.into_iter().collect();
     categories.sort_by(|a, b| b.1.cmp(&a.1));
     for (category, count) in categories {
-        println!("  {}: {}", category, count);
+        println!("  {category}: {count}");
     }
     println!();
 
@@ -317,7 +317,7 @@ pub fn print_stats(path: &std::path::Path) -> Result<(), String> {
         let min_ts = decisions.iter().map(|d| d.timestamp_us).min().unwrap();
         let max_ts = decisions.iter().map(|d| d.timestamp_us).max().unwrap();
         let duration_ms = (max_ts - min_ts) / 1000;
-        println!("Time range: {} ms", duration_ms);
+        println!("Time range: {duration_ms} ms");
         println!(
             "Rate: {:.1} decisions/sec",
             if duration_ms > 0 {

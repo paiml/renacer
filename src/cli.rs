@@ -174,17 +174,17 @@ pub struct Cli {
     /// Format: version-trace_id-parent_id-trace_flags
     /// Example: 00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01
     ///
-    /// If not provided, checks TRACEPARENT or OTEL_TRACEPARENT environment variables.
+    /// If not provided, checks TRACEPARENT or `OTEL_TRACEPARENT` environment variables.
     /// If no context found, creates new root trace (existing behavior).
     #[arg(long = "trace-parent", value_name = "TRACEPARENT")]
     pub trace_parent: Option<String>,
 
     /// Enable compute block tracing (Trueno SIMD operations) - Sprint 32
     ///
-    /// Exports statistical computation blocks (e.g., calculate_statistics) as
+    /// Exports statistical computation blocks (e.g., `calculate_statistics`) as
     /// OpenTelemetry spans. Uses adaptive sampling: only traces blocks with
     /// duration >= threshold (default: 100μs). Toyota Way compliant: safe by
-    /// default, cannot DoS tracing backend.
+    /// default, cannot `DoS` tracing backend.
     #[arg(long = "trace-compute")]
     pub trace_compute: bool,
 
