@@ -986,6 +986,42 @@ fn print_analysis_summaries(
     }
 }
 
+/// Handle JSON output with ML analysis additions
+fn handle_json_output(
+    mut output: crate::json_output::JsonOutput,
+    stats_tracker: &Option<crate::stats::StatsTracker>,
+    analysis: &AnalysisConfig,
+    exit_code: i32,
+) {
+    if analysis.ml_anomaly {
+        if let Some(report) = generate_ml_analysis_for_json(stats_tracker, analysis.ml_clusters) {
+            output.set_ml_analysis(report);
+        }
+    }
+    if analysis.ml_outliers {
+        if let Some(report) = generate_isolation_forest_analysis_for_json(
+            stats_tracker,
+            analysis.ml_outlier_trees,
+            analysis.ml_outlier_threshold,
+            analysis.explain,
+        ) {
+            output.set_isolation_forest_analysis(report, analysis.explain);
+        }
+    }
+    if analysis.dl_anomaly {
+        if let Some(report) = generate_autoencoder_analysis_for_json(
+            stats_tracker,
+            analysis.dl_hidden_size,
+            analysis.dl_epochs,
+            f64::from(analysis.dl_threshold),
+            analysis.explain,
+        ) {
+            output.set_autoencoder_analysis(report, analysis.dl_threshold, analysis.explain);
+        }
+    }
+    print_json_output(output, exit_code);
+}
+
 /// Print all summaries at end of tracing
 fn print_summaries(tracers: Tracers, timing_mode: bool, exit_code: i32, analysis: &AnalysisConfig) {
     let Tracers {
@@ -997,9 +1033,9 @@ fn print_summaries(tracers: Tracers, timing_mode: bool, exit_code: i32, analysis
         profiling_ctx,
         function_profiler,
         anomaly_detector,
-        decision_tracer, // Sprint 26: Now used for decision trace output
+        decision_tracer,
         #[cfg(feature = "otlp")]
-        mut otlp_exporter, // Sprint 30: OTLP exporter
+        mut otlp_exporter,
     } = tracers;
 
     // Sprint 31: Export decision traces to OTLP (before ending root span)
@@ -1016,7 +1052,6 @@ fn print_summaries(tracers: Tracers, timing_mode: bool, exit_code: i32, analysis
     }
 
     // Print statistics summary if in statistics mode (text format)
-    // Sprint 32: Do this BEFORE shutdown so compute tracing can export spans
     if stats_tracker.is_some() && csv_stats_output.is_none() {
         #[cfg(feature = "otlp")]
         print_text_stats(
@@ -1035,55 +1070,19 @@ fn print_summaries(tracers: Tracers, timing_mode: bool, exit_code: i32, analysis
     }
 
     // Sprint 30: End root span and shutdown OTLP exporter
-    // Sprint 32: Moved AFTER stats printing so compute blocks can be traced
     #[cfg(feature = "otlp")]
     if let Some(ref mut exporter) = otlp_exporter {
         exporter.end_root_span(exit_code);
         exporter.shutdown();
     }
 
-    // Print JSON output if in JSON mode
-    if let Some(mut output) = json_output {
-        // Add ML analysis to JSON if enabled
-        if analysis.ml_anomaly {
-            if let Some(report) =
-                generate_ml_analysis_for_json(&stats_tracker, analysis.ml_clusters)
-            {
-                output.set_ml_analysis(report);
-            }
-        }
-        // Add Isolation Forest analysis to JSON if enabled (Sprint 22)
-        if analysis.ml_outliers {
-            if let Some(report) = generate_isolation_forest_analysis_for_json(
-                &stats_tracker,
-                analysis.ml_outlier_trees,
-                analysis.ml_outlier_threshold,
-                analysis.explain,
-            ) {
-                output.set_isolation_forest_analysis(report, analysis.explain);
-            }
-        }
-        // Add Autoencoder analysis to JSON if enabled (Sprint 23)
-        if analysis.dl_anomaly {
-            if let Some(report) = generate_autoencoder_analysis_for_json(
-                &stats_tracker,
-                analysis.dl_hidden_size,
-                analysis.dl_epochs,
-                f64::from(analysis.dl_threshold),
-                analysis.explain,
-            ) {
-                output.set_autoencoder_analysis(report, analysis.dl_threshold, analysis.explain);
-            }
-        }
-        print_json_output(output, exit_code);
+    // Handle output formats
+    if let Some(output) = json_output {
+        handle_json_output(output, &stats_tracker, analysis, exit_code);
     }
-
-    // Print CSV output if in CSV mode (normal mode)
     if let Some(output) = csv_output {
         print!("{}", output.to_csv());
     }
-
-    // Print CSV statistics output if in CSV + statistics mode
     if let Some(csv_stats) = csv_stats_output {
         print_csv_stats(
             csv_stats,
@@ -1093,19 +1092,13 @@ fn print_summaries(tracers: Tracers, timing_mode: bool, exit_code: i32, analysis
             analysis.anomaly_threshold,
         );
     }
-
-    // Print HTML output if in HTML mode
     if let Some(output) = html_output {
         print!("{}", output.to_html(stats_tracker.as_ref()));
     }
 
     // Print profiling and tracing summaries
     print_optional_summaries(profiling_ctx, function_profiler, anomaly_detector);
-
-    // Print analysis reports (HPU, ML)
     print_analysis_summaries(&stats_tracker, analysis);
-
-    // Sprint 26: Print decision trace summary
     print_decision_trace_summary(decision_tracer);
 }
 
