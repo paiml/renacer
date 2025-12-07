@@ -314,8 +314,16 @@ pub fn print_stats(path: &std::path::Path) -> Result<(), String> {
 
     // Time range
     if !decisions.is_empty() {
-        let min_ts = decisions.iter().map(|d| d.timestamp_us).min().unwrap();
-        let max_ts = decisions.iter().map(|d| d.timestamp_us).max().unwrap();
+        let min_ts = decisions
+            .iter()
+            .map(|d| d.timestamp_us)
+            .min()
+            .expect("checked non-empty");
+        let max_ts = decisions
+            .iter()
+            .map(|d| d.timestamp_us)
+            .max()
+            .expect("checked non-empty");
         let duration_ms = (max_ts - min_ts) / 1000;
         println!("Time range: {duration_ms} ms");
         println!(

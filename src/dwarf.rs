@@ -52,6 +52,7 @@ impl DwarfContext {
         let file = File::open(binary_path)
             .with_context(|| format!("Failed to open binary: {}", binary_path.display()))?;
 
+        // SAFETY: File is valid and open; memory mapping is read-only and file stays open for mmap lifetime
         let mmap = unsafe { memmap2::Mmap::map(&file) }.context("Failed to memory-map binary")?;
 
         let object = object::File::parse(&*mmap).context("Failed to parse ELF binary")?;

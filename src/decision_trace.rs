@@ -483,7 +483,7 @@ impl MmapDecisionWriter {
         file.set_len(size as u64)
             .map_err(|e| format!("Failed to set file size: {e}"))?;
 
-        // Memory-map the file
+        // SAFETY: File is valid, open with write access, and sized appropriately for mmap
         let mmap = unsafe {
             MmapMut::map_mut(&file).map_err(|e| format!("Failed to create memory map: {e}"))?
         };
