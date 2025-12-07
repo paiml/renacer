@@ -208,6 +208,18 @@ Renacer (Spanish: "to be reborn") is a next-generation binary inspection and tra
 - ✅ **Trueno integration** - SIMD-accelerated statistics via trueno v0.1.0
 - ✅ **100% coverage** - All new modules (anomaly.rs) have 100% test coverage
 
+## Installation
+
+```bash
+# From crates.io
+cargo install renacer
+
+# From source
+git clone https://github.com/paiml/renacer
+cd renacer
+cargo install --path .
+```
+
 ## Quick Start
 
 ```bash
