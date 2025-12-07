@@ -97,6 +97,7 @@ pub fn trace_command(command: &[String], config: TracerConfig) -> Result<()> {
     let chaos_config = config.chaos_config.clone();
 
     // Fork: parent will trace, child will exec
+    // SAFETY: fork() is safe to call; we handle both parent and child cases properly
     match unsafe { fork() }.context("Failed to fork")? {
         ForkResult::Parent { child } => {
             trace_child(child, config)?;
