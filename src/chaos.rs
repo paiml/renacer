@@ -244,7 +244,7 @@ impl std::fmt::Display for ChaosError {
             }
             #[cfg(feature = "chaos-byzantine")]
             ChaosError::ByzantineFaultFailed { syscall, reason } => {
-                write!(f, "Byzantine fault failed ({}): {}", syscall, reason)
+                write!(f, "Byzantine fault failed ({syscall}): {reason}")
             }
         }
     }

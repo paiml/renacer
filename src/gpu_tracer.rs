@@ -81,7 +81,7 @@ impl Default for GpuTracerConfig {
 /// library) with Renacer's OTLP export infrastructure. It follows Sprint 32's
 /// Toyota Way principles:
 /// - **Genchi Genbutsu**: Reuse proven wgpu-profiler infrastructure
-/// - **Jidoka**: Mandatory adaptive sampling (cannot DoS tracing backend)
+/// - **Jidoka**: Mandatory adaptive sampling (cannot `DoS` tracing backend)
 /// - **Muda**: Kernel-level tracing (no per-instruction overhead)
 /// - **Poka-Yoke**: Feature flag prevents accidental overhead
 #[cfg(feature = "gpu-tracing")]
@@ -107,7 +107,7 @@ impl GpuProfilerWrapper {
     ///
     /// # Note
     ///
-    /// In wgpu-profiler 0.18, GpuProfiler::new() doesn't require a device.
+    /// In wgpu-profiler 0.18, `GpuProfiler::new()` doesn't require a device.
     /// The profiler is initialized lazily when first used.
     pub fn new(
         otlp_exporter: Option<std::sync::Arc<OtlpExporter>>,
@@ -141,14 +141,14 @@ impl GpuProfilerWrapper {
     ///
     /// # Arguments
     ///
-    /// * `timestamp_period` - GPU timestamp period from queue.get_timestamp_period()
+    /// * `timestamp_period` - GPU timestamp period from `queue.get_timestamp_period()`
     ///
     /// # Adaptive Sampling
     ///
     /// Only kernels with `duration >= threshold_us` (default 100μs) are exported,
     /// unless `config.trace_all = true` (debug mode).
     ///
-    /// This prevents DoS on the tracing backend (Toyota Way: Jidoka).
+    /// This prevents `DoS` on the tracing backend (Toyota Way: Jidoka).
     pub fn export_frame(&mut self, timestamp_period: f32) {
         if let Some(frame_data) = self.profiler.process_finished_frame(timestamp_period) {
             // Convert wgpu-profiler results to GpuKernel structs

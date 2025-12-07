@@ -30,7 +30,7 @@ fn print_function_mappings(map: &transpiler_map::TranspilerMap, show_context: bo
             println!("─────────────────────────────────────────");
         }
         for (rust_fn, python_fn) in &map.function_map {
-            println!("{} -> {}", rust_fn, python_fn);
+            println!("{rust_fn} -> {python_fn}");
         }
         if show_context {
             println!("─────────────────────────────────────────");
@@ -181,7 +181,7 @@ fn main() -> Result<()> {
         args.chaos_timeout.as_deref(),
         args.chaos_signals,
     )
-    .map_err(|e| anyhow::anyhow!("Chaos config error: {}", e))?;
+    .map_err(|e| anyhow::anyhow!("Chaos config error: {e}"))?;
 
     // Display chaos mode status if enabled
     if let Some(ref chaos) = chaos_config {
