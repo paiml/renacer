@@ -2,10 +2,10 @@
 //!
 //! Detects architectural anti-patterns in system traces:
 //!
-//! - **GodProcess**: Single process dominates syscall activity (>80%)
-//! - **TightLoop**: Syscalls occurring at sub-threshold intervals
-//! - **ExcessiveIO**: I/O operations exceed sustainable rate
-//! - **BlockingMainThread**: Long-running operations block main thread
+//! - **`GodProcess`**: Single process dominates syscall activity (>80%)
+//! - **`TightLoop`**: Syscalls occurring at sub-threshold intervals
+//! - **`ExcessiveIO`**: I/O operations exceed sustainable rate
+//! - **`BlockingMainThread`**: Long-running operations block main thread
 //!
 //! # Reference
 //!
@@ -158,7 +158,7 @@ impl AntiPatternDetector {
     /// Detect God Process anti-pattern
     ///
     /// A God Process is one that dominates syscall activity beyond the threshold.
-    /// In a UnifiedTrace, all syscalls belong to the traced process, so we check
+    /// In a `UnifiedTrace`, all syscalls belong to the traced process, so we check
     /// if there are enough syscalls to warrant flagging.
     fn detect_god_process(&self, trace: &UnifiedTrace) -> Option<AntiPattern> {
         let syscall_count = trace.syscall_spans.len();
@@ -231,7 +231,7 @@ impl AntiPatternDetector {
 
         // Check against threshold
         if avg_interval_ms < self.thresholds.tight_loop_threshold_ms {
-            let location = format!("syscall: {}", dominant_syscall);
+            let location = format!("syscall: {dominant_syscall}");
             Some(AntiPattern::TightLoop {
                 location,
                 interval_ms: avg_interval_ms,
@@ -253,8 +253,8 @@ impl AntiPatternDetector {
         }
 
         // Find time span of syscalls
-        let first_timestamp = syscalls.first().map(|s| s.timestamp_nanos).unwrap_or(0);
-        let last_timestamp = syscalls.last().map(|s| s.timestamp_nanos).unwrap_or(0);
+        let first_timestamp = syscalls.first().map_or(0, |s| s.timestamp_nanos);
+        let last_timestamp = syscalls.last().map_or(0, |s| s.timestamp_nanos);
 
         // Calculate duration in seconds
         if last_timestamp <= first_timestamp {

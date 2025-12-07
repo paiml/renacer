@@ -70,9 +70,9 @@ impl CsvOutput {
 
         if self.include_timing {
             if let Some(duration) = syscall.duration_us {
-                fields.push(format!("{}us", duration));
+                fields.push(format!("{duration}us"));
             } else {
-                fields.push("".to_string());
+                fields.push(String::new());
             }
         }
 
@@ -80,7 +80,7 @@ impl CsvOutput {
             if let Some(ref source) = syscall.source_location {
                 fields.push(Self::escape_field(source));
             } else {
-                fields.push("".to_string());
+                fields.push(String::new());
             }
         }
 
@@ -152,7 +152,7 @@ impl CsvStatsOutput {
             if include_timing {
                 output.push(',');
                 if let Some(time_us) = stat.total_time_us {
-                    output.push_str(&format!("{}us", time_us));
+                    output.push_str(&format!("{time_us}us"));
                 } else {
                     output.push_str("0us");
                 }

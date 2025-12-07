@@ -22,7 +22,7 @@ pub struct SyscallDistribution {
 }
 
 impl SyscallDistribution {
-    /// Calculate coefficient of variation (CV = std_dev / mean)
+    /// Calculate coefficient of variation (CV = `std_dev` / mean)
     ///
     /// CV is a normalized measure of variability:
     /// - CV near 0: very stable (e.g., CV=0.1 means std is 10% of mean)
@@ -70,7 +70,7 @@ impl SyscallDistribution {
 
     /// Check if this syscall is "noisy" based on CV threshold
     pub fn is_noisy(&self, threshold: f64) -> bool {
-        self.coefficient_of_variation() as f64 > threshold
+        f64::from(self.coefficient_of_variation()) > threshold
     }
 }
 
@@ -84,7 +84,7 @@ impl SyscallDistribution {
 /// * `noise_threshold` - CV threshold (default: 0.5)
 ///
 /// # Returns
-/// Tuple of (stable_syscalls, filtered_out_syscalls)
+/// Tuple of (`stable_syscalls`, `filtered_out_syscalls`)
 ///
 /// # Example
 /// ```ignore

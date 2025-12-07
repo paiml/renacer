@@ -5,7 +5,7 @@
 //!
 //! # Toyota Way Principle: Poka-Yoke (Error-Proofing)
 //!
-//! Physical timestamps ($t_A < t_B$) are unreliable for establishing causality due to:
+//! Physical timestamps ($`t_A` < `t_B`$) are unreliable for establishing causality due to:
 //! - Clock skew across CPU cores (100-1000ns)
 //! - NTP drift across machines (milliseconds)
 //! - GPU async execution (kernel launch returns before kernel completes)
@@ -16,7 +16,7 @@
 //! # Peer-Reviewed Foundation
 //!
 //! **Lamport (1978). "Time, Clocks, and the Ordering of Events in a Distributed System." CACM.**
-//! - **Theorem:** Event A → B iff logical_clock(A) < logical_clock(B)
+//! - **Theorem:** Event A → B iff `logical_clock(A)` < `logical_clock(B)`
 //! - **Application:** Eliminates false causal edges from timestamp inference
 //!
 //! **Chow et al. (2014). "The Mystery Machine: End-to-end Performance Analysis." OSDI.**
@@ -80,8 +80,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 ///
 /// # Performance
 ///
-/// - `tick()`: ~10ns (single atomic fetch_add)
-/// - `sync()`: ~20ns (atomic fetch_max + branch)
+/// - `tick()`: ~10ns (single atomic `fetch_add`)
+/// - `sync()`: ~20ns (atomic `fetch_max` + branch)
 #[derive(Debug)]
 pub struct LamportClock {
     counter: AtomicU64,
@@ -142,7 +142,7 @@ impl LamportClock {
     ///
     /// # Performance
     ///
-    /// ~10ns (single atomic fetch_add with SeqCst ordering)
+    /// ~10ns (single atomic `fetch_add` with `SeqCst` ordering)
     ///
     /// # Example
     ///
@@ -176,7 +176,7 @@ impl LamportClock {
     ///
     /// # Performance
     ///
-    /// ~20ns (atomic fetch_max + fetch_add)
+    /// ~20ns (atomic `fetch_max` + `fetch_add`)
     ///
     /// # Example
     ///
@@ -280,10 +280,7 @@ pub fn init_from_env() {
     if let Ok(clock_str) = std::env::var("RENACER_LOGICAL_CLOCK") {
         if let Ok(parent_clock) = clock_str.parse::<u64>() {
             GLOBAL_CLOCK.sync(parent_clock);
-            eprintln!(
-                "DEBUG: Initialized Lamport clock from parent: {}",
-                parent_clock
-            );
+            eprintln!("DEBUG: Initialized Lamport clock from parent: {parent_clock}");
         }
     }
 }

@@ -161,9 +161,9 @@ impl AdaptiveSampler {
     ///
     /// # Algorithm
     ///
-    /// 1. If trace_all mode, always trace
+    /// 1. If `trace_all` mode, always trace
     /// 2. If duration >= threshold, always trace (slow operations)
-    /// 3. Otherwise, probabilistic sampling based on sample_rate
+    /// 3. Otherwise, probabilistic sampling based on `sample_rate`
     pub fn should_trace(&self, estimated_duration_us: u64) -> bool {
         // Debug mode: trace everything
         if self.trace_all {
@@ -186,7 +186,7 @@ impl AdaptiveSampler {
     /// - GPU operations: always trace if >100μs
     /// - SIMD operations: always trace if >50μs
     /// - I/O syscalls: always trace if >10μs
-    /// - Other syscalls: sample at sample_rate
+    /// - Other syscalls: sample at `sample_rate`
     ///
     /// # Arguments
     ///

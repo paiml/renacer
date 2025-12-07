@@ -42,10 +42,10 @@
 //! # Storage Savings
 //!
 //! Without RLE:
-//! - 100,000 SpanRecords × ~500 bytes = 50 MB
+//! - 100,000 `SpanRecords` × ~500 bytes = 50 MB
 //!
 //! With RLE:
-//! - 1 RleSegment × ~200 bytes = 200 bytes
+//! - 1 `RleSegment` × ~200 bytes = 200 bytes
 //! - **Compression:** 50 MB → 200 bytes = 250,000× reduction
 //!
 //! # Peer-Reviewed Foundation
@@ -142,7 +142,7 @@ impl RleSegment {
     ///
     /// # Returns
     ///
-    /// Compression ratio (count / 1), representing how many SpanRecords
+    /// Compression ratio (count / 1), representing how many `SpanRecords`
     /// were compressed into this single segment.
     pub fn compression_ratio(&self) -> f64 {
         self.count as f64
@@ -177,7 +177,7 @@ impl CompressedTrace {
     ///
     /// # Returns
     ///
-    /// Compression ratio (original_count / compressed_count)
+    /// Compression ratio (`original_count` / `compressed_count`)
     pub fn compression_ratio(&self) -> f64 {
         let compressed_count = self.segments.len() + self.uncompressed.len();
         if compressed_count == 0 {
@@ -347,7 +347,7 @@ fn spans_have_similar_attributes(span1: &SpanRecord, span2: &SpanRecord) -> bool
 ///
 /// # Returns
 ///
-/// Vector of SpanRecords representing the original sequence.
+/// Vector of `SpanRecords` representing the original sequence.
 ///
 /// # Note
 ///
@@ -397,7 +397,7 @@ pub fn decompress_segment(segment: &RleSegment) -> Vec<SpanRecord> {
 ///
 /// # Returns
 ///
-/// Compressed trace with default min_run_length = 10
+/// Compressed trace with default `min_run_length` = 10
 pub fn compress_trace(spans: &[SpanRecord]) -> Result<CompressedTrace> {
     compress_spans(spans, 10)
 }

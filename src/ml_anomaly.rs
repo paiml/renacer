@@ -1,6 +1,6 @@
 //! ML-based anomaly detection using Aprender (Sprint 23)
 //!
-//! Uses KMeans clustering to identify anomalous syscall patterns.
+//! Uses `KMeans` clustering to identify anomalous syscall patterns.
 
 use aprender::cluster::KMeans;
 use aprender::primitives::Matrix;
@@ -37,7 +37,7 @@ pub struct MlAnomaly {
     pub distance: f64,
 }
 
-/// ML Anomaly Analyzer using Aprender KMeans
+/// ML Anomaly Analyzer using Aprender `KMeans`
 pub struct MlAnomalyAnalyzer {
     num_clusters: usize,
 }
@@ -129,7 +129,7 @@ impl MlAnomalyAnalyzer {
 
         for (i, &feature) in features.iter().enumerate() {
             let cluster = labels[i];
-            centers[cluster] += feature as f64;
+            centers[cluster] += f64::from(feature);
             counts[cluster] += 1;
         }
 
@@ -165,13 +165,13 @@ impl MlAnomalyAnalyzer {
 
             for j in 0..n {
                 if i != j && labels[j] == cluster_i {
-                    same_cluster_dist += (features[i] - features[j]).abs() as f64;
+                    same_cluster_dist += f64::from((features[i] - features[j]).abs());
                     same_count += 1;
                 }
             }
 
             let a_i = if same_count > 0 {
-                same_cluster_dist / same_count as f64
+                same_cluster_dist / f64::from(same_count)
             } else {
                 0.0
             };
@@ -189,13 +189,13 @@ impl MlAnomalyAnalyzer {
 
                 for j in 0..n {
                     if labels[j] == c {
-                        other_dist += (features[i] - features[j]).abs() as f64;
+                        other_dist += f64::from((features[i] - features[j]).abs());
                         other_count += 1;
                     }
                 }
 
                 if other_count > 0 {
-                    let avg_dist = other_dist / other_count as f64;
+                    let avg_dist = other_dist / f64::from(other_count);
                     if avg_dist < min_other_dist {
                         min_other_dist = avg_dist;
                     }
@@ -239,7 +239,7 @@ impl MlAnomalyAnalyzer {
         for (i, name) in names.iter().enumerate() {
             let cluster = labels[i];
             let center = centers[cluster];
-            let feature_val = features[i] as f64;
+            let feature_val = f64::from(features[i]);
             let distance = (feature_val - center).abs();
 
             // Mark as anomaly if in high-latency cluster
@@ -299,7 +299,7 @@ impl MlAnomalyReport {
         // Cluster centers
         output.push_str("\nCluster Centers (avg time in \u{03bc}s):\n");
         for (i, center) in self.cluster_centers.iter().enumerate() {
-            output.push_str(&format!("  Cluster {}: {:.2} \u{03bc}s\n", i, center));
+            output.push_str(&format!("  Cluster {i}: {center:.2} \u{03bc}s\n"));
         }
 
         // Anomalies
@@ -336,13 +336,13 @@ impl MlAnomalyReport {
         // ML-only anomalies
         let ml_only: Vec<_> = ml_set.difference(&zscore_set).collect();
         if !ml_only.is_empty() {
-            output.push_str(&format!("ML-only anomalies: {:?}\n", ml_only));
+            output.push_str(&format!("ML-only anomalies: {ml_only:?}\n"));
         }
 
         // Z-score-only anomalies
         let zscore_only: Vec<_> = zscore_set.difference(&ml_set).collect();
         if !zscore_only.is_empty() {
-            output.push_str(&format!("Z-score-only anomalies: {:?}\n", zscore_only));
+            output.push_str(&format!("Z-score-only anomalies: {zscore_only:?}\n"));
         }
 
         output

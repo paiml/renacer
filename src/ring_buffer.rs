@@ -86,7 +86,7 @@ use std::time::Duration;
 /// buffer.shutdown();
 /// ```
 pub struct SpanRingBuffer {
-    /// Lock-free bounded queue (crossbeam::ArrayQueue)
+    /// Lock-free bounded queue (`crossbeam::ArrayQueue`)
     queue: Arc<ArrayQueue<SpanRecord>>,
 
     /// Sidecar thread handle
@@ -157,7 +157,7 @@ impl SpanRingBuffer {
             .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
 
         match self.queue.push(span) {
-            Ok(_) => {}
+            Ok(()) => {}
             Err(_dropped_span) => {
                 // Ring buffer full - drop span (never block app)
                 self.total_dropped
@@ -235,12 +235,12 @@ impl SpanRingBuffer {
             }
 
             // Export batch if non-empty
-            if !batch.is_empty() {
-                Self::export_batch(&batch);
-                batch.clear();
-            } else {
+            if batch.is_empty() {
                 // Sleep if buffer empty (prevent busy-wait)
                 thread::sleep(Duration::from_millis(SLEEP_MS));
+            } else {
+                Self::export_batch(&batch);
+                batch.clear();
             }
         }
     }

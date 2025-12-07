@@ -37,7 +37,7 @@ pub struct ArgsFilter {
 /// ```
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ClusterDefinition {
-    /// Unique cluster name (e.g., "MemoryAllocation", "GPU")
+    /// Unique cluster name (e.g., "`MemoryAllocation`", "GPU")
     pub name: String,
 
     /// Human-readable description

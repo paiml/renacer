@@ -192,13 +192,13 @@ impl AnomalyDetector {
 
         eprintln!("Severity Distribution:");
         if high_count > 0 {
-            eprintln!("  🔴 High (>5.0σ):   {} anomalies", high_count);
+            eprintln!("  🔴 High (>5.0σ):   {high_count} anomalies");
         }
         if medium_count > 0 {
-            eprintln!("  🟡 Medium (4-5σ): {} anomalies", medium_count);
+            eprintln!("  🟡 Medium (4-5σ): {medium_count} anomalies");
         }
         if low_count > 0 {
-            eprintln!("  🟢 Low (3-4σ):    {} anomalies", low_count);
+            eprintln!("  🟢 Low (3-4σ):    {low_count} anomalies");
         }
         eprintln!();
 

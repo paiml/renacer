@@ -37,7 +37,7 @@ use crate::trace_context::TraceContext; // Sprint 33
 /// Configuration for OTLP exporter (Sprint 36: added batch config)
 #[derive(Debug, Clone)]
 pub struct OtlpConfig {
-    /// OTLP endpoint URL (e.g., "http://localhost:4317")
+    /// OTLP endpoint URL (e.g., "<http://localhost:4317>")
     pub endpoint: String,
     /// Service name for traces
     pub service_name: String,
@@ -113,7 +113,7 @@ impl OtlpConfig {
 /// Trueno SIMD operations (e.g., mean, stddev, percentiles).
 #[derive(Debug, Clone)]
 pub struct ComputeBlock {
-    /// Operation name (e.g., "calculate_statistics", "detect_anomalies")
+    /// Operation name (e.g., "`calculate_statistics`", "`detect_anomalies`")
     pub operation: &'static str,
     /// Total duration of the block in microseconds
     pub duration_us: u64,
@@ -129,7 +129,7 @@ pub struct ComputeBlock {
 /// captured via wgpu timestamp queries.
 #[derive(Debug, Clone)]
 pub struct GpuKernel {
-    /// Kernel name (e.g., "sum_aggregation", "matrix_multiply")
+    /// Kernel name (e.g., "`sum_aggregation`", "`matrix_multiply`")
     pub kernel: String,
     /// Total duration in microseconds
     pub duration_us: u64,
@@ -148,9 +148,9 @@ pub struct GpuKernel {
 /// Represents the direction of CPU↔GPU data movement.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TransferDirection {
-    /// CPU → GPU (buffer upload, write_buffer)
+    /// CPU → GPU (buffer upload, `write_buffer`)
     CpuToGpu,
-    /// GPU → CPU (buffer download/readback, map_async)
+    /// GPU → CPU (buffer download/readback, `map_async`)
     GpuToCpu,
 }
 
@@ -167,11 +167,11 @@ impl TransferDirection {
 /// GPU memory transfer metadata for tracing (Sprint 39 - Phase 4)
 ///
 /// Represents a single CPU↔GPU memory transfer operation captured via wall-clock timing.
-/// Tracks buffer uploads (CPU→GPU) and downloads (GPU→CPU) to identify PCIe bandwidth
+/// Tracks buffer uploads (CPU→GPU) and downloads (GPU→CPU) to identify `PCIe` bandwidth
 /// bottlenecks.
 #[derive(Debug, Clone)]
 pub struct GpuMemoryTransfer {
-    /// Transfer name/label (e.g., "mesh_data_upload", "framebuffer_readback")
+    /// Transfer name/label (e.g., "`mesh_data_upload`", "`framebuffer_readback`")
     pub label: String,
     /// Transfer direction (CPU→GPU or GPU→CPU)
     pub direction: TransferDirection,
@@ -203,7 +203,7 @@ impl GpuMemoryTransfer {
     ///
     /// # Returns
     ///
-    /// New GpuMemoryTransfer with calculated bandwidth
+    /// New `GpuMemoryTransfer` with calculated bandwidth
     pub fn new(
         label: String,
         direction: TransferDirection,
@@ -248,7 +248,7 @@ impl OtlpExporter {
     pub fn new(config: OtlpConfig, trace_context: Option<TraceContext>) -> Result<Self> {
         // Create a Tokio runtime for OTLP async operations
         let runtime = tokio::runtime::Runtime::new()
-            .map_err(|e| anyhow::anyhow!("Failed to create Tokio runtime: {}", e))?;
+            .map_err(|e| anyhow::anyhow!("Failed to create Tokio runtime: {e}"))?;
 
         // Build OTLP exporter within the runtime context
         let (provider, tracer) = runtime.block_on(async {
@@ -329,11 +329,11 @@ impl OtlpExporter {
     pub fn start_root_span(&mut self, program: &str, pid: i32) {
         let span_builder = self
             .tracer
-            .span_builder(format!("process: {}", program))
+            .span_builder(format!("process: {program}"))
             .with_kind(SpanKind::Server)
             .with_attributes(vec![
                 KeyValue::new("process.command", program.to_string()),
-                KeyValue::new("process.pid", pid as i64),
+                KeyValue::new("process.pid", i64::from(pid)),
             ]);
 
         // Sprint 33: If we have a remote parent context, make this span a child
@@ -357,7 +357,7 @@ impl OtlpExporter {
     ) {
         let mut span = self
             .tracer
-            .span_builder(format!("syscall: {}", name))
+            .span_builder(format!("syscall: {name}"))
             .with_kind(SpanKind::Internal)
             .with_attributes(vec![
                 KeyValue::new("syscall.name", name.to_string()),
@@ -375,13 +375,13 @@ impl OtlpExporter {
             span.set_attribute(KeyValue::new("code.filepath", file.to_string()));
         }
         if let Some(line) = source_line {
-            span.set_attribute(KeyValue::new("code.lineno", line as i64));
+            span.set_attribute(KeyValue::new("code.lineno", i64::from(line)));
         }
 
         // Mark as error if syscall failed
         if result < 0 {
             span.set_status(Status::Error {
-                description: format!("syscall failed with code: {}", result).into(),
+                description: format!("syscall failed with code: {result}").into(),
             });
         }
 
@@ -410,13 +410,13 @@ impl OtlpExporter {
             }
 
             // Add event to the root span
-            span.add_event(format!("decision: {}::{}", category, name), attributes);
+            span.add_event(format!("decision: {category}::{name}"), attributes);
         }
     }
 
     /// Record a compute block (multiple Trueno operations) as a span (Sprint 32)
     ///
-    /// This exports a block of statistical computations (e.g., calculate_statistics)
+    /// This exports a block of statistical computations (e.g., `calculate_statistics`)
     /// as a single span. Following Toyota Way principles, we trace at the block level
     /// rather than individual SIMD operations to avoid overhead (Muda) and false
     /// observability (Genchi Genbutsu).
@@ -428,7 +428,7 @@ impl OtlpExporter {
     /// # Adaptive Sampling
     ///
     /// This method should only be called if duration >= threshold (default 100μs).
-    /// The caller (trace_compute_block! macro) handles sampling decisions.
+    /// The caller (`trace_compute_block`! macro) handles sampling decisions.
     pub fn record_compute_block(&self, block: ComputeBlock) {
         let mut span = self
             .tracer
@@ -459,7 +459,7 @@ impl OtlpExporter {
     /// # Adaptive Sampling
     ///
     /// This method should only be called if duration >= threshold (default 100μs).
-    /// The caller (GpuProfilerWrapper) handles sampling decisions.
+    /// The caller (`GpuProfilerWrapper`) handles sampling decisions.
     pub fn record_gpu_kernel(&self, kernel: GpuKernel) {
         let mut span_attrs = vec![
             // Only dynamic attributes on span (Toyota Way: no attribute explosion)
@@ -533,11 +533,11 @@ impl OtlpExporter {
     /// Finish the root span
     pub fn end_root_span(&mut self, exit_code: i32) {
         if let Some(mut span) = self.root_span.take() {
-            span.set_attribute(KeyValue::new("process.exit_code", exit_code as i64));
+            span.set_attribute(KeyValue::new("process.exit_code", i64::from(exit_code)));
 
             if exit_code != 0 {
                 span.set_status(Status::Error {
-                    description: format!("process exited with code: {}", exit_code).into(),
+                    description: format!("process exited with code: {exit_code}").into(),
                 });
             }
 
@@ -545,14 +545,14 @@ impl OtlpExporter {
         }
     }
 
-    /// Export a complete UnifiedTrace to OTLP (Sprint 40 - Section 7.1)
+    /// Export a complete `UnifiedTrace` to OTLP (Sprint 40 - Section 7.1)
     ///
-    /// Exports all layers of the UnifiedTrace structure to OTLP:
-    /// - ProcessSpan as root span
-    /// - SyscallSpans as children of process span
+    /// Exports all layers of the `UnifiedTrace` structure to OTLP:
+    /// - `ProcessSpan` as root span
+    /// - `SyscallSpans` as children of process span
     /// - GPU kernels, GPU memory transfers, SIMD blocks, transpiler decisions
     ///
-    /// Preserves happens-before relationships via parent_span_id.
+    /// Preserves happens-before relationships via `parent_span_id`.
     ///
     /// # Arguments
     ///

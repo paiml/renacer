@@ -1,6 +1,6 @@
 //! DWARF debug info parsing for source correlation
 //!
-//! Sprint 5-6: Map instruction pointers to source file:line using DWARF .debug_line
+//! Sprint 5-6: Map instruction pointers to source <file:line> using DWARF .`debug_line`
 //!
 //! Uses addr2line crate for robust DWARF parsing
 
@@ -88,7 +88,7 @@ impl DwarfContext {
 
     /// Look up source location for an instruction pointer
     ///
-    /// Sprint 5-6: Full implementation with DWARF .debug_line parsing
+    /// Sprint 5-6: Full implementation with DWARF .`debug_line` parsing
     /// Returns the first valid source location found in DWARF
     pub fn lookup(&self, ip: u64) -> Result<Option<SourceLocation>> {
         // Try multiple IP offsets to find user code

@@ -220,7 +220,7 @@ impl IsolationForest {
     pub fn predict(&self, sample: &[f64], contamination: f32) -> bool {
         let score = self.anomaly_score(sample);
         // Scores close to 1.0 are anomalies, close to 0.5 are normal
-        score > 0.5 + (contamination as f64 / 2.0)
+        score > 0.5 + (f64::from(contamination) / 2.0)
     }
 }
 

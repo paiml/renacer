@@ -37,7 +37,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Span type classification for different tracing contexts
 ///
-/// Extends beyond OpenTelemetry SpanKind to include domain-specific types.
+/// Extends beyond OpenTelemetry `SpanKind` to include domain-specific types.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum SpanType {
     /// System call span (read, write, etc.)
@@ -73,7 +73,7 @@ pub struct ExperimentMetadata {
     #[serde(default)]
     pub loss: Option<f64>,
 
-    /// Additional metrics (accuracy, f1_score, perplexity, etc.)
+    /// Additional metrics (accuracy, `f1_score`, perplexity, etc.)
     #[serde(default)]
     pub metrics: HashMap<String, f64>,
 }
@@ -89,7 +89,7 @@ impl ExperimentMetadata {
         serde_json::from_str(json)
     }
 
-    /// Convert to attribute map for SpanRecord
+    /// Convert to attribute map for `SpanRecord`
     pub fn to_attributes(&self) -> HashMap<String, String> {
         let mut attrs = HashMap::new();
 
@@ -108,7 +108,7 @@ impl ExperimentMetadata {
         }
 
         for (key, value) in &self.metrics {
-            attrs.insert(format!("experiment.metrics.{}", key), value.to_string());
+            attrs.insert(format!("experiment.metrics.{key}"), value.to_string());
         }
 
         attrs
@@ -151,11 +151,11 @@ pub struct ExperimentSpan {
 impl ExperimentSpan {
     /// Create a new experiment span with the given name and metadata
     ///
-    /// Automatically generates trace_id, span_id, and sets start_time.
+    /// Automatically generates `trace_id`, `span_id`, and sets `start_time`.
     ///
     /// # Arguments
     ///
-    /// * `name` - Human-readable span name (e.g., "training_step", "evaluation")
+    /// * `name` - Human-readable span name (e.g., "`training_step`", "evaluation")
     /// * `metadata` - Experiment metadata with model info, epoch, loss, etc.
     ///
     /// # Example
@@ -222,7 +222,7 @@ impl ExperimentSpan {
         self.end_time_nanos = now.as_nanos() as u64;
     }
 
-    /// Convert to SpanRecord for storage in trueno-db
+    /// Convert to `SpanRecord` for storage in trueno-db
     pub fn to_span_record(&self) -> SpanRecord {
         let attributes = self.metadata.to_attributes();
 
@@ -302,7 +302,7 @@ impl EquivalenceScore {
 ///
 /// # Returns
 ///
-/// EquivalenceScore with detailed metrics on trace similarity.
+/// `EquivalenceScore` with detailed metrics on trace similarity.
 ///
 /// # Example
 ///

@@ -19,7 +19,7 @@ pub enum RegressionVerdict {
     /// No statistically significant regression detected
     NoRegression,
 
-    /// Statistically significant regression detected (p < significance_level)
+    /// Statistically significant regression detected (p < `significance_level`)
     Regression {
         /// Syscall(s) that regressed
         regressed_syscalls: Vec<String>,
@@ -78,11 +78,11 @@ impl RegressionAssessment {
                     "Regressed syscalls: {}\n",
                     regressed_syscalls.join(", ")
                 ));
-                report.push_str(&format!("Filtered noisy syscalls: {}\n", filtered_count));
+                report.push_str(&format!("Filtered noisy syscalls: {filtered_count}\n"));
             }
             RegressionVerdict::InsufficientData { reason } => {
                 report.push_str("⚠️  INSUFFICIENT DATA\n\n");
-                report.push_str(&format!("Reason: {}\n", reason));
+                report.push_str(&format!("Reason: {reason}\n"));
             }
         }
 
@@ -93,7 +93,7 @@ impl RegressionAssessment {
                 self.filtered_syscalls.len()
             ));
             for name in &self.filtered_syscalls {
-                report.push_str(&format!("  - {}\n", name));
+                report.push_str(&format!("  - {name}\n"));
             }
         }
 

@@ -11,7 +11,7 @@
 //! # Design Principles
 //!
 //! 1. **Flat Structure:** Parquet performs best with flat schemas (no deep nesting)
-//! 2. **Fixed-size IDs:** trace_id (16 bytes), span_id (8 bytes) for efficient indexing
+//! 2. **Fixed-size IDs:** `trace_id` (16 bytes), `span_id` (8 bytes) for efficient indexing
 //! 3. **JSON Attributes:** Flexible key-value pairs stored as JSON string
 //! 4. **Timestamp Precision:** Nanosecond precision for microsecond-level tracing
 //! 5. **Logical Causality:** Lamport clock field for provable ordering
@@ -129,7 +129,7 @@ pub struct SpanRecord {
     ///
     /// Should follow OpenTelemetry semantic conventions:
     /// - Syscalls: use syscall name (e.g., "read", "write")
-    /// - Functions: use function name (e.g., "process_request")
+    /// - Functions: use function name (e.g., "`process_request`")
     /// - HTTP: use "HTTP {method}" (e.g., "HTTP GET")
     pub span_name: String,
 
@@ -150,7 +150,7 @@ pub struct SpanRecord {
     /// Use `logical_clock` for causal ordering.
     pub end_time_nanos: u64,
 
-    /// Span duration in nanoseconds (end_time - start_time)
+    /// Span duration in nanoseconds (`end_time` - `start_time`)
     ///
     /// This is a computed field for query convenience.
     pub duration_nanos: u64,
@@ -238,7 +238,7 @@ pub enum StatusCode {
 }
 
 impl SpanRecord {
-    /// Create a new SpanRecord with computed duration
+    /// Create a new `SpanRecord` with computed duration
     ///
     /// # Arguments
     ///
@@ -337,7 +337,7 @@ impl SpanRecord {
     ///
     /// # Returns
     ///
-    /// HashMap of attribute key-value pairs, or empty map if parse fails.
+    /// `HashMap` of attribute key-value pairs, or empty map if parse fails.
     pub fn parse_attributes(&self) -> HashMap<String, String> {
         serde_json::from_str(&self.attributes_json).unwrap_or_default()
     }
@@ -346,7 +346,7 @@ impl SpanRecord {
     ///
     /// # Returns
     ///
-    /// HashMap of resource key-value pairs, or empty map if parse fails.
+    /// `HashMap` of resource key-value pairs, or empty map if parse fails.
     pub fn parse_resource(&self) -> HashMap<String, String> {
         serde_json::from_str(&self.resource_json).unwrap_or_default()
     }

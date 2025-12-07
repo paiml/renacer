@@ -55,7 +55,7 @@ pub struct RegressionConfig {
 
     /// Noise threshold (coefficient of variation) for Delta Debugging
     ///
-    /// Coefficient of Variation (CV) = std_dev / mean
+    /// Coefficient of Variation (CV) = `std_dev` / mean
     /// - CV > threshold: syscall is "noisy", filtered out before testing
     /// - CV <= threshold: syscall is "stable", included in testing
     ///

@@ -35,7 +35,7 @@ impl std::fmt::Display for HPUBackend {
 pub struct CorrelationResult {
     /// Syscall names in order
     pub syscalls: Vec<String>,
-    /// Correlation matrix (syscalls.len() x syscalls.len())
+    /// Correlation matrix (`syscalls.len()` x `syscalls.len()`)
     pub matrix: Vec<Vec<f32>>,
 }
 
@@ -101,7 +101,7 @@ impl HPUProfiler {
 
     /// Analyze syscall data and produce HPU analysis report
     ///
-    /// Takes a map of syscall name -> (count, total_time_ns)
+    /// Takes a map of syscall name -> (count, `total_time_ns`)
     pub fn analyze(&self, syscall_data: &HashMap<String, (u64, u64)>) -> HPUAnalysisReport {
         let start = Instant::now();
 
@@ -141,8 +141,8 @@ impl HPUProfiler {
                     matrix[i][j] = 1.0;
                 } else {
                     // Basic correlation based on count ratio
-                    let count_i = data.get(&syscalls[i]).map(|(c, _)| *c).unwrap_or(1) as f32;
-                    let count_j = data.get(&syscalls[j]).map(|(c, _)| *c).unwrap_or(1) as f32;
+                    let count_i = data.get(&syscalls[i]).map_or(1, |(c, _)| *c) as f32;
+                    let count_j = data.get(&syscalls[j]).map_or(1, |(c, _)| *c) as f32;
                     let ratio = if count_i > count_j {
                         count_j / count_i
                     } else {
@@ -185,7 +185,7 @@ impl HPUProfiler {
         // TODO: Implement proper K-means in Step 5
         let mut sorted: Vec<_> = syscalls
             .iter()
-            .map(|s| (s.clone(), data.get(s).map(|(c, _)| *c).unwrap_or(0)))
+            .map(|s| (s.clone(), data.get(s).map_or(0, |(c, _)| *c)))
             .collect();
         sorted.sort_by_key(|(_, c)| std::cmp::Reverse(*c));
 
@@ -252,7 +252,7 @@ impl HPUAnalysisReport {
                 cluster.members.len()
             ));
             for member in &cluster.members {
-                output.push_str(&format!("  - {}\n", member));
+                output.push_str(&format!("  - {member}\n"));
             }
         }
 

@@ -78,7 +78,7 @@ impl TraceContext {
 
     /// Extract trace context from environment variables
     ///
-    /// Checks TRACEPARENT and OTEL_TRACEPARENT (in that order)
+    /// Checks TRACEPARENT and `OTEL_TRACEPARENT` (in that order)
     pub fn from_env() -> Option<Self> {
         std::env::var("TRACEPARENT")
             .or_else(|_| std::env::var("OTEL_TRACEPARENT"))
@@ -89,14 +89,14 @@ impl TraceContext {
     /// Set trace context as environment variable (Sprint 42: Batuta Integration)
     ///
     /// Sets TRACEPARENT for child processes to inherit trace context.
-    /// This enables distributed tracing across exec() boundaries.
+    /// This enables distributed tracing across `exec()` boundaries.
     pub fn set_env(&self) {
         std::env::set_var("TRACEPARENT", self.to_string());
     }
 
     /// Extract logical clock from environment variable (Sprint 42: Batuta Integration)
     ///
-    /// Checks RENACER_LOGICAL_CLOCK environment variable.
+    /// Checks `RENACER_LOGICAL_CLOCK` environment variable.
     /// Returns None if not set or invalid format.
     pub fn logical_clock_from_env() -> Option<u64> {
         std::env::var("RENACER_LOGICAL_CLOCK")
@@ -106,24 +106,24 @@ impl TraceContext {
 
     /// Set logical clock as environment variable (Sprint 42: Batuta Integration)
     ///
-    /// Sets RENACER_LOGICAL_CLOCK for child processes to inherit.
-    /// This propagates Lamport logical clocks across exec() boundaries.
+    /// Sets `RENACER_LOGICAL_CLOCK` for child processes to inherit.
+    /// This propagates Lamport logical clocks across `exec()` boundaries.
     pub fn set_logical_clock_env(timestamp: u64) {
         std::env::set_var("RENACER_LOGICAL_CLOCK", timestamp.to_string());
     }
 
-    /// Check if trace is sampled (trace_flags & 0x01)
+    /// Check if trace is sampled (`trace_flags` & 0x01)
     pub fn is_sampled(&self) -> bool {
         self.trace_flags & 0x01 != 0
     }
 
-    /// Convert trace_id to OpenTelemetry TraceId
+    /// Convert `trace_id` to OpenTelemetry `TraceId`
     #[cfg(feature = "otlp")]
     pub fn otel_trace_id(&self) -> opentelemetry::trace::TraceId {
         opentelemetry::trace::TraceId::from_bytes(self.trace_id)
     }
 
-    /// Convert parent_id to OpenTelemetry SpanId
+    /// Convert `parent_id` to OpenTelemetry `SpanId`
     #[cfg(feature = "otlp")]
     pub fn otel_parent_id(&self) -> opentelemetry::trace::SpanId {
         opentelemetry::trace::SpanId::from_bytes(self.parent_id)
@@ -150,11 +150,11 @@ pub enum TraceContextError {
     InvalidFormat,
     /// Invalid version (must be 00)
     InvalidVersion,
-    /// Invalid trace_id (must be 32 hex chars)
+    /// Invalid `trace_id` (must be 32 hex chars)
     InvalidTraceId,
-    /// Invalid parent_id (must be 16 hex chars)
+    /// Invalid `parent_id` (must be 16 hex chars)
     InvalidParentId,
-    /// Invalid trace_flags (must be 2 hex chars)
+    /// Invalid `trace_flags` (must be 2 hex chars)
     InvalidTraceFlags,
     /// Trace ID is all zeros (forbidden by W3C spec)
     AllZeroTraceId,
@@ -208,11 +208,11 @@ fn hex_to_bytes_8(hex: &str) -> Option<[u8; 8]> {
 }
 
 fn bytes_to_hex_16(bytes: &[u8; 16]) -> String {
-    bytes.iter().map(|b| format!("{:02x}", b)).collect()
+    bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
 
 fn bytes_to_hex_8(bytes: &[u8; 8]) -> String {
-    bytes.iter().map(|b| format!("{:02x}", b)).collect()
+    bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
 
 // ============================================================================
@@ -529,7 +529,7 @@ impl LamportClock {
     /// Increment clock on local event
     ///
     /// Returns the new timestamp after increment.
-    /// Uses SeqCst ordering to ensure happens-before consistency.
+    /// Uses `SeqCst` ordering to ensure happens-before consistency.
     pub fn tick(&self) -> u64 {
         self.counter.fetch_add(1, Ordering::SeqCst) + 1
     }
@@ -564,7 +564,7 @@ impl LamportClock {
     ///
     /// Returns true if a < b (strict temporal ordering).
     /// Note: This is a simple timestamp comparison. Full happens-before
-    /// semantics require checking causal chains (see UnifiedTrace).
+    /// semantics require checking causal chains (see `UnifiedTrace`).
     pub fn happens_before(a: u64, b: u64) -> bool {
         a < b
     }

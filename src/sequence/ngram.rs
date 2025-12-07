@@ -17,7 +17,7 @@ pub type NGramMap = HashMap<NGram, usize>;
 /// * `n` - N-gram size (3 recommended for syscalls per Forrest et al.)
 ///
 /// # Returns
-/// HashMap mapping each N-gram sequence to its occurrence count
+/// `HashMap` mapping each N-gram sequence to its occurrence count
 ///
 /// # Example
 /// ```

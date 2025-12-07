@@ -103,18 +103,18 @@ pub fn compare_distributions(baseline: &[f32], current: &[f32]) -> Result<Statis
     })
 }
 
-/// Calculate median using aprender's DescriptiveStats
+/// Calculate median using aprender's `DescriptiveStats`
 ///
 /// Median is more robust to outliers than mean, making it suitable for
 /// syscall traces which may have spikes.
 ///
 /// Uses aprender's quantile(0.5) which implements the R-7 method with
-/// QuickSelect for O(n) performance (Floyd & Rivest 1975).
+/// `QuickSelect` for O(n) performance (Floyd & Rivest 1975).
 pub fn median(vector: &Vector<f32>) -> Result<f32> {
     let stats = DescriptiveStats::new(vector);
     stats
         .quantile(0.5)
-        .map_err(|e| anyhow::anyhow!("Failed to compute median: {}", e))
+        .map_err(|e| anyhow::anyhow!("Failed to compute median: {e}"))
 }
 
 #[cfg(test)]

@@ -97,83 +97,66 @@ fn explain_hotspot(cluster: &str, percentage: f64) -> String {
         "FileIO" => {
             if percentage > 50.0 {
                 format!(
-                    "File I/O dominates execution ({:.1}%). Expected for transpilers reading source files.",
-                    percentage
+                    "File I/O dominates execution ({percentage:.1}%). Expected for transpilers reading source files."
                 )
             } else {
                 format!(
-                    "File I/O consumes {:.1}% of time. Typical for reading source + emitting output.",
-                    percentage
+                    "File I/O consumes {percentage:.1}% of time. Typical for reading source + emitting output."
                 )
             }
         }
         "MemoryAllocation" => {
             format!(
-                "Memory allocation uses {:.1}% of time. May indicate excessive allocations or large AST structures.",
-                percentage
+                "Memory allocation uses {percentage:.1}% of time. May indicate excessive allocations or large AST structures."
             )
         }
         "DynamicLinking" => {
             if percentage > 20.0 {
                 format!(
-                    "Dynamic linking overhead is high ({:.1}%). Consider static linking or reducing dependency count.",
-                    percentage
+                    "Dynamic linking overhead is high ({percentage:.1}%). Consider static linking or reducing dependency count."
                 )
             } else {
-                format!(
-                    "Dynamic linking uses {:.1}% of time. Normal startup cost.",
-                    percentage
-                )
+                format!("Dynamic linking uses {percentage:.1}% of time. Normal startup cost.")
             }
         }
         "Networking" => {
             format!(
-                "❌ UNEXPECTED: Networking detected ({:.1}%). Transpilers should not perform network I/O (telemetry leak?).",
-                percentage
+                "❌ UNEXPECTED: Networking detected ({percentage:.1}%). Transpilers should not perform network I/O (telemetry leak?)."
             )
         }
         "GPU" => {
             format!(
-                "❌ UNEXPECTED: GPU operations detected ({:.1}%). Single-shot transpilers should not use GPU.",
-                percentage
+                "❌ UNEXPECTED: GPU operations detected ({percentage:.1}%). Single-shot transpilers should not use GPU."
             )
         }
         "Synchronization" => {
             if percentage > 5.0 {
                 format!(
-                    "⚠️ UNEXPECTED: Synchronization overhead ({:.1}%). Transpilers should be single-threaded.",
-                    percentage
+                    "⚠️ UNEXPECTED: Synchronization overhead ({percentage:.1}%). Transpilers should be single-threaded."
                 )
             } else {
                 format!(
-                    "Synchronization detected ({:.1}%). May indicate unintended threading.",
-                    percentage
+                    "Synchronization detected ({percentage:.1}%). May indicate unintended threading."
                 )
             }
         }
         "ProcessControl" => {
             format!(
-                "Process control operations use {:.1}% of time. May include fork/exec if invoking external tools.",
-                percentage
+                "Process control operations use {percentage:.1}% of time. May include fork/exec if invoking external tools."
             )
         }
         "Randomness" => {
             format!(
-                "Random number generation uses {:.1}% of time. Should be minimal for deterministic compilation.",
-                percentage
+                "Random number generation uses {percentage:.1}% of time. Should be minimal for deterministic compilation."
             )
         }
         "Unclassified" => {
             format!(
-                "Unclassified syscalls consume {:.1}% of time. Review clusters.toml for missing patterns.",
-                percentage
+                "Unclassified syscalls consume {percentage:.1}% of time. Review clusters.toml for missing patterns."
             )
         }
         _ => {
-            format!(
-                "{} cluster uses {:.1}% of execution time.",
-                cluster, percentage
-            )
+            format!("{cluster} cluster uses {percentage:.1}% of execution time.")
         }
     }
 }

@@ -49,7 +49,7 @@ impl SpanPoolConfig {
 pub struct PooledSpan {
     pub trace_id: String,
     pub span_id: String,
-    /// Operation name - often static (e.g., "syscall:open", "compute_block:mean")
+    /// Operation name - often static (e.g., "syscall:open", "`compute_block:mean`")
     /// Uses Cow for zero-copy when static strings are used
     pub name: Cow<'static, str>,
     /// Attributes with static keys (zero-copy optimization)
@@ -147,16 +147,13 @@ impl SpanPool {
 
         self.acquired.fetch_add(1, Ordering::Relaxed);
 
-        match self.pool.pop() {
-            Some(mut span) => {
-                span.reset();
-                span
-            }
-            None => {
-                // Pool exhausted, allocate new
-                self.allocated.fetch_add(1, Ordering::Relaxed);
-                PooledSpan::new()
-            }
+        if let Some(mut span) = self.pool.pop() {
+            span.reset();
+            span
+        } else {
+            // Pool exhausted, allocate new
+            self.allocated.fetch_add(1, Ordering::Relaxed);
+            PooledSpan::new()
         }
     }
 

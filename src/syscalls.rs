@@ -1,10 +1,10 @@
-//! Syscall number to name mapping for x86_64
+//! Syscall number to name mapping for `x86_64`
 //!
 //! Sprint 3-4: Full syscall coverage
 
-/// Resolve syscall number to name for x86_64
+/// Resolve syscall number to name for `x86_64`
 ///
-/// Returns the syscall name, or "syscall_NNN" if unknown
+/// Returns the syscall name, or "`syscall_NNN`" if unknown
 pub fn syscall_name(num: i64) -> &'static str {
     match num {
         0 => "read",

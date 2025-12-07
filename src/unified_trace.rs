@@ -23,7 +23,7 @@ pub type SpanId = u64;
 
 /// Process span representing the root lifecycle span
 ///
-/// Each traced process gets exactly one ProcessSpan as the root of its trace tree.
+/// Each traced process gets exactly one `ProcessSpan` as the root of its trace tree.
 #[derive(Debug, Clone)]
 pub struct ProcessSpan {
     /// Process ID
@@ -76,7 +76,7 @@ impl ProcessSpan {
 pub struct SyscallSpan {
     /// Span ID (unique within trace)
     pub span_id: SpanId,
-    /// Parent span ID (typically ProcessSpan)
+    /// Parent span ID (typically `ProcessSpan`)
     pub parent_span_id: SpanId,
     /// Syscall name (e.g., "open", "read", "write")
     pub name: Cow<'static, str>,

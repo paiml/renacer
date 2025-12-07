@@ -11,7 +11,7 @@ use std::collections::HashMap;
 /// - **Genchi Genbutsu**: No backend detection guessing
 /// - **Jidoka**: Mandatory adaptive sampling (default: skip if duration < 100μs)
 /// - **Muda**: Zero waste - no per-operation tracing overhead
-/// - **Poka-Yoke**: Safe by default - cannot DoS tracing backend
+/// - **Poka-Yoke**: Safe by default - cannot `DoS` tracing backend
 ///
 /// # Usage
 ///
@@ -38,7 +38,7 @@ use std::collections::HashMap;
 /// # Arguments
 ///
 /// * `$exporter` - Optional reference to `OtlpExporter` (None if OTLP disabled)
-/// * `$op_name` - Static string with operation name (e.g., "calculate_statistics")
+/// * `$op_name` - Static string with operation name (e.g., "`calculate_statistics`")
 /// * `$elements` - Number of elements being processed (usize)
 /// * `$block` - Code block containing Trueno operations
 ///
@@ -190,7 +190,7 @@ impl StatsTracker {
 
     /// Calculate extended statistics for a syscall using Trueno
     ///
-    /// Sprint 32: Now accepts optional OtlpExporter for compute block tracing
+    /// Sprint 32: Now accepts optional `OtlpExporter` for compute block tracing
     ///
     /// # Arguments
     ///
@@ -276,7 +276,7 @@ impl StatsTracker {
 
     /// Print extended statistics summary to stderr
     ///
-    /// Sprint 32: Now accepts optional OtlpExporter for compute block tracing
+    /// Sprint 32: Now accepts optional `OtlpExporter` for compute block tracing
     pub fn print_extended_summary(
         &self,
         threshold: f32,
@@ -316,10 +316,7 @@ impl StatsTracker {
                 if extended.stddev > 0.0 {
                     let max_z = (extended.max - extended.mean) / extended.stddev;
                     if max_z > threshold {
-                        eprintln!(
-                            "  ⚠️  ANOMALY DETECTED: Max duration is {:.1}σ above mean",
-                            max_z
-                        );
+                        eprintln!("  ⚠️  ANOMALY DETECTED: Max duration is {max_z:.1}σ above mean");
                     }
                 }
                 eprintln!();

@@ -203,7 +203,7 @@ pub struct AutoencoderReport {
     pub epochs: usize,
 }
 
-/// Extract features from syscall statistics (reuse isolation_forest approach)
+/// Extract features from syscall statistics (reuse `isolation_forest` approach)
 fn extract_features(syscall_data: &HashMap<String, (u64, u64)>) -> (Vec<String>, Vec<Vec<f64>>) {
     let mut syscall_names = Vec::new();
     let mut features = Vec::new();

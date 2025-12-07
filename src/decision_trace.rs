@@ -5,7 +5,7 @@
 //!
 //! This module enables observability into transpiler decision-making by:
 //! 1. Parsing decision traces from stderr (v1.0 - Sprint 26)
-//! 2. Reading decision traces from memory-mapped MessagePack files (v2.0 - Sprint 27)
+//! 2. Reading decision traces from memory-mapped `MessagePack` files (v2.0 - Sprint 27)
 //! 3. Correlating decisions with source locations via DWARF
 //! 4. Building decision dependency graphs
 //! 5. Detecting decision anomalies
@@ -28,7 +28,7 @@ use std::hash::Hasher;
 
 /// Sprint 28: Sampling and rate limiting infrastructure (v2.0.0)
 ///
-/// Provides zero-allocation sampling with DoS protection for runtime tracing.
+/// Provides zero-allocation sampling with `DoS` protection for runtime tracing.
 /// Reference: `docs/specifications/ruchy-tracing-support.md` §3.2
 pub mod sampling {
     use std::cell::Cell;
@@ -215,10 +215,10 @@ pub struct DecisionTrace {
     /// Timestamp (relative to trace start)
     pub timestamp_us: u64,
 
-    /// Decision category (e.g., "exception_flow_analysis", "type_inference")
+    /// Decision category (e.g., "`exception_flow_analysis`", "`type_inference`")
     pub category: String,
 
-    /// Decision name (e.g., "try_body", "infer_return_type")
+    /// Decision name (e.g., "`try_body`", "`infer_return_type`")
     pub name: String,
 
     /// Decision input (structured data)
@@ -227,7 +227,7 @@ pub struct DecisionTrace {
     /// Decision result/output (if available)
     pub result: Option<serde_json::Value>,
 
-    /// Source location where decision was made (file:line function)
+    /// Source location where decision was made (<file:line> function)
     pub source_location: Option<String>,
 
     /// Sprint 27 (v2.0): Hash-based decision ID (FNV-1a)
@@ -239,18 +239,18 @@ pub struct DecisionTrace {
 
 /// Sprint 27 (v2.0): Decision manifest entry
 ///
-/// Maps u64 decision_id to human-readable description.
+/// Maps u64 `decision_id` to human-readable description.
 /// This is the "sidecar" file (`.ruchy/decision_manifest.json`) that
 /// makes hash-based traces interpretable.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct DecisionManifestEntry {
-    /// FNV-1a hash of category::name::file::line
+    /// FNV-1a hash of `category::name::file::line`
     pub decision_id: u64,
 
-    /// Decision category (e.g., "optimization", "type_inference")
+    /// Decision category (e.g., "optimization", "`type_inference`")
     pub category: String,
 
-    /// Decision name (e.g., "inline_candidate", "infer_function")
+    /// Decision name (e.g., "`inline_candidate`", "`infer_function`")
     pub name: String,
 
     /// Source location where decision was made
@@ -292,7 +292,7 @@ pub struct DecisionManifest {
     /// Transpiler version
     pub transpiler_version: Option<String>,
 
-    /// Map of decision_id (hex string) → manifest entry
+    /// Map of `decision_id` (hex string) → manifest entry
     #[serde(flatten)]
     pub entries: HashMap<String, DecisionManifestEntry>,
 }
@@ -303,8 +303,8 @@ pub struct DecisionManifest {
 /// `category::name::file::line`
 ///
 /// # Arguments
-/// * `category` - Decision category (e.g., "optimization", "type_inference")
-/// * `name` - Decision name (e.g., "inline_candidate", "infer_function")
+/// * `category` - Decision category (e.g., "optimization", "`type_inference`")
+/// * `name` - Decision name (e.g., "`inline_candidate`", "`infer_function`")
 /// * `file` - Source file path (e.g., "foo.rb")
 /// * `line` - Line number in source file
 ///
@@ -344,7 +344,7 @@ pub fn generate_decision_id(category: &str, name: &str, file: &str, line: u32) -
     hasher.finish()
 }
 
-/// Sprint 27 (v2.0): DecisionManifest implementation
+/// Sprint 27 (v2.0): `DecisionManifest` implementation
 impl DecisionManifest {
     /// Load decision manifest from JSON file
     ///
@@ -366,16 +366,16 @@ impl DecisionManifest {
     /// ```
     pub fn load_from_file(path: &std::path::Path) -> Result<Self, String> {
         let contents = std::fs::read_to_string(path)
-            .map_err(|e| format!("Failed to read manifest file: {}", e))?;
+            .map_err(|e| format!("Failed to read manifest file: {e}"))?;
 
         let manifest: DecisionManifest = serde_json::from_str(&contents)
-            .map_err(|e| format!("Failed to parse manifest JSON: {}", e))?;
+            .map_err(|e| format!("Failed to parse manifest JSON: {e}"))?;
 
         Ok(manifest)
     }
 }
 
-/// Sprint 27 (v2.0): Read decision traces from MessagePack file
+/// Sprint 27 (v2.0): Read decision traces from `MessagePack` file
 ///
 /// Reads binary decision trace file (`.ruchy/decisions.msgpack`) produced
 /// by the Ruchy transpiler during compilation.
@@ -398,15 +398,14 @@ impl DecisionManifest {
 /// println!("Loaded {} decision traces", traces.len());
 /// ```
 pub fn read_decisions_from_msgpack(path: &std::path::Path) -> Result<Vec<DecisionTrace>, String> {
-    let contents =
-        std::fs::read(path).map_err(|e| format!("Failed to read msgpack file: {}", e))?;
+    let contents = std::fs::read(path).map_err(|e| format!("Failed to read msgpack file: {e}"))?;
 
     if contents.is_empty() {
         return Err("MessagePack file is empty".to_string());
     }
 
     let traces: Vec<DecisionTrace> = rmp_serde::from_slice(&contents)
-        .map_err(|e| format!("Failed to deserialize msgpack: {}", e))?;
+        .map_err(|e| format!("Failed to deserialize msgpack: {e}"))?;
 
     Ok(traces)
 }
@@ -420,7 +419,7 @@ pub fn read_decisions_from_msgpack(path: &std::path::Path) -> Result<Vec<Decisio
 ///
 /// 1. Pre-allocates a file of specified size
 /// 2. Memory-maps the file for direct memory access
-/// 3. Appends decisions as MessagePack data
+/// 3. Appends decisions as `MessagePack` data
 /// 4. Auto-flushes on Drop to ensure data persistence
 ///
 /// ## Example
@@ -469,7 +468,7 @@ impl MmapDecisionWriter {
         // Create parent directory if needed
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)
-                .map_err(|e| format!("Failed to create parent directory: {}", e))?;
+                .map_err(|e| format!("Failed to create parent directory: {e}"))?;
         }
 
         // Create and pre-allocate file
@@ -479,14 +478,14 @@ impl MmapDecisionWriter {
             .create(true)
             .truncate(true)
             .open(path)
-            .map_err(|e| format!("Failed to create file: {}", e))?;
+            .map_err(|e| format!("Failed to create file: {e}"))?;
 
         file.set_len(size as u64)
-            .map_err(|e| format!("Failed to set file size: {}", e))?;
+            .map_err(|e| format!("Failed to set file size: {e}"))?;
 
         // Memory-map the file
         let mmap = unsafe {
-            MmapMut::map_mut(&file).map_err(|e| format!("Failed to create memory map: {}", e))?
+            MmapMut::map_mut(&file).map_err(|e| format!("Failed to create memory map: {e}"))?
         };
 
         Ok(Self {
@@ -516,7 +515,7 @@ impl MmapDecisionWriter {
 
     /// Flush buffered decisions to memory-mapped file
     ///
-    /// Serializes all buffered decisions to MessagePack and writes to mmap.
+    /// Serializes all buffered decisions to `MessagePack` and writes to mmap.
     ///
     /// # Returns
     ///
@@ -529,7 +528,7 @@ impl MmapDecisionWriter {
 
         // Serialize decisions to MessagePack
         let packed = rmp_serde::to_vec(&self.decisions)
-            .map_err(|e| format!("Failed to serialize decisions: {}", e))?;
+            .map_err(|e| format!("Failed to serialize decisions: {e}"))?;
 
         // Check if we have enough space
         if self.offset + packed.len() > self.mmap.len() {
@@ -547,7 +546,7 @@ impl MmapDecisionWriter {
         // Flush mmap to disk
         self.mmap
             .flush()
-            .map_err(|e| format!("Failed to flush mmap: {}", e))?;
+            .map_err(|e| format!("Failed to flush mmap: {e}"))?;
 
         Ok(())
     }
@@ -614,14 +613,14 @@ impl DecisionTracer {
         // Split into "category::name" and "input=..."
         let parts: Vec<&str> = content.splitn(2, " input=").collect();
         if parts.len() != 2 {
-            return Err(format!("Invalid DECISION format: {}", line));
+            return Err(format!("Invalid DECISION format: {line}"));
         }
 
         // Parse category::name
         let category_name = parts[0];
         let cat_name_parts: Vec<&str> = category_name.split("::").collect();
         if cat_name_parts.len() != 2 {
-            return Err(format!("Invalid category::name format: {}", category_name));
+            return Err(format!("Invalid category::name format: {category_name}"));
         }
 
         let category = cat_name_parts[0].to_string();
@@ -629,7 +628,7 @@ impl DecisionTracer {
 
         // Parse JSON input
         let input: serde_json::Value =
-            serde_json::from_str(parts[1]).map_err(|e| format!("Invalid JSON input: {}", e))?;
+            serde_json::from_str(parts[1]).map_err(|e| format!("Invalid JSON input: {e}"))?;
 
         self.traces.push(DecisionTrace {
             timestamp_us,
@@ -655,14 +654,14 @@ impl DecisionTracer {
         // Split into "name" and "= {...}"
         let parts: Vec<&str> = content.splitn(2, " = ").collect();
         if parts.len() != 2 {
-            return Err(format!("Invalid RESULT format: {}", line));
+            return Err(format!("Invalid RESULT format: {line}"));
         }
 
         let name = parts[0].trim();
 
         // Parse JSON result
         let result: serde_json::Value =
-            serde_json::from_str(parts[1]).map_err(|e| format!("Invalid JSON result: {}", e))?;
+            serde_json::from_str(parts[1]).map_err(|e| format!("Invalid JSON result: {e}"))?;
 
         // Find the most recent decision with this name and attach result
         for trace in self.traces.iter_mut().rev() {
@@ -672,7 +671,7 @@ impl DecisionTracer {
             }
         }
 
-        Err(format!("No matching DECISION found for RESULT: {}", name))
+        Err(format!("No matching DECISION found for RESULT: {name}"))
     }
 
     /// Get all collected traces
@@ -685,13 +684,13 @@ impl DecisionTracer {
         self.traces.len()
     }
 
-    /// Sprint 27 (v2.0): Add decision with full metadata including decision_id
+    /// Sprint 27 (v2.0): Add decision with full metadata including `decision_id`
     ///
     /// This is the v2.0 API for adding decisions with hash-based IDs.
     ///
     /// # Arguments
-    /// * `category` - Decision category (e.g., "optimization", "type_inference")
-    /// * `name` - Decision name (e.g., "inline_candidate", "infer_function")
+    /// * `category` - Decision category (e.g., "optimization", "`type_inference`")
+    /// * `name` - Decision name (e.g., "`inline_candidate`", "`infer_function`")
     /// * `input` - Decision input parameters
     /// * `result` - Decision result/output (optional)
     /// * `source_location` - Source location string (e.g., "foo.rb:42")
@@ -713,14 +712,14 @@ impl DecisionTracer {
             name: name.to_string(),
             input,
             result,
-            source_location: source_location.map(|s| s.to_string()),
+            source_location: source_location.map(std::string::ToString::to_string),
             decision_id,
         });
     }
 
-    /// Sprint 27 (v2.0): Write traces to MessagePack file
+    /// Sprint 27 (v2.0): Write traces to `MessagePack` file
     ///
-    /// Writes all collected decision traces to a binary MessagePack file.
+    /// Writes all collected decision traces to a binary `MessagePack` file.
     /// This is the v2.0 output format (`.ruchy/decisions.msgpack`).
     ///
     /// # Arguments
@@ -731,10 +730,10 @@ impl DecisionTracer {
     /// * `Err(String)` - Error writing or serializing
     pub fn write_to_msgpack(&self, path: &std::path::Path) -> Result<(), String> {
         let packed = rmp_serde::to_vec(&self.traces)
-            .map_err(|e| format!("Failed to serialize traces to MessagePack: {}", e))?;
+            .map_err(|e| format!("Failed to serialize traces to MessagePack: {e}"))?;
 
         std::fs::write(path, packed)
-            .map_err(|e| format!("Failed to write MessagePack file: {}", e))?;
+            .map_err(|e| format!("Failed to write MessagePack file: {e}"))?;
 
         Ok(())
     }
@@ -805,23 +804,23 @@ impl DecisionTracer {
                 };
 
                 // Use hex string as key (e.g., "0xDEADBEEF")
-                let key = format!("0x{:X}", decision_id);
+                let key = format!("0x{decision_id:X}");
                 entries.insert(key, entry);
             }
         }
 
         let manifest = DecisionManifest {
             version: version.to_string(),
-            git_commit: git_commit.map(|s| s.to_string()),
-            transpiler_version: transpiler_version.map(|s| s.to_string()),
+            git_commit: git_commit.map(std::string::ToString::to_string),
+            transpiler_version: transpiler_version.map(std::string::ToString::to_string),
             entries,
         };
 
         // Serialize to pretty JSON
         let json = serde_json::to_string_pretty(&manifest)
-            .map_err(|e| format!("Failed to serialize manifest to JSON: {}", e))?;
+            .map_err(|e| format!("Failed to serialize manifest to JSON: {e}"))?;
 
-        std::fs::write(path, json).map_err(|e| format!("Failed to write manifest file: {}", e))?;
+        std::fs::write(path, json).map_err(|e| format!("Failed to write manifest file: {e}"))?;
 
         Ok(())
     }
@@ -836,7 +835,7 @@ impl Default for DecisionTracer {
 /// Decision dependency graph
 #[derive(Debug)]
 pub struct DecisionGraph {
-    /// Adjacency list: decision_id -> Vec<dependent_decision_id>
+    /// Adjacency list: `decision_id` -> Vec<`dependent_decision_id`>
     dependencies: HashMap<usize, Vec<usize>>,
     traces: Vec<DecisionTrace>,
 }

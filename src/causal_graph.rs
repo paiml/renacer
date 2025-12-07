@@ -47,7 +47,7 @@
 //! # Peer-Reviewed Foundation
 //!
 //! - **Lamport (1978). "Time, Clocks, and the Ordering of Events."**
-//!   - Theorem: A → B iff logical_clock(A) < logical_clock(B)
+//!   - Theorem: A → B iff `logical_clock(A)` < `logical_clock(B)`
 //!   - Application: Graph edges respect Lamport ordering
 //!
 //! - **Tarjan (1972). "Depth-First Search and Linear Graph Algorithms."**
@@ -110,7 +110,7 @@ use trueno_graph::{CsrGraph, NodeId};
 ///
 /// Edges represent happens-before relationships:
 /// - **Parent → Child**: Explicit via `parent_span_id`
-/// - **Logical ordering**: Implicit via Lamport clocks (if A.logical_clock < B.logical_clock and same trace)
+/// - **Logical ordering**: Implicit via Lamport clocks (if `A.logical_clock` < `B.logical_clock` and same trace)
 /// - **Edge weight**: Span duration in nanoseconds (for critical path)
 ///
 /// # Performance
@@ -122,12 +122,12 @@ pub struct CausalGraph {
     /// Underlying CSR graph (via trueno-graph)
     graph: CsrGraph,
 
-    /// Span metadata indexed by NodeId
-    /// Maps NodeId → SpanRecord for reverse lookups
+    /// Span metadata indexed by `NodeId`
+    /// Maps `NodeId` → `SpanRecord` for reverse lookups
     span_metadata: HashMap<NodeId, SpanRecord>,
 
-    /// Span ID to NodeId mapping
-    /// Maps span_id → NodeId for edge construction
+    /// Span ID to `NodeId` mapping
+    /// Maps `span_id` → `NodeId` for edge construction
     span_id_to_node: HashMap<[u8; 8], NodeId>,
 
     /// Root nodes (spans with no parent)
@@ -147,11 +147,11 @@ impl CausalGraph {
     ///
     /// # Errors
     ///
-    /// Returns error if spans have inconsistent trace_id or if graph construction fails.
+    /// Returns error if spans have inconsistent `trace_id` or if graph construction fails.
     ///
     /// # Performance
     ///
-    /// - Time complexity: O(V + E) where V = spans.len(), E ≈ spans.len() - 1
+    /// - Time complexity: O(V + E) where V = `spans.len()`, E ≈ `spans.len()` - 1
     /// - Space complexity: O(V + E)
     /// - Target: <100ms for 1K spans
     ///
@@ -279,7 +279,7 @@ impl CausalGraph {
 
     /// Get the underlying CSR graph
     ///
-    /// This allows direct access to trueno-graph algorithms (PageRank, BFS, etc.)
+    /// This allows direct access to trueno-graph algorithms (`PageRank`, BFS, etc.)
     pub fn as_csr_graph(&self) -> &CsrGraph {
         &self.graph
     }
@@ -364,7 +364,7 @@ impl CausalGraph {
         Ok(false)
     }
 
-    /// Get NodeId from span_id
+    /// Get `NodeId` from `span_id`
     ///
     /// # Arguments
     ///
@@ -372,12 +372,12 @@ impl CausalGraph {
     ///
     /// # Returns
     ///
-    /// The corresponding NodeId if found, None otherwise.
+    /// The corresponding `NodeId` if found, None otherwise.
     pub fn get_node_by_span_id(&self, span_id: &[u8; 8]) -> Option<NodeId> {
         self.span_id_to_node.get(span_id).copied()
     }
 
-    /// Get SpanRecord from span_id
+    /// Get `SpanRecord` from `span_id`
     ///
     /// # Arguments
     ///
@@ -385,7 +385,7 @@ impl CausalGraph {
     ///
     /// # Returns
     ///
-    /// The corresponding SpanRecord if found, None otherwise.
+    /// The corresponding `SpanRecord` if found, None otherwise.
     pub fn get_span_by_id(&self, span_id: &[u8; 8]) -> Option<&SpanRecord> {
         self.get_node_by_span_id(span_id)
             .and_then(|node| self.get_span(node))

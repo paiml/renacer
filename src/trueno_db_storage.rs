@@ -33,7 +33,7 @@
 //! # Performance Targets (Sprint 40 Acceptance Criteria)
 //!
 //! - **Insert throughput:** 10K spans/sec sustained
-//! - **Query latency:** <20ms p95 for 1M spans (trace_id filter)
+//! - **Query latency:** <20ms p95 for 1M spans (`trace_id` filter)
 //! - **Storage efficiency:** 10-50× compression via Parquet columnar encoding
 //! - **Concurrent queries:** Support multiple readers without blocking inserts
 //!
@@ -124,7 +124,7 @@ use std::sync::{Arc, Mutex};
 ///
 /// These settings optimize query performance by:
 /// - Row groups: Enable Parquet to skip irrelevant data (10K rows/group)
-/// - Composite indexes: Accelerate (trace_id, timestamp) queries
+/// - Composite indexes: Accelerate (`trace_id`, timestamp) queries
 /// - Predicate pushdown: Filter at Parquet layer (reduce I/O)
 #[derive(Debug, Clone)]
 pub struct StorageConfig {
@@ -134,13 +134,13 @@ pub struct StorageConfig {
     /// 10K is optimal for trace queries (balance scan vs skip).
     pub row_group_size: usize,
 
-    /// Enable Bloom filter on trace_id (default: true)
+    /// Enable Bloom filter on `trace_id` (default: true)
     ///
     /// Bloom filters reduce false positives to <1%, enabling aggressive
-    /// row group skipping for trace_id queries.
+    /// row group skipping for `trace_id` queries.
     pub bloom_filter_trace_id: bool,
 
-    /// Enable composite index on (trace_id, timestamp) (default: true)
+    /// Enable composite index on (`trace_id`, timestamp) (default: true)
     ///
     /// This accelerates time-range queries within a trace.
     pub composite_index_trace_time: bool,
@@ -174,7 +174,7 @@ impl Default for StorageConfig {
 /// # Performance Characteristics
 ///
 /// - **Insert batch (100 spans):** ~10ms (async write to Parquet)
-/// - **Query by trace_id (1M spans):** <20ms p95 (Bloom filter + column scan)
+/// - **Query by `trace_id` (1M spans):** <20ms p95 (Bloom filter + column scan)
 /// - **Storage overhead:** 10-50× compression vs raw JSON
 pub struct TruenoDbStorage {
     /// Path to Parquet file
@@ -184,13 +184,13 @@ pub struct TruenoDbStorage {
     config: StorageConfig,
 
     /// Trueno-DB connection (placeholder - will integrate with trueno-db API)
-    /// TODO Sprint 40: Replace with actual trueno_db::Database handle
+    /// TODO Sprint 40: Replace with actual `trueno_db::Database` handle
     _db: Arc<Mutex<PlaceholderDb>>,
 }
 
 /// Placeholder for trueno-db integration
 ///
-/// TODO Sprint 40: Replace with actual trueno_db::Database
+/// TODO Sprint 40: Replace with actual `trueno_db::Database`
 struct PlaceholderDb {
     // This will be replaced with trueno_db::Database once we integrate
 }
@@ -261,7 +261,7 @@ impl TruenoDbStorage {
 
         let _db = Arc::new(Mutex::new(PlaceholderDb {}));
 
-        eprintln!("INFO: TruenoDbStorage initialized at {:?}", path);
+        eprintln!("INFO: TruenoDbStorage initialized at {path:?}");
         eprintln!("  - Row group size: {}", config.row_group_size);
         eprintln!(
             "  - Bloom filter (trace_id): {}",
@@ -454,21 +454,18 @@ impl TruenoDbStorage {
     /// A vector of all spans from the specified process, sorted by logical clock.
     pub fn query_by_process_id(&self, process_id: u32) -> Result<Vec<SpanRecord>> {
         // TODO Sprint 40: Implement actual Parquet query via trueno-db
-        eprintln!(
-            "DEBUG: TruenoDbStorage::query_by_process_id({}) (placeholder)",
-            process_id
-        );
+        eprintln!("DEBUG: TruenoDbStorage::query_by_process_id({process_id}) (placeholder)");
 
         Ok(vec![])
     }
 
-    /// Query error spans (status_code = ERROR)
+    /// Query error spans (`status_code` = ERROR)
     ///
     /// This is useful for error analysis and debugging.
     ///
     /// # Returns
     ///
-    /// A vector of all spans with status_code = ERROR, sorted by timestamp.
+    /// A vector of all spans with `status_code` = ERROR, sorted by timestamp.
     pub fn query_errors(&self) -> Result<Vec<SpanRecord>> {
         // TODO Sprint 40: Implement actual Parquet query via trueno-db
         eprintln!("DEBUG: TruenoDbStorage::query_errors() (placeholder)");
@@ -529,8 +526,8 @@ impl TruenoDbStorage {
     ///
     /// # Performance (Sprint 43 Targets)
     ///
-    /// - **1M spans, trace_id filter:** <20ms p95 (Bloom filter + row group skipping)
-    /// - **10M spans, trace_id + time range:** <200ms p95 (composite index)
+    /// - **1M spans, `trace_id` filter:** <20ms p95 (Bloom filter + row group skipping)
+    /// - **10M spans, `trace_id` + time range:** <200ms p95 (composite index)
     /// - **100M spans, multiple filters:** <2s p95 (predicate pushdown)
     ///
     /// # Example
@@ -581,9 +578,9 @@ impl TruenoDbStorage {
 
         eprintln!("DEBUG: TruenoDbStorage::query_optimized() (placeholder)");
         eprintln!("  - trace_id: {:?}", trace_id.map(hex::encode));
-        eprintln!("  - start_time_min: {:?}", start_time_min);
-        eprintln!("  - start_time_max: {:?}", start_time_max);
-        eprintln!("  - process_id: {:?}", process_id);
+        eprintln!("  - start_time_min: {start_time_min:?}");
+        eprintln!("  - start_time_max: {start_time_max:?}");
+        eprintln!("  - process_id: {process_id:?}");
         eprintln!("  - predicate_pushdown: {}", self.config.predicate_pushdown);
         eprintln!("TODO Sprint 43: Implement optimized query with predicate pushdown");
 
