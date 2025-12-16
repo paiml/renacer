@@ -31,7 +31,7 @@ fn make_span(
 /// Test realistic transpiler pattern: FileIO dominates
 #[test]
 fn test_transpiler_file_io_dominant() {
-    let registry = ClusterRegistry::default_transpiler_clusters().unwrap();
+    let registry = ClusterRegistry::default_transpiler_clusters().expect("test");
 
     // Realistic: transpiler spends 70% time in I/O, 20% memory, 10% misc
     let spans = vec![
@@ -69,14 +69,17 @@ fn test_transpiler_file_io_dominant() {
     assert!(hotspots.iter().any(|h| h.cluster == "MemoryAllocation"));
 
     // FileIO hotspot should be marked as expected
-    let file_io_hotspot = hotspots.iter().find(|h| h.cluster == "FileIO").unwrap();
+    let file_io_hotspot = hotspots
+        .iter()
+        .find(|h| h.cluster == "FileIO")
+        .expect("test");
     assert!(file_io_hotspot.is_expected);
 }
 
 /// Test anomaly: Unexpected networking (telemetry leak)
 #[test]
 fn test_unexpected_networking_hotspot() {
-    let registry = ClusterRegistry::default_transpiler_clusters().unwrap();
+    let registry = ClusterRegistry::default_transpiler_clusters().expect("test");
 
     let spans = vec![
         // Normal I/O (40%)
@@ -94,7 +97,7 @@ fn test_unexpected_networking_hotspot() {
     let networking = hotspots.iter().find(|h| h.cluster == "Networking");
     assert!(networking.is_some());
 
-    let networking = networking.unwrap();
+    let networking = networking.expect("test");
     assert!(!networking.is_expected); // NOT expected for transpilers
     assert!(networking.explanation.contains("UNEXPECTED"));
 }
@@ -102,7 +105,7 @@ fn test_unexpected_networking_hotspot() {
 /// Test anomaly: Unexpected GPU usage
 #[test]
 fn test_unexpected_gpu_hotspot() {
-    let registry = ClusterRegistry::default_transpiler_clusters().unwrap();
+    let registry = ClusterRegistry::default_transpiler_clusters().expect("test");
 
     let spans = vec![
         make_span("read", 30_000_000, vec![]),
@@ -121,7 +124,7 @@ fn test_unexpected_gpu_hotspot() {
     let gpu = hotspots.iter().find(|h| h.cluster == "GPU");
     assert!(gpu.is_some());
 
-    let gpu = gpu.unwrap();
+    let gpu = gpu.expect("test");
     assert!(!gpu.is_expected);
     assert!(gpu.explanation.contains("UNEXPECTED"));
 }
@@ -129,7 +132,7 @@ fn test_unexpected_gpu_hotspot() {
 /// Test blocking I/O dominates over frequent fast calls
 #[test]
 fn test_blocking_io_dominates_fast_calls() {
-    let registry = ClusterRegistry::default_transpiler_clusters().unwrap();
+    let registry = ClusterRegistry::default_transpiler_clusters().expect("test");
 
     let spans = vec![
         // 1000 fast mmap calls (1ms total)
@@ -144,7 +147,10 @@ fn test_blocking_io_dominates_fast_calls() {
     let attributions = calculate_time_attribution(&spans, &registry);
 
     // FileIO should dominate despite only 1 call
-    let file_io = attributions.iter().find(|a| a.cluster == "FileIO").unwrap();
+    let file_io = attributions
+        .iter()
+        .find(|a| a.cluster == "FileIO")
+        .expect("test");
     assert!(file_io.percentage > 99.0);
     assert_eq!(file_io.call_count, 1);
 }
@@ -152,7 +158,7 @@ fn test_blocking_io_dominates_fast_calls() {
 /// Test hotspot threshold (5%)
 #[test]
 fn test_hotspot_threshold_filtering() {
-    let registry = ClusterRegistry::default_transpiler_clusters().unwrap();
+    let registry = ClusterRegistry::default_transpiler_clusters().expect("test");
 
     let spans = vec![
         make_span("read", 60_000_000, vec![]), // FileIO: 60%
@@ -172,7 +178,7 @@ fn test_hotspot_threshold_filtering() {
 /// Test empty trace handling
 #[test]
 fn test_empty_trace() {
-    let registry = ClusterRegistry::default_transpiler_clusters().unwrap();
+    let registry = ClusterRegistry::default_transpiler_clusters().expect("test");
     let spans: Vec<SyscallSpan> = vec![];
 
     let attributions = calculate_time_attribution(&spans, &registry);
@@ -185,7 +191,7 @@ fn test_empty_trace() {
 /// Test all-zero duration handling
 #[test]
 fn test_zero_duration_trace() {
-    let registry = ClusterRegistry::default_transpiler_clusters().unwrap();
+    let registry = ClusterRegistry::default_transpiler_clusters().expect("test");
     let spans = vec![make_span("read", 0, vec![]), make_span("write", 0, vec![])];
 
     let attributions = calculate_time_attribution(&spans, &registry);
@@ -218,7 +224,7 @@ fn test_hotspot_report_formatting() {
 /// Test avg_per_call calculation
 #[test]
 fn test_avg_per_call_accuracy() {
-    let registry = ClusterRegistry::default_transpiler_clusters().unwrap();
+    let registry = ClusterRegistry::default_transpiler_clusters().expect("test");
 
     let spans = vec![
         make_span("read", 10_000_000, vec![]), // 10ms
@@ -227,7 +233,10 @@ fn test_avg_per_call_accuracy() {
     ];
 
     let attributions = calculate_time_attribution(&spans, &registry);
-    let file_io = attributions.iter().find(|a| a.cluster == "FileIO").unwrap();
+    let file_io = attributions
+        .iter()
+        .find(|a| a.cluster == "FileIO")
+        .expect("test");
 
     // Average: (10 + 20 + 30) / 3 = 20ms
     assert_eq!(file_io.avg_per_call, Duration::from_millis(20));
@@ -236,7 +245,7 @@ fn test_avg_per_call_accuracy() {
 /// Test percentage calculation accuracy
 #[test]
 fn test_percentage_accuracy() {
-    let registry = ClusterRegistry::default_transpiler_clusters().unwrap();
+    let registry = ClusterRegistry::default_transpiler_clusters().expect("test");
 
     let spans = vec![
         make_span("read", 25_000_000, vec![]), // 25% (FileIO)
@@ -245,12 +254,15 @@ fn test_percentage_accuracy() {
 
     let attributions = calculate_time_attribution(&spans, &registry);
 
-    let file_io = attributions.iter().find(|a| a.cluster == "FileIO").unwrap();
+    let file_io = attributions
+        .iter()
+        .find(|a| a.cluster == "FileIO")
+        .expect("test");
     assert!((file_io.percentage - 25.0).abs() < 0.01);
 
     let mem = attributions
         .iter()
         .find(|a| a.cluster == "MemoryAllocation")
-        .unwrap();
+        .expect("test");
     assert!((mem.percentage - 75.0).abs() < 0.01);
 }

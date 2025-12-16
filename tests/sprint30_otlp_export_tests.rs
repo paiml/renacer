@@ -11,7 +11,7 @@ use tempfile::TempDir;
 #[test]
 fn test_otlp_endpoint_flag_accepted() {
     // Test that --otlp-endpoint flag is recognized
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("otlp_basic_test");
 
     let source = r#"
@@ -22,7 +22,7 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("otlp_basic_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
@@ -44,7 +44,7 @@ int main() {
 #[test]
 fn test_otlp_endpoint_default_disabled() {
     // Test that OTLP export is disabled by default
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("otlp_disabled_test");
 
     let source = r#"
@@ -55,7 +55,7 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("otlp_disabled_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
@@ -74,7 +74,7 @@ int main() {
 #[test]
 fn test_otlp_with_statistics_mode() {
     // Test that OTLP export works with statistics mode
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("otlp_stats_test");
 
     let source = r#"
@@ -87,7 +87,7 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("otlp_stats_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
@@ -109,7 +109,7 @@ int main() {
 #[test]
 fn test_otlp_service_name_configuration() {
     // Test that service name can be configured
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("otlp_service_test");
 
     let source = r#"
@@ -120,7 +120,7 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("otlp_service_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
@@ -143,7 +143,7 @@ int main() {
 #[test]
 fn test_otlp_invalid_endpoint() {
     // Test graceful handling of invalid endpoint
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("otlp_invalid_test");
 
     let source = r#"
@@ -154,7 +154,7 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("otlp_invalid_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
@@ -176,7 +176,7 @@ int main() {
 #[test]
 fn test_otlp_with_timing_mode() {
     // Test that OTLP export includes timing information
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("otlp_timing_test");
 
     let source = r#"
@@ -189,7 +189,7 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("otlp_timing_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
@@ -211,7 +211,7 @@ int main() {
 #[test]
 fn test_otlp_with_source_correlation() {
     // Test that OTLP spans include source location attributes when available
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("otlp_source_test");
 
     let source = r#"
@@ -222,7 +222,7 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("otlp_source_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg("-g") // Include debug info
@@ -245,7 +245,7 @@ int main() {
 #[test]
 fn test_otlp_with_filtering() {
     // Test that OTLP export respects syscall filters
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("otlp_filter_test");
 
     let source = r#"
@@ -258,7 +258,7 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("otlp_filter_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
@@ -281,7 +281,7 @@ int main() {
 #[test]
 fn test_otlp_backward_compatibility() {
     // Test that programs work normally without OTLP flags
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("otlp_compat_test");
 
     let source = r#"
@@ -292,7 +292,7 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("otlp_compat_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
@@ -311,7 +311,7 @@ int main() {
 #[test]
 fn test_otlp_grpc_protocol() {
     // Test gRPC endpoint (default OTLP protocol)
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("otlp_grpc_test");
 
     let source = r#"
@@ -322,7 +322,7 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("otlp_grpc_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
@@ -343,7 +343,7 @@ int main() {
 #[test]
 fn test_otlp_http_protocol() {
     // Test HTTP endpoint as alternative protocol
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("otlp_http_test");
 
     let source = r#"
@@ -354,7 +354,7 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("otlp_http_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
@@ -375,7 +375,7 @@ int main() {
 #[test]
 fn test_otlp_trace_hierarchy() {
     // Test that syscalls are exported as child spans of a root trace
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("otlp_hierarchy_test");
 
     let source = r#"
@@ -388,7 +388,7 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("otlp_hierarchy_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)

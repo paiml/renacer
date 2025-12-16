@@ -379,12 +379,24 @@ mod tests {
             vec![10.0, 20.0], // Outlier
         ];
 
-        let tree = IsolationTree::build(&samples, 10);
-        let outlier_path = tree.path_length(&[10.0, 20.0]);
-        let normal_path = tree.path_length(&[1.0, 2.0]);
+        // Use multiple trees to average out randomness
+        let mut outlier_total = 0.0;
+        let mut normal_total = 0.0;
+        for _ in 0..10 {
+            let tree = IsolationTree::build(&samples, 10);
+            outlier_total += tree.path_length(&[10.0, 20.0]);
+            normal_total += tree.path_length(&[1.0, 2.0]);
+        }
+        let outlier_avg = outlier_total / 10.0;
+        let normal_avg = normal_total / 10.0;
 
-        // Outlier should have shorter path
-        assert!(outlier_path < normal_path);
+        // Outlier should have shorter average path (more isolated)
+        assert!(
+            outlier_avg < normal_avg,
+            "Outlier avg ({}) should be < normal avg ({})",
+            outlier_avg,
+            normal_avg
+        );
     }
 
     #[test]

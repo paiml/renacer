@@ -149,9 +149,9 @@ fn test_lamport_clock_fork_simulation() {
 
     // Child process: inherits parent clock
     let child_clock_value = std::env::var("TEST_LAMPORT_FORK_CLOCK")
-        .unwrap()
+        .expect("test")
         .parse::<u64>()
-        .unwrap();
+        .expect("test");
 
     let child_clock = LamportClock::new();
     child_clock.sync(child_clock_value);
@@ -191,9 +191,9 @@ fn test_lamport_clock_environment_propagation() {
 
     // Simulate child process reading from env
     let env_clock = std::env::var("RENACER_LOGICAL_CLOCK")
-        .unwrap()
+        .expect("test")
         .parse::<u64>()
-        .unwrap();
+        .expect("test");
 
     assert_eq!(env_clock, 42);
 
@@ -224,7 +224,7 @@ fn test_lamport_clock_thread_safety() {
 
     // Wait for all threads
     for handle in handles {
-        handle.join().unwrap();
+        handle.join().expect("test");
     }
 
     // Final clock should be exactly 1000

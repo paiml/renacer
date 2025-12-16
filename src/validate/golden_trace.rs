@@ -579,7 +579,7 @@ mod tests {
     fn test_header_roundtrip() {
         let header = TraceHeader::new(42, TraceFlags::new(false, true, true));
         let encoded = header.encode();
-        let decoded = TraceHeader::decode(&encoded).unwrap();
+        let decoded = TraceHeader::decode(&encoded).expect("decode should succeed");
 
         assert_eq!(decoded.entry_count, 42);
         assert!(decoded.flags.has_timing());
@@ -643,7 +643,7 @@ mod tests {
             string_args: vec!["hello".to_string(), "world".to_string()],
         };
         let encoded = entry.encode();
-        let decoded = TraceSyscallEntry::decode(&encoded).unwrap();
+        let decoded = TraceSyscallEntry::decode(&encoded).expect("decode should succeed");
 
         assert_eq!(decoded.timestamp_ns, 12345);
         assert_eq!(decoded.syscall_nr, 1);
@@ -664,7 +664,7 @@ mod tests {
     fn test_syscall_entry_encode_empty_args() {
         let entry = TraceSyscallEntry::simple(0, "read", 100);
         let encoded = entry.encode();
-        let decoded = TraceSyscallEntry::decode(&encoded).unwrap();
+        let decoded = TraceSyscallEntry::decode(&encoded).expect("decode should succeed");
         assert!(decoded.args.is_empty());
         assert!(decoded.string_args.is_empty());
     }
@@ -728,47 +728,51 @@ mod tests {
 
     #[test]
     fn test_load_baseline_missing_manifest() {
-        let temp_dir = TempDir::new().unwrap();
+        let temp_dir = TempDir::new().expect("failed to create temp dir");
         let result = load_baseline(temp_dir.path());
         assert!(result.is_err());
     }
 
     #[test]
     fn test_load_baseline_invalid_manifest() {
-        let temp_dir = TempDir::new().unwrap();
-        fs::write(temp_dir.path().join("manifest.json"), "invalid json").unwrap();
+        let temp_dir = TempDir::new().expect("failed to create temp dir");
+        fs::write(temp_dir.path().join("manifest.json"), "invalid json")
+            .expect("failed to write manifest");
         let result = load_baseline(temp_dir.path());
         assert!(result.is_err());
     }
 
     #[test]
     fn test_load_baseline_valid() {
-        let temp_dir = TempDir::new().unwrap();
+        let temp_dir = TempDir::new().expect("failed to create temp dir");
 
         // Create valid manifest
         let manifest = TraceManifest::new(vec!["echo".to_string()]);
-        let manifest_json = serde_json::to_string(&manifest).unwrap();
-        fs::write(temp_dir.path().join("manifest.json"), manifest_json).unwrap();
+        let manifest_json = serde_json::to_string(&manifest).expect("failed to serialize manifest");
+        fs::write(temp_dir.path().join("manifest.json"), manifest_json)
+            .expect("failed to write manifest");
 
         // Create timing stats
         let timing = TimingStats::default();
-        let timing_json = serde_json::to_string(&timing).unwrap();
-        fs::write(temp_dir.path().join("timing.stats"), timing_json).unwrap();
+        let timing_json = serde_json::to_string(&timing).expect("failed to serialize timing");
+        fs::write(temp_dir.path().join("timing.stats"), timing_json)
+            .expect("failed to write timing stats");
 
         let result = load_baseline(temp_dir.path());
         assert!(result.is_ok());
-        let baseline = result.unwrap();
+        let baseline = result.expect("baseline should load");
         assert_eq!(baseline.manifest.command, vec!["echo"]);
     }
 
     #[test]
     fn test_load_baseline_without_timing_stats() {
-        let temp_dir = TempDir::new().unwrap();
+        let temp_dir = TempDir::new().expect("failed to create temp dir");
 
         // Create valid manifest only (no timing.stats)
         let manifest = TraceManifest::new(vec!["test".to_string()]);
-        let manifest_json = serde_json::to_string(&manifest).unwrap();
-        fs::write(temp_dir.path().join("manifest.json"), manifest_json).unwrap();
+        let manifest_json = serde_json::to_string(&manifest).expect("failed to serialize manifest");
+        fs::write(temp_dir.path().join("manifest.json"), manifest_json)
+            .expect("failed to write manifest");
 
         let result = load_baseline(temp_dir.path());
         assert!(result.is_ok());

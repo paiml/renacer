@@ -60,7 +60,7 @@ fn bench_graph_construction_1k_linear(b: &mut Bencher) {
     }
 
     b.iter(|| {
-        let graph = CausalGraph::from_spans(&spans).unwrap();
+        let graph = CausalGraph::from_spans(&spans).expect("test");
         test::black_box(graph);
     });
 }
@@ -77,7 +77,7 @@ fn bench_graph_construction_1k_tree(b: &mut Bencher) {
     }
 
     b.iter(|| {
-        let graph = CausalGraph::from_spans(&spans).unwrap();
+        let graph = CausalGraph::from_spans(&spans).expect("test");
         test::black_box(graph);
     });
 }
@@ -98,7 +98,7 @@ fn bench_graph_construction_1k_fanout(b: &mut Bencher) {
     }
 
     b.iter(|| {
-        let graph = CausalGraph::from_spans(&spans).unwrap();
+        let graph = CausalGraph::from_spans(&spans).expect("test");
         test::black_box(graph);
     });
 }
@@ -115,8 +115,8 @@ fn bench_graph_and_critical_path_1k(b: &mut Bencher) {
     }
 
     b.iter(|| {
-        let graph = CausalGraph::from_spans(&spans).unwrap();
-        let result = find_critical_path(&graph).unwrap();
+        let graph = CausalGraph::from_spans(&spans).expect("test");
+        let result = find_critical_path(&graph).expect("test");
         test::black_box(result);
     });
 }
@@ -133,7 +133,7 @@ fn bench_graph_construction_10k(b: &mut Bencher) {
     }
 
     b.iter(|| {
-        let graph = CausalGraph::from_spans(&spans).unwrap();
+        let graph = CausalGraph::from_spans(&spans).expect("test");
         test::black_box(graph);
     });
 }
@@ -163,7 +163,7 @@ fn bench_graph_construction_distributed_1k(b: &mut Bencher) {
     }
 
     b.iter(|| {
-        let graph = CausalGraph::from_spans(&spans).unwrap();
+        let graph = CausalGraph::from_spans(&spans).expect("test");
         test::black_box(graph);
     });
 }
@@ -179,13 +179,13 @@ fn bench_graph_queries_1k(b: &mut Bencher) {
         spans.push(create_span(i, parent, i as u64, 100));
     }
 
-    let graph = CausalGraph::from_spans(&spans).unwrap();
+    let graph = CausalGraph::from_spans(&spans).expect("test");
 
     b.iter(|| {
         // Query all children
         for i in 0..512 {
             let node = trueno_graph::NodeId(i);
-            let children = graph.children(node).unwrap();
+            let children = graph.children(node).expect("test");
             test::black_box(children);
         }
     });
@@ -202,10 +202,10 @@ fn bench_dag_validation_1k(b: &mut Bencher) {
         spans.push(create_span(i, parent, i as u64, 100));
     }
 
-    let graph = CausalGraph::from_spans(&spans).unwrap();
+    let graph = CausalGraph::from_spans(&spans).expect("test");
 
     b.iter(|| {
-        let is_dag = graph.is_dag().unwrap();
+        let is_dag = graph.is_dag().expect("test");
         test::black_box(is_dag);
     });
 }

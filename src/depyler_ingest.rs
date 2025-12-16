@@ -15,10 +15,10 @@
 //! use renacer::depyler_ingest::{DepylerIngestConfig, DepylerWatcher};
 //!
 //! let config = DepylerIngestConfig::default();
-//! let mut watcher = DepylerWatcher::new(config).unwrap();
+//! let mut watcher = DepylerWatcher::new(config).expect("test");
 //!
 //! // Poll for new decisions
-//! let decisions = watcher.poll().unwrap();
+//! let decisions = watcher.poll().expect("test");
 //! println!("Got {} new decisions", decisions.len());
 //! ```
 //!
@@ -249,7 +249,6 @@ impl DepylerWatcher {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::TempDir;
 
     #[test]
     fn test_config_default() {
@@ -282,16 +281,16 @@ mod tests {
             watch_paths: vec![PathBuf::from("/nonexistent/path.msgpack")],
             ..Default::default()
         };
-        let mut watcher = DepylerWatcher::new(config).unwrap();
+        let mut watcher = DepylerWatcher::new(config).expect("test");
         let result = watcher.poll();
         assert!(result.is_ok());
-        assert!(result.unwrap().is_empty());
+        assert!(result.expect("test").is_empty());
     }
 
     #[test]
     fn test_watcher_stats() {
         let config = DepylerIngestConfig::default();
-        let watcher = DepylerWatcher::new(config).unwrap();
+        let watcher = DepylerWatcher::new(config).expect("test");
         let stats = watcher.stats();
         assert_eq!(stats.total_decisions_seen, 0);
         assert_eq!(stats.total_decisions_sampled, 0);
@@ -305,7 +304,7 @@ mod tests {
             poll_interval_ms: 500,
             ..Default::default()
         };
-        let watcher = DepylerWatcher::new(config).unwrap();
+        let watcher = DepylerWatcher::new(config).expect("test");
         assert_eq!(watcher.poll_interval(), Duration::from_millis(500));
     }
 
@@ -366,10 +365,10 @@ mod tests {
             remote_sample_rate: 1.0, // 100% sampling
             ..Default::default()
         };
-        let mut watcher = DepylerWatcher::new(config).unwrap();
+        let mut watcher = DepylerWatcher::new(config).expect("test");
         let result = watcher.poll_sampled();
         assert!(result.is_ok());
-        assert!(result.unwrap().is_empty());
+        assert!(result.expect("test").is_empty());
     }
 
     #[test]
@@ -379,10 +378,10 @@ mod tests {
             max_remote_rate: 100,
             ..Default::default()
         };
-        let mut watcher = DepylerWatcher::new(config).unwrap();
+        let mut watcher = DepylerWatcher::new(config).expect("test");
         let result = watcher.poll_with_circuit_breaker();
         assert!(result.is_ok());
-        assert!(result.unwrap().is_empty());
+        assert!(result.expect("test").is_empty());
     }
 
     #[test]
@@ -391,10 +390,10 @@ mod tests {
             watch_paths: vec![],
             ..Default::default()
         };
-        let mut watcher = DepylerWatcher::new(config).unwrap();
+        let mut watcher = DepylerWatcher::new(config).expect("test");
         let result = watcher.poll();
         assert!(result.is_ok());
-        assert!(result.unwrap().is_empty());
+        assert!(result.expect("test").is_empty());
     }
 
     #[test]
@@ -403,7 +402,7 @@ mod tests {
             watch_paths: vec![PathBuf::from("/nonexistent/path.msgpack")],
             ..Default::default()
         };
-        let mut watcher = DepylerWatcher::new(config).unwrap();
+        let mut watcher = DepylerWatcher::new(config).expect("test");
 
         // Multiple polls should be fine
         for _ in 0..5 {
@@ -419,7 +418,7 @@ mod tests {
             max_remote_rate: 0, // Zero quota
             ..Default::default()
         };
-        let mut watcher = DepylerWatcher::new(config).unwrap();
+        let mut watcher = DepylerWatcher::new(config).expect("test");
 
         // Poll with zero quota - should record stats
         let _ = watcher.poll_with_circuit_breaker();

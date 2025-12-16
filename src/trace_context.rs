@@ -227,7 +227,7 @@ mod tests {
     #[test]
     fn test_parse_valid_traceparent() {
         let traceparent = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01";
-        let ctx = TraceContext::parse(traceparent).unwrap();
+        let ctx = TraceContext::parse(traceparent).expect("test");
 
         assert_eq!(ctx.version, 0);
         assert_eq!(ctx.trace_flags, 1);
@@ -249,7 +249,7 @@ mod tests {
     #[test]
     fn test_parse_valid_traceparent_not_sampled() {
         let traceparent = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00";
-        let ctx = TraceContext::parse(traceparent).unwrap();
+        let ctx = TraceContext::parse(traceparent).expect("test");
 
         assert_eq!(ctx.version, 0);
         assert_eq!(ctx.trace_flags, 0);
@@ -375,7 +375,7 @@ mod tests {
     #[test]
     fn test_is_sampled_flag_set() {
         let traceparent = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01";
-        let ctx = TraceContext::parse(traceparent).unwrap();
+        let ctx = TraceContext::parse(traceparent).expect("test");
 
         assert!(ctx.is_sampled());
     }
@@ -384,7 +384,7 @@ mod tests {
     #[test]
     fn test_is_sampled_flag_unset() {
         let traceparent = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-00";
-        let ctx = TraceContext::parse(traceparent).unwrap();
+        let ctx = TraceContext::parse(traceparent).expect("test");
 
         assert!(!ctx.is_sampled());
     }
@@ -393,7 +393,7 @@ mod tests {
     #[test]
     fn test_display_formatting() {
         let traceparent = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01";
-        let ctx = TraceContext::parse(traceparent).unwrap();
+        let ctx = TraceContext::parse(traceparent).expect("test");
 
         assert_eq!(ctx.to_string(), traceparent);
     }
@@ -409,7 +409,7 @@ mod tests {
         let ctx = TraceContext::from_env();
         assert!(ctx.is_some());
 
-        let ctx = ctx.unwrap();
+        let ctx = ctx.expect("test");
         assert_eq!(ctx.version, 0);
         assert!(ctx.is_sampled());
 
@@ -428,7 +428,7 @@ mod tests {
         let ctx = TraceContext::from_env();
         assert!(ctx.is_some());
 
-        let ctx = ctx.unwrap();
+        let ctx = ctx.expect("test");
         assert_eq!(ctx.version, 0);
         assert!(!ctx.is_sampled());
 
@@ -460,7 +460,7 @@ mod tests {
     #[test]
     fn test_trace_context_clone() {
         let traceparent = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01";
-        let ctx1 = TraceContext::parse(traceparent).unwrap();
+        let ctx1 = TraceContext::parse(traceparent).expect("test");
         let ctx2 = ctx1.clone();
 
         assert_eq!(ctx1, ctx2);
@@ -470,7 +470,7 @@ mod tests {
     #[test]
     fn test_trace_context_debug() {
         let traceparent = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01";
-        let ctx = TraceContext::parse(traceparent).unwrap();
+        let ctx = TraceContext::parse(traceparent).expect("test");
 
         let debug_str = format!("{:?}", ctx);
         assert!(debug_str.contains("TraceContext"));
@@ -828,7 +828,7 @@ mod lamport_tests {
         }
 
         for handle in handles {
-            handle.join().unwrap();
+            handle.join().expect("test");
         }
 
         // After 10 threads × 10 ticks = 100 total ticks
@@ -855,7 +855,7 @@ mod lamport_tests {
         }
 
         for handle in handles {
-            handle.join().unwrap();
+            handle.join().expect("test");
         }
 
         // Final value should be at least 51 (max remote + 1)

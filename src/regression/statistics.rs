@@ -60,7 +60,7 @@ pub struct StatisticalTest {
 /// let baseline = vec![10.0, 12.0, 11.0, 13.0, 10.0]; // Stable baseline
 /// let current = vec![25.0, 27.0, 26.0, 28.0, 25.0];  // Regressed!
 ///
-/// let result = compare_distributions(&baseline, &current).unwrap();
+/// let result = compare_distributions(&baseline, &current).expect("test");
 /// assert!(result.pvalue < 0.05); // Significant difference
 /// ```
 pub fn compare_distributions(baseline: &[f32], current: &[f32]) -> Result<StatisticalTest> {
@@ -124,19 +124,19 @@ mod tests {
     #[test]
     fn test_median_odd_length() {
         let vec = Vector::from_slice(&[1.0, 3.0, 5.0, 7.0, 9.0]);
-        assert_eq!(median(&vec).unwrap(), 5.0);
+        assert_eq!(median(&vec).expect("test"), 5.0);
     }
 
     #[test]
     fn test_median_even_length() {
         let vec = Vector::from_slice(&[1.0, 2.0, 3.0, 4.0]);
-        assert_eq!(median(&vec).unwrap(), 2.5);
+        assert_eq!(median(&vec).expect("test"), 2.5);
     }
 
     #[test]
     fn test_variance_basic() {
         let vec = Vector::from_slice(&[2.0, 4.0, 6.0, 8.0]);
-        let var = vec.variance().unwrap();
+        let var = vec.variance().expect("test");
 
         // Note: trueno uses population variance (divide by n), not sample variance (n-1)
         // Expected: mean=5, variance = ((2-5)^2 + (4-5)^2 + (6-5)^2 + (8-5)^2) / 4 = 20/4 = 5.0
@@ -146,7 +146,7 @@ mod tests {
     #[test]
     fn test_variance_constant() {
         let vec = Vector::from_slice(&[5.0, 5.0, 5.0, 5.0]);
-        assert_eq!(vec.variance().unwrap(), 0.0);
+        assert_eq!(vec.variance().expect("test"), 0.0);
     }
 
     #[test]
@@ -157,7 +157,7 @@ mod tests {
         // Current: much higher counts (regression!)
         let current = vec![25.0, 27.0, 26.0, 28.0, 25.0];
 
-        let result = compare_distributions(&baseline, &current).unwrap();
+        let result = compare_distributions(&baseline, &current).expect("test");
 
         // Should detect significant difference
         assert!(
@@ -174,7 +174,7 @@ mod tests {
         let baseline = vec![10.0, 12.0, 11.0, 13.0, 10.0];
         let current = vec![11.0, 13.0, 10.0, 12.0, 11.0];
 
-        let result = compare_distributions(&baseline, &current).unwrap();
+        let result = compare_distributions(&baseline, &current).expect("test");
 
         // Should NOT detect significant difference
         assert!(

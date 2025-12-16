@@ -133,7 +133,7 @@ impl RegressionAssessment {
 /// let mut current = HashMap::new();
 /// current.insert("mmap".to_string(), vec![10.0, 11.0, 10.0, 13.0, 10.0]);
 ///
-/// let assessment = assess_regression(&baseline, &current, &RegressionConfig::default()).unwrap();
+/// let assessment = assess_regression(&baseline, &current, &RegressionConfig::default()).expect("test");
 /// // Should show no regression (distributions similar)
 /// assert_eq!(assessment.verdict, renacer::regression::RegressionVerdict::NoRegression);
 /// ```
@@ -225,7 +225,7 @@ mod tests {
         current.insert("mmap".to_string(), vec![10.0, 11.0, 10.0, 13.0, 10.0]);
 
         let config = RegressionConfig::default();
-        let assessment = assess_regression(&baseline, &current, &config).unwrap();
+        let assessment = assess_regression(&baseline, &current, &config).expect("test");
 
         assert_eq!(assessment.verdict, RegressionVerdict::NoRegression);
         assert_eq!(assessment.tests.len(), 1);
@@ -240,7 +240,7 @@ mod tests {
         current.insert("mmap".to_string(), vec![50.0, 52.0, 51.0, 53.0, 50.0]);
 
         let config = RegressionConfig::default();
-        let assessment = assess_regression(&baseline, &current, &config).unwrap();
+        let assessment = assess_regression(&baseline, &current, &config).expect("test");
 
         match assessment.verdict {
             RegressionVerdict::Regression {
@@ -264,7 +264,7 @@ mod tests {
         current.insert("socket".to_string(), vec![6.0, 51.0, 4.0, 46.0, 3.0]);
 
         let config = RegressionConfig::default();
-        let assessment = assess_regression(&baseline, &current, &config).unwrap();
+        let assessment = assess_regression(&baseline, &current, &config).expect("test");
 
         // Should filter out socket as noisy
         assert!(assessment.filtered_syscalls.contains(&"socket".to_string()));
@@ -283,7 +283,7 @@ mod tests {
         current.insert("mmap".to_string(), vec![10.0]);
 
         let config = RegressionConfig::default();
-        let assessment = assess_regression(&baseline, &current, &config).unwrap();
+        let assessment = assess_regression(&baseline, &current, &config).expect("test");
 
         match assessment.verdict {
             RegressionVerdict::InsufficientData { .. } => {

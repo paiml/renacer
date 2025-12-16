@@ -297,7 +297,7 @@ mod tests {
 
     #[test]
     fn test_filter_individual_syscalls() {
-        let filter = SyscallFilter::from_expr("trace=open,read,write").unwrap();
+        let filter = SyscallFilter::from_expr("trace=open,read,write").expect("test");
         assert!(filter.should_trace("open"));
         assert!(filter.should_trace("read"));
         assert!(filter.should_trace("write"));
@@ -306,7 +306,7 @@ mod tests {
 
     #[test]
     fn test_filter_file_class() {
-        let filter = SyscallFilter::from_expr("trace=file").unwrap();
+        let filter = SyscallFilter::from_expr("trace=file").expect("test");
         assert!(filter.should_trace("open"));
         assert!(filter.should_trace("openat"));
         assert!(filter.should_trace("read"));
@@ -316,7 +316,7 @@ mod tests {
 
     #[test]
     fn test_filter_network_class() {
-        let filter = SyscallFilter::from_expr("trace=network").unwrap();
+        let filter = SyscallFilter::from_expr("trace=network").expect("test");
         assert!(filter.should_trace("socket"));
         assert!(filter.should_trace("connect"));
         assert!(!filter.should_trace("open"));
@@ -324,7 +324,7 @@ mod tests {
 
     #[test]
     fn test_filter_mixed() {
-        let filter = SyscallFilter::from_expr("trace=file,socket").unwrap();
+        let filter = SyscallFilter::from_expr("trace=file,socket").expect("test");
         assert!(filter.should_trace("open"));
         assert!(filter.should_trace("socket"));
         assert!(!filter.should_trace("clone"));
@@ -338,7 +338,7 @@ mod tests {
 
     #[test]
     fn test_filter_process_class() {
-        let filter = SyscallFilter::from_expr("trace=process").unwrap();
+        let filter = SyscallFilter::from_expr("trace=process").expect("test");
         assert!(filter.should_trace("fork"));
         assert!(filter.should_trace("clone"));
         assert!(filter.should_trace("execve"));
@@ -349,7 +349,7 @@ mod tests {
 
     #[test]
     fn test_filter_memory_class() {
-        let filter = SyscallFilter::from_expr("trace=memory").unwrap();
+        let filter = SyscallFilter::from_expr("trace=memory").expect("test");
         assert!(filter.should_trace("mmap"));
         assert!(filter.should_trace("munmap"));
         assert!(filter.should_trace("mprotect"));
@@ -360,7 +360,7 @@ mod tests {
 
     #[test]
     fn test_filter_multiple_classes() {
-        let filter = SyscallFilter::from_expr("trace=file,network,process").unwrap();
+        let filter = SyscallFilter::from_expr("trace=file,network,process").expect("test");
         // File class
         assert!(filter.should_trace("open"));
         assert!(filter.should_trace("read"));
@@ -376,7 +376,7 @@ mod tests {
 
     #[test]
     fn test_filter_clone() {
-        let filter1 = SyscallFilter::from_expr("trace=open,read").unwrap();
+        let filter1 = SyscallFilter::from_expr("trace=open,read").expect("test");
         let filter2 = filter1.clone();
         assert!(filter2.should_trace("open"));
         assert!(filter2.should_trace("read"));
@@ -393,7 +393,7 @@ mod tests {
     #[test]
     fn test_filter_empty_trace_spec() {
         // Empty spec should create filter with no syscalls
-        let filter = SyscallFilter::from_expr("trace=").unwrap();
+        let filter = SyscallFilter::from_expr("trace=").expect("test");
         // Empty filter should not trace anything (empty HashSet)
         assert!(!filter.should_trace("open"));
         assert!(!filter.should_trace("read"));
@@ -401,7 +401,7 @@ mod tests {
 
     #[test]
     fn test_filter_whitespace_handling() {
-        let filter = SyscallFilter::from_expr("trace=open, read , write").unwrap();
+        let filter = SyscallFilter::from_expr("trace=open, read , write").expect("test");
         assert!(filter.should_trace("open"));
         assert!(filter.should_trace("read"));
         assert!(filter.should_trace("write"));
@@ -411,7 +411,7 @@ mod tests {
     // Sprint 15: Negation operator tests
     #[test]
     fn test_negation_single_syscall() {
-        let filter = SyscallFilter::from_expr("trace=!close").unwrap();
+        let filter = SyscallFilter::from_expr("trace=!close").expect("test");
         assert!(filter.should_trace("open"));
         assert!(filter.should_trace("read"));
         assert!(!filter.should_trace("close"));
@@ -419,7 +419,7 @@ mod tests {
 
     #[test]
     fn test_negation_multiple_syscalls() {
-        let filter = SyscallFilter::from_expr("trace=!open,!close").unwrap();
+        let filter = SyscallFilter::from_expr("trace=!open,!close").expect("test");
         assert!(!filter.should_trace("open"));
         assert!(!filter.should_trace("close"));
         assert!(filter.should_trace("read"));
@@ -428,7 +428,7 @@ mod tests {
 
     #[test]
     fn test_negation_syscall_class() {
-        let filter = SyscallFilter::from_expr("trace=!file").unwrap();
+        let filter = SyscallFilter::from_expr("trace=!file").expect("test");
         assert!(!filter.should_trace("open"));
         assert!(!filter.should_trace("read"));
         assert!(!filter.should_trace("write"));
@@ -438,7 +438,7 @@ mod tests {
 
     #[test]
     fn test_mixed_positive_negative() {
-        let filter = SyscallFilter::from_expr("trace=file,!close").unwrap();
+        let filter = SyscallFilter::from_expr("trace=file,!close").expect("test");
         assert!(filter.should_trace("open"));
         assert!(filter.should_trace("read"));
         assert!(!filter.should_trace("close")); // Explicitly excluded
@@ -458,7 +458,7 @@ mod tests {
     #[test]
     fn test_negation_preserves_original_behavior() {
         // Ensure positive-only filters still work
-        let filter = SyscallFilter::from_expr("trace=open,read").unwrap();
+        let filter = SyscallFilter::from_expr("trace=open,read").expect("test");
         assert!(filter.should_trace("open"));
         assert!(filter.should_trace("read"));
         assert!(!filter.should_trace("write"));
@@ -488,7 +488,7 @@ mod tests {
     // Sprint 16: Regex pattern tests
     #[test]
     fn test_regex_pattern_basic() {
-        let filter = SyscallFilter::from_expr("trace=/^open.*/").unwrap();
+        let filter = SyscallFilter::from_expr("trace=/^open.*/").expect("test");
         assert!(filter.should_trace("open"));
         assert!(filter.should_trace("openat"));
         assert!(!filter.should_trace("close"));
@@ -497,7 +497,7 @@ mod tests {
 
     #[test]
     fn test_regex_pattern_suffix() {
-        let filter = SyscallFilter::from_expr("trace=/.*at$/").unwrap();
+        let filter = SyscallFilter::from_expr("trace=/.*at$/").expect("test");
         assert!(filter.should_trace("openat"));
         assert!(filter.should_trace("newfstatat"));
         assert!(!filter.should_trace("open"));
@@ -506,7 +506,7 @@ mod tests {
 
     #[test]
     fn test_regex_pattern_or() {
-        let filter = SyscallFilter::from_expr("trace=/read|write/").unwrap();
+        let filter = SyscallFilter::from_expr("trace=/read|write/").expect("test");
         assert!(filter.should_trace("read"));
         assert!(filter.should_trace("write"));
         assert!(!filter.should_trace("open"));
@@ -515,7 +515,7 @@ mod tests {
 
     #[test]
     fn test_regex_pattern_case_insensitive() {
-        let filter = SyscallFilter::from_expr("trace=/(?i)OPEN/").unwrap();
+        let filter = SyscallFilter::from_expr("trace=/(?i)OPEN/").expect("test");
         assert!(filter.should_trace("open"));
         assert!(filter.should_trace("OPEN"));
         assert!(!filter.should_trace("close"));
@@ -523,7 +523,7 @@ mod tests {
 
     #[test]
     fn test_regex_mixed_with_literal() {
-        let filter = SyscallFilter::from_expr("trace=/^open.*/,close").unwrap();
+        let filter = SyscallFilter::from_expr("trace=/^open.*/,close").expect("test");
         assert!(filter.should_trace("open"));
         assert!(filter.should_trace("openat"));
         assert!(filter.should_trace("close"));
@@ -532,7 +532,7 @@ mod tests {
 
     #[test]
     fn test_regex_mixed_with_negation() {
-        let filter = SyscallFilter::from_expr("trace=/^open.*/,!/openat/").unwrap();
+        let filter = SyscallFilter::from_expr("trace=/^open.*/,!/openat/").expect("test");
         assert!(filter.should_trace("open"));
         assert!(!filter.should_trace("openat")); // Excluded by negation
         assert!(!filter.should_trace("close"));
@@ -540,7 +540,7 @@ mod tests {
 
     #[test]
     fn test_regex_negation_pattern() {
-        let filter = SyscallFilter::from_expr("trace=!/close/").unwrap();
+        let filter = SyscallFilter::from_expr("trace=!/close/").expect("test");
         assert!(filter.should_trace("open"));
         assert!(filter.should_trace("read"));
         assert!(!filter.should_trace("close")); // Excluded by regex
@@ -558,9 +558,9 @@ mod tests {
     fn test_parse_regex_pattern_valid() {
         let result = parse_regex_pattern("/^test.*/");
         assert!(result.is_ok());
-        let pattern = result.unwrap();
+        let pattern = result.expect("test");
         assert!(pattern.is_some());
-        let regex = pattern.unwrap();
+        let regex = pattern.expect("test");
         assert!(regex.is_match("test123"));
         assert!(!regex.is_match("other"));
     }
@@ -569,7 +569,7 @@ mod tests {
     fn test_parse_regex_pattern_not_regex() {
         let result = parse_regex_pattern("open");
         assert!(result.is_ok());
-        assert!(result.unwrap().is_none());
+        assert!(result.expect("test").is_none());
     }
 
     #[test]
@@ -577,13 +577,13 @@ mod tests {
         let result = parse_regex_pattern("//");
         assert!(result.is_ok());
         // Empty regex is valid but matches nothing useful
-        let pattern = result.unwrap();
+        let pattern = result.expect("test");
         assert!(pattern.is_some());
     }
 
     #[test]
     fn test_regex_with_syscall_class() {
-        let filter = SyscallFilter::from_expr("trace=file,/socket|connect/").unwrap();
+        let filter = SyscallFilter::from_expr("trace=file,/socket|connect/").expect("test");
         // File class
         assert!(filter.should_trace("open"));
         assert!(filter.should_trace("read"));
@@ -596,7 +596,7 @@ mod tests {
 
     #[test]
     fn test_regex_exclude_with_include_class() {
-        let filter = SyscallFilter::from_expr("trace=file,!/.*at$/").unwrap();
+        let filter = SyscallFilter::from_expr("trace=file,!/.*at$/").expect("test");
         assert!(filter.should_trace("open"));
         assert!(filter.should_trace("read"));
         assert!(!filter.should_trace("openat")); // Excluded by regex

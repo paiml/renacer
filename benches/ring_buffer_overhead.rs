@@ -195,13 +195,13 @@ fn bench_synchronous_write_baseline(c: &mut Criterion) {
     use tempfile::NamedTempFile;
 
     c.bench_function("synchronous_write_baseline", |b| {
-        let mut file = NamedTempFile::new().unwrap();
+        let mut file = NamedTempFile::new().expect("test");
 
         b.iter(|| {
             // Simulate writing span to file (like synchronous OTLP export)
             let data = b"span data here\n";
-            file.write_all(black_box(data)).unwrap();
-            file.flush().unwrap(); // Force fsync
+            file.write_all(black_box(data)).expect("test");
+            file.flush().expect("test"); // Force fsync
         });
     });
 }

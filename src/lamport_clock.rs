@@ -407,7 +407,7 @@ mod tests {
         }
 
         for handle in handles {
-            handle.join().unwrap();
+            handle.join().expect("test");
         }
 
         // Final clock value should be 1000
@@ -426,8 +426,8 @@ mod tests {
         std::env::set_var("TEST_RENACER_LOGICAL_CLOCK", current.to_string());
 
         // Simulate child process reading from env
-        let clock_str = std::env::var("TEST_RENACER_LOGICAL_CLOCK").unwrap();
-        let parent_clock = clock_str.parse::<u64>().unwrap();
+        let clock_str = std::env::var("TEST_RENACER_LOGICAL_CLOCK").expect("test");
+        let parent_clock = clock_str.parse::<u64>().expect("test");
 
         let child_clock = LamportClock::new();
         child_clock.sync(parent_clock);
@@ -459,7 +459,7 @@ mod tests {
         propagate_to_env();
 
         // Verify env var was set
-        let env_val = std::env::var("RENACER_LOGICAL_CLOCK").unwrap();
+        let env_val = std::env::var("RENACER_LOGICAL_CLOCK").expect("test");
         assert_eq!(env_val, "3");
     }
 

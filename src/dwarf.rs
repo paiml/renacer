@@ -161,11 +161,11 @@ mod tests {
     use tempfile::TempDir;
 
     fn compile_test_binary() -> (TempDir, std::path::PathBuf) {
-        let temp_dir = TempDir::new().unwrap();
+        let temp_dir = TempDir::new().expect("test");
         let src_file = temp_dir.path().join("test.rs");
         let bin_file = temp_dir.path().join("test_bin");
 
-        fs::write(&src_file, "fn main() { println!(\"test\"); }").unwrap();
+        fs::write(&src_file, "fn main() { println!(\"test\"); }").expect("test");
 
         Command::new("rustc")
             .arg(&src_file)
@@ -173,7 +173,7 @@ mod tests {
             .arg(&bin_file)
             .arg("-g")
             .status()
-            .unwrap();
+            .expect("test");
 
         (temp_dir, bin_file)
     }
@@ -192,7 +192,7 @@ mod tests {
     #[test]
     fn test_dwarf_lookup_returns_option() {
         let (_temp_dir, bin_file) = compile_test_binary();
-        let ctx = DwarfContext::load(&bin_file).unwrap();
+        let ctx = DwarfContext::load(&bin_file).expect("test");
         let result = ctx.lookup(0x1000);
         assert!(
             result.is_ok(),
@@ -217,9 +217,9 @@ mod tests {
     #[test]
     fn test_dwarf_load_invalid_binary() {
         // Test error handling: invalid ELF file
-        let temp_dir = TempDir::new().unwrap();
+        let temp_dir = TempDir::new().expect("test");
         let invalid_file = temp_dir.path().join("invalid.bin");
-        fs::write(&invalid_file, b"not a valid ELF file").unwrap();
+        fs::write(&invalid_file, b"not a valid ELF file").expect("test");
 
         let result = DwarfContext::load(&invalid_file);
         assert!(result.is_err(), "Should fail for invalid ELF");
@@ -228,11 +228,11 @@ mod tests {
     #[test]
     fn test_dwarf_load_no_debug_symbols() {
         // Test error handling: binary without debug symbols
-        let temp_dir = TempDir::new().unwrap();
+        let temp_dir = TempDir::new().expect("test");
         let src_file = temp_dir.path().join("test.rs");
         let bin_file = temp_dir.path().join("test_bin_stripped");
 
-        fs::write(&src_file, "fn main() {}").unwrap();
+        fs::write(&src_file, "fn main() {}").expect("test");
 
         // Compile without -g (no debug symbols)
         Command::new("rustc")
@@ -242,7 +242,7 @@ mod tests {
             .arg("-C")
             .arg("strip=symbols")
             .status()
-            .unwrap();
+            .expect("test");
 
         let result = DwarfContext::load(&bin_file);
         // May succeed but with no useful DWARF data, or may fail
@@ -254,7 +254,7 @@ mod tests {
     fn test_dwarf_lookup_with_valid_address() {
         // Test lookup with a potentially valid address
         let (_temp_dir, bin_file) = compile_test_binary();
-        let ctx = DwarfContext::load(&bin_file).unwrap();
+        let ctx = DwarfContext::load(&bin_file).expect("test");
 
         // Try multiple addresses to increase coverage
         for offset in [0, 1, 2, 4, 8, 16] {
@@ -265,7 +265,7 @@ mod tests {
     #[test]
     fn test_dwarf_lookup_zero_address() {
         let (_temp_dir, bin_file) = compile_test_binary();
-        let ctx = DwarfContext::load(&bin_file).unwrap();
+        let ctx = DwarfContext::load(&bin_file).expect("test");
         let result = ctx.lookup(0);
         assert!(result.is_ok(), "Lookup of zero address should not crash");
     }
@@ -273,7 +273,7 @@ mod tests {
     #[test]
     fn test_dwarf_lookup_high_address() {
         let (_temp_dir, bin_file) = compile_test_binary();
-        let ctx = DwarfContext::load(&bin_file).unwrap();
+        let ctx = DwarfContext::load(&bin_file).expect("test");
         let result = ctx.lookup(0xFFFFFFFFFFFF);
         assert!(result.is_ok(), "Lookup of high address should not crash");
     }
@@ -354,7 +354,7 @@ mod tests {
     #[test]
     fn test_dwarf_context_debug() {
         let (_temp_dir, bin_file) = compile_test_binary();
-        let ctx = DwarfContext::load(&bin_file).unwrap();
+        let ctx = DwarfContext::load(&bin_file).expect("test");
         let debug_str = format!("{:?}", ctx);
         assert!(debug_str.contains("DwarfContext"));
         assert!(debug_str.contains("addr2line context"));
@@ -363,7 +363,7 @@ mod tests {
     #[test]
     fn test_dwarf_lookup_multiple_addresses() {
         let (_temp_dir, bin_file) = compile_test_binary();
-        let ctx = DwarfContext::load(&bin_file).unwrap();
+        let ctx = DwarfContext::load(&bin_file).expect("test");
 
         // Test a range of addresses
         for addr in [0x1000, 0x2000, 0x3000, 0x4000, 0x5000] {
@@ -379,7 +379,7 @@ mod tests {
     #[test]
     fn test_dwarf_lookup_negative_offset() {
         let (_temp_dir, bin_file) = compile_test_binary();
-        let ctx = DwarfContext::load(&bin_file).unwrap();
+        let ctx = DwarfContext::load(&bin_file).expect("test");
 
         // Test lookup with addresses that might underflow with offset
         let result = ctx.lookup(0);
@@ -427,7 +427,7 @@ mod tests {
     #[test]
     fn test_dwarf_lookup_extensive_coverage() {
         // Compile a more complex test binary with actual code
-        let temp_dir = TempDir::new().unwrap();
+        let temp_dir = TempDir::new().expect("test");
         let src_file = temp_dir.path().join("complex.rs");
         let bin_file = temp_dir.path().join("complex_bin");
 
@@ -446,7 +446,7 @@ fn main() {
 }
 "#,
         )
-        .unwrap();
+        .expect("test");
 
         Command::new("rustc")
             .arg(&src_file)
@@ -454,9 +454,9 @@ fn main() {
             .arg(&bin_file)
             .arg("-g")
             .status()
-            .unwrap();
+            .expect("test");
 
-        let ctx = DwarfContext::load(&bin_file).unwrap();
+        let ctx = DwarfContext::load(&bin_file).expect("test");
 
         // Try many different addresses to maximize coverage of lookup logic
         for addr in 0x1000..0x1100 {

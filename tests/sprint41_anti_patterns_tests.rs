@@ -44,8 +44,8 @@ fn test_god_process_detection() {
         create_span(3, Some(2), 2, 5_000, "final_step", 200),
     ];
 
-    let graph = CausalGraph::from_spans(&spans).unwrap();
-    let anti_patterns = detect_anti_patterns(&graph).unwrap();
+    let graph = CausalGraph::from_spans(&spans).expect("test");
+    let anti_patterns = detect_anti_patterns(&graph).expect("test");
 
     // Should detect God Process
     assert!(
@@ -83,8 +83,8 @@ fn test_no_god_process_balanced() {
         create_span(3, Some(2), 2, 20_000, "service3", 300),
     ];
 
-    let graph = CausalGraph::from_spans(&spans).unwrap();
-    let anti_patterns = detect_anti_patterns(&graph).unwrap();
+    let graph = CausalGraph::from_spans(&spans).expect("test");
+    let anti_patterns = detect_anti_patterns(&graph).expect("test");
 
     // Should NOT detect God Process
     let god_process = anti_patterns
@@ -109,8 +109,8 @@ fn test_tight_loop_detection() {
         ));
     }
 
-    let graph = CausalGraph::from_spans(&spans).unwrap();
-    let anti_patterns = detect_anti_patterns(&graph).unwrap();
+    let graph = CausalGraph::from_spans(&spans).expect("test");
+    let anti_patterns = detect_anti_patterns(&graph).expect("test");
 
     // Should detect Tight Loop
     let tight_loop = anti_patterns
@@ -149,8 +149,8 @@ fn test_no_tight_loop_varied_calls() {
         ));
     }
 
-    let graph = CausalGraph::from_spans(&spans).unwrap();
-    let anti_patterns = detect_anti_patterns(&graph).unwrap();
+    let graph = CausalGraph::from_spans(&spans).expect("test");
+    let anti_patterns = detect_anti_patterns(&graph).expect("test");
 
     // Should NOT detect Tight Loop (max 100 consecutive "read" calls)
     let tight_loop = anti_patterns
@@ -209,8 +209,8 @@ fn test_pcie_bottleneck_detection() {
         ),
     ];
 
-    let graph = CausalGraph::from_spans(&spans).unwrap();
-    let anti_patterns = detect_anti_patterns(&graph).unwrap();
+    let graph = CausalGraph::from_spans(&spans).expect("test");
+    let anti_patterns = detect_anti_patterns(&graph).expect("test");
 
     // Should detect PCIe Bottleneck
     let pcie = anti_patterns
@@ -279,8 +279,8 @@ fn test_no_pcie_bottleneck_compute_bound() {
         ),
     ];
 
-    let graph = CausalGraph::from_spans(&spans).unwrap();
-    let anti_patterns = detect_anti_patterns(&graph).unwrap();
+    let graph = CausalGraph::from_spans(&spans).expect("test");
+    let anti_patterns = detect_anti_patterns(&graph).expect("test");
 
     // Should NOT detect PCIe Bottleneck
     let pcie = anti_patterns
@@ -318,8 +318,8 @@ fn test_multiple_anti_patterns() {
         888,
     ));
 
-    let graph = CausalGraph::from_spans(&spans).unwrap();
-    let anti_patterns = detect_anti_patterns(&graph).unwrap();
+    let graph = CausalGraph::from_spans(&spans).expect("test");
+    let anti_patterns = detect_anti_patterns(&graph).expect("test");
 
     // Debug: Print what we detected
     for (i, ap) in anti_patterns.iter().enumerate() {
@@ -367,8 +367,8 @@ fn test_severity_levels() {
         create_span(3, Some(2), 2, 500, "tiny_work", 200),
     ];
 
-    let graph = CausalGraph::from_spans(&spans).unwrap();
-    let anti_patterns = detect_anti_patterns(&graph).unwrap();
+    let graph = CausalGraph::from_spans(&spans).expect("test");
+    let anti_patterns = detect_anti_patterns(&graph).expect("test");
 
     let god_process = anti_patterns
         .iter()
@@ -391,8 +391,8 @@ fn test_anti_pattern_recommendations() {
         create_span(3, Some(2), 2, 1_000, "final", 200),
     ];
 
-    let graph = CausalGraph::from_spans(&spans).unwrap();
-    let anti_patterns = detect_anti_patterns(&graph).unwrap();
+    let graph = CausalGraph::from_spans(&spans).expect("test");
+    let anti_patterns = detect_anti_patterns(&graph).expect("test");
 
     // Verify each anti-pattern has a recommendation
     for anti_pattern in &anti_patterns {
@@ -421,8 +421,8 @@ fn test_clean_trace_no_anti_patterns() {
         create_span(4, Some(3), 3, 20_000, "response", 100),
     ];
 
-    let graph = CausalGraph::from_spans(&spans).unwrap();
-    let anti_patterns = detect_anti_patterns(&graph).unwrap();
+    let graph = CausalGraph::from_spans(&spans).expect("test");
+    let anti_patterns = detect_anti_patterns(&graph).expect("test");
 
     // Should detect NO anti-patterns
     assert!(

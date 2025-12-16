@@ -19,7 +19,7 @@ use tempfile::TempDir;
 
 #[test]
 fn test_rewrite_errors_flag_accepted() {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let source_map = temp_dir.path().join("test.sourcemap.json");
 
     let map_content = r#"{
@@ -30,9 +30,9 @@ fn test_rewrite_errors_flag_accepted() {
         "mappings": [],
         "function_map": {}
     }"#;
-    fs::write(&source_map, map_content).unwrap();
+    fs::write(&source_map, map_content).expect("test");
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("--transpiler-map")
         .arg(&source_map)
         .arg("--rewrite-errors")
@@ -49,7 +49,7 @@ fn test_rewrite_errors_flag_accepted() {
 
 #[test]
 fn test_error_correlation_with_mappings() {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let source_map = temp_dir.path().join("error_map.sourcemap.json");
 
     // Source map with line mappings for error correlation
@@ -79,9 +79,9 @@ fn test_error_correlation_with_mappings() {
             "calculate_distance": "calculate_distance"
         }
     }"#;
-    fs::write(&source_map, map_content).unwrap();
+    fs::write(&source_map, map_content).expect("test");
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("--transpiler-map")
         .arg(&source_map)
         .arg("--rewrite-errors")
@@ -99,7 +99,7 @@ fn test_error_correlation_with_mappings() {
 
 #[test]
 fn test_rewrite_errors_with_context() {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let source_map = temp_dir.path().join("context.sourcemap.json");
 
     let map_content = r#"{
@@ -120,9 +120,9 @@ fn test_rewrite_errors_with_context() {
             "main": "main"
         }
     }"#;
-    fs::write(&source_map, map_content).unwrap();
+    fs::write(&source_map, map_content).expect("test");
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("--transpiler-map")
         .arg(&source_map)
         .arg("--rewrite-errors")
@@ -140,7 +140,7 @@ fn test_rewrite_errors_with_context() {
 
 #[test]
 fn test_rewrite_errors_typescript() {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let source_map = temp_dir.path().join("app.sourcemap.json");
 
     let map_content = r#"{
@@ -161,9 +161,9 @@ fn test_rewrite_errors_typescript() {
             "handleRequest": "handleRequest (app.ts:20)"
         }
     }"#;
-    fs::write(&source_map, map_content).unwrap();
+    fs::write(&source_map, map_content).expect("test");
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("--transpiler-map")
         .arg(&source_map)
         .arg("--rewrite-errors")
@@ -180,7 +180,7 @@ fn test_rewrite_errors_typescript() {
 
 #[test]
 fn test_backward_compatibility_without_rewrite_errors() {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let source_map = temp_dir.path().join("test.sourcemap.json");
 
     let map_content = r#"{
@@ -201,10 +201,10 @@ fn test_backward_compatibility_without_rewrite_errors() {
             "main": "main"
         }
     }"#;
-    fs::write(&source_map, map_content).unwrap();
+    fs::write(&source_map, map_content).expect("test");
 
     // Use source map WITHOUT --rewrite-errors
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("--transpiler-map")
         .arg(&source_map)
         .arg("--")
@@ -220,7 +220,7 @@ fn test_backward_compatibility_without_rewrite_errors() {
 
 #[test]
 fn test_rewrite_errors_empty_mappings() {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let source_map = temp_dir.path().join("empty.sourcemap.json");
 
     let map_content = r#"{
@@ -231,9 +231,9 @@ fn test_rewrite_errors_empty_mappings() {
         "mappings": [],
         "function_map": {}
     }"#;
-    fs::write(&source_map, map_content).unwrap();
+    fs::write(&source_map, map_content).expect("test");
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("--transpiler-map")
         .arg(&source_map)
         .arg("--rewrite-errors")
@@ -250,7 +250,7 @@ fn test_rewrite_errors_empty_mappings() {
 
 #[test]
 fn test_rewrite_errors_with_stacktrace() {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let source_map = temp_dir.path().join("combined.sourcemap.json");
 
     let map_content = r#"{
@@ -271,10 +271,10 @@ fn test_rewrite_errors_with_stacktrace() {
             "process_data": "process_data"
         }
     }"#;
-    fs::write(&source_map, map_content).unwrap();
+    fs::write(&source_map, map_content).expect("test");
 
     // Combine both flags
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("--transpiler-map")
         .arg(&source_map)
         .arg("--rewrite-errors")
@@ -291,7 +291,7 @@ fn test_rewrite_errors_with_stacktrace() {
 
 #[test]
 fn test_rewrite_errors_with_statistics() {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let source_map = temp_dir.path().join("stats.sourcemap.json");
 
     let map_content = r#"{
@@ -304,9 +304,9 @@ fn test_rewrite_errors_with_statistics() {
             "main": "main"
         }
     }"#;
-    fs::write(&source_map, map_content).unwrap();
+    fs::write(&source_map, map_content).expect("test");
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("--transpiler-map")
         .arg(&source_map)
         .arg("--rewrite-errors")
@@ -324,7 +324,7 @@ fn test_rewrite_errors_with_statistics() {
 
 #[test]
 fn test_multiple_error_mappings() {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let source_map = temp_dir.path().join("multi.sourcemap.json");
 
     // Multiple mappings to test lookup efficiency
@@ -362,9 +362,9 @@ fn test_multiple_error_mappings() {
             "func_c": "func_c"
         }
     }"#;
-    fs::write(&source_map, map_content).unwrap();
+    fs::write(&source_map, map_content).expect("test");
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("--transpiler-map")
         .arg(&source_map)
         .arg("--rewrite-errors")
@@ -380,7 +380,7 @@ fn test_multiple_error_mappings() {
 
 #[test]
 fn test_rewrite_errors_with_function_time() {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let source_map = temp_dir.path().join("perf.sourcemap.json");
 
     let map_content = r#"{
@@ -393,9 +393,9 @@ fn test_rewrite_errors_with_function_time() {
             "hot_function": "hot_function (perf.py:150)"
         }
     }"#;
-    fs::write(&source_map, map_content).unwrap();
+    fs::write(&source_map, map_content).expect("test");
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("--transpiler-map")
         .arg(&source_map)
         .arg("--rewrite-errors")

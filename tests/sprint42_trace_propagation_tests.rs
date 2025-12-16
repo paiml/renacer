@@ -27,7 +27,7 @@ fn test_trace_context_env_propagation() {
     ctx.set_env();
 
     // Verify it can be read back
-    let retrieved = TraceContext::from_env().unwrap();
+    let retrieved = TraceContext::from_env().expect("test");
     assert_eq!(retrieved.trace_id, trace_id);
     assert_eq!(retrieved.parent_id, parent_id);
     assert_eq!(retrieved.trace_flags, 1);
@@ -45,7 +45,7 @@ fn test_logical_clock_env_propagation() {
     TraceContext::set_logical_clock_env(timestamp);
 
     // Verify it can be read back
-    let retrieved = TraceContext::logical_clock_from_env().unwrap();
+    let retrieved = TraceContext::logical_clock_from_env().expect("test");
     assert_eq!(retrieved, timestamp);
 
     // Cleanup
@@ -78,7 +78,7 @@ fn test_logical_clock_env_large_value() {
     let timestamp = u64::MAX;
     TraceContext::set_logical_clock_env(timestamp);
 
-    let retrieved = TraceContext::logical_clock_from_env().unwrap();
+    let retrieved = TraceContext::logical_clock_from_env().expect("test");
     assert_eq!(retrieved, timestamp);
 
     env::remove_var("RENACER_LOGICAL_CLOCK");
@@ -106,8 +106,8 @@ fn test_combined_propagation() {
     TraceContext::set_logical_clock_env(timestamp);
 
     // Child process reads both
-    let child_ctx = TraceContext::from_env().unwrap();
-    let child_clock = TraceContext::logical_clock_from_env().unwrap();
+    let child_ctx = TraceContext::from_env().expect("test");
+    let child_clock = TraceContext::logical_clock_from_env().expect("test");
 
     assert_eq!(child_ctx.trace_id, trace_id);
     assert_eq!(child_clock, timestamp);
@@ -140,8 +140,8 @@ fn test_fork_simulation() {
     TraceContext::set_logical_clock_env(parent_timestamp);
 
     // Child process (simulated)
-    let child_ctx = TraceContext::from_env().unwrap();
-    let child_start_clock = TraceContext::logical_clock_from_env().unwrap();
+    let child_ctx = TraceContext::from_env().expect("test");
+    let child_start_clock = TraceContext::logical_clock_from_env().expect("test");
 
     // Child should have same trace_id (same trace)
     assert_eq!(child_ctx.trace_id, parent_trace_id);
@@ -176,8 +176,8 @@ fn test_exec_simulation() {
     TraceContext::set_logical_clock_env(100);
 
     // New process after exec() reads environment
-    let new_ctx = TraceContext::from_env().unwrap();
-    let new_clock_start = TraceContext::logical_clock_from_env().unwrap();
+    let new_ctx = TraceContext::from_env().expect("test");
+    let new_clock_start = TraceContext::logical_clock_from_env().expect("test");
 
     // Should maintain trace continuity
     assert_eq!(new_ctx.trace_id, original_trace_id);
@@ -215,8 +215,8 @@ fn test_multi_hop_propagation() {
     TraceContext::set_logical_clock_env(ts_a);
 
     // Process B reads A's context
-    let ctx_b_in = TraceContext::from_env().unwrap();
-    let ts_b_in = TraceContext::logical_clock_from_env().unwrap();
+    let ctx_b_in = TraceContext::from_env().expect("test");
+    let ts_b_in = TraceContext::logical_clock_from_env().expect("test");
     assert_eq!(ctx_b_in.trace_id, trace_id);
     assert_eq!(ts_b_in, ts_a);
 
@@ -234,8 +234,8 @@ fn test_multi_hop_propagation() {
     TraceContext::set_logical_clock_env(ts_b);
 
     // Process C reads B's context
-    let ctx_c_in = TraceContext::from_env().unwrap();
-    let ts_c_in = TraceContext::logical_clock_from_env().unwrap();
+    let ctx_c_in = TraceContext::from_env().expect("test");
+    let ts_c_in = TraceContext::logical_clock_from_env().expect("test");
     assert_eq!(ctx_c_in.trace_id, trace_id);
     assert_eq!(ts_c_in, ts_b);
     assert!(ts_c_in > ts_a); // C's timestamp > A's timestamp
@@ -264,7 +264,7 @@ fn test_trace_context_round_trip() {
     original.set_env();
 
     // Deserialize
-    let retrieved = TraceContext::from_env().unwrap();
+    let retrieved = TraceContext::from_env().expect("test");
 
     // Verify
     assert_eq!(retrieved, original);
@@ -294,7 +294,7 @@ fn test_logical_clock_sync_across_processes() {
     clock2.tick(); // ts2 = 5 (ahead of process 1)
 
     // Process 2 receives message from Process 1
-    let ts1_received = TraceContext::logical_clock_from_env().unwrap();
+    let ts1_received = TraceContext::logical_clock_from_env().expect("test");
     let ts2_synced = clock2.sync(ts1_received);
 
     // Process 2's clock should be max(5, 3) + 1 = 6
@@ -318,7 +318,7 @@ fn test_trace_sampling_propagation() {
     };
     sampled_ctx.set_env();
 
-    let retrieved_sampled = TraceContext::from_env().unwrap();
+    let retrieved_sampled = TraceContext::from_env().expect("test");
     assert!(retrieved_sampled.is_sampled());
 
     // Unsampled trace
@@ -330,7 +330,7 @@ fn test_trace_sampling_propagation() {
     };
     unsampled_ctx.set_env();
 
-    let retrieved_unsampled = TraceContext::from_env().unwrap();
+    let retrieved_unsampled = TraceContext::from_env().expect("test");
     assert!(!retrieved_unsampled.is_sampled());
 
     // Cleanup
@@ -357,7 +357,7 @@ fn test_concurrent_env_var_access() {
         .collect();
 
     for handle in handles {
-        handle.join().unwrap();
+        handle.join().expect("test");
     }
 
     // Cleanup
@@ -370,7 +370,7 @@ fn test_zero_logical_clock() {
     // Test edge case: logical clock = 0
 
     TraceContext::set_logical_clock_env(0);
-    let retrieved = TraceContext::logical_clock_from_env().unwrap();
+    let retrieved = TraceContext::logical_clock_from_env().expect("test");
     assert_eq!(retrieved, 0);
 
     env::remove_var("RENACER_LOGICAL_CLOCK");
@@ -397,8 +397,8 @@ fn test_batuta_integration_scenario() {
     TraceContext::set_logical_clock_env(python_ts);
 
     // Rust execution (transpiled) inherits context
-    let rust_ctx = TraceContext::from_env().unwrap();
-    let rust_clock_start = TraceContext::logical_clock_from_env().unwrap();
+    let rust_ctx = TraceContext::from_env().expect("test");
+    let rust_clock_start = TraceContext::logical_clock_from_env().expect("test");
 
     // Both should have same trace ID (golden thread)
     assert_eq!(rust_ctx.trace_id, python_trace_id);

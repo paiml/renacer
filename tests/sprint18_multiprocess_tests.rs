@@ -14,7 +14,7 @@ use tempfile::TempDir;
 #[test]
 fn test_follow_forks_basic() {
     // Test that -f flag traces both parent and child after fork()
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("fork_test");
 
     // Create a simple C program that forks
@@ -39,7 +39,7 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("fork_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     // Compile the test program
     std::process::Command::new("gcc")
@@ -63,7 +63,7 @@ int main() {
 #[test]
 fn test_follow_forks_with_exec() {
     // Test that -f flag traces child process after fork + exec
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("fork_exec_test");
 
     // Create a program that forks and execs /bin/true
@@ -87,14 +87,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("fork_exec_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-f").arg("--").arg(&test_program);
@@ -110,7 +110,7 @@ int main() {
 #[test]
 fn test_follow_forks_disabled_by_default() {
     // Test that WITHOUT -f flag, only parent is traced
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("fork_default_test");
 
     let source = r#"
@@ -134,14 +134,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("fork_default_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     // Run WITHOUT -f flag
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
@@ -159,7 +159,7 @@ int main() {
 #[test]
 fn test_follow_multiple_forks() {
     // Test tracing program that forks multiple children
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("multi_fork_test");
 
     let source = r#"
@@ -188,14 +188,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("multi_fork_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-f").arg("--").arg(&test_program);
@@ -211,7 +211,7 @@ int main() {
 #[test]
 fn test_follow_forks_with_filtering() {
     // Test -f works with syscall filtering
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("fork_filter_test");
 
     let source = r#"
@@ -233,14 +233,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("fork_filter_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-f")
@@ -258,7 +258,7 @@ int main() {
 #[test]
 fn test_follow_forks_with_statistics() {
     // Test -f works with -c statistics mode
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("fork_stats_test");
 
     let source = r#"
@@ -271,14 +271,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("fork_stats_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-f").arg("-c").arg("--").arg(&test_program);
@@ -293,7 +293,7 @@ int main() {
 #[test]
 fn test_follow_forks_with_json() {
     // Test -f works with JSON output format
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("fork_json_test");
 
     let source = r#"
@@ -307,14 +307,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("fork_json_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-f")
@@ -333,7 +333,7 @@ int main() {
 #[test]
 fn test_follow_forks_with_csv() {
     // Test -f works with CSV output format
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("fork_csv_test");
 
     let source = r#"
@@ -347,14 +347,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("fork_csv_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-f")
@@ -376,7 +376,7 @@ int main() {
 #[test]
 fn test_follow_forks_with_immediate_exit() {
     // Test child that exits immediately after fork
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("fork_quick_exit");
 
     let source = r#"
@@ -396,14 +396,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("fork_quick_exit.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-f").arg("--").arg(&test_program);
@@ -415,7 +415,7 @@ int main() {
 #[test]
 fn test_follow_vfork() {
     // Test vfork() variant (shares memory until exec)
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("vfork_test");
 
     let source = r#"
@@ -437,14 +437,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("vfork_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-f").arg("--").arg(&test_program);
@@ -456,7 +456,7 @@ int main() {
 #[test]
 fn test_follow_clone() {
     // Test clone() syscall (used by pthread_create)
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("clone_test");
 
     let source = r#"
@@ -475,7 +475,7 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("clone_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
@@ -483,7 +483,7 @@ int main() {
         .arg(&test_program)
         .arg("-pthread")
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-f").arg("--").arg(&test_program);

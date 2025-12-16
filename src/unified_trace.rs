@@ -453,7 +453,7 @@ mod tests {
         let duration = span.duration_nanos();
 
         assert!(duration.is_some());
-        assert!(duration.unwrap() > 0);
+        assert!(duration.expect("test") > 0);
     }
 
     // Test 5: Syscall span creation
@@ -619,7 +619,7 @@ mod tests {
 
         let duration = trace.total_duration_nanos();
         assert!(duration.is_some());
-        assert!(duration.unwrap() > 0);
+        assert!(duration.expect("test") > 0);
     }
 
     // Test 13: Find parent syscall for GPU kernel
@@ -645,7 +645,7 @@ mod tests {
         let parent = trace.find_parent_syscall(ioctl_timestamp + 1000);
 
         assert!(parent.is_some());
-        assert_eq!(&*parent.unwrap().name, "ioctl");
+        assert_eq!(&*parent.expect("test").name, "ioctl");
     }
 
     // Test 14: Find parent returns None when no suitable syscall
@@ -1064,7 +1064,10 @@ mod tests {
 
         let timestamp = trace.get_span_timestamp(process_id);
         assert!(timestamp.is_some());
-        assert_eq!(timestamp.unwrap(), trace.process_span.start_timestamp_nanos);
+        assert_eq!(
+            timestamp.expect("test"),
+            trace.process_span.start_timestamp_nanos
+        );
     }
 
     // Test 29: Get span timestamp (syscall span)
@@ -1089,7 +1092,7 @@ mod tests {
 
         let timestamp = trace.get_span_timestamp(syscall_id);
         assert!(timestamp.is_some());
-        assert_eq!(timestamp.unwrap(), syscall_ts);
+        assert_eq!(timestamp.expect("test"), syscall_ts);
     }
 
     // Test 30: Get parent span ID (process has no parent)
@@ -1123,7 +1126,7 @@ mod tests {
 
         let retrieved_parent = trace.get_parent_span_id(syscall_id);
         assert!(retrieved_parent.is_some());
-        assert_eq!(retrieved_parent.unwrap(), parent_id);
+        assert_eq!(retrieved_parent.expect("test"), parent_id);
     }
 
     // ========================================================================
@@ -1169,7 +1172,7 @@ mod tests {
             "Trace with syscalls should return Some for architectural quality"
         );
 
-        let quality = quality.unwrap();
+        let quality = quality.expect("test");
         // Should have a quality score between 0 and 1
         assert!(
             quality.score >= 0.0 && quality.score <= 1.0,

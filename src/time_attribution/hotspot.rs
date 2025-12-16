@@ -54,7 +54,7 @@ impl Hotspot {
 /// use renacer::unified_trace::SyscallSpan;
 /// use std::borrow::Cow;
 ///
-/// let registry = ClusterRegistry::default_transpiler_clusters().unwrap();
+/// let registry = ClusterRegistry::default_transpiler_clusters().expect("test");
 /// let spans = vec![
 ///     SyscallSpan {
 ///         span_id: 1,

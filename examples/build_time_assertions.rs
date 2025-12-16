@@ -277,7 +277,7 @@ fn main() {
     #[test]
     fn test_api_performance() {{
         // Load assertions from renacer.toml
-        let config = AssertionConfig::from_file("renacer.toml").unwrap();
+        let config = AssertionConfig::from_file("renacer.toml").expect("test");
 
         // Run your API endpoint and capture trace
         let trace = run_api_endpoint();

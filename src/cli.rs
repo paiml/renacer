@@ -636,7 +636,7 @@ mod tests {
     fn test_cli_parses_command() {
         let cli = Cli::parse_from(["renacer", "--", "echo", "hello"]);
         assert!(cli.command.is_some());
-        let cmd = cli.command.unwrap();
+        let cmd = cli.command.expect("test");
         assert_eq!(cmd[0], "echo");
         assert_eq!(cmd[1], "hello");
     }
@@ -1147,7 +1147,7 @@ mod tests {
             "test",
         ]);
         assert!(cli.otlp_endpoint.is_some());
-        assert_eq!(cli.otlp_endpoint.unwrap(), "http://localhost:4317");
+        assert_eq!(cli.otlp_endpoint.expect("test"), "http://localhost:4317");
     }
 
     #[test]
@@ -1187,7 +1187,7 @@ mod tests {
             "echo",
             "test",
         ]);
-        assert_eq!(cli.otlp_endpoint.unwrap(), "http://jaeger:4317");
+        assert_eq!(cli.otlp_endpoint.expect("test"), "http://jaeger:4317");
         assert_eq!(cli.otlp_service_name, "traced-app");
     }
 
@@ -1353,7 +1353,7 @@ mod tests {
     #[test]
     fn test_cli_chaos_cpu_limit() {
         let cli = Cli::parse_from(["renacer", "--chaos-cpu-limit", "0.5", "--", "echo", "test"]);
-        assert!((cli.chaos_cpu_limit.unwrap() - 0.5).abs() < f64::EPSILON);
+        assert!((cli.chaos_cpu_limit.expect("test") - 0.5).abs() < f64::EPSILON);
     }
 
     #[test]
@@ -1436,7 +1436,7 @@ mod tests {
         ]);
         assert_eq!(cli.chaos_preset.as_deref(), Some("aggressive"));
         assert_eq!(cli.chaos_memory_limit.as_deref(), Some("64M"));
-        assert!((cli.chaos_cpu_limit.unwrap() - 0.25).abs() < f64::EPSILON);
+        assert!((cli.chaos_cpu_limit.expect("test") - 0.25).abs() < f64::EPSILON);
         assert_eq!(cli.chaos_timeout.as_deref(), Some("10s"));
         assert!(cli.chaos_signals);
     }

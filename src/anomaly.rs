@@ -288,7 +288,7 @@ mod tests {
         let result = detector.record_and_check("write", 1000);
         assert!(result.is_some(), "Should detect anomaly");
 
-        let anomaly = result.unwrap();
+        let anomaly = result.expect("test");
         assert_eq!(anomaly.syscall_name, "write");
         assert_eq!(anomaly.duration_us, 1000);
         assert!(anomaly.z_score.abs() > 3.0);
@@ -316,7 +316,7 @@ mod tests {
         }
 
         // Baseline should only contain last 50 samples
-        let baseline = detector.get_baselines().get("write").unwrap();
+        let baseline = detector.get_baselines().get("write").expect("test");
         assert_eq!(baseline.samples.len(), 50);
     }
 

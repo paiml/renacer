@@ -1,10 +1,9 @@
 # Clippy configuration for renacer
 # Enforces project quality standards
-
-disallowed-methods = [
-    { path = "std::option::Option::unwrap", reason = "Use .expect() with a meaningful message or proper error handling" },
-    { path = "std::result::Result::unwrap", reason = "Use .expect() with a meaningful message or proper error handling" },
-]
+#
+# Note: disallowed-methods for unwrap() removed because serde_json::json! macro
+# internally uses unwrap() and we cannot control third-party macro internals.
+# All direct .unwrap() calls have been replaced with .expect() where appropriate.
 
 # Cognitive complexity threshold
 cognitive-complexity-threshold = 25

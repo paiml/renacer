@@ -62,7 +62,7 @@ fn test_storage_config_custom() {
 #[test]
 fn test_storage_with_config() {
     // Test creating storage with custom config
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let path = tmp_dir.path().join("test.parquet");
 
     let config = StorageConfig {
@@ -72,7 +72,7 @@ fn test_storage_with_config() {
         predicate_pushdown: true,
     };
 
-    let storage = TruenoDbStorage::with_config(&path, config.clone()).unwrap();
+    let storage = TruenoDbStorage::with_config(&path, config.clone()).expect("test");
 
     assert_eq!(storage.config().row_group_size, 5_000);
     assert!(storage.config().bloom_filter_trace_id);
@@ -83,10 +83,10 @@ fn test_storage_with_config() {
 #[test]
 fn test_query_by_trace_id_performance_small() {
     // Performance test: Query 1K spans (baseline)
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let path = tmp_dir.path().join("test.parquet");
 
-    let storage = TruenoDbStorage::new(&path).unwrap();
+    let storage = TruenoDbStorage::new(&path).expect("test");
 
     // Insert 1K spans
     let trace_id = [0x4b; 16];
@@ -94,11 +94,11 @@ fn test_query_by_trace_id_performance_small() {
         .map(|i| create_test_span(trace_id, i, i * 1_000_000))
         .collect();
 
-    storage.insert_batch(&spans).unwrap();
+    storage.insert_batch(&spans).expect("test");
 
     // Query and measure time
     let start = Instant::now();
-    let results = storage.query_by_trace_id(&trace_id).unwrap();
+    let results = storage.query_by_trace_id(&trace_id).expect("test");
     let duration = start.elapsed();
 
     println!("Query 1K spans: {:?} ({} results)", duration, results.len());
@@ -111,10 +111,10 @@ fn test_query_by_trace_id_performance_small() {
 #[test]
 fn test_query_by_trace_id_and_time_range() {
     // Test composite index query (trace_id + time range)
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let path = tmp_dir.path().join("test.parquet");
 
-    let storage = TruenoDbStorage::new(&path).unwrap();
+    let storage = TruenoDbStorage::new(&path).expect("test");
 
     // Insert spans with varying timestamps
     let trace_id = [0xaa; 16];
@@ -122,7 +122,7 @@ fn test_query_by_trace_id_and_time_range() {
         .map(|i| create_test_span(trace_id, i, i * 1_000_000_000)) // 1s intervals
         .collect();
 
-    storage.insert_batch(&spans).unwrap();
+    storage.insert_batch(&spans).expect("test");
 
     // Query time range: 10s - 20s (should match 10 spans)
     let start_time = 10_000_000_000; // 10s
@@ -131,7 +131,7 @@ fn test_query_by_trace_id_and_time_range() {
     let start = Instant::now();
     let results = storage
         .query_by_trace_id_and_time(&trace_id, start_time, end_time)
-        .unwrap();
+        .expect("test");
     let duration = start.elapsed();
 
     println!(
@@ -147,23 +147,23 @@ fn test_query_by_trace_id_and_time_range() {
 #[test]
 fn test_query_optimized_single_filter() {
     // Test optimized query with single filter (trace_id only)
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let path = tmp_dir.path().join("test.parquet");
 
-    let storage = TruenoDbStorage::new(&path).unwrap();
+    let storage = TruenoDbStorage::new(&path).expect("test");
 
     let trace_id = [0xbb; 16];
     let spans: Vec<_> = (0..50)
         .map(|i| create_test_span(trace_id, i, i * 1_000_000))
         .collect();
 
-    storage.insert_batch(&spans).unwrap();
+    storage.insert_batch(&spans).expect("test");
 
     // Query with trace_id filter only
     let start = Instant::now();
     let results = storage
         .query_optimized(Some(&trace_id), None, None, None)
-        .unwrap();
+        .expect("test");
     let duration = start.elapsed();
 
     println!(
@@ -176,17 +176,17 @@ fn test_query_optimized_single_filter() {
 #[test]
 fn test_query_optimized_multiple_filters() {
     // Test optimized query with multiple filters (predicate pushdown)
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let path = tmp_dir.path().join("test.parquet");
 
-    let storage = TruenoDbStorage::new(&path).unwrap();
+    let storage = TruenoDbStorage::new(&path).expect("test");
 
     let trace_id = [0xcc; 16];
     let spans: Vec<_> = (0..100)
         .map(|i| create_test_span(trace_id, i, i * 1_000_000_000))
         .collect();
 
-    storage.insert_batch(&spans).unwrap();
+    storage.insert_batch(&spans).expect("test");
 
     // Query with trace_id + time range + process_id
     let start_time_min = 10_000_000_000;
@@ -201,7 +201,7 @@ fn test_query_optimized_multiple_filters() {
             Some(start_time_max),
             Some(process_id),
         )
-        .unwrap();
+        .expect("test");
     let duration = start.elapsed();
 
     println!(
@@ -214,7 +214,7 @@ fn test_query_optimized_multiple_filters() {
 #[test]
 fn test_predicate_pushdown_disabled() {
     // Test query performance with predicate pushdown disabled
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let path = tmp_dir.path().join("test.parquet");
 
     let config = StorageConfig {
@@ -224,19 +224,19 @@ fn test_predicate_pushdown_disabled() {
         predicate_pushdown: false,
     };
 
-    let storage = TruenoDbStorage::with_config(&path, config).unwrap();
+    let storage = TruenoDbStorage::with_config(&path, config).expect("test");
 
     let trace_id = [0xdd; 16];
     let spans: Vec<_> = (0..100)
         .map(|i| create_test_span(trace_id, i, i * 1_000_000))
         .collect();
 
-    storage.insert_batch(&spans).unwrap();
+    storage.insert_batch(&spans).expect("test");
 
     let start = Instant::now();
     let results = storage
         .query_optimized(Some(&trace_id), None, None, None)
-        .unwrap();
+        .expect("test");
     let duration = start.elapsed();
 
     println!(
@@ -251,7 +251,7 @@ fn test_predicate_pushdown_disabled() {
 #[test]
 fn test_row_group_size_configuration() {
     // Test different row group sizes
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
 
     // Small row groups (1K)
     let path1 = tmp_dir.path().join("test_small.parquet");
@@ -259,12 +259,12 @@ fn test_row_group_size_configuration() {
         row_group_size: 1_000,
         ..Default::default()
     };
-    let storage1 = TruenoDbStorage::with_config(&path1, config1).unwrap();
+    let storage1 = TruenoDbStorage::with_config(&path1, config1).expect("test");
     assert_eq!(storage1.config().row_group_size, 1_000);
 
     // Medium row groups (10K - default)
     let path2 = tmp_dir.path().join("test_medium.parquet");
-    let storage2 = TruenoDbStorage::new(&path2).unwrap();
+    let storage2 = TruenoDbStorage::new(&path2).expect("test");
     assert_eq!(storage2.config().row_group_size, 10_000);
 
     // Large row groups (100K)
@@ -273,18 +273,18 @@ fn test_row_group_size_configuration() {
         row_group_size: 100_000,
         ..Default::default()
     };
-    let storage3 = TruenoDbStorage::with_config(&path3, config3).unwrap();
+    let storage3 = TruenoDbStorage::with_config(&path3, config3).expect("test");
     assert_eq!(storage3.config().row_group_size, 100_000);
 }
 
 #[test]
 fn test_bloom_filter_configuration() {
     // Test Bloom filter on/off
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
 
     // With Bloom filter (default)
     let path1 = tmp_dir.path().join("test_bloom_on.parquet");
-    let storage1 = TruenoDbStorage::new(&path1).unwrap();
+    let storage1 = TruenoDbStorage::new(&path1).expect("test");
     assert!(storage1.config().bloom_filter_trace_id);
 
     // Without Bloom filter
@@ -293,18 +293,18 @@ fn test_bloom_filter_configuration() {
         bloom_filter_trace_id: false,
         ..Default::default()
     };
-    let storage2 = TruenoDbStorage::with_config(&path2, config2).unwrap();
+    let storage2 = TruenoDbStorage::with_config(&path2, config2).expect("test");
     assert!(!storage2.config().bloom_filter_trace_id);
 }
 
 #[test]
 fn test_composite_index_configuration() {
     // Test composite index on/off
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
 
     // With composite index (default)
     let path1 = tmp_dir.path().join("test_index_on.parquet");
-    let storage1 = TruenoDbStorage::new(&path1).unwrap();
+    let storage1 = TruenoDbStorage::new(&path1).expect("test");
     assert!(storage1.config().composite_index_trace_time);
 
     // Without composite index
@@ -313,17 +313,17 @@ fn test_composite_index_configuration() {
         composite_index_trace_time: false,
         ..Default::default()
     };
-    let storage2 = TruenoDbStorage::with_config(&path2, config2).unwrap();
+    let storage2 = TruenoDbStorage::with_config(&path2, config2).expect("test");
     assert!(!storage2.config().composite_index_trace_time);
 }
 
 #[test]
 fn test_query_multiple_traces() {
     // Test querying when database contains multiple traces
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let path = tmp_dir.path().join("test.parquet");
 
-    let storage = TruenoDbStorage::new(&path).unwrap();
+    let storage = TruenoDbStorage::new(&path).expect("test");
 
     // Insert 3 different traces
     let trace_id_1 = [0x01; 16];
@@ -334,11 +334,11 @@ fn test_query_multiple_traces() {
         let spans: Vec<_> = (0..100)
             .map(|i| create_test_span(*trace_id, i, i * 1_000_000))
             .collect();
-        storage.insert_batch(&spans).unwrap();
+        storage.insert_batch(&spans).expect("test");
     }
 
     // Query should only return spans from trace_id_1
-    let results = storage.query_by_trace_id(&trace_id_1).unwrap();
+    let results = storage.query_by_trace_id(&trace_id_1).expect("test");
 
     // Once trueno-db is integrated, this should return exactly 100 spans
     // assert_eq!(results.len(), 100);
@@ -352,26 +352,26 @@ fn test_query_multiple_traces() {
 #[test]
 fn test_query_performance_regression_detection() {
     // Test regression detection (<10% latency increase)
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let path = tmp_dir.path().join("test.parquet");
 
-    let storage = TruenoDbStorage::new(&path).unwrap();
+    let storage = TruenoDbStorage::new(&path).expect("test");
 
     let trace_id = [0xff; 16];
     let spans: Vec<_> = (0..1_000)
         .map(|i| create_test_span(trace_id, i, i * 1_000_000))
         .collect();
 
-    storage.insert_batch(&spans).unwrap();
+    storage.insert_batch(&spans).expect("test");
 
     // Baseline query
     let start = Instant::now();
-    let _ = storage.query_by_trace_id(&trace_id).unwrap();
+    let _ = storage.query_by_trace_id(&trace_id).expect("test");
     let baseline_duration = start.elapsed();
 
     // Second query (should be similar performance)
     let start = Instant::now();
-    let _ = storage.query_by_trace_id(&trace_id).unwrap();
+    let _ = storage.query_by_trace_id(&trace_id).expect("test");
     let second_duration = start.elapsed();
 
     println!(
@@ -389,21 +389,21 @@ fn test_query_performance_regression_detection() {
 #[test]
 fn test_empty_query_results() {
     // Test querying for non-existent trace ID
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let path = tmp_dir.path().join("test.parquet");
 
-    let storage = TruenoDbStorage::new(&path).unwrap();
+    let storage = TruenoDbStorage::new(&path).expect("test");
 
     // Insert spans with one trace ID
     let trace_id_1 = [0xaa; 16];
     let spans: Vec<_> = (0..100)
         .map(|i| create_test_span(trace_id_1, i, i * 1_000_000))
         .collect();
-    storage.insert_batch(&spans).unwrap();
+    storage.insert_batch(&spans).expect("test");
 
     // Query for different trace ID (should return empty)
     let trace_id_2 = [0xbb; 16];
-    let results = storage.query_by_trace_id(&trace_id_2).unwrap();
+    let results = storage.query_by_trace_id(&trace_id_2).expect("test");
 
     assert_eq!(results.len(), 0);
 }

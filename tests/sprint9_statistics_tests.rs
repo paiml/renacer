@@ -62,5 +62,5 @@ fn test_statistics_shows_call_counts() {
         .arg("test")
         .assert()
         .success()
-        .stderr(predicate::str::is_match(r"\d+\s+write").unwrap()); // Number before "write"
+        .stderr(predicate::str::is_match(r"\d+\s+write").expect("test")); // Number before "write"
 }

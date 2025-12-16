@@ -12,7 +12,7 @@ fn test_negation_single_syscall() {
         .arg("echo")
         .arg("test");
 
-    let output = cmd.output().unwrap();
+    let output = cmd.output().expect("test");
     assert!(output.status.success());
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -41,7 +41,7 @@ fn test_negation_multiple_syscalls() {
         .arg("echo")
         .arg("test");
 
-    let output = cmd.output().unwrap();
+    let output = cmd.output().expect("test");
     assert!(output.status.success());
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -65,7 +65,7 @@ fn test_negation_syscall_class() {
         .arg("echo")
         .arg("test");
 
-    let output = cmd.output().unwrap();
+    let output = cmd.output().expect("test");
     assert!(output.status.success());
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -91,7 +91,7 @@ fn test_mixed_positive_negative() {
         .arg("cat")
         .arg("/dev/null");
 
-    let output = cmd.output().unwrap();
+    let output = cmd.output().expect("test");
     assert!(output.status.success());
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -121,7 +121,7 @@ fn test_negation_with_statistics() {
         .arg("echo")
         .arg("test");
 
-    let output = cmd.output().unwrap();
+    let output = cmd.output().expect("test");
     assert!(output.status.success());
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -144,7 +144,7 @@ fn test_invalid_negation_syntax() {
         .arg("echo")
         .arg("test");
 
-    let output = cmd.output().unwrap();
+    let output = cmd.output().expect("test");
     // Should fail with invalid syntax
     assert!(!output.status.success());
 }
@@ -160,7 +160,7 @@ fn test_negation_nonexistent_syscall() {
         .arg("echo")
         .arg("test");
 
-    let output = cmd.output().unwrap();
+    let output = cmd.output().expect("test");
     // Should succeed and show all syscalls (nothing excluded)
     assert!(output.status.success());
 

@@ -4,9 +4,10 @@
 //!
 //! Reference: paiml/depyler docs/specifications/decision-traces-signal-spec.md
 
+#![allow(deprecated)] // Command::cargo_bin deprecation warning
+
 use renacer::decision_export::{DecisionExportConfig, DecisionExporter, ExportStats, RetryConfig};
 use renacer::decision_trace::DecisionTrace;
-use std::path::PathBuf;
 use tempfile::TempDir;
 
 // =============================================================================
@@ -40,7 +41,7 @@ max_backoff_ms = 60000
 queue_size = 20000
 "#;
 
-    let config: DecisionExportConfig = toml::from_str(toml).unwrap();
+    let config: DecisionExportConfig = toml::from_str(toml).expect("test");
 
     assert_eq!(config.otlp_endpoint, "http://entrenar.example.com:4317");
     assert_eq!(config.batch_size, 200);
@@ -103,7 +104,7 @@ fn test_decision_exporter_creation() {
 fn test_decision_exporter_queue_decisions() {
     // AC: Queue decisions for export
     let config = DecisionExportConfig::default();
-    let mut exporter = DecisionExporter::new(config).unwrap();
+    let mut exporter = DecisionExporter::new(config).expect("test");
 
     let decision = DecisionTrace {
         timestamp_us: 1000,
@@ -129,7 +130,7 @@ fn test_decision_exporter_queue_overflow() {
         queue_size: 5,
         ..Default::default()
     };
-    let mut exporter = DecisionExporter::new(config).unwrap();
+    let mut exporter = DecisionExporter::new(config).expect("test");
 
     // Queue 10 decisions
     for i in 0..10 {
@@ -164,7 +165,7 @@ fn test_decision_exporter_batch_size() {
         batch_size: 3,
         ..Default::default()
     };
-    let mut exporter = DecisionExporter::new(config).unwrap();
+    let mut exporter = DecisionExporter::new(config).expect("test");
 
     // Queue 10 decisions
     for i in 0..10 {
@@ -197,9 +198,9 @@ fn test_decision_exporter_batch_size() {
 fn test_cli_stats_command() {
     // AC: renacer stats <file> shows decision statistics
     use assert_cmd::Command;
-    use renacer::decision_trace::{generate_decision_id, DecisionTrace};
+    use renacer::decision_trace::DecisionTrace;
 
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let msgpack_path = temp_dir.path().join("decisions.msgpack");
 
     // Write test decisions
@@ -220,9 +221,9 @@ fn test_cli_stats_command() {
         })
         .collect();
 
-    std::fs::write(&msgpack_path, rmp_serde::to_vec(&traces).unwrap()).unwrap();
+    std::fs::write(&msgpack_path, rmp_serde::to_vec(&traces).expect("test")).expect("test");
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     let output = cmd
         .arg("stats")
         .arg(&msgpack_path)
@@ -255,7 +256,7 @@ fn test_cli_export_command_help() {
     // AC: renacer export --help shows usage
     use assert_cmd::Command;
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     let output = cmd
         .arg("export")
         .arg("--help")
@@ -299,7 +300,7 @@ otlp_endpoint = "http://secure.example.com:4317"
 auth_token = "secret-token-123"
 "#;
 
-    let config: DecisionExportConfig = toml::from_str(toml).unwrap();
+    let config: DecisionExportConfig = toml::from_str(toml).expect("test");
 
     assert_eq!(config.auth_token, Some("secret-token-123".to_string()));
 }

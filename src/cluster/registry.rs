@@ -265,7 +265,7 @@ fd_path_pattern = "/dev/nvidia*"
         // mmap → MemoryAllocation cluster
         let cluster = registry.classify("mmap", &[], &fds);
         assert!(cluster.is_some());
-        assert_eq!(cluster.unwrap().name, "MemoryAllocation");
+        assert_eq!(cluster.expect("test").name, "MemoryAllocation");
 
         // Unmatched syscall
         let cluster = registry.classify("socket", &[], &fds);
@@ -289,14 +289,14 @@ fd_path_pattern = "/dev/nvidia*"
         fds.insert(3, "/dev/nvidia0".to_string());
         let cluster = registry.classify("ioctl", &["3".to_string()], &fds);
         assert!(cluster.is_some());
-        assert_eq!(cluster.unwrap().name, "GPU");
+        assert_eq!(cluster.expect("test").name, "GPU");
 
         Ok(())
     }
 
     #[test]
     fn test_duplicate_syscall_error() {
-        let mut file = NamedTempFile::new().unwrap();
+        let mut file = NamedTempFile::new().expect("test");
         writeln!(
             file,
             r#"
@@ -317,8 +317,8 @@ anomaly_threshold = 0.5
 severity = "medium"
 "#
         )
-        .unwrap();
-        file.flush().unwrap();
+        .expect("test");
+        file.flush().expect("test");
 
         let result = ClusterRegistry::from_toml(file.path());
         assert!(result.is_err());

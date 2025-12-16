@@ -640,7 +640,7 @@ mod tests {
         let perf = PerformanceComparison::new(1000000, 500000).with_memory(1000000, 600000); // 40% reduction
 
         assert!(perf.memory_delta.is_some());
-        let mem = perf.memory_delta.unwrap();
+        let mem = perf.memory_delta.expect("test");
         assert_eq!(mem.original_bytes, 1000000);
         assert_eq!(mem.transpiled_bytes, 600000);
         assert!((mem.reduction_percentage - 40.0).abs() < 0.1);

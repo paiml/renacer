@@ -289,10 +289,16 @@ mod tests {
         profiler.record("helper", "open", 500, None);
 
         assert_eq!(profiler.stats.len(), 2);
-        assert_eq!(profiler.stats.get("main").unwrap().syscall_count, 2);
-        assert_eq!(profiler.stats.get("main").unwrap().total_time_us, 3000);
-        assert_eq!(profiler.stats.get("helper").unwrap().syscall_count, 1);
-        assert_eq!(profiler.stats.get("helper").unwrap().total_time_us, 500);
+        assert_eq!(profiler.stats.get("main").expect("test").syscall_count, 2);
+        assert_eq!(
+            profiler.stats.get("main").expect("test").total_time_us,
+            3000
+        );
+        assert_eq!(profiler.stats.get("helper").expect("test").syscall_count, 1);
+        assert_eq!(
+            profiler.stats.get("helper").expect("test").total_time_us,
+            500
+        );
     }
 
     #[test]
@@ -338,15 +344,19 @@ mod tests {
 
         // Verify data is present
         assert_eq!(
-            profiler.stats.get("slow_func").unwrap().total_time_us,
+            profiler.stats.get("slow_func").expect("test").total_time_us,
             5000000
         );
         assert_eq!(
-            profiler.stats.get("fast_func").unwrap().total_time_us,
+            profiler.stats.get("fast_func").expect("test").total_time_us,
             100000
         );
         assert_eq!(
-            profiler.stats.get("medium_func").unwrap().total_time_us,
+            profiler
+                .stats
+                .get("medium_func")
+                .expect("test")
+                .total_time_us,
             1000000
         );
     }
@@ -359,7 +369,7 @@ mod tests {
         profiler.record("test_func", "read", 2000, None);
         profiler.record("test_func", "open", 3000, None);
 
-        let stats = profiler.stats.get("test_func").unwrap();
+        let stats = profiler.stats.get("test_func").expect("test");
         assert_eq!(stats.syscall_count, 3);
         assert_eq!(stats.total_time_us, 6000);
 
@@ -388,7 +398,7 @@ mod tests {
         // Should handle division by zero gracefully
         profiler.print_summary();
 
-        let stats = profiler.stats.get("never_called").unwrap();
+        let stats = profiler.stats.get("never_called").expect("test");
         assert_eq!(stats.syscall_count, 0);
     }
 
@@ -402,7 +412,7 @@ mod tests {
         profiler.record("io_func", "open", 700, None);
         profiler.record("io_func", "close", 400, None);
 
-        let stats = profiler.stats.get("io_func").unwrap();
+        let stats = profiler.stats.get("io_func").expect("test");
         assert_eq!(stats.io_syscalls, 4);
         assert_eq!(stats.syscall_count, 4);
         assert_eq!(stats.slow_io_count, 0); // All under 1ms
@@ -417,7 +427,7 @@ mod tests {
         profiler.record("compute_func", "mmap", 600, None);
         profiler.record("compute_func", "getpid", 100, None);
 
-        let stats = profiler.stats.get("compute_func").unwrap();
+        let stats = profiler.stats.get("compute_func").expect("test");
         assert_eq!(stats.io_syscalls, 0);
         assert_eq!(stats.syscall_count, 3);
         assert_eq!(stats.slow_io_count, 0);
@@ -432,7 +442,7 @@ mod tests {
         profiler.record("slow_io_func", "write", 5000, None); // 5ms - SLOW
         profiler.record("slow_io_func", "fsync", 10000, None); // 10ms - SLOW
 
-        let stats = profiler.stats.get("slow_io_func").unwrap();
+        let stats = profiler.stats.get("slow_io_func").expect("test");
         assert_eq!(stats.io_syscalls, 3);
         assert_eq!(stats.slow_io_count, 3);
         assert_eq!(stats.syscall_count, 3);
@@ -447,7 +457,7 @@ mod tests {
         profiler.record("fast_io_func", "write", 500, None); // 0.5ms - fast
         profiler.record("fast_io_func", "close", 50, None); // 0.05ms - fast
 
-        let stats = profiler.stats.get("fast_io_func").unwrap();
+        let stats = profiler.stats.get("fast_io_func").expect("test");
         assert_eq!(stats.io_syscalls, 3);
         assert_eq!(stats.slow_io_count, 0); // None are slow
         assert_eq!(stats.syscall_count, 3);
@@ -464,7 +474,7 @@ mod tests {
         profiler.record("mixed_func", "mmap", 200, None); // Non-I/O
         profiler.record("mixed_func", "fsync", 3000, None); // I/O, slow
 
-        let stats = profiler.stats.get("mixed_func").unwrap();
+        let stats = profiler.stats.get("mixed_func").expect("test");
         assert_eq!(stats.syscall_count, 5);
         assert_eq!(stats.io_syscalls, 3); // read, write, fsync
         assert_eq!(stats.slow_io_count, 2); // read and fsync
@@ -480,7 +490,7 @@ mod tests {
         profiler.record("boundary_func", "write", 999, None); // Just under - NOT slow
         profiler.record("boundary_func", "open", 1001, None); // Just over - SLOW
 
-        let stats = profiler.stats.get("boundary_func").unwrap();
+        let stats = profiler.stats.get("boundary_func").expect("test");
         assert_eq!(stats.io_syscalls, 3);
         assert_eq!(stats.slow_io_count, 1); // Only the 1001us operation
     }
@@ -507,7 +517,7 @@ mod tests {
         profiler.record("io_types", "tee", 100, None);
         profiler.record("io_types", "vmsplice", 100, None);
 
-        let stats = profiler.stats.get("io_types").unwrap();
+        let stats = profiler.stats.get("io_types").expect("test");
         assert_eq!(stats.io_syscalls, 16); // All 16 I/O syscall types
         assert_eq!(stats.syscall_count, 16);
         assert_eq!(stats.slow_io_count, 0); // All fast
@@ -520,9 +530,9 @@ mod tests {
         // main calls helper
         profiler.record("helper", "write", 1000, Some("main"));
 
-        let main_stats = profiler.stats.get("main").unwrap();
+        let main_stats = profiler.stats.get("main").expect("test");
         assert_eq!(main_stats.callees.len(), 1);
-        assert_eq!(*main_stats.callees.get("helper").unwrap(), 1);
+        assert_eq!(*main_stats.callees.get("helper").expect("test"), 1);
     }
 
     #[test]
@@ -534,9 +544,9 @@ mod tests {
         profiler.record("helper", "read", 2000, Some("main"));
         profiler.record("helper", "open", 500, Some("main"));
 
-        let main_stats = profiler.stats.get("main").unwrap();
+        let main_stats = profiler.stats.get("main").expect("test");
         assert_eq!(main_stats.callees.len(), 1);
-        assert_eq!(*main_stats.callees.get("helper").unwrap(), 3);
+        assert_eq!(*main_stats.callees.get("helper").expect("test"), 3);
     }
 
     #[test]
@@ -548,11 +558,11 @@ mod tests {
         profiler.record("helper_b", "read", 2000, Some("main"));
         profiler.record("helper_c", "open", 500, Some("main"));
 
-        let main_stats = profiler.stats.get("main").unwrap();
+        let main_stats = profiler.stats.get("main").expect("test");
         assert_eq!(main_stats.callees.len(), 3);
-        assert_eq!(*main_stats.callees.get("helper_a").unwrap(), 1);
-        assert_eq!(*main_stats.callees.get("helper_b").unwrap(), 1);
-        assert_eq!(*main_stats.callees.get("helper_c").unwrap(), 1);
+        assert_eq!(*main_stats.callees.get("helper_a").expect("test"), 1);
+        assert_eq!(*main_stats.callees.get("helper_b").expect("test"), 1);
+        assert_eq!(*main_stats.callees.get("helper_c").expect("test"), 1);
     }
 
     #[test]
@@ -563,13 +573,13 @@ mod tests {
         profiler.record("helper_a", "write", 1000, Some("main"));
         profiler.record("helper_b", "read", 2000, Some("helper_a"));
 
-        let main_stats = profiler.stats.get("main").unwrap();
+        let main_stats = profiler.stats.get("main").expect("test");
         assert_eq!(main_stats.callees.len(), 1);
-        assert_eq!(*main_stats.callees.get("helper_a").unwrap(), 1);
+        assert_eq!(*main_stats.callees.get("helper_a").expect("test"), 1);
 
-        let helper_a_stats = profiler.stats.get("helper_a").unwrap();
+        let helper_a_stats = profiler.stats.get("helper_a").expect("test");
         assert_eq!(helper_a_stats.callees.len(), 1);
-        assert_eq!(*helper_a_stats.callees.get("helper_b").unwrap(), 1);
+        assert_eq!(*helper_a_stats.callees.get("helper_b").expect("test"), 1);
     }
 
     #[test]
@@ -579,7 +589,7 @@ mod tests {
         // Function called with no caller (e.g., from main)
         profiler.record("main", "write", 1000, None);
 
-        let main_stats = profiler.stats.get("main").unwrap();
+        let main_stats = profiler.stats.get("main").expect("test");
         assert_eq!(main_stats.callees.len(), 0);
         assert_eq!(main_stats.syscall_count, 1);
     }
@@ -595,12 +605,12 @@ mod tests {
         // helper is also called without caller (e.g., recursion or external call)
         profiler.record("helper", "open", 500, None);
 
-        let main_stats = profiler.stats.get("main").unwrap();
+        let main_stats = profiler.stats.get("main").expect("test");
         assert_eq!(main_stats.syscall_count, 1);
         assert_eq!(main_stats.callees.len(), 1);
-        assert_eq!(*main_stats.callees.get("helper").unwrap(), 1);
+        assert_eq!(*main_stats.callees.get("helper").expect("test"), 1);
 
-        let helper_stats = profiler.stats.get("helper").unwrap();
+        let helper_stats = profiler.stats.get("helper").expect("test");
         assert_eq!(helper_stats.syscall_count, 2);
         assert_eq!(helper_stats.callees.len(), 0);
     }
@@ -657,7 +667,7 @@ mod tests {
         // Should show call graph for hot functions
         profiler.print_summary();
 
-        let hot_main_stats = profiler.stats.get("hot_main").unwrap();
+        let hot_main_stats = profiler.stats.get("hot_main").expect("test");
         assert_eq!(hot_main_stats.callees.len(), 3);
         assert_eq!(hot_main_stats.total_time_us, 5000000);
     }
@@ -675,7 +685,7 @@ mod tests {
         assert_eq!(total, 10000000);
 
         // Verify percentages would be calculated correctly
-        let func_50_stats = profiler.stats.get("func_50").unwrap();
+        let func_50_stats = profiler.stats.get("func_50").expect("test");
         let percent_50 = (func_50_stats.total_time_us as f64 / total as f64) * 100.0;
         assert!((percent_50 - 50.0).abs() < 0.01);
 
@@ -704,9 +714,9 @@ mod tests {
         profiler.record("main", "write", 1000, None);
 
         let mut output = Vec::new();
-        profiler.export_flamegraph(&mut output).unwrap();
+        profiler.export_flamegraph(&mut output).expect("test");
 
-        let flamegraph = String::from_utf8(output).unwrap();
+        let flamegraph = String::from_utf8(output).expect("test");
         assert!(flamegraph.contains("main 1"));
     }
 
@@ -719,9 +729,9 @@ mod tests {
         profiler.record("helper", "read", 2000, Some("main"));
 
         let mut output = Vec::new();
-        profiler.export_flamegraph(&mut output).unwrap();
+        profiler.export_flamegraph(&mut output).expect("test");
 
-        let flamegraph = String::from_utf8(output).unwrap();
+        let flamegraph = String::from_utf8(output).expect("test");
 
         // Should have root function
         assert!(flamegraph.contains("main 1"));
@@ -740,9 +750,9 @@ mod tests {
         profiler.record("helper_c", "close", 4000, Some("main"));
 
         let mut output = Vec::new();
-        profiler.export_flamegraph(&mut output).unwrap();
+        profiler.export_flamegraph(&mut output).expect("test");
 
-        let flamegraph = String::from_utf8(output).unwrap();
+        let flamegraph = String::from_utf8(output).expect("test");
 
         // Should have all call paths
         assert!(flamegraph.contains("main;helper_a 1"));
@@ -760,9 +770,9 @@ mod tests {
         profiler.record("helper_b", "open", 3000, Some("helper_a"));
 
         let mut output = Vec::new();
-        profiler.export_flamegraph(&mut output).unwrap();
+        profiler.export_flamegraph(&mut output).expect("test");
 
-        let flamegraph = String::from_utf8(output).unwrap();
+        let flamegraph = String::from_utf8(output).expect("test");
 
         // Should have main as root
         assert!(flamegraph.contains("main 1"));
@@ -783,9 +793,9 @@ mod tests {
         profiler.record("helper", "open", 3000, Some("main"));
 
         let mut output = Vec::new();
-        profiler.export_flamegraph(&mut output).unwrap();
+        profiler.export_flamegraph(&mut output).expect("test");
 
-        let flamegraph = String::from_utf8(output).unwrap();
+        let flamegraph = String::from_utf8(output).expect("test");
 
         // Should show aggregated call count
         assert!(flamegraph.contains("main;helper 3"));
@@ -796,9 +806,9 @@ mod tests {
         let profiler = FunctionProfiler::new();
 
         let mut output = Vec::new();
-        profiler.export_flamegraph(&mut output).unwrap();
+        profiler.export_flamegraph(&mut output).expect("test");
 
-        let flamegraph = String::from_utf8(output).unwrap();
+        let flamegraph = String::from_utf8(output).expect("test");
         assert!(flamegraph.is_empty());
     }
 
@@ -812,9 +822,9 @@ mod tests {
         profiler.record("signal_handler", "open", 3000, None);
 
         let mut output = Vec::new();
-        profiler.export_flamegraph(&mut output).unwrap();
+        profiler.export_flamegraph(&mut output).expect("test");
 
-        let flamegraph = String::from_utf8(output).unwrap();
+        let flamegraph = String::from_utf8(output).expect("test");
 
         // All should appear as roots
         assert!(flamegraph.contains("main 1"));
@@ -843,9 +853,9 @@ mod tests {
         profiler.record("helper", "read", 2000, Some("main"));
 
         let mut output = Vec::new();
-        profiler.export_flamegraph(&mut output).unwrap();
+        profiler.export_flamegraph(&mut output).expect("test");
 
-        let flamegraph = String::from_utf8(output).unwrap();
+        let flamegraph = String::from_utf8(output).expect("test");
         let lines: Vec<&str> = flamegraph.lines().collect();
 
         // Each line should follow "stack count" format
@@ -858,7 +868,7 @@ mod tests {
             );
 
             // Last part should be a number (count)
-            let count_str = parts.last().unwrap();
+            let count_str = parts.last().expect("test");
             assert!(
                 count_str.parse::<u64>().is_ok(),
                 "Count should be a number: {}",

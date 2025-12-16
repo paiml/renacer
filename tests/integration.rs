@@ -7,11 +7,10 @@ use std::collections::HashMap;
 /// Test that the crate builds and exports expected types
 #[test]
 fn test_crate_exports() {
-    // Verify main module exports compile
-    assert!(true, "crate compiled successfully");
+    // Verify main module exports compile - no assertion needed, just compilation
 }
 
-/// Test basic HashMap operations (used throughout renacer)
+/// Test basic `HashMap` operations (used throughout renacer)
 #[test]
 fn test_hashmap_operations() {
     let mut map: HashMap<String, i32> = HashMap::new();

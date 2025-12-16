@@ -450,7 +450,7 @@ mod tests {
         data.insert("write".to_string(), (100, 1_000_000)); // 10µs avg
         data.insert("read".to_string(), (50, 500_000)); // 10µs avg
 
-        let (names, features) = extract_features(&data).unwrap();
+        let (names, features) = extract_features(&data).expect("test");
 
         assert_eq!(names.len(), 2);
         let (rows, cols) = features.shape();
@@ -487,7 +487,7 @@ mod tests {
         data.insert("read".to_string(), (50, 500_000));
         data.insert("empty".to_string(), (0, 0)); // Should be skipped
 
-        let (names, _) = extract_features(&data).unwrap();
+        let (names, _) = extract_features(&data).expect("test");
         assert_eq!(names.len(), 2);
         assert!(!names.contains(&"empty".to_string()));
     }
@@ -501,8 +501,8 @@ mod tests {
         data.insert("read".to_string(), (50, 500_000));
         data.insert("openat".to_string(), (20, 200_000));
 
-        let (names, features) = extract_features(&data).unwrap();
-        let normalized = normalize_features(names.clone(), features).unwrap();
+        let (names, features) = extract_features(&data).expect("test");
+        let normalized = normalize_features(names.clone(), features).expect("test");
 
         assert_eq!(normalized.syscall_names.len(), 3);
         assert_eq!(normalized.feature_names.len(), 3);
@@ -517,8 +517,8 @@ mod tests {
         data.insert("read".to_string(), (50, 500_000));
         data.insert("openat".to_string(), (20, 200_000));
 
-        let (names, features) = extract_features(&data).unwrap();
-        let normalized = normalize_features(names, features).unwrap();
+        let (names, features) = extract_features(&data).expect("test");
+        let normalized = normalize_features(names, features).expect("test");
 
         // After normalization, mean of each column should be ~0
         let (n_rows, n_cols) = normalized.data.shape();
@@ -545,12 +545,12 @@ mod tests {
             10.0, 10.0, // Cluster 1
             10.1, 10.1, // Cluster 1
         ];
-        let matrix = Matrix::from_vec(4, 2, data).unwrap();
+        let matrix = Matrix::from_vec(4, 2, data).expect("test");
         let labels = vec![0, 0, 1, 1];
 
         let score = calculate_silhouette(&matrix, &labels);
         assert!(score.is_some());
-        let s = score.unwrap();
+        let s = score.expect("test");
         assert!(
             s > 0.8,
             "Well-separated clusters should have high silhouette, got {}",
@@ -561,7 +561,7 @@ mod tests {
     #[test]
     fn test_silhouette_score_single_cluster() {
         let data = vec![1.0, 1.0, 1.1, 1.1, 1.2, 1.2];
-        let matrix = Matrix::from_vec(3, 2, data).unwrap();
+        let matrix = Matrix::from_vec(3, 2, data).expect("test");
         let labels = vec![0, 0, 0]; // Single cluster
 
         let score = calculate_silhouette(&matrix, &labels);
@@ -576,7 +576,7 @@ mod tests {
             10.0, 10.0, // Cluster 1
             5.0, 5.0, // Noise
         ];
-        let matrix = Matrix::from_vec(4, 2, data).unwrap();
+        let matrix = Matrix::from_vec(4, 2, data).expect("test");
         let labels = vec![0, 0, 1, -1]; // -1 is noise
 
         let score = calculate_silhouette(&matrix, &labels);
@@ -595,10 +595,10 @@ mod tests {
         data.insert("mmap".to_string(), (100, 100_000_000)); // 1000µs avg
         data.insert("munmap".to_string(), (100, 100_000_000)); // 1000µs avg
 
-        let (names, features) = extract_features(&data).unwrap();
-        let normalized = normalize_features(names, features).unwrap();
+        let (names, features) = extract_features(&data).expect("test");
+        let normalized = normalize_features(names, features).expect("test");
 
-        let result = run_dbscan(&normalized, 1.0, 2).unwrap();
+        let result = run_dbscan(&normalized, 1.0, 2).expect("test");
 
         // Should find clusters (exact number depends on parameters)
         assert!(result.n_clusters >= 1);
@@ -615,11 +615,11 @@ mod tests {
         // Outlier
         data.insert("slow_syscall".to_string(), (10, 1_000_000_000)); // Very slow
 
-        let (names, features) = extract_features(&data).unwrap();
-        let normalized = normalize_features(names, features).unwrap();
+        let (names, features) = extract_features(&data).expect("test");
+        let normalized = normalize_features(names, features).expect("test");
 
         // Use strict parameters to identify outliers
-        let result = run_dbscan(&normalized, 0.5, 2).unwrap();
+        let result = run_dbscan(&normalized, 0.5, 2).expect("test");
 
         // Should have some noise points
         assert!(result.n_noise > 0 || result.n_clusters > 1);
@@ -637,10 +637,10 @@ mod tests {
         // Outlier
         data.insert("slow_syscall".to_string(), (10, 1_000_000_000));
 
-        let (names, features) = extract_features(&data).unwrap();
-        let normalized = normalize_features(names, features).unwrap();
+        let (names, features) = extract_features(&data).expect("test");
+        let normalized = normalize_features(names, features).expect("test");
 
-        let result = run_lof(&normalized, &data, 2, 0.25).unwrap();
+        let result = run_lof(&normalized, &data, 2, 0.25).expect("test");
 
         // Should detect outliers
         assert!(!result.outliers.is_empty() || result.labels.contains(&-1));
@@ -654,10 +654,10 @@ mod tests {
         data.insert("read".to_string(), (1000, 10_000_000));
         data.insert("close".to_string(), (1000, 10_000_000));
 
-        let (names, features) = extract_features(&data).unwrap();
-        let normalized = normalize_features(names, features).unwrap();
+        let (names, features) = extract_features(&data).expect("test");
+        let normalized = normalize_features(names, features).expect("test");
 
-        let result = run_lof(&normalized, &data, 2, 0.1).unwrap();
+        let result = run_lof(&normalized, &data, 2, 0.1).expect("test");
 
         // LOF scores should be positive
         for score in &result.scores {
@@ -675,10 +675,10 @@ mod tests {
         data.insert("close".to_string(), (1000, 10_000_000));
         data.insert("openat".to_string(), (500, 5_000_000));
 
-        let (names, features) = extract_features(&data).unwrap();
-        let normalized = normalize_features(names, features).unwrap();
+        let (names, features) = extract_features(&data).expect("test");
+        let normalized = normalize_features(names, features).expect("test");
 
-        let result = run_pca(&normalized, 2).unwrap();
+        let result = run_pca(&normalized, 2).expect("test");
 
         let (n_samples, n_components) = result.reduced_data.shape();
         assert_eq!(n_samples, 4);
@@ -693,10 +693,10 @@ mod tests {
         data.insert("close".to_string(), (1000, 10_000_000));
         data.insert("openat".to_string(), (500, 5_000_000));
 
-        let (names, features) = extract_features(&data).unwrap();
-        let normalized = normalize_features(names, features).unwrap();
+        let (names, features) = extract_features(&data).expect("test");
+        let normalized = normalize_features(names, features).expect("test");
 
-        let result = run_pca(&normalized, 3).unwrap();
+        let result = run_pca(&normalized, 3).expect("test");
 
         // Total variance should be <= 1.0
         assert!(
@@ -717,8 +717,8 @@ mod tests {
         data.insert("mmap".to_string(), (100, 100_000_000));
         data.insert("munmap".to_string(), (100, 100_000_000));
 
-        let (names, features) = extract_features(&data).unwrap();
-        let normalized = normalize_features(names, features).unwrap();
+        let (names, features) = extract_features(&data).expect("test");
+        let normalized = normalize_features(names, features).expect("test");
 
         let optimal_k = find_optimal_k(&normalized, 2..5);
 
@@ -775,7 +775,7 @@ mod tests {
     #[test]
     fn test_pca_result_format() {
         let result = PCAResult {
-            reduced_data: Matrix::from_vec(3, 2, vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]).unwrap(),
+            reduced_data: Matrix::from_vec(3, 2, vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]).expect("test"),
             explained_variance_ratio: vec![0.8, 0.15],
             total_variance_explained: 0.95,
             syscall_names: vec!["write".to_string(), "read".to_string(), "close".to_string()],
@@ -799,8 +799,8 @@ mod tests {
                 data.insert(format!("syscall_{}", i), ((i + 1) as u64 * 100, (i + 1) as u64 * 1_000_000));
             }
 
-            let (names, features) = extract_features(&data).unwrap();
-            let normalized = normalize_features(names.clone(), features).unwrap();
+            let (names, features) = extract_features(&data).expect("test");
+            let normalized = normalize_features(names.clone(), features).expect("test");
 
             prop_assert_eq!(normalized.syscall_names.len(), names.len());
         });
@@ -810,7 +810,7 @@ mod tests {
     fn test_silhouette_bounds() {
         // Silhouette score should always be in [-1, 1]
         let data = vec![1.0, 2.0, 3.0, 4.0, 10.0, 20.0, 30.0, 40.0];
-        let matrix = Matrix::from_vec(4, 2, data).unwrap();
+        let matrix = Matrix::from_vec(4, 2, data).expect("test");
         let labels = vec![0, 0, 1, 1];
 
         if let Some(score) = calculate_silhouette(&matrix, &labels) {

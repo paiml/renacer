@@ -43,7 +43,7 @@ fn test_realistic_tight_loop_compression() {
         ));
     }
 
-    let compressed = compress_spans(&spans, 100).unwrap();
+    let compressed = compress_spans(&spans, 100).expect("test");
 
     // Should compress into a single segment
     assert_eq!(compressed.segments.len(), 1);
@@ -77,7 +77,7 @@ fn test_262k_compression_target() {
         ));
     }
 
-    let compressed = compress_spans(&spans, 1000).unwrap();
+    let compressed = compress_spans(&spans, 1000).expect("test");
 
     // Should compress into a single segment
     assert_eq!(compressed.segments.len(), 1);
@@ -115,7 +115,7 @@ fn test_mixed_workload_selective_compression() {
         spans.push(create_span((i % 256) as u8, i as u64, "write", 80));
     }
 
-    let compressed = compress_spans(&spans, 100).unwrap();
+    let compressed = compress_spans(&spans, 100).expect("test");
 
     // Should have 2 compressed segments + 50 uncompressed
     assert_eq!(compressed.segments.len(), 2);
@@ -142,7 +142,7 @@ fn test_decompression_accuracy() {
         spans.push(create_span((i % 256) as u8, i, "recv", 120));
     }
 
-    let compressed = compress_spans(&spans, 500).unwrap();
+    let compressed = compress_spans(&spans, 500).expect("test");
     assert_eq!(compressed.segments.len(), 1);
 
     let segment = &compressed.segments[0];
@@ -168,7 +168,7 @@ fn test_varying_durations_statistics() {
         spans.push(create_span((i % 256) as u8, i, "read", duration));
     }
 
-    let compressed = compress_spans(&spans, 100).unwrap();
+    let compressed = compress_spans(&spans, 100).expect("test");
     assert_eq!(compressed.segments.len(), 1);
 
     let segment = &compressed.segments[0];
@@ -194,7 +194,7 @@ fn test_poll_loop_compression() {
         ));
     }
 
-    let compressed = compress_spans(&spans, 10_000).unwrap();
+    let compressed = compress_spans(&spans, 10_000).expect("test");
 
     assert_eq!(compressed.segments.len(), 1);
     let segment = &compressed.segments[0];
@@ -223,7 +223,7 @@ fn test_network_recv_loop_compression() {
         ));
     }
 
-    let compressed = compress_spans(&spans, 5_000).unwrap();
+    let compressed = compress_spans(&spans, 5_000).expect("test");
 
     assert_eq!(compressed.segments.len(), 1);
     let segment = &compressed.segments[0];
@@ -250,12 +250,12 @@ fn test_min_run_length_threshold() {
     }
 
     // Test with min_run_length = 1000 (should NOT compress)
-    let compressed_high = compress_spans(&spans, 1000).unwrap();
+    let compressed_high = compress_spans(&spans, 1000).expect("test");
     assert_eq!(compressed_high.segments.len(), 0);
     assert_eq!(compressed_high.uncompressed.len(), 500);
 
     // Test with min_run_length = 100 (SHOULD compress)
-    let compressed_low = compress_spans(&spans, 100).unwrap();
+    let compressed_low = compress_spans(&spans, 100).expect("test");
     assert_eq!(compressed_low.segments.len(), 1);
     assert_eq!(compressed_low.uncompressed.len(), 0);
 }
@@ -290,7 +290,7 @@ fn test_multiple_tight_loops() {
         spans.push(create_span((i % 256) as u8, i as u64, "poll", 200));
     }
 
-    let compressed = compress_spans(&spans, 100).unwrap();
+    let compressed = compress_spans(&spans, 100).expect("test");
 
     // Should have 3 compressed segments
     assert_eq!(compressed.segments.len(), 3);
@@ -317,7 +317,7 @@ fn test_compression_preserves_metadata() {
         spans.push(create_span((i % 256) as u8, i, "read", 100));
     }
 
-    let compressed = compress_spans(&spans, 500).unwrap();
+    let compressed = compress_spans(&spans, 500).expect("test");
     assert_eq!(compressed.segments.len(), 1);
 
     let segment = &compressed.segments[0];
@@ -332,7 +332,7 @@ fn test_compression_preserves_metadata() {
 fn test_empty_trace_compression() {
     // Scenario: Empty trace
     let spans: Vec<SpanRecord> = vec![];
-    let compressed = compress_spans(&spans, 100).unwrap();
+    let compressed = compress_spans(&spans, 100).expect("test");
 
     assert_eq!(compressed.segments.len(), 0);
     assert_eq!(compressed.uncompressed.len(), 0);
@@ -351,7 +351,7 @@ fn test_no_compression_needed() {
         spans.push(create_span(i as u8, i as u64, syscall, 100));
     }
 
-    let compressed = compress_spans(&spans, 5).unwrap();
+    let compressed = compress_spans(&spans, 5).expect("test");
 
     // No compression should occur
     assert_eq!(compressed.segments.len(), 0);
@@ -367,7 +367,7 @@ fn test_storage_savings_calculation() {
         spans.push(create_span((i % 256) as u8, i, "read", 100));
     }
 
-    let compressed = compress_spans(&spans, 100).unwrap();
+    let compressed = compress_spans(&spans, 100).expect("test");
 
     // 10,000 spans compressed to 1 segment
     let savings = compressed.storage_savings_percent();
@@ -394,7 +394,7 @@ fn test_total_span_count() {
         spans.push(create_span((i % 256) as u8, i as u64, syscall, 150));
     }
 
-    let compressed = compress_spans(&spans, 100).unwrap();
+    let compressed = compress_spans(&spans, 100).expect("test");
 
     // Verify total count
     let total = compressed.total_span_count();

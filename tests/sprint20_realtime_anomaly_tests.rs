@@ -12,7 +12,7 @@ use tempfile::TempDir;
 #[test]
 fn test_realtime_anomaly_detects_slow_syscall() {
     // Test that --anomaly-realtime detects and reports slow syscalls in real-time
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("realtime_anomaly_test");
 
     // Create program with baseline fast syscalls + one anomalous slow syscall
@@ -34,7 +34,7 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("realtime_anomaly_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
@@ -58,7 +58,7 @@ int main() {
 #[test]
 fn test_anomaly_window_size_configuration() {
     // Test that --anomaly-window-size configures sliding window
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("window_size_test");
 
     let source = r#"
@@ -71,14 +71,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("window_size_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--anomaly-realtime")
@@ -94,7 +94,7 @@ int main() {
 #[test]
 fn test_anomaly_requires_minimum_samples() {
     // Test that anomaly detection waits for minimum samples (10) before detecting
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("min_samples_test");
 
     let source = r#"
@@ -108,14 +108,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("min_samples_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--anomaly-realtime")
@@ -135,7 +135,7 @@ int main() {
 #[test]
 fn test_anomaly_severity_classification() {
     // Test that anomalies are classified by severity (3-4σ: Low, 4-5σ: Medium, >5σ: High)
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("severity_test");
 
     let source = r#"
@@ -156,14 +156,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("severity_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--anomaly-realtime")
@@ -183,7 +183,7 @@ int main() {
 #[test]
 fn test_anomaly_realtime_with_statistics() {
     // Test --anomaly-realtime works with -c flag
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("stats_anomaly_test");
 
     let source = r#"
@@ -196,14 +196,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("stats_anomaly_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-c")
@@ -221,7 +221,7 @@ int main() {
 #[test]
 fn test_anomaly_realtime_with_filtering() {
     // Test --anomaly-realtime works with syscall filtering
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("filter_anomaly_test");
 
     let source = r#"
@@ -243,14 +243,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("filter_anomaly_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--anomaly-realtime")
@@ -267,7 +267,7 @@ int main() {
 #[test]
 fn test_anomaly_realtime_with_multiprocess() {
     // Test --anomaly-realtime works with -f (multi-process tracing)
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("fork_anomaly_test");
 
     let source = r#"
@@ -292,14 +292,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("fork_anomaly_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-f")
@@ -319,7 +319,7 @@ int main() {
 #[test]
 fn test_anomaly_json_export() {
     // Test that anomalies are included in JSON output
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("json_anomaly_test");
 
     let source = r#"
@@ -332,14 +332,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("json_anomaly_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--anomaly-realtime")
@@ -361,7 +361,7 @@ int main() {
 #[test]
 fn test_anomaly_with_zero_variance() {
     // Test anomaly detection when all samples are identical (stddev = 0)
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("zero_variance_test");
 
     // This test is conceptual - in practice, syscall durations always vary
@@ -376,14 +376,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("zero_variance_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--anomaly-realtime")
@@ -398,7 +398,7 @@ int main() {
 #[test]
 fn test_anomaly_sliding_window_wraparound() {
     // Test that sliding window correctly removes old samples
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("sliding_window_test");
 
     let source = r#"
@@ -412,14 +412,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("sliding_window_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--anomaly-realtime")
@@ -436,7 +436,7 @@ int main() {
 #[test]
 fn test_backward_compatibility_without_anomaly_realtime() {
     // Test that WITHOUT --anomaly-realtime, no anomaly detection occurs
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("compat_anomaly_test");
 
     let source = r#"
@@ -449,14 +449,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("compat_anomaly_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-T").arg("--").arg(&test_program);
@@ -470,7 +470,7 @@ int main() {
 #[test]
 fn test_anomaly_threshold_from_sprint19_still_works() {
     // Test that --anomaly-threshold from Sprint 19 still works (post-hoc analysis)
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("threshold_compat_test");
 
     let source = r#"
@@ -483,14 +483,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("threshold_compat_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-c")

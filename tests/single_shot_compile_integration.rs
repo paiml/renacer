@@ -33,7 +33,7 @@ fn make_span(name: &'static str, duration_nanos: u64) -> SyscallSpan {
 /// Test complete workflow: Normal transpiler execution (baseline)
 #[test]
 fn test_complete_workflow_baseline() {
-    let registry = ClusterRegistry::default_transpiler_clusters().unwrap();
+    let registry = ClusterRegistry::default_transpiler_clusters().expect("test");
 
     // Realistic transpiler baseline: File I/O dominates, single-threaded
     let spans = vec![
@@ -70,7 +70,7 @@ fn test_complete_workflow_baseline() {
     baseline_data.insert("read".to_string(), vec![50.0, 50.0, 50.0, 50.0, 50.0]);
 
     let config = RegressionConfig::default();
-    let assessment = assess_regression(&baseline_data, &baseline_data, &config).unwrap();
+    let assessment = assess_regression(&baseline_data, &baseline_data, &config).expect("test");
 
     // Baseline vs baseline should show no regression
     assert_eq!(
@@ -93,7 +93,7 @@ fn test_regression_file_io_slowdown() {
     current.insert("write".to_string(), vec![5.0, 6.0, 5.0, 6.0, 5.0]);
 
     let config = RegressionConfig::default();
-    let assessment = assess_regression(&baseline, &current, &config).unwrap();
+    let assessment = assess_regression(&baseline, &current, &config).expect("test");
 
     // Should detect read() regression
     match assessment.verdict {
@@ -110,7 +110,7 @@ fn test_regression_file_io_slowdown() {
 /// Test anomaly detection: Unexpected networking
 #[test]
 fn test_anomaly_unexpected_networking() {
-    let registry = ClusterRegistry::default_transpiler_clusters().unwrap();
+    let registry = ClusterRegistry::default_transpiler_clusters().expect("test");
 
     // Baseline: Normal transpiler (no networking)
     let baseline_spans = [
@@ -139,7 +139,7 @@ fn test_anomaly_unexpected_networking() {
         "Should detect networking hotspot"
     );
     assert!(
-        !networking_hotspot.unwrap().is_expected,
+        !networking_hotspot.expect("test").is_expected,
         "Networking should be unexpected"
     );
 
@@ -195,7 +195,7 @@ fn test_memory_allocation_pattern_change() {
 /// Test complete transpiler validation workflow
 #[test]
 fn test_complete_transpiler_validation() {
-    let registry = ClusterRegistry::default_transpiler_clusters().unwrap();
+    let registry = ClusterRegistry::default_transpiler_clusters().expect("test");
 
     // Step 1: Collect baseline golden trace
     let baseline_spans = vec![
@@ -223,8 +223,11 @@ fn test_complete_transpiler_validation() {
     let baseline_file_io = baseline_attr
         .iter()
         .find(|a| a.cluster == "FileIO")
-        .unwrap();
-    let current_file_io = current_attr.iter().find(|a| a.cluster == "FileIO").unwrap();
+        .expect("test");
+    let current_file_io = current_attr
+        .iter()
+        .find(|a| a.cluster == "FileIO")
+        .expect("test");
 
     assert!(
         current_file_io.total_time < baseline_file_io.total_time,
@@ -254,7 +257,7 @@ fn test_complete_transpiler_validation() {
     current_data.insert("read".to_string(), vec![30.0, 30.0, 30.0, 30.0, 30.0]); // Improvement!
 
     let config = RegressionConfig::default();
-    let assessment = assess_regression(&baseline_data, &current_data, &config).unwrap();
+    let assessment = assess_regression(&baseline_data, &current_data, &config).expect("test");
 
     // This is an IMPROVEMENT (negative regression), not a problem
     // Tool should report this as optimization success
@@ -272,7 +275,7 @@ fn test_complete_transpiler_validation() {
 /// Test hotspot identification accuracy
 #[test]
 fn test_hotspot_identification_accuracy() {
-    let registry = ClusterRegistry::default_transpiler_clusters().unwrap();
+    let registry = ClusterRegistry::default_transpiler_clusters().expect("test");
 
     // Spans with clear hotspot (80% in read)
     let spans = vec![
@@ -292,7 +295,10 @@ fn test_hotspot_identification_accuracy() {
         "Should identify hotspots (>5% threshold)"
     );
 
-    let file_io_hotspot = hotspots.iter().find(|h| h.cluster == "FileIO").unwrap();
+    let file_io_hotspot = hotspots
+        .iter()
+        .find(|h| h.cluster == "FileIO")
+        .expect("test");
     assert!(
         (file_io_hotspot.percentage - 90.0).abs() < 1.0,
         "FileIO should be ~90%, got {}",
@@ -320,7 +326,7 @@ fn test_noise_filtering_integration() {
     current.insert("socket".to_string(), vec![6.0, 51.0, 4.0, 46.0, 3.0]);
 
     let config = RegressionConfig::default();
-    let assessment = assess_regression(&baseline, &current, &config).unwrap();
+    let assessment = assess_regression(&baseline, &current, &config).expect("test");
 
     // Should filter socket as noisy
     assert!(assessment.filtered_syscalls.contains(&"socket".to_string()));

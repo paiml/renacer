@@ -26,9 +26,9 @@ fn test_trace_shows_multiple_syscalls() {
 #[test]
 fn test_trace_file_operations() {
     // Create temp file for testing
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let test_file = temp_dir.path().join("test.txt");
-    fs::write(&test_file, "test content").unwrap();
+    fs::write(&test_file, "test content").expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--")
@@ -59,9 +59,9 @@ fn test_syscall_names_not_numbers() {
 #[test]
 fn test_trace_shows_syscall_arguments() {
     // Test that syscall arguments are decoded (e.g., filename, fd)
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let test_file = temp_dir.path().join("myfile.txt");
-    fs::write(&test_file, "content").unwrap();
+    fs::write(&test_file, "content").expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--")

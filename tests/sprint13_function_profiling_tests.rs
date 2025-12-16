@@ -8,7 +8,7 @@ fn test_function_time_flag_accepted() {
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--function-time").arg("--").arg("echo").arg("test");
 
-    let output = cmd.output().unwrap();
+    let output = cmd.output().expect("test");
     assert!(output.status.success());
 
     // Should execute echo successfully and show profiling message
@@ -25,7 +25,7 @@ fn test_function_time_output_format() {
         .arg("echo")
         .arg("hello");
 
-    let output = cmd.output().unwrap();
+    let output = cmd.output().expect("test");
     assert!(output.status.success());
 
     let stderr = String::from_utf8_lossy(&output.stderr);
@@ -50,7 +50,7 @@ fn test_function_time_with_filter() {
         .arg("echo")
         .arg("hello");
 
-    let output = cmd.output().unwrap();
+    let output = cmd.output().expect("test");
     assert!(output.status.success());
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -70,7 +70,7 @@ fn test_function_time_without_flag_no_profiling() {
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--").arg("echo").arg("test");
 
-    let output = cmd.output().unwrap();
+    let output = cmd.output().expect("test");
     assert!(output.status.success());
 
     let stderr = String::from_utf8_lossy(&output.stderr);

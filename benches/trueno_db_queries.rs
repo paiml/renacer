@@ -33,10 +33,10 @@ fn create_test_span(trace_id: [u8; 16], span_idx: u64, start_time_nanos: u64) ->
 }
 
 fn setup_storage(num_spans: usize, config: StorageConfig) -> (TempDir, TruenoDbStorage, [u8; 16]) {
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let path = tmp_dir.path().join("bench.parquet");
 
-    let storage = TruenoDbStorage::with_config(&path, config).unwrap();
+    let storage = TruenoDbStorage::with_config(&path, config).expect("test");
 
     // Insert spans in batches
     let trace_id = [0x4b; 16];
@@ -47,7 +47,7 @@ fn setup_storage(num_spans: usize, config: StorageConfig) -> (TempDir, TruenoDbS
         let spans: Vec<_> = (batch_start..batch_end)
             .map(|i| create_test_span(trace_id, i as u64, (i as u64) * 1_000_000))
             .collect();
-        storage.insert_batch(&spans).unwrap();
+        storage.insert_batch(&spans).expect("test");
     }
 
     (tmp_dir, storage, trace_id)
@@ -66,7 +66,9 @@ fn bench_query_by_trace_id(c: &mut Criterion) {
                     setup_storage(num_spans, StorageConfig::default());
 
                 b.iter(|| {
-                    let results = storage.query_by_trace_id(black_box(&trace_id)).unwrap();
+                    let results = storage
+                        .query_by_trace_id(black_box(&trace_id))
+                        .expect("test");
                     black_box(results);
                 });
             },
@@ -98,7 +100,7 @@ fn bench_query_by_trace_id_and_time(c: &mut Criterion) {
                             black_box(start_time),
                             black_box(end_time),
                         )
-                        .unwrap();
+                        .expect("test");
                     black_box(results);
                 });
             },
@@ -131,7 +133,7 @@ fn bench_query_optimized(c: &mut Criterion) {
                             black_box(Some(start_time_max)),
                             black_box(process_id),
                         )
-                        .unwrap();
+                        .expect("test");
                     black_box(results);
                 });
             },
@@ -157,7 +159,7 @@ fn bench_predicate_pushdown_comparison(c: &mut Criterion) {
         b.iter(|| {
             let results = storage
                 .query_optimized(black_box(Some(&trace_id)), None, None, None)
-                .unwrap();
+                .expect("test");
             black_box(results);
         });
     });
@@ -173,7 +175,7 @@ fn bench_predicate_pushdown_comparison(c: &mut Criterion) {
         b.iter(|| {
             let results = storage
                 .query_optimized(black_box(Some(&trace_id)), None, None, None)
-                .unwrap();
+                .expect("test");
             black_box(results);
         });
     });
@@ -195,7 +197,9 @@ fn bench_bloom_filter_comparison(c: &mut Criterion) {
         let (_tmp_dir, storage, trace_id) = setup_storage(num_spans, config);
 
         b.iter(|| {
-            let results = storage.query_by_trace_id(black_box(&trace_id)).unwrap();
+            let results = storage
+                .query_by_trace_id(black_box(&trace_id))
+                .expect("test");
             black_box(results);
         });
     });
@@ -209,7 +213,9 @@ fn bench_bloom_filter_comparison(c: &mut Criterion) {
         let (_tmp_dir, storage, trace_id) = setup_storage(num_spans, config);
 
         b.iter(|| {
-            let results = storage.query_by_trace_id(black_box(&trace_id)).unwrap();
+            let results = storage
+                .query_by_trace_id(black_box(&trace_id))
+                .expect("test");
             black_box(results);
         });
     });
@@ -231,7 +237,9 @@ fn bench_row_group_size_comparison(c: &mut Criterion) {
         let (_tmp_dir, storage, trace_id) = setup_storage(num_spans, config);
 
         b.iter(|| {
-            let results = storage.query_by_trace_id(black_box(&trace_id)).unwrap();
+            let results = storage
+                .query_by_trace_id(black_box(&trace_id))
+                .expect("test");
             black_box(results);
         });
     });
@@ -245,7 +253,9 @@ fn bench_row_group_size_comparison(c: &mut Criterion) {
         let (_tmp_dir, storage, trace_id) = setup_storage(num_spans, config);
 
         b.iter(|| {
-            let results = storage.query_by_trace_id(black_box(&trace_id)).unwrap();
+            let results = storage
+                .query_by_trace_id(black_box(&trace_id))
+                .expect("test");
             black_box(results);
         });
     });
@@ -259,7 +269,9 @@ fn bench_row_group_size_comparison(c: &mut Criterion) {
         let (_tmp_dir, storage, trace_id) = setup_storage(num_spans, config);
 
         b.iter(|| {
-            let results = storage.query_by_trace_id(black_box(&trace_id)).unwrap();
+            let results = storage
+                .query_by_trace_id(black_box(&trace_id))
+                .expect("test");
             black_box(results);
         });
     });
@@ -290,7 +302,7 @@ fn bench_composite_index_comparison(c: &mut Criterion) {
                     black_box(start_time),
                     black_box(end_time),
                 )
-                .unwrap();
+                .expect("test");
             black_box(results);
         });
     });
@@ -313,7 +325,7 @@ fn bench_composite_index_comparison(c: &mut Criterion) {
                     black_box(start_time),
                     black_box(end_time),
                 )
-                .unwrap();
+                .expect("test");
             black_box(results);
         });
     });

@@ -117,7 +117,7 @@ mod cuda_tracing_tests {
                 let device_info = wrapper.get_device_info();
                 assert!(device_info.is_ok());
 
-                let info = device_info.unwrap();
+                let info = device_info.expect("test");
                 assert_eq!(info.device_id, 0);
             }
             Err(e) => {

@@ -199,9 +199,10 @@ mod tests {
 
     #[test]
     fn test_run_validate_invalid_baseline() {
-        let temp_dir = TempDir::new().unwrap();
+        let temp_dir = TempDir::new().expect("failed to create temp dir");
         // Create invalid manifest
-        std::fs::write(temp_dir.path().join("manifest.json"), "invalid json").unwrap();
+        std::fs::write(temp_dir.path().join("manifest.json"), "invalid json")
+            .expect("failed to write manifest");
 
         let config = ValidateConfig::default().with_baseline(temp_dir.path().to_path_buf());
         let result = run_validate(&["echo".to_string()], &config);
