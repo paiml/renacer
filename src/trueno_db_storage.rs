@@ -734,4 +734,143 @@ mod tests {
         let storage = TruenoDbStorage::new(&path).unwrap();
         storage.flush().unwrap();
     }
+
+    #[test]
+    fn test_query_by_process_id() {
+        let tmp_dir = TempDir::new().unwrap();
+        let path = tmp_dir.path().join("test.parquet");
+
+        let storage = TruenoDbStorage::new(&path).unwrap();
+        let result = storage.query_by_process_id(1234).unwrap();
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_query_errors() {
+        let tmp_dir = TempDir::new().unwrap();
+        let path = tmp_dir.path().join("test.parquet");
+
+        let storage = TruenoDbStorage::new(&path).unwrap();
+        let result = storage.query_errors().unwrap();
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_query_optimized_all_none() {
+        let tmp_dir = TempDir::new().unwrap();
+        let path = tmp_dir.path().join("test.parquet");
+
+        let storage = TruenoDbStorage::new(&path).unwrap();
+        let result = storage.query_optimized(None, None, None, None).unwrap();
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_query_optimized_with_trace_id() {
+        let tmp_dir = TempDir::new().unwrap();
+        let path = tmp_dir.path().join("test.parquet");
+
+        let storage = TruenoDbStorage::new(&path).unwrap();
+        let trace_id = [0x4b; 16];
+        let result = storage
+            .query_optimized(Some(&trace_id), None, None, None)
+            .unwrap();
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_query_optimized_with_time_range() {
+        let tmp_dir = TempDir::new().unwrap();
+        let path = tmp_dir.path().join("test.parquet");
+
+        let storage = TruenoDbStorage::new(&path).unwrap();
+        let result = storage
+            .query_optimized(None, Some(1000), Some(2000), None)
+            .unwrap();
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_query_optimized_with_process_id() {
+        let tmp_dir = TempDir::new().unwrap();
+        let path = tmp_dir.path().join("test.parquet");
+
+        let storage = TruenoDbStorage::new(&path).unwrap();
+        let result = storage
+            .query_optimized(None, None, None, Some(1234))
+            .unwrap();
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_query_optimized_all_filters() {
+        let tmp_dir = TempDir::new().unwrap();
+        let path = tmp_dir.path().join("test.parquet");
+
+        let storage = TruenoDbStorage::new(&path).unwrap();
+        let trace_id = [0x4b; 16];
+        let result = storage
+            .query_optimized(Some(&trace_id), Some(1000), Some(2000), Some(5678))
+            .unwrap();
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_storage_config_default() {
+        let config = StorageConfig::default();
+        assert_eq!(config.row_group_size, 10_000);
+        assert!(config.bloom_filter_trace_id);
+        assert!(config.composite_index_trace_time);
+        assert!(config.predicate_pushdown);
+    }
+
+    #[test]
+    fn test_storage_config() {
+        let tmp_dir = TempDir::new().unwrap();
+        let path = tmp_dir.path().join("test.parquet");
+
+        let storage = TruenoDbStorage::new(&path).unwrap();
+        let config = storage.config();
+        assert_eq!(config.row_group_size, 10_000);
+    }
+
+    #[test]
+    fn test_stats_zero_spans() {
+        let stats = StorageStats {
+            total_spans: 0,
+            file_size_bytes: 0,
+            row_groups: 0,
+            compression_ratio: 1.0,
+        };
+
+        assert!((stats.avg_compressed_span_size_bytes() - 0.0).abs() < f64::EPSILON);
+        assert!((stats.avg_span_size_bytes() - 0.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_stats_debug() {
+        let stats = StorageStats {
+            total_spans: 100,
+            file_size_bytes: 1000,
+            row_groups: 1,
+            compression_ratio: 2.0,
+        };
+        let debug = format!("{:?}", stats);
+        assert!(debug.contains("StorageStats"));
+        assert!(debug.contains("total_spans"));
+    }
+
+    #[test]
+    fn test_storage_config_clone() {
+        let config = StorageConfig::default();
+        let cloned = config.clone();
+        assert_eq!(cloned.row_group_size, config.row_group_size);
+    }
+
+    #[test]
+    fn test_storage_config_debug() {
+        let config = StorageConfig::default();
+        let debug = format!("{:?}", config);
+        assert!(debug.contains("StorageConfig"));
+    }
 }

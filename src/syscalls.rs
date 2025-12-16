@@ -122,8 +122,16 @@ pub fn syscall_name(num: i64) -> &'static str {
         262 => "newfstatat",
         273 => "set_robust_list",
         318 => "getrandom",
+        329 => "pkey_mprotect",
+        330 => "pkey_alloc",
+        331 => "pkey_free",
         332 => "statx",
+        334 => "rseq",
+        // Linux 5.x+ syscalls
         435 => "clone3",
+        // Memory protection keys syscall (used by glibc)
+        // Note: syscall 302 is pkey_mprotect on some kernel versions
+        302 => "pkey_mprotect",
         _ => "unknown",
     }
 }

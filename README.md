@@ -11,10 +11,7 @@
 </p>
 
 <p align="center">
-  <a href="https://crates.io/crates/renacer"><img src="https://img.shields.io/crates/v/renacer.svg" alt="Crates.io"></a>
-  <a href="https://docs.rs/renacer"><img src="https://docs.rs/renacer/badge.svg" alt="Documentation"></a>
   <a href="https://github.com/paiml/renacer/actions/workflows/ci.yml"><img src="https://github.com/paiml/renacer/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License"></a>
 </p>
 
 </div>
@@ -47,7 +44,7 @@ Renacer (Spanish: "to be reborn") is a next-generation binary inspection and tra
 
 | Metric | Value |
 |--------|-------|
-| **Current Version** | 0.6.6 |
+| **Current Version** | 0.8.0 |
 | **Status** | Production-Ready |
 | **Test Coverage** | 849+ tests (all passing) |
 | **TDG Score** | 95.1/100 (A+ grade) |

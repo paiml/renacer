@@ -157,7 +157,25 @@ dependencies = [
  "rmp-serde",
  "serde",
  "serde_json",
- "trueno",
+ "trueno 0.7.3",
+]
+
+[[package]]
+name = "aprender"
+version = "0.18.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1227105f5e74290918ed42277b999b7f9cc7ed3345cdfb98652532e77976fd77"
+dependencies = [
+ "bincode",
+ "getrandom 0.2.16",
+ "memmap2",
+ "rand 0.8.5",
+ "rand_chacha 0.3.1",
+ "rayon",
+ "rmp-serde",
+ "serde",
+ "serde_json",
+ "trueno 0.8.6",
 ]
 
 [[package]]
@@ -2907,11 +2925,11 @@ checksum = "7a2d987857b319362043e95f5353c0535c1f58eec5336fdfcf626430af7def58"
 
 [[package]]
 name = "renacer"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "addr2line",
  "anyhow",
- "aprender",
+ "aprender 0.18.2",
  "arbitrary",
  "assert_cmd",
  "backtrace",
@@ -2946,7 +2964,7 @@ dependencies = [
  "toml",
  "tracing",
  "tracing-subscriber",
- "trueno",
+ "trueno 0.8.6",
  "trueno-db",
  "trueno-graph",
  "wgpu 23.0.1",
@@ -3915,6 +3933,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "trueno"
+version = "0.8.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "936a4112513b0809229041c3b16c6a110588e3008b1b4965232aee910d773db8"
+dependencies = [
+ "thiserror 2.0.17",
+]
+
+[[package]]
 name = "trueno-db"
 version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3935,7 +3962,7 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-subscriber",
- "trueno",
+ "trueno 0.7.3",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
@@ -3948,12 +3975,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f94d040235744a91e756fc23f16dcc0ead90cbd6effe0f3d2144cc95e0c27d32"
 dependencies = [
  "anyhow",
- "aprender",
+ "aprender 0.14.0",
  "arrow",
  "parquet",
  "thiserror 1.0.69",
  "tokio",
- "trueno",
+ "trueno 0.7.3",
  "trueno-db",
 ]
 

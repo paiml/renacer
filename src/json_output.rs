@@ -320,6 +320,15 @@ mod tests {
     }
 
     #[test]
+    fn test_json_output_default() {
+        let output = JsonOutput::default();
+        assert_eq!(output.format, "renacer-json-v1");
+        assert!(output.ml_analysis.is_none());
+        assert!(output.isolation_forest_analysis.is_none());
+        assert!(output.autoencoder_analysis.is_none());
+    }
+
+    #[test]
     fn test_add_syscall() {
         let mut output = JsonOutput::new();
         let syscall = JsonSyscall {
@@ -333,6 +342,208 @@ mod tests {
         output.add_syscall(syscall);
         assert_eq!(output.summary.total_syscalls, 1);
         assert_eq!(output.summary.total_time_us, Some(100));
+    }
+
+    #[test]
+    fn test_add_multiple_syscalls_accumulates_time() {
+        let mut output = JsonOutput::new();
+
+        output.add_syscall(JsonSyscall {
+            name: "read".to_string(),
+            args: vec![],
+            result: 10,
+            duration_us: Some(50),
+            source: None,
+        });
+
+        output.add_syscall(JsonSyscall {
+            name: "write".to_string(),
+            args: vec![],
+            result: 10,
+            duration_us: Some(75),
+            source: None,
+        });
+
+        assert_eq!(output.summary.total_syscalls, 2);
+        assert_eq!(output.summary.total_time_us, Some(125)); // 50 + 75
+    }
+
+    #[test]
+    fn test_add_syscall_without_duration() {
+        let mut output = JsonOutput::new();
+
+        output.add_syscall(JsonSyscall {
+            name: "read".to_string(),
+            args: vec![],
+            result: 10,
+            duration_us: None,
+            source: None,
+        });
+
+        assert_eq!(output.summary.total_syscalls, 1);
+        assert!(output.summary.total_time_us.is_none());
+    }
+
+    #[test]
+    fn test_set_exit_code() {
+        let mut output = JsonOutput::new();
+        output.set_exit_code(42);
+        assert_eq!(output.summary.exit_code, 42);
+    }
+
+    #[test]
+    fn test_set_ml_analysis() {
+        use crate::ml_anomaly::{MlAnomaly, MlAnomalyReport};
+        use std::collections::HashMap;
+
+        let mut output = JsonOutput::new();
+        let report = MlAnomalyReport {
+            num_clusters: 3,
+            silhouette_score: 0.75,
+            cluster_assignments: HashMap::new(),
+            cluster_centers: vec![100.0, 200.0, 500.0],
+            total_samples: 100,
+            anomalies: vec![MlAnomaly {
+                syscall: "poll".to_string(),
+                avg_time_us: 150.0,
+                cluster: 2,
+                distance: 50.0,
+            }],
+        };
+
+        output.set_ml_analysis(report);
+
+        let analysis = output.ml_analysis.expect("ML analysis should be set");
+        assert_eq!(analysis.clusters, 3);
+        assert!((analysis.silhouette_score - 0.75).abs() < f64::EPSILON);
+        assert_eq!(analysis.anomalies.len(), 1);
+        assert_eq!(analysis.anomalies[0].syscall, "poll");
+    }
+
+    #[test]
+    fn test_set_isolation_forest_analysis_without_explain() {
+        use crate::isolation_forest::{Outlier, OutlierReport};
+
+        let mut output = JsonOutput::new();
+        let report = OutlierReport {
+            num_trees: 100,
+            contamination: 0.05,
+            total_samples: 500,
+            outliers: vec![Outlier {
+                syscall: "epoll_wait".to_string(),
+                anomaly_score: 0.85,
+                avg_duration_us: 5000.0,
+                call_count: 10,
+                feature_importance: vec![],
+            }],
+        };
+
+        output.set_isolation_forest_analysis(report, false);
+
+        let analysis = output
+            .isolation_forest_analysis
+            .expect("Isolation forest analysis should be set");
+        assert_eq!(analysis.num_trees, 100);
+        assert!((analysis.contamination - 0.05).abs() < f32::EPSILON);
+        assert_eq!(analysis.total_samples, 500);
+        assert_eq!(analysis.outliers.len(), 1);
+        assert!(analysis.outliers[0].feature_importance.is_none());
+    }
+
+    #[test]
+    fn test_set_isolation_forest_analysis_with_explain() {
+        use crate::isolation_forest::{Outlier, OutlierReport};
+
+        let mut output = JsonOutput::new();
+        let report = OutlierReport {
+            num_trees: 50,
+            contamination: 0.1,
+            total_samples: 200,
+            outliers: vec![Outlier {
+                syscall: "futex".to_string(),
+                anomaly_score: 0.92,
+                avg_duration_us: 10000.0,
+                call_count: 5,
+                feature_importance: vec![
+                    ("duration".to_string(), 45.0),
+                    ("frequency".to_string(), 35.0),
+                ],
+            }],
+        };
+
+        output.set_isolation_forest_analysis(report, true);
+
+        let analysis = output.isolation_forest_analysis.expect("Analysis set");
+        let outlier = &analysis.outliers[0];
+        let importance = outlier.feature_importance.as_ref().expect("Features set");
+        assert_eq!(importance.len(), 2);
+        assert_eq!(importance[0].feature, "duration");
+        assert!((importance[0].importance - 45.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_set_autoencoder_analysis_without_explain() {
+        use crate::autoencoder::{Anomaly, AutoencoderReport};
+
+        let mut output = JsonOutput::new();
+        let report = AutoencoderReport {
+            hidden_size: 32,
+            epochs: 100,
+            threshold: 0.05,
+            total_samples: 1000,
+            anomalies: vec![Anomaly {
+                syscall: "sendmsg".to_string(),
+                reconstruction_error: 0.12,
+                avg_duration_us: 250.0,
+                call_count: 50,
+                feature_contributions: vec![],
+            }],
+        };
+
+        output.set_autoencoder_analysis(report, 2.0, false);
+
+        let analysis = output
+            .autoencoder_analysis
+            .expect("Autoencoder analysis should be set");
+        assert_eq!(analysis.hidden_size, 32);
+        assert_eq!(analysis.epochs, 100);
+        assert!((analysis.threshold - 2.0).abs() < f32::EPSILON);
+        assert_eq!(analysis.anomalies.len(), 1);
+        assert!(analysis.anomalies[0].feature_contributions.is_none());
+    }
+
+    #[test]
+    fn test_set_autoencoder_analysis_with_explain() {
+        use crate::autoencoder::{Anomaly, AutoencoderReport};
+
+        let mut output = JsonOutput::new();
+        let report = AutoencoderReport {
+            hidden_size: 64,
+            epochs: 200,
+            threshold: 0.08,
+            total_samples: 2000,
+            anomalies: vec![Anomaly {
+                syscall: "recvfrom".to_string(),
+                reconstruction_error: 0.25,
+                avg_duration_us: 800.0,
+                call_count: 100,
+                feature_contributions: vec![
+                    ("latency".to_string(), 60.0),
+                    ("variance".to_string(), 40.0),
+                ],
+            }],
+        };
+
+        output.set_autoencoder_analysis(report, 3.0, true);
+
+        let analysis = output.autoencoder_analysis.expect("Analysis set");
+        let anomaly = &analysis.anomalies[0];
+        let contributions = anomaly
+            .feature_contributions
+            .as_ref()
+            .expect("Features set");
+        assert_eq!(contributions.len(), 2);
+        assert_eq!(contributions[0].feature, "latency");
     }
 
     #[test]
@@ -376,5 +587,40 @@ mod tests {
         // Optional None fields should be omitted
         assert!(!json.contains("duration_us"));
         assert!(!json.contains("source"));
+    }
+
+    #[test]
+    fn test_source_location_without_function() {
+        let loc = JsonSourceLocation {
+            file: "test.rs".to_string(),
+            line: 10,
+            function: None,
+        };
+        let json = serde_json::to_string(&loc).unwrap();
+        // Compact format doesn't have spaces after colons
+        assert!(json.contains("\"file\":\"test.rs\"") || json.contains("\"file\": \"test.rs\""));
+        assert!(!json.contains("function"));
+    }
+
+    #[test]
+    fn test_json_deserialization() {
+        let json = r#"{
+            "version": "0.7.0",
+            "format": "renacer-json-v1",
+            "syscalls": [{
+                "name": "write",
+                "args": ["1", "hello"],
+                "result": 5
+            }],
+            "summary": {
+                "total_syscalls": 1,
+                "exit_code": 0
+            }
+        }"#;
+
+        let output: JsonOutput = serde_json::from_str(json).unwrap();
+        assert_eq!(output.syscalls.len(), 1);
+        assert_eq!(output.syscalls[0].name, "write");
+        assert_eq!(output.summary.total_syscalls, 1);
     }
 }

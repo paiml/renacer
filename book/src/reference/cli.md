@@ -8,7 +8,49 @@ Complete command-line interface documentation for Renacer.
 
 ```
 renacer [OPTIONS] [-- <COMMAND>...]
+renacer validate [VALIDATE_OPTIONS] [-- <COMMAND>...]
 ```
+
+## Subcommands
+
+### `validate`
+
+Golden trace validation for regression detection. See [Golden Trace Validation](../advanced/golden-trace-validation.md).
+
+**Generate baseline:**
+```bash
+renacer validate --generate ./golden -- echo "hello"
+```
+
+**Validate against baseline:**
+```bash
+renacer validate --baseline ./golden -- echo "hello"
+```
+
+**Options:**
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--generate <DIR>` | Generate baseline to directory | - |
+| `--baseline <DIR>` | Compare against baseline directory | - |
+| `--tolerance <PERCENT>` | Timing tolerance percentage | 10.0 |
+| `--strict` | Strict mode (zero tolerance) | false |
+| `--ignore-timing` | Ignore timing, compare behavior only | false |
+| `--output <FORMAT>` | Output format (text, json, junit) | text |
+| `--fail-fast` | Stop on first mismatch | false |
+
+**Exit Codes:**
+
+| Code | Meaning |
+|------|---------|
+| 0 | Validation passed |
+| 1 | Regression detected |
+| 2 | Baseline not found |
+| 3 | Invalid baseline format |
+| 4 | Command execution error |
+| 5 | Configuration error |
+
+---
 
 ## Description
 

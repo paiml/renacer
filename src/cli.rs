@@ -1,11 +1,20 @@
-//! CLI argument parsing for Renacer
+//! CLI argument parsing and execution for Renacer
 
-use clap::{Parser, ValueEnum};
+use crate::{
+    chaos::ChaosConfig,
+    filter, tracer, transpiler_map,
+    validate::{self, ValidateConfig},
+};
+use anyhow::Result;
+use clap::{Args, Parser, Subcommand, ValueEnum};
+use std::path::PathBuf;
+use tracing_subscriber::EnvFilter;
 
 /// Output format for syscall traces
-#[derive(Debug, Clone, Copy, ValueEnum)]
+#[derive(Debug, Clone, Copy, ValueEnum, Default)]
 pub enum OutputFormat {
     /// Human-readable text format (default)
+    #[default]
     Text,
     /// JSON format for machine parsing
     Json,
@@ -277,6 +286,346 @@ pub struct Cli {
     /// Command to trace (everything after --)
     #[arg(last = true)]
     pub command: Option<Vec<String>>,
+
+    /// Subcommand (validate, etc.)
+    #[command(subcommand)]
+    pub subcommand: Option<Commands>,
+}
+
+/// Available subcommands
+#[derive(Subcommand, Debug)]
+pub enum Commands {
+    /// Validate traces against golden baseline (Sprint 50)
+    ///
+    /// Generates or compares syscall traces against a golden baseline.
+    /// Exit codes: 0=passed, 1=failed, 2=baseline not found, 3=invalid baseline,
+    /// 4=command error, 5=config error
+    Validate(ValidateArgs),
+}
+
+/// Arguments for the validate subcommand
+#[derive(Args, Debug)]
+pub struct ValidateArgs {
+    /// Path to existing baseline directory for comparison
+    ///
+    /// Compares the traced command against the baseline and reports regressions.
+    #[arg(long = "baseline", value_name = "DIR")]
+    pub baseline: Option<PathBuf>,
+
+    /// Generate new baseline in the specified directory
+    ///
+    /// Traces the command and saves the result as a golden baseline.
+    #[arg(long = "generate", value_name = "DIR")]
+    pub generate: Option<PathBuf>,
+
+    /// Timing tolerance percentage (default: 10.0)
+    ///
+    /// Allow timing variations within this percentage before reporting regression.
+    #[arg(long = "tolerance", value_name = "PERCENT", default_value = "10.0")]
+    pub tolerance: f32,
+
+    /// Enable strict mode (zero tolerance)
+    ///
+    /// Any deviation from baseline is reported as failure.
+    #[arg(long = "strict")]
+    pub strict: bool,
+
+    /// Ignore timing, compare behavior only
+    ///
+    /// Only compare syscall sequences, not their timing.
+    #[arg(long = "ignore-timing")]
+    pub ignore_timing: bool,
+
+    /// Stop on first regression (fail fast)
+    #[arg(long = "fail-fast")]
+    pub fail_fast: bool,
+
+    /// Output format for validation results
+    #[arg(long = "output", value_enum, default_value = "text")]
+    pub output: ValidationOutputFormat,
+
+    /// Command to trace and validate (everything after --)
+    #[arg(last = true, required = true)]
+    pub command: Vec<String>,
+}
+
+/// Output format for validation results (Sprint 50)
+#[derive(Debug, Clone, Copy, ValueEnum, Default, PartialEq, Eq)]
+pub enum ValidationOutputFormat {
+    /// Human-readable text format (default)
+    #[default]
+    Text,
+    /// JSON format for machine parsing
+    Json,
+    /// `JUnit` XML format for CI systems
+    Junit,
+}
+
+/// Initialize tracing subscriber for debug output
+fn init_tracing(debug: bool) {
+    if debug {
+        tracing_subscriber::fmt()
+            .with_env_filter(
+                EnvFilter::from_default_env().add_directive(tracing::Level::TRACE.into()),
+            )
+            .with_writer(std::io::stderr)
+            .init();
+    }
+}
+
+/// Print function mappings from transpiler source map (Sprint 25)
+fn print_function_mappings(map: &transpiler_map::TranspilerMap, show_context: bool) {
+    if show_context {
+        println!("=== Transpiler Source Map ===");
+        println!("Source Language: {} -> Rust", map.source_language());
+        println!("Source File: {}", map.source_file().display());
+        println!();
+    }
+
+    if !map.function_map.is_empty() {
+        if show_context {
+            println!("Function Mappings (Rust -> {}):", map.source_language());
+            println!("─────────────────────────────────────────");
+        }
+        for (rust_fn, python_fn) in &map.function_map {
+            println!("{rust_fn} -> {python_fn}");
+        }
+        if show_context {
+            println!("─────────────────────────────────────────");
+            println!();
+        }
+    }
+}
+
+/// Print stack trace mappings from transpiler source map (Sprint 26)
+fn print_stack_trace_mappings(map: &transpiler_map::TranspilerMap, show_context: bool) {
+    if show_context {
+        println!("=== Stack Trace Mapping ===");
+        println!(
+            "Source: {} -> {}",
+            map.source_file().display(),
+            map.generated_file().display()
+        );
+        println!();
+    }
+
+    if !map.mappings.is_empty() {
+        if show_context {
+            println!("Line Mappings (Rust -> {}):", map.source_language());
+            println!("─────────────────────────────────────────");
+        }
+        for mapping in &map.mappings {
+            println!(
+                "{} ({}:{}) -> {}:{}",
+                mapping.rust_function,
+                map.generated_file().display(),
+                mapping.rust_line,
+                map.source_file().display(),
+                mapping.python_line
+            );
+        }
+        if show_context {
+            println!("─────────────────────────────────────────");
+            println!();
+        }
+    }
+}
+
+/// Print error correlation mappings from transpiler source map (Sprint 27)
+fn print_error_correlation_mappings(map: &transpiler_map::TranspilerMap, show_context: bool) {
+    if show_context {
+        println!("=== Error Correlation Mapping ===");
+        println!(
+            "Errors in {} will map to {}",
+            map.generated_file().display(),
+            map.source_file().display()
+        );
+        println!();
+    }
+
+    if !map.mappings.is_empty() {
+        if show_context {
+            println!("Available Line Mappings ({} entries):", map.mappings.len());
+            println!("─────────────────────────────────────────");
+        }
+        for mapping in &map.mappings {
+            println!(
+                "  {}:{} -> {}:{} ({})",
+                map.generated_file().display(),
+                mapping.rust_line,
+                map.source_file().display(),
+                mapping.python_line,
+                mapping.python_function
+            );
+        }
+        if show_context {
+            println!("─────────────────────────────────────────");
+            println!();
+        }
+    }
+}
+
+/// Execute the tracer based on PID or command arguments
+fn run_tracer(
+    pid: Option<i32>,
+    command: Option<Vec<String>>,
+    config: tracer::TracerConfig,
+) -> Result<i32> {
+    match (pid, command) {
+        (Some(pid), None) => tracer::attach_to_pid(pid, config),
+        (None, Some(command)) => tracer::trace_command(&command, config),
+        (Some(_), Some(_)) => {
+            anyhow::bail!("Cannot specify both -p PID and command. Choose one.");
+        }
+        (None, None) => {
+            anyhow::bail!(
+                "Must specify either -p PID or command. Usage: renacer -p PID or renacer -- COMMAND [ARGS...]"
+            );
+        }
+    }
+}
+
+/// Run the validate subcommand (Sprint 50)
+fn run_validate_subcommand(args: &ValidateArgs) -> i32 {
+    // Convert CLI ValidationOutputFormat to validate module's format
+    let output_format = match args.output {
+        ValidationOutputFormat::Text => validate::ValidationOutputFormat::Text,
+        ValidationOutputFormat::Json => validate::ValidationOutputFormat::Json,
+        ValidationOutputFormat::Junit => validate::ValidationOutputFormat::JUnit,
+    };
+
+    // Build ValidateConfig from CLI args
+    let config = ValidateConfig::default()
+        .set_tolerance(args.tolerance)
+        .with_strict_mode(args.strict)
+        .with_ignore_timing(args.ignore_timing)
+        .with_fail_fast(args.fail_fast)
+        .with_output_format(output_format);
+
+    // Apply baseline or generate directory
+    let config = if let Some(baseline) = &args.baseline {
+        config.with_baseline(baseline.clone())
+    } else {
+        config
+    };
+
+    let config = if let Some(generate) = &args.generate {
+        config.with_generate(generate.clone())
+    } else {
+        config
+    };
+
+    // Run validation
+    let exit_code = validate::run_validate(&args.command, &config);
+    exit_code.code()
+}
+
+/// Main entry point - parses CLI and runs the appropriate command.
+/// Returns the exit code.
+pub fn run() -> Result<i32> {
+    let args = Cli::parse();
+
+    // Sprint 50: Handle subcommands first
+    if let Some(subcommand) = &args.subcommand {
+        match subcommand {
+            Commands::Validate(validate_args) => {
+                return Ok(run_validate_subcommand(validate_args));
+            }
+        }
+    }
+
+    // Validate ml_clusters range (must be >= 2)
+    if args.ml_clusters < 2 {
+        anyhow::bail!(
+            "Invalid value for --ml-clusters: {} (must be >= 2)",
+            args.ml_clusters
+        );
+    }
+
+    // Initialize tracing if --debug flag is set
+    init_tracing(args.debug);
+
+    // Load transpiler source map if provided (Sprint 24)
+    let source_map = if let Some(map_path) = &args.transpiler_map {
+        Some(transpiler_map::TranspilerMap::from_file(map_path)?)
+    } else {
+        None
+    };
+
+    // Sprint 25: Print function name correlations when using --function-time with source map
+    if let (true, Some(ref map)) = (args.function_time, &source_map) {
+        print_function_mappings(map, args.show_transpiler_context);
+    }
+
+    // Sprint 26: Print stack trace mapping info when using --rewrite-stacktrace with source map
+    if let (true, Some(ref map)) = (args.rewrite_stacktrace, &source_map) {
+        print_stack_trace_mappings(map, args.show_transpiler_context);
+    }
+
+    // Sprint 27: Print error correlation info when using --rewrite-errors with source map
+    if let (true, Some(ref map)) = (args.rewrite_errors, &source_map) {
+        print_error_correlation_mappings(map, args.show_transpiler_context);
+    }
+
+    // Parse filter expression if provided
+    let filter = if let Some(expr) = args.filter {
+        filter::SyscallFilter::from_expr(&expr)?
+    } else {
+        filter::SyscallFilter::all()
+    };
+
+    // Sprint 47: Parse chaos configuration (Issue #17)
+    let chaos_config = ChaosConfig::from_cli(
+        args.chaos_preset.as_deref(),
+        args.chaos_memory_limit.as_deref(),
+        args.chaos_cpu_limit,
+        args.chaos_timeout.as_deref(),
+        args.chaos_signals,
+    )
+    .map_err(|e| anyhow::anyhow!("Chaos config error: {e}"))?;
+
+    // Display chaos mode status if enabled
+    if let Some(ref chaos) = chaos_config {
+        eprintln!("⚠️  Chaos mode enabled: {}", chaos.status_line());
+    }
+
+    // Create tracer configuration
+    let config = tracer::TracerConfig {
+        enable_source: args.source,
+        filter,
+        statistics_mode: args.statistics,
+        timing_mode: args.timing,
+        output_format: args.format,
+        follow_forks: args.follow_forks,
+        profile_self: args.profile_self,
+        function_time: args.function_time,
+        stats_extended: args.stats_extended,
+        anomaly_threshold: args.anomaly_threshold,
+        anomaly_realtime: args.anomaly_realtime,
+        anomaly_window_size: args.anomaly_window_size,
+        hpu_analysis: args.hpu_analysis,
+        hpu_cpu_only: args.hpu_cpu_only,
+        ml_anomaly: args.ml_anomaly,
+        ml_clusters: args.ml_clusters,
+        ml_compare: args.ml_compare,
+        ml_outliers: args.ml_outliers,
+        ml_outlier_threshold: args.ml_outlier_threshold,
+        ml_outlier_trees: args.ml_outlier_trees,
+        explain: args.explain,
+        dl_anomaly: args.dl_anomaly,
+        dl_threshold: args.dl_threshold,
+        dl_hidden_size: args.dl_hidden_size,
+        dl_epochs: args.dl_epochs,
+        trace_transpiler_decisions: args.trace_transpiler_decisions,
+        transpiler_map: source_map,
+        otlp_endpoint: args.otlp_endpoint,
+        otlp_service_name: args.otlp_service_name,
+        trace_parent: args.trace_parent,
+        chaos_config,
+    };
+
+    // Either attach to PID or trace command (mutually exclusive)
+    run_tracer(args.pid, args.command, config)
 }
 
 #[cfg(test)]
@@ -1243,5 +1592,224 @@ mod tests {
         assert_eq!(cli.load_model.as_deref(), Some("pretrained.apr"));
         assert_eq!(cli.save_model.as_deref(), Some("updated.apr"));
         assert_eq!(cli.baseline_model.as_deref(), Some("golden.apr"));
+    }
+
+    // Tests for helper functions
+
+    #[test]
+    fn test_run_tracer_both_pid_and_command_errors() {
+        use crate::filter::SyscallFilter;
+        let config = tracer::TracerConfig {
+            filter: SyscallFilter::all(),
+            ..Default::default()
+        };
+        let result = run_tracer(Some(1234), Some(vec!["echo".to_string()]), config);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("Cannot specify both"));
+    }
+
+    #[test]
+    fn test_run_tracer_neither_pid_nor_command_errors() {
+        use crate::filter::SyscallFilter;
+        let config = tracer::TracerConfig {
+            filter: SyscallFilter::all(),
+            ..Default::default()
+        };
+        let result = run_tracer(None, None, config);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("Must specify either"));
+    }
+
+    #[test]
+    fn test_run_validate_subcommand_no_baseline_or_generate() {
+        let args = ValidateArgs {
+            baseline: None,
+            generate: None,
+            tolerance: 10.0,
+            strict: false,
+            ignore_timing: false,
+            fail_fast: false,
+            output: ValidationOutputFormat::Text,
+            command: vec!["echo".to_string()],
+        };
+        let code = run_validate_subcommand(&args);
+        assert_eq!(code, 5); // ConfigError
+    }
+
+    #[test]
+    fn test_run_validate_subcommand_baseline_not_found() {
+        let args = ValidateArgs {
+            baseline: Some(PathBuf::from("/nonexistent/baseline")),
+            generate: None,
+            tolerance: 10.0,
+            strict: false,
+            ignore_timing: false,
+            fail_fast: false,
+            output: ValidationOutputFormat::Text,
+            command: vec!["echo".to_string()],
+        };
+        let code = run_validate_subcommand(&args);
+        assert_eq!(code, 2); // BaselineNotFound
+    }
+
+    #[test]
+    fn test_run_validate_subcommand_json_output() {
+        let args = ValidateArgs {
+            baseline: None,
+            generate: None,
+            tolerance: 10.0,
+            strict: false,
+            ignore_timing: false,
+            fail_fast: false,
+            output: ValidationOutputFormat::Json,
+            command: vec!["echo".to_string()],
+        };
+        // Should still return ConfigError since no baseline/generate
+        let code = run_validate_subcommand(&args);
+        assert_eq!(code, 5);
+    }
+
+    #[test]
+    fn test_run_validate_subcommand_junit_output() {
+        let args = ValidateArgs {
+            baseline: None,
+            generate: None,
+            tolerance: 10.0,
+            strict: false,
+            ignore_timing: false,
+            fail_fast: false,
+            output: ValidationOutputFormat::Junit,
+            command: vec!["echo".to_string()],
+        };
+        let code = run_validate_subcommand(&args);
+        assert_eq!(code, 5);
+    }
+
+    #[test]
+    fn test_validate_args_defaults() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "validate",
+            "--baseline",
+            "/tmp/baseline",
+            "--",
+            "echo",
+            "test",
+        ]);
+        if let Some(Commands::Validate(args)) = cli.subcommand {
+            assert!((args.tolerance - 10.0).abs() < f32::EPSILON);
+            assert!(!args.strict);
+            assert!(!args.ignore_timing);
+            assert!(!args.fail_fast);
+            assert_eq!(args.output, ValidationOutputFormat::Text);
+        } else {
+            panic!("Expected Validate subcommand");
+        }
+    }
+
+    #[test]
+    fn test_validate_args_strict() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "validate",
+            "--baseline",
+            "/tmp/baseline",
+            "--strict",
+            "--",
+            "echo",
+        ]);
+        if let Some(Commands::Validate(args)) = cli.subcommand {
+            assert!(args.strict);
+        } else {
+            panic!("Expected Validate subcommand");
+        }
+    }
+
+    #[test]
+    fn test_validate_args_ignore_timing() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "validate",
+            "--baseline",
+            "/tmp/baseline",
+            "--ignore-timing",
+            "--",
+            "echo",
+        ]);
+        if let Some(Commands::Validate(args)) = cli.subcommand {
+            assert!(args.ignore_timing);
+        } else {
+            panic!("Expected Validate subcommand");
+        }
+    }
+
+    #[test]
+    fn test_validate_args_fail_fast() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "validate",
+            "--baseline",
+            "/tmp/baseline",
+            "--fail-fast",
+            "--",
+            "echo",
+        ]);
+        if let Some(Commands::Validate(args)) = cli.subcommand {
+            assert!(args.fail_fast);
+        } else {
+            panic!("Expected Validate subcommand");
+        }
+    }
+
+    #[test]
+    fn test_validate_args_custom_tolerance() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "validate",
+            "--baseline",
+            "/tmp/baseline",
+            "--tolerance",
+            "5.0",
+            "--",
+            "echo",
+        ]);
+        if let Some(Commands::Validate(args)) = cli.subcommand {
+            assert!((args.tolerance - 5.0).abs() < f32::EPSILON);
+        } else {
+            panic!("Expected Validate subcommand");
+        }
+    }
+
+    #[test]
+    fn test_validate_args_generate() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "validate",
+            "--generate",
+            "/tmp/new-baseline",
+            "--",
+            "echo",
+        ]);
+        if let Some(Commands::Validate(args)) = cli.subcommand {
+            assert!(args.baseline.is_none());
+            assert_eq!(args.generate, Some(PathBuf::from("/tmp/new-baseline")));
+        } else {
+            panic!("Expected Validate subcommand");
+        }
+    }
+
+    #[test]
+    fn test_output_format_default() {
+        let format = OutputFormat::default();
+        assert!(matches!(format, OutputFormat::Text));
+    }
+
+    #[test]
+    fn test_validation_output_format_eq() {
+        assert_eq!(ValidationOutputFormat::Text, ValidationOutputFormat::Text);
+        assert_ne!(ValidationOutputFormat::Text, ValidationOutputFormat::Json);
+        assert_ne!(ValidationOutputFormat::Json, ValidationOutputFormat::Junit);
     }
 }

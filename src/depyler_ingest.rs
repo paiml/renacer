@@ -249,12 +249,24 @@ impl DepylerWatcher {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tempfile::TempDir;
 
     #[test]
     fn test_config_default() {
         let config = DepylerIngestConfig::default();
         assert_eq!(config.poll_interval_ms, 100);
-        assert_eq!(config.remote_sample_rate, 0.1);
+        assert!((config.remote_sample_rate - 0.1).abs() < f64::EPSILON);
+        assert_eq!(config.max_remote_rate, 1000);
+        assert_eq!(config.watch_paths.len(), 1);
+    }
+
+    #[test]
+    fn test_config_default_functions() {
+        assert_eq!(default_poll_interval(), 100);
+        assert!((default_sample_rate() - 0.1).abs() < f64::EPSILON);
+        assert_eq!(default_max_rate(), 1000);
+        let paths = default_watch_paths();
+        assert_eq!(paths.len(), 1);
     }
 
     #[test]
@@ -262,5 +274,156 @@ mod tests {
         let config = DepylerIngestConfig::default();
         let watcher = DepylerWatcher::new(config);
         assert!(watcher.is_ok());
+    }
+
+    #[test]
+    fn test_watcher_poll_nonexistent_file() {
+        let config = DepylerIngestConfig {
+            watch_paths: vec![PathBuf::from("/nonexistent/path.msgpack")],
+            ..Default::default()
+        };
+        let mut watcher = DepylerWatcher::new(config).unwrap();
+        let result = watcher.poll();
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_empty());
+    }
+
+    #[test]
+    fn test_watcher_stats() {
+        let config = DepylerIngestConfig::default();
+        let watcher = DepylerWatcher::new(config).unwrap();
+        let stats = watcher.stats();
+        assert_eq!(stats.total_decisions_seen, 0);
+        assert_eq!(stats.total_decisions_sampled, 0);
+        assert_eq!(stats.total_decisions_exported, 0);
+        assert_eq!(stats.circuit_breaker_trips, 0);
+    }
+
+    #[test]
+    fn test_watcher_poll_interval() {
+        let config = DepylerIngestConfig {
+            poll_interval_ms: 500,
+            ..Default::default()
+        };
+        let watcher = DepylerWatcher::new(config).unwrap();
+        assert_eq!(watcher.poll_interval(), Duration::from_millis(500));
+    }
+
+    #[test]
+    fn test_ingest_stats_default() {
+        let stats = IngestStats::default();
+        assert_eq!(stats.total_decisions_seen, 0);
+        assert_eq!(stats.total_decisions_sampled, 0);
+        assert_eq!(stats.total_decisions_exported, 0);
+        assert_eq!(stats.circuit_breaker_trips, 0);
+    }
+
+    #[test]
+    fn test_ingest_stats_clone() {
+        let stats = IngestStats {
+            total_decisions_seen: 100,
+            total_decisions_sampled: 50,
+            total_decisions_exported: 25,
+            circuit_breaker_trips: 2,
+        };
+        let cloned = stats.clone();
+        assert_eq!(cloned.total_decisions_seen, 100);
+        assert_eq!(cloned.total_decisions_sampled, 50);
+    }
+
+    #[test]
+    fn test_config_clone() {
+        let config = DepylerIngestConfig::default();
+        let cloned = config.clone();
+        assert_eq!(cloned.poll_interval_ms, config.poll_interval_ms);
+    }
+
+    #[test]
+    fn test_config_debug() {
+        let config = DepylerIngestConfig::default();
+        let debug = format!("{:?}", config);
+        assert!(debug.contains("DepylerIngestConfig"));
+    }
+
+    #[test]
+    fn test_ingest_stats_debug() {
+        let stats = IngestStats::default();
+        let debug = format!("{:?}", stats);
+        assert!(debug.contains("IngestStats"));
+    }
+
+    #[test]
+    fn test_file_state_default() {
+        let state = FileState::default();
+        assert!(state.last_mtime.is_none());
+        assert_eq!(state.last_count, 0);
+    }
+
+    #[test]
+    fn test_watcher_poll_sampled_nonexistent() {
+        let config = DepylerIngestConfig {
+            watch_paths: vec![PathBuf::from("/nonexistent/path.msgpack")],
+            remote_sample_rate: 1.0, // 100% sampling
+            ..Default::default()
+        };
+        let mut watcher = DepylerWatcher::new(config).unwrap();
+        let result = watcher.poll_sampled();
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_empty());
+    }
+
+    #[test]
+    fn test_watcher_poll_with_circuit_breaker_nonexistent() {
+        let config = DepylerIngestConfig {
+            watch_paths: vec![PathBuf::from("/nonexistent/path.msgpack")],
+            max_remote_rate: 100,
+            ..Default::default()
+        };
+        let mut watcher = DepylerWatcher::new(config).unwrap();
+        let result = watcher.poll_with_circuit_breaker();
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_empty());
+    }
+
+    #[test]
+    fn test_watcher_empty_watch_paths() {
+        let config = DepylerIngestConfig {
+            watch_paths: vec![],
+            ..Default::default()
+        };
+        let mut watcher = DepylerWatcher::new(config).unwrap();
+        let result = watcher.poll();
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_empty());
+    }
+
+    #[test]
+    fn test_watcher_multiple_polls() {
+        let config = DepylerIngestConfig {
+            watch_paths: vec![PathBuf::from("/nonexistent/path.msgpack")],
+            ..Default::default()
+        };
+        let mut watcher = DepylerWatcher::new(config).unwrap();
+
+        // Multiple polls should be fine
+        for _ in 0..5 {
+            let result = watcher.poll();
+            assert!(result.is_ok());
+        }
+    }
+
+    #[test]
+    fn test_watcher_circuit_breaker_stats() {
+        let config = DepylerIngestConfig {
+            watch_paths: vec![PathBuf::from("/nonexistent/path.msgpack")],
+            max_remote_rate: 0, // Zero quota
+            ..Default::default()
+        };
+        let mut watcher = DepylerWatcher::new(config).unwrap();
+
+        // Poll with zero quota - should record stats
+        let _ = watcher.poll_with_circuit_breaker();
+        let stats = watcher.stats();
+        assert_eq!(stats.total_decisions_exported, 0);
     }
 }
