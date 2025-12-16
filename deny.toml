@@ -3,7 +3,8 @@
 
 [advisories]
 version = 2
-ignore = []
+# Ignore unmaintained paste crate - transitive dependency from parquet
+ignore = ["RUSTSEC-2024-0436"]
 
 [licenses]
 version = 2
@@ -14,8 +15,8 @@ allow = [
     "BSD-2-Clause",
     "BSD-3-Clause",
     "ISC",
-    "Unicode-DFS-2016",
     "Zlib",
+    "Unicode-3.0",
 ]
 
 [licenses.private]
