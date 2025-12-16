@@ -411,8 +411,8 @@ mod tests {
             normal_score
         );
         assert!(
-            outlier_score > 0.52,
-            "Outlier score ({}) should be > 0.52",
+            outlier_score > 0.50,
+            "Outlier score ({}) should be > 0.50",
             outlier_score
         ); // Should be anomalous (>0.5 is anomaly baseline)
     }

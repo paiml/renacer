@@ -650,4 +650,226 @@ mod tests {
         assert_eq!(totals.total_time_us, 1000);
         assert_eq!(totals.total_errors, 0);
     }
+
+    #[test]
+    fn test_calculate_extended_statistics() {
+        let mut tracker = StatsTracker::new();
+
+        // Add multiple durations for statistical analysis
+        tracker.record("read", 10, 100);
+        tracker.record("read", 10, 200);
+        tracker.record("read", 10, 300);
+        tracker.record("read", 10, 400);
+        tracker.record("read", 10, 500);
+
+        #[cfg(feature = "otlp")]
+        let extended = tracker.calculate_extended_statistics("read", None);
+        #[cfg(not(feature = "otlp"))]
+        let extended = tracker.calculate_extended_statistics("read", None);
+
+        let stats = extended.expect("Should calculate extended stats");
+        assert!((stats.mean - 300.0).abs() < 1.0);
+        assert!(stats.min >= 100.0);
+        assert!(stats.max <= 500.0);
+        assert!((stats.median - 300.0).abs() < 1.0);
+    }
+
+    #[test]
+    fn test_calculate_extended_statistics_empty() {
+        let tracker = StatsTracker::new();
+
+        #[cfg(feature = "otlp")]
+        let extended = tracker.calculate_extended_statistics("nonexistent", None);
+        #[cfg(not(feature = "otlp"))]
+        let extended = tracker.calculate_extended_statistics("nonexistent", None);
+
+        assert!(extended.is_none());
+    }
+
+    #[test]
+    fn test_calculate_extended_statistics_single_value() {
+        let mut tracker = StatsTracker::new();
+        tracker.record("single", 0, 100);
+
+        #[cfg(feature = "otlp")]
+        let extended = tracker.calculate_extended_statistics("single", None);
+        #[cfg(not(feature = "otlp"))]
+        let extended = tracker.calculate_extended_statistics("single", None);
+
+        let stats = extended.expect("Should calculate stats for single value");
+        assert!((stats.mean - 100.0).abs() < f32::EPSILON);
+        assert!((stats.min - 100.0).abs() < f32::EPSILON);
+        assert!((stats.max - 100.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn test_is_anomaly_detection() {
+        let mut tracker = StatsTracker::new();
+
+        // Add baseline with consistent times
+        for _ in 0..50 {
+            tracker.record("consistent", 0, 100);
+        }
+        // Add one outlier
+        tracker.record("consistent", 0, 1000);
+
+        // The 1000μs call should be an anomaly (> 3σ)
+        let is_anomaly = tracker.is_anomaly("consistent", 1000, 3.0);
+        // Note: depends on whether there's enough variance
+        // With 50 x 100μs and 1 x 1000μs, the stddev is significant
+        assert!(is_anomaly);
+
+        // A normal call should not be an anomaly
+        let is_normal = tracker.is_anomaly("consistent", 100, 3.0);
+        assert!(!is_normal);
+    }
+
+    #[test]
+    fn test_is_anomaly_no_stddev() {
+        let mut tracker = StatsTracker::new();
+
+        // All same values - stddev is 0
+        tracker.record("same", 0, 100);
+        tracker.record("same", 0, 100);
+        tracker.record("same", 0, 100);
+
+        // Should not detect anomaly when stddev is 0
+        let result = tracker.is_anomaly("same", 100, 2.0);
+        assert!(!result);
+    }
+
+    #[test]
+    fn test_is_anomaly_nonexistent_syscall() {
+        let tracker = StatsTracker::new();
+
+        // Should return false for nonexistent syscall
+        let result = tracker.is_anomaly("nonexistent", 100, 2.0);
+        assert!(!result);
+    }
+
+    #[test]
+    fn test_stats_map_access() {
+        let mut tracker = StatsTracker::new();
+        tracker.record("test", 0, 100);
+
+        let stats_map = tracker.stats_map();
+        assert_eq!(stats_map.len(), 1);
+        assert!(stats_map.contains_key("test"));
+    }
+
+    #[test]
+    fn test_calculate_percentile_empty() {
+        let percentile = StatsTracker::calculate_percentile(&[], 50.0);
+        assert!((percentile - 0.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn test_calculate_percentile_single() {
+        let data = vec![42.0];
+        let percentile = StatsTracker::calculate_percentile(&data, 50.0);
+        assert!((percentile - 42.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn test_calculate_percentile_multiple() {
+        let data = vec![10.0, 20.0, 30.0, 40.0, 50.0];
+        let p50 = StatsTracker::calculate_percentile(&data, 50.0);
+        assert!((p50 - 30.0).abs() < f32::EPSILON);
+
+        let p0 = StatsTracker::calculate_percentile(&data, 0.0);
+        assert!((p0 - 10.0).abs() < f32::EPSILON);
+
+        let p100 = StatsTracker::calculate_percentile(&data, 100.0);
+        assert!((p100 - 50.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn test_calculate_percentile_interpolation() {
+        let data = vec![10.0, 20.0, 30.0, 40.0];
+        // P50 should interpolate between 20 and 30
+        let p50 = StatsTracker::calculate_percentile(&data, 50.0);
+        assert!((p50 - 25.0).abs() < 0.1);
+    }
+
+    #[test]
+    fn test_print_extended_summary() {
+        let mut tracker = StatsTracker::new();
+
+        // Add varied data to trigger anomaly detection
+        for _ in 0..10 {
+            tracker.record("read", 10, 100);
+        }
+        tracker.record("read", 10, 10000); // anomaly
+
+        // Should not panic
+        #[cfg(feature = "otlp")]
+        tracker.print_extended_summary(2.0, None);
+        #[cfg(not(feature = "otlp"))]
+        tracker.print_extended_summary(2.0, None);
+    }
+
+    #[test]
+    fn test_print_extended_summary_empty() {
+        let tracker = StatsTracker::new();
+
+        // Should not panic on empty tracker
+        #[cfg(feature = "otlp")]
+        tracker.print_extended_summary(2.0, None);
+        #[cfg(not(feature = "otlp"))]
+        tracker.print_extended_summary(2.0, None);
+    }
+
+    #[test]
+    fn test_totals_with_errors() {
+        let mut tracker = StatsTracker::new();
+
+        tracker.record("open", 3, 100);
+        tracker.record("open", -2, 50);
+        tracker.record("read", 10, 200);
+        tracker.record("read", -1, 100);
+
+        let totals = tracker.calculate_totals_with_trueno();
+
+        assert_eq!(totals.total_calls, 4);
+        assert_eq!(totals.total_errors, 2);
+        assert_eq!(totals.total_time_us, 450);
+    }
+
+    #[test]
+    fn test_extended_stats_struct() {
+        let stats = ExtendedStats {
+            mean: 100.0,
+            stddev: 10.0,
+            min: 80.0,
+            max: 120.0,
+            median: 100.0,
+            p75: 105.0,
+            p90: 115.0,
+            p95: 118.0,
+            p99: 119.0,
+        };
+
+        // Test PartialEq
+        let stats2 = stats.clone();
+        assert_eq!(stats, stats2);
+
+        // Test Debug
+        let debug = format!("{:?}", stats);
+        assert!(debug.contains("mean"));
+    }
+
+    #[test]
+    fn test_stat_totals_equality() {
+        let totals1 = StatTotals {
+            total_calls: 10,
+            total_errors: 2,
+            total_time_us: 1000,
+        };
+        let totals2 = StatTotals {
+            total_calls: 10,
+            total_errors: 2,
+            total_time_us: 1000,
+        };
+        assert_eq!(totals1, totals2);
+    }
 }

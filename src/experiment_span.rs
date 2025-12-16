@@ -644,4 +644,212 @@ mod tests {
         let c = vec!["read", "close"];
         assert_eq!(lcs_length(&a, &c), 2);
     }
+
+    #[test]
+    fn test_span_type_serialize_deserialize() {
+        let syscall = SpanType::Syscall;
+        let json = serde_json::to_string(&syscall).unwrap();
+        let deser: SpanType = serde_json::from_str(&json).unwrap();
+        assert_eq!(deser, SpanType::Syscall);
+
+        let gpu = SpanType::Gpu;
+        let json = serde_json::to_string(&gpu).unwrap();
+        let deser: SpanType = serde_json::from_str(&json).unwrap();
+        assert_eq!(deser, SpanType::Gpu);
+
+        let experiment = SpanType::Experiment;
+        let json = serde_json::to_string(&experiment).unwrap();
+        let deser: SpanType = serde_json::from_str(&json).unwrap();
+        assert_eq!(deser, SpanType::Experiment);
+    }
+
+    #[test]
+    fn test_experiment_metadata_to_attributes() {
+        let mut metrics = HashMap::new();
+        metrics.insert("accuracy".to_string(), 0.95);
+
+        let meta = ExperimentMetadata {
+            model_name: "bert".to_string(),
+            epoch: Some(10),
+            step: Some(100),
+            loss: Some(0.05),
+            metrics,
+        };
+
+        let attrs = meta.to_attributes();
+        assert_eq!(
+            attrs.get("experiment.model_name"),
+            Some(&"bert".to_string())
+        );
+        assert_eq!(attrs.get("experiment.epoch"), Some(&"10".to_string()));
+        assert_eq!(attrs.get("experiment.step"), Some(&"100".to_string()));
+        assert_eq!(attrs.get("experiment.loss"), Some(&"0.05".to_string()));
+        assert_eq!(
+            attrs.get("experiment.metrics.accuracy"),
+            Some(&"0.95".to_string())
+        );
+    }
+
+    #[test]
+    fn test_experiment_metadata_to_attributes_partial() {
+        let meta = ExperimentMetadata {
+            model_name: "model".to_string(),
+            epoch: None,
+            step: None,
+            loss: None,
+            metrics: HashMap::new(),
+        };
+
+        let attrs = meta.to_attributes();
+        assert_eq!(
+            attrs.get("experiment.model_name"),
+            Some(&"model".to_string())
+        );
+        assert!(attrs.get("experiment.epoch").is_none());
+        assert!(attrs.get("experiment.step").is_none());
+        assert!(attrs.get("experiment.loss").is_none());
+    }
+
+    #[test]
+    fn test_experiment_span_with_parent() {
+        let meta = ExperimentMetadata::default();
+        let trace_id = [1u8; 16];
+        let parent_id = [2u8; 8];
+
+        let span = ExperimentSpan::new_experiment_with_parent("child", meta, trace_id, parent_id);
+
+        assert_eq!(span.trace_id, trace_id);
+        assert_eq!(span.parent_span_id, Some(parent_id));
+        assert_eq!(span.name, "child");
+        assert_eq!(span.span_type, SpanType::Experiment);
+    }
+
+    #[test]
+    fn test_experiment_span_end() {
+        let meta = ExperimentMetadata::default();
+        let mut span = ExperimentSpan::new_experiment("test", meta);
+
+        assert_eq!(span.end_time_nanos, 0);
+        span.end();
+        assert!(span.end_time_nanos > 0);
+        assert!(span.end_time_nanos >= span.start_time_nanos);
+    }
+
+    #[test]
+    fn test_lcs_length_edge_cases() {
+        // Empty arrays
+        let empty: Vec<&str> = vec![];
+        let non_empty = vec!["a"];
+        assert_eq!(lcs_length(&empty, &empty), 0);
+        assert_eq!(lcs_length(&empty, &non_empty), 0);
+        assert_eq!(lcs_length(&non_empty, &empty), 0);
+
+        // No common elements
+        let a = vec!["a", "b"];
+        let b = vec!["c", "d"];
+        assert_eq!(lcs_length(&a, &b), 0);
+
+        // Partial match
+        let c = vec!["a", "b", "c"];
+        let d = vec!["b", "c", "d"];
+        assert_eq!(lcs_length(&c, &d), 2);
+    }
+
+    #[test]
+    fn test_equivalence_score_partial() {
+        let score = EquivalenceScore {
+            syscall_match: 0.9,
+            timing_variance: 0.1,
+            semantic_equiv: 0.9,
+        };
+
+        // 0.4*0.9 + 0.2*(1-0.1) + 0.4*0.9 = 0.36 + 0.18 + 0.36 = 0.90
+        assert!((score.overall() - 0.90).abs() < f64::EPSILON);
+        assert!(score.is_equivalent());
+    }
+
+    #[test]
+    fn test_equivalence_threshold() {
+        // Well above threshold (overall = 0.4*1.0 + 0.2*1.0 + 0.4*1.0 = 1.0)
+        let score = EquivalenceScore {
+            syscall_match: 1.0,
+            timing_variance: 0.0,
+            semantic_equiv: 1.0,
+        };
+        assert!(score.is_equivalent());
+
+        // Well below threshold (overall = 0.4*0.5 + 0.2*0.5 + 0.4*0.5 = 0.5)
+        let score2 = EquivalenceScore {
+            syscall_match: 0.5,
+            timing_variance: 0.5, // timing_score = 1.0 - 0.5 = 0.5
+            semantic_equiv: 0.5,
+        };
+        assert!(!score2.is_equivalent());
+    }
+
+    #[test]
+    fn test_span_type_clone_eq() {
+        let a = SpanType::Syscall;
+        let b = a;
+        assert_eq!(a, b);
+
+        let c = SpanType::Gpu;
+        assert_ne!(a, c);
+    }
+
+    #[test]
+    fn test_experiment_metadata_clone() {
+        let mut metrics = HashMap::new();
+        metrics.insert("acc".to_string(), 0.9);
+
+        let meta = ExperimentMetadata {
+            model_name: "test".to_string(),
+            epoch: Some(5),
+            step: Some(100),
+            loss: Some(0.1),
+            metrics,
+        };
+
+        let cloned = meta.clone();
+        assert_eq!(cloned.model_name, meta.model_name);
+        assert_eq!(cloned.epoch, meta.epoch);
+        assert_eq!(cloned.metrics.get("acc"), meta.metrics.get("acc"));
+    }
+
+    #[test]
+    fn test_experiment_span_clone() {
+        let meta = ExperimentMetadata::default();
+        let span = ExperimentSpan::new_experiment("test", meta);
+        let cloned = span.clone();
+
+        assert_eq!(cloned.name, span.name);
+        assert_eq!(cloned.trace_id, span.trace_id);
+        assert_eq!(cloned.span_id, span.span_id);
+    }
+
+    #[test]
+    fn test_equivalence_score_clone() {
+        let score = EquivalenceScore {
+            syscall_match: 0.8,
+            timing_variance: 0.2,
+            semantic_equiv: 0.7,
+        };
+        let cloned = score.clone();
+        assert_eq!(cloned.syscall_match, score.syscall_match);
+    }
+
+    #[test]
+    fn test_generate_trace_id_unique() {
+        let id1 = generate_trace_id();
+        let id2 = generate_trace_id();
+        // Should be different due to counter
+        assert_ne!(id1, id2);
+    }
+
+    #[test]
+    fn test_generate_span_id_unique() {
+        let id1 = generate_span_id();
+        let id2 = generate_span_id();
+        assert_ne!(id1, id2);
+    }
 }

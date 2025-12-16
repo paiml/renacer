@@ -12969,6 +12969,232 @@ entrenar citl stats decision_patterns.apr
 <li><a href="advanced/./transpiler-integration.html">Transpiler Integration</a> - Source mapping</li>
 <li><a href="https://github.com/paiml/entrenar/docs/book/citl.md">entrenar CITL Book</a> - Full CITL docs</li>
 </ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="experiment-span-tracking"><a class="header" href="#experiment-span-tracking">Experiment Span Tracking</a></h1>
+<p>Renacer provides specialized span types for tracking ML experiments, enabling syscall correlation during training runs. This integrates with the <a href="https://github.com/paiml/entrenar">entrenar</a> experiment tracking framework (v1.8.0 specification).</p>
+<h2 id="overview-21"><a class="header" href="#overview-21">Overview</a></h2>
+<p>The experiment span module (<code>renacer::experiment_span</code>) provides:</p>
+<ul>
+<li><strong>SpanType::Experiment</strong> - Specialized span type for ML training operations</li>
+<li><strong>ExperimentMetadata</strong> - Structured metadata for training runs</li>
+<li><strong>Golden trace comparison</strong> - Compare traces for behavioral equivalence</li>
+</ul>
+<h2 id="spantype-enum"><a class="header" href="#spantype-enum">SpanType Enum</a></h2>
+<p>Renacer classifies spans into three types:</p>
+<pre><code class="language-rust">use renacer::experiment_span::SpanType;
+
+let syscall_span = SpanType::Syscall;    // System call (read, write, etc.)
+let gpu_span = SpanType::Gpu;            // GPU operation (kernel, transfer)
+let experiment_span = SpanType::Experiment; // ML experiment span</code></pre>
+<h2 id="experimentmetadata"><a class="header" href="#experimentmetadata">ExperimentMetadata</a></h2>
+<p>Capture rich metadata about ML training operations:</p>
+<pre><code class="language-rust">use renacer::experiment_span::ExperimentMetadata;
+use std::collections::HashMap;
+
+let mut metrics = HashMap::new();
+metrics.insert("accuracy".to_string(), 0.95);
+metrics.insert("f1_score".to_string(), 0.92);
+
+let metadata = ExperimentMetadata {
+    model_name: "gpt-2".to_string(),
+    epoch: Some(10),
+    step: Some(1000),
+    loss: Some(0.0025),
+    metrics,
+};
+
+// Serialize to JSON for storage
+let json = metadata.to_json();
+
+// Parse from JSON
+let parsed = ExperimentMetadata::from_json(&amp;json).unwrap();</code></pre>
+<h3 id="fields"><a class="header" href="#fields">Fields</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>model_name</code></td><td><code>String</code></td><td>Model identifier (e.g., "gpt-2", "bert-base")</td></tr>
+<tr><td><code>epoch</code></td><td><code>Option&lt;u32&gt;</code></td><td>Current training epoch</td></tr>
+<tr><td><code>step</code></td><td><code>Option&lt;u64&gt;</code></td><td>Current training step</td></tr>
+<tr><td><code>loss</code></td><td><code>Option&lt;f64&gt;</code></td><td>Current loss value</td></tr>
+<tr><td><code>metrics</code></td><td><code>HashMap&lt;String, f64&gt;</code></td><td>Additional metrics (accuracy, perplexity, etc.)</td></tr>
+</tbody></table>
+</div>
+<h2 id="creating-experiment-spans"><a class="header" href="#creating-experiment-spans">Creating Experiment Spans</a></h2>
+<p>Use <code>ExperimentSpan::new_experiment()</code> to create spans:</p>
+<pre><code class="language-rust">use renacer::experiment_span::{ExperimentMetadata, ExperimentSpan};
+
+let metadata = ExperimentMetadata {
+    model_name: "llama-7b".to_string(),
+    epoch: Some(5),
+    step: Some(500),
+    loss: Some(0.15),
+    ..Default::default()
+};
+
+let span = ExperimentSpan::new_experiment("training_step", metadata);
+
+// Span automatically has:
+// - Generated trace_id (W3C format)
+// - Generated span_id
+// - Start timestamp
+// - SpanType::Experiment
+
+// End the span when done
+let mut span = span;
+span.end();
+
+// Convert to SpanRecord for storage
+let record = span.to_span_record();</code></pre>
+<h2 id="golden-trace-comparison"><a class="header" href="#golden-trace-comparison">Golden Trace Comparison</a></h2>
+<p>Compare two traces for behavioral equivalence using <code>compare_traces()</code>:</p>
+<pre><code class="language-rust">use renacer::experiment_span::{compare_traces, EquivalenceScore};
+use renacer::unified_trace::UnifiedTrace;
+
+// Baseline trace (e.g., from original Python training)
+let baseline = UnifiedTrace::new(1234, "python_train".to_string());
+
+// Candidate trace (e.g., from Rust-transpiled training)
+let candidate = UnifiedTrace::new(1234, "rust_train".to_string());
+
+let score: EquivalenceScore = compare_traces(&amp;baseline, &amp;candidate);
+
+println!("Syscall match: {:.1}%", score.syscall_match * 100.0);
+println!("Timing variance: {:.1}%", score.timing_variance * 100.0);
+println!("Semantic equiv: {:.1}%", score.semantic_equiv * 100.0);
+println!("Overall: {:.1}%", score.overall() * 100.0);
+
+if score.is_equivalent() {
+    println!("Traces are behaviorally equivalent!");
+}</code></pre>
+<h3 id="equivalencescore"><a class="header" href="#equivalencescore">EquivalenceScore</a></h3>
+<p>The comparison returns three metrics:</p>
+<div class="table-wrapper"><table><thead><tr><th>Metric</th><th>Range</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>syscall_match</code></td><td>0.0-1.0</td><td>Syscall sequence similarity (LCS-based)</td></tr>
+<tr><td><code>timing_variance</code></td><td>0.0-1.0</td><td>Timing difference (0 = identical)</td></tr>
+<tr><td><code>semantic_equiv</code></td><td>0.0-1.0</td><td>Observable behavior match</td></tr>
+</tbody></table>
+</div>
+<p>The <code>overall()</code> method computes a weighted score:</p>
+<ul>
+<li>40% syscall match</li>
+<li>20% timing (inverted)</li>
+<li>40% semantic equivalence</li>
+</ul>
+<p>The <code>is_equivalent()</code> method returns <code>true</code> if <code>overall() &gt;= 0.85</code>.</p>
+<h2 id="integration-with-entrenar"><a class="header" href="#integration-with-entrenar">Integration with entrenar</a></h2>
+<p>When using entrenar's experiment tracking, Renacer spans enable syscall correlation:</p>
+<pre><code class="language-rust">use renacer::experiment_span::{ExperimentMetadata, ExperimentSpan};
+
+// Called by entrenar's Run at each training step
+fn track_training_step(
+    model: &amp;str,
+    epoch: u32,
+    step: u64,
+    loss: f64,
+    metrics: HashMap&lt;String, f64&gt;,
+) -&gt; ExperimentSpan {
+    let metadata = ExperimentMetadata {
+        model_name: model.to_string(),
+        epoch: Some(epoch),
+        step: Some(step),
+        loss: Some(loss),
+        metrics,
+    };
+
+    ExperimentSpan::new_experiment("training_step", metadata)
+}</code></pre>
+<p>The experiment spans are automatically converted to <code>SpanRecord</code> for storage in trueno-db, enabling:</p>
+<ul>
+<li>Syscall correlation during training</li>
+<li>Performance analysis per epoch/step</li>
+<li>Trace comparison between implementations</li>
+<li>Anomaly detection in training behavior</li>
+</ul>
+<h2 id="use-cases"><a class="header" href="#use-cases">Use Cases</a></h2>
+<h3 id="1-transpiler-validation"><a class="header" href="#1-transpiler-validation">1. Transpiler Validation</a></h3>
+<p>Compare Python vs Rust training traces:</p>
+<pre><code class="language-rust">let python_trace = trace_python_training();
+let rust_trace = trace_rust_training();
+
+let score = compare_traces(&amp;python_trace, &amp;rust_trace);
+assert!(score.is_equivalent(), "Transpilation changed behavior!");</code></pre>
+<h3 id="2-regression-detection"><a class="header" href="#2-regression-detection">2. Regression Detection</a></h3>
+<p>Compare traces across code changes:</p>
+<pre><code class="language-rust">let baseline = load_golden_trace("baseline.trace");
+let current = run_current_training();
+
+let score = compare_traces(&amp;baseline, &amp;current);
+if !score.is_equivalent() {
+    eprintln!("Regression detected: {:.1}% match", score.overall() * 100.0);
+}</code></pre>
+<h3 id="3-performance-analysis"><a class="header" href="#3-performance-analysis">3. Performance Analysis</a></h3>
+<p>Track syscall patterns per training step:</p>
+<pre><code class="language-rust">for step in 0..num_steps {
+    let span = ExperimentSpan::new_experiment("step", metadata.clone());
+
+    // Training happens here (syscalls are traced)
+    train_step(model, batch);
+
+    span.end();
+    storage.insert(span.to_span_record());
+}
+
+// Query syscall patterns per step
+let patterns = storage.query_by_attribute("experiment.step");</code></pre>
+<h2 id="api-reference-1"><a class="header" href="#api-reference-1">API Reference</a></h2>
+<h3 id="spantype"><a class="header" href="#spantype">SpanType</a></h3>
+<pre><code class="language-rust">pub enum SpanType {
+    Syscall,    // Default - system calls
+    Gpu,        // GPU operations
+    Experiment, // ML experiment spans
+}</code></pre>
+<h3 id="experimentmetadata-1"><a class="header" href="#experimentmetadata-1">ExperimentMetadata</a></h3>
+<pre><code class="language-rust">pub struct ExperimentMetadata {
+    pub model_name: String,
+    pub epoch: Option&lt;u32&gt;,
+    pub step: Option&lt;u64&gt;,
+    pub loss: Option&lt;f64&gt;,
+    pub metrics: HashMap&lt;String, f64&gt;,
+}
+
+impl ExperimentMetadata {
+    fn default() -&gt; Self;
+    fn to_json(&amp;self) -&gt; String;
+    fn from_json(json: &amp;str) -&gt; Result&lt;Self, serde_json::Error&gt;;
+    fn to_attributes(&amp;self) -&gt; HashMap&lt;String, String&gt;;
+}</code></pre>
+<h3 id="experimentspan"><a class="header" href="#experimentspan">ExperimentSpan</a></h3>
+<pre><code class="language-rust">pub struct ExperimentSpan {
+    pub trace_id: [u8; 16],
+    pub span_id: [u8; 8],
+    pub parent_span_id: Option&lt;[u8; 8]&gt;,
+    pub name: String,
+    pub span_type: SpanType,
+    pub metadata: ExperimentMetadata,
+    pub start_time_nanos: u64,
+    pub end_time_nanos: u64,
+    pub logical_clock: u64,
+}
+
+impl ExperimentSpan {
+    fn new_experiment(name: &amp;str, metadata: ExperimentMetadata) -&gt; Self;
+    fn new_experiment_with_parent(...) -&gt; Self;
+    fn end(&amp;mut self);
+    fn to_span_record(&amp;self) -&gt; SpanRecord;
+}</code></pre>
+<h3 id="equivalencescore-1"><a class="header" href="#equivalencescore-1">EquivalenceScore</a></h3>
+<pre><code class="language-rust">pub struct EquivalenceScore {
+    pub syscall_match: f64,
+    pub timing_variance: f64,
+    pub semantic_equiv: f64,
+}
+
+impl EquivalenceScore {
+    fn overall(&amp;self) -&gt; f64;
+    fn is_equivalent(&amp;self) -&gt; bool;
+}</code></pre>
+<h3 id="compare_traces"><a class="header" href="#compare_traces">compare_traces</a></h3>
+<pre><code class="language-rust">pub fn compare_traces(
+    baseline: &amp;UnifiedTrace,
+    candidate: &amp;UnifiedTrace,
+) -&gt; EquivalenceScore;</code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="performance-optimization-1"><a class="header" href="#performance-optimization-1">Performance Optimization</a></h1>
 <p>Renacer is designed for production use with minimal overhead. Sprint 36 introduced comprehensive performance optimizations that reduce overhead to &lt;5% for basic tracing and &lt;10% for the full observability stack.</p>
 <h2 id="performance-goals"><a class="header" href="#performance-goals">Performance Goals</a></h2>
@@ -13576,7 +13802,7 @@ renacer --chaos-timeout 1h -- ./batch-job
 <p><strong>Example:</strong></p>
 <pre><code class="language-bash">renacer --chaos-signals -- ./signal-handler-test
 </code></pre>
-<h2 id="use-cases"><a class="header" href="#use-cases">Use Cases</a></h2>
+<h2 id="use-cases-1"><a class="header" href="#use-cases-1">Use Cases</a></h2>
 <h3 id="1-memory-leak-detection"><a class="header" href="#1-memory-leak-detection">1. Memory Leak Detection</a></h3>
 <p>Test if your application handles memory pressure gracefully:</p>
 <pre><code class="language-bash"># Strict memory limit
@@ -13739,7 +13965,7 @@ renacer --chaos-timeout 60s --chaos-memory-limit 64M -c -- ./slow-starter
 <p>Start with <code>--chaos gentle</code> for regular testing, graduate to <code>--chaos aggressive</code> for stress testing, and use custom options for targeted validation.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="single-shot-compile-tooling"><a class="header" href="#single-shot-compile-tooling">Single-Shot Compile Tooling</a></h1>
 <p>High-level performance and bug detection for transpilers and single-shot compile workflows.</p>
-<h2 id="overview-21"><a class="header" href="#overview-21">Overview</a></h2>
+<h2 id="overview-22"><a class="header" href="#overview-22">Overview</a></h2>
 <p>Renacer's Single-Shot Compile Tooling provides automated analysis for transpilers and compilers that run once per input file. This hybrid analysis combines <strong>critical path tracing</strong> (performance) with <strong>semantic diff</strong> (bug detection) to provide actionable, high-level insights.</p>
 <h2 id="key-features"><a class="header" href="#key-features">Key Features</a></h2>
 <h3 id="-hotspot-identification"><a class="header" href="#-hotspot-identification">🔥 Hotspot Identification</a></h3>
@@ -13908,7 +14134,7 @@ Statistical significance: p &lt; 0.001 (99.9% confidence)
 </ol>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="syscall-clustering"><a class="header" href="#syscall-clustering">Syscall Clustering</a></h1>
 <p>TOML-based configuration for grouping syscalls into semantic clusters.</p>
-<h2 id="overview-22"><a class="header" href="#overview-22">Overview</a></h2>
+<h2 id="overview-23"><a class="header" href="#overview-23">Overview</a></h2>
 <p>Instead of analyzing raw syscalls (<code>mmap</code>, <code>brk</code>, <code>munmap</code>), Renacer groups them into <strong>semantic clusters</strong> like "MemoryAllocation" or "FileIO". This provides high-level, actionable insights.</p>
 <h2 id="key-innovation-open-closed-principle"><a class="header" href="#key-innovation-open-closed-principle">Key Innovation: Open-Closed Principle</a></h2>
 <p>The clustering algorithm is <strong>user-extensible via TOML configuration</strong> - no code changes required to add new clusters or modify existing ones.</p>
@@ -14101,7 +14327,7 @@ impl ClusterRegistry {
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="sequence-mining"><a class="header" href="#sequence-mining">Sequence Mining</a></h1>
 <p>N-gram grammar detection for identifying unexpected syscall patterns.</p>
-<h2 id="overview-23"><a class="header" href="#overview-23">Overview</a></h2>
+<h2 id="overview-24"><a class="header" href="#overview-24">Overview</a></h2>
 <p>Sequence mining analyzes the <strong>order</strong> of syscalls to detect behavioral anomalies. Based on Forrest et al.'s (1996) seminal work on intrusion detection, this technique identifies "grammar violations" - syscall sequences that deviate from baseline behavior.</p>
 <h2 id="key-concept-syscall-grammar"><a class="header" href="#key-concept-syscall-grammar">Key Concept: Syscall Grammar</a></h2>
 <p>Every program has an implicit "grammar" - expected patterns of syscall sequences:</p>
@@ -14355,7 +14581,7 @@ MemoryAllocation: 10ms (10%)
 <li><strong>Tests</strong>: 22/22 passing (100%)</li>
 <li><strong>Performance</strong>: O(n) where n = number of syscalls</li>
 </ul>
-<h2 id="api-reference-1"><a class="header" href="#api-reference-1">API Reference</a></h2>
+<h2 id="api-reference-2"><a class="header" href="#api-reference-2">API Reference</a></h2>
 <h3 id="timeattribution"><a class="header" href="#timeattribution">TimeAttribution</a></h3>
 <pre><code class="language-rust">pub struct TimeAttribution {
     pub cluster: String,
@@ -14391,7 +14617,7 @@ impl Hotspot {
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="semantic-equivalence"><a class="header" href="#semantic-equivalence">Semantic Equivalence</a></h1>
 <p>Validate that optimizations preserve observable behavior using state-based comparison.</p>
-<h2 id="overview-24"><a class="header" href="#overview-24">Overview</a></h2>
+<h2 id="overview-25"><a class="header" href="#overview-25">Overview</a></h2>
 <p>Semantic equivalence detection ensures that code changes (optimizations, refactoring) don't alter <strong>observable behavior</strong> - the program's interaction with the operating system.</p>
 <h2 id="key-concept-observable-behavior"><a class="header" href="#key-concept-observable-behavior">Key Concept: Observable Behavior</a></h2>
 <p>Two programs are <strong>semantically equivalent</strong> if they produce the same observable effects:</p>
@@ -14759,7 +14985,7 @@ fn test_no_performance_regression() {
 <li><strong>Dependencies</strong>: aprender 0.7.1, trueno 0.7.0 (SIMD-optimized)</li>
 <li><strong>Zero Custom Implementations</strong>: Uses established libraries</li>
 </ul>
-<h2 id="api-reference-2"><a class="header" href="#api-reference-2">API Reference</a></h2>
+<h2 id="api-reference-3"><a class="header" href="#api-reference-3">API Reference</a></h2>
 <h3 id="regressionconfig"><a class="header" href="#regressionconfig">RegressionConfig</a></h3>
 <pre><code class="language-rust">pub struct RegressionConfig {
     pub significance_level: f64,     // p-value threshold (default: 0.05)
@@ -14812,12 +15038,538 @@ Action: Fix regression before merge.
 <li>Use <a href="advanced/./semantic-equivalence.html">Semantic Equivalence</a> to validate fixes</li>
 <li>Integrate with <a href="advanced/./syscall-clustering.html">Syscall Clustering</a> for semantic grouping</li>
 </ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="golden-trace-validation"><a class="header" href="#golden-trace-validation">Golden Trace Validation</a></h1>
+<p>The <code>renacer validate</code> subcommand enables regression detection through golden trace comparison. Based on the APR Runtime Model Tracing Support specification (Sprint 50).</p>
+<h2 id="toyota-way-jidoka"><a class="header" href="#toyota-way-jidoka">Toyota Way: Jidoka</a></h2>
+<p><strong>Jidoka</strong> means "stop on defect detection." Golden trace validation implements this principle by:</p>
+<ol>
+<li><strong>Capturing known-good behavior</strong> as a baseline (golden trace)</li>
+<li><strong>Comparing current behavior</strong> against the baseline</li>
+<li><strong>Stopping CI/CD pipelines</strong> when regressions are detected</li>
+</ol>
+<h2 id="quick-start-5"><a class="header" href="#quick-start-5">Quick Start</a></h2>
+<h3 id="generate-a-baseline"><a class="header" href="#generate-a-baseline">Generate a Baseline</a></h3>
+<pre><code class="language-bash"># Create golden trace directory from known-good behavior
+renacer validate --generate ./golden -- echo "hello"
+</code></pre>
+<p>This creates:</p>
+<pre><code>golden/
+  manifest.json     # Trace metadata (version, platform, command)
+  syscalls.trace    # Binary syscall sequence (RNTR format)
+  timing.stats      # Timing statistics per syscall
+</code></pre>
+<h3 id="validate-against-baseline"><a class="header" href="#validate-against-baseline">Validate Against Baseline</a></h3>
+<pre><code class="language-bash"># Compare current behavior against baseline
+renacer validate --baseline ./golden -- echo "hello"
+</code></pre>
+<p><strong>Exit code 0</strong>: Validation passed
+<strong>Exit code 1</strong>: Regression detected</p>
+<h2 id="exit-codes"><a class="header" href="#exit-codes">Exit Codes</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Code</th><th>Constant</th><th>Meaning</th></tr></thead><tbody>
+<tr><td>0</td><td><code>Passed</code></td><td>Validation passed</td></tr>
+<tr><td>1</td><td><code>Failed</code></td><td>Regression detected</td></tr>
+<tr><td>2</td><td><code>BaselineNotFound</code></td><td>Baseline directory not found</td></tr>
+<tr><td>3</td><td><code>InvalidBaseline</code></td><td>Invalid baseline format (corrupt or incompatible)</td></tr>
+<tr><td>4</td><td><code>CommandError</code></td><td>Command execution error</td></tr>
+<tr><td>5</td><td><code>ConfigError</code></td><td>Configuration error</td></tr>
+</tbody></table>
+</div>
+<h2 id="configuration-options"><a class="header" href="#configuration-options">Configuration Options</a></h2>
+<h3 id="timing-tolerance"><a class="header" href="#timing-tolerance">Timing Tolerance</a></h3>
+<p>By default, timing variations up to 10% are allowed:</p>
+<pre><code class="language-bash"># Allow 15% timing variance
+renacer validate --baseline ./golden --tolerance 15.0 -- ./myapp
+
+# Strict mode: zero tolerance
+renacer validate --baseline ./golden --strict -- ./myapp
+</code></pre>
+<h3 id="ignore-timing"><a class="header" href="#ignore-timing">Ignore Timing</a></h3>
+<p>For behavioral-only validation (ignoring performance):</p>
+<pre><code class="language-bash"># Only compare syscall sequences, ignore timing
+renacer validate --baseline ./golden --ignore-timing -- ./myapp
+</code></pre>
+<h3 id="output-formats-1"><a class="header" href="#output-formats-1">Output Formats</a></h3>
+<pre><code class="language-bash"># Human-readable text (default)
+renacer validate --baseline ./golden --output text -- ./myapp
+
+# JSON for machine parsing
+renacer validate --baseline ./golden --output json -- ./myapp
+
+# JUnit XML for CI integration
+renacer validate --baseline ./golden --output junit -- ./myapp &gt; results.xml
+</code></pre>
+<h2 id="output-format-examples"><a class="header" href="#output-format-examples">Output Format Examples</a></h2>
+<h3 id="text-output"><a class="header" href="#text-output">Text Output</a></h3>
+<pre><code>=== Validation Report ===
+
+Status: FAILED
+
+Summary:
+  Total syscalls compared: 42
+  Matches: 40
+  Mismatches: 1
+  Timing regressions: 1
+
+Syscall Mismatches:
+  [DIFFERENT] Index 15: expected 'read', found 'write'
+
+Timing Regressions:
+  read: 0.10ms -&gt; 0.12ms (+20.0%)
+</code></pre>
+<h3 id="json-output"><a class="header" href="#json-output">JSON Output</a></h3>
+<pre><code class="language-json">{
+  "status": "failed",
+  "total_compared": 42,
+  "matches": 40,
+  "mismatches": 1,
+  "timing_regressions": 1,
+  "syscall_details": [
+    {
+      "index": 15,
+      "expected": "read",
+      "found": "write",
+      "mismatch_type": "different"
+    }
+  ],
+  "timing_details": [
+    {
+      "syscall": "read",
+      "baseline_ms": 0.10,
+      "actual_ms": 0.12,
+      "delta_percent": 20.0
+    }
+  ]
+}
+</code></pre>
+<h3 id="junit-xml-output"><a class="header" href="#junit-xml-output">JUnit XML Output</a></h3>
+<pre><code class="language-xml">&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;testsuite name="renacer-validate" tests="3" failures="2" errors="0"&gt;
+  &lt;testcase name="validation-overall" classname="renacer.validate"&gt;
+    &lt;failure message="Validation failed: 1 mismatches, 1 timing regressions"/&gt;
+  &lt;/testcase&gt;
+  &lt;testcase name="syscall-15" classname="renacer.validate.syscalls"&gt;
+    &lt;failure message="Expected 'read', found 'write' (different)"/&gt;
+  &lt;/testcase&gt;
+  &lt;testcase name="timing-read" classname="renacer.validate.timing"&gt;
+    &lt;failure message="Timing regression: 0.10ms -&gt; 0.12ms (+20.0%)"/&gt;
+  &lt;/testcase&gt;
+&lt;/testsuite&gt;
+</code></pre>
+<h2 id="binary-trace-format"><a class="header" href="#binary-trace-format">Binary Trace Format</a></h2>
+<p>The <code>syscalls.trace</code> file uses a binary format for efficient storage:</p>
+<h3 id="header-32-bytes"><a class="header" href="#header-32-bytes">Header (32 bytes)</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>Offset</th><th>Size</th><th>Field</th><th>Description</th></tr></thead><tbody>
+<tr><td>0</td><td>4</td><td>Magic</td><td>"RNTR"</td></tr>
+<tr><td>4</td><td>4</td><td>Version</td><td>Format version (currently 1)</td></tr>
+<tr><td>8</td><td>4</td><td>Flags</td><td>Bitfield (compressed, timing, string_args)</td></tr>
+<tr><td>12</td><td>8</td><td>Entry Count</td><td>Number of syscall entries</td></tr>
+<tr><td>20</td><td>8</td><td>Checksum</td><td>CRC32 of entries</td></tr>
+<tr><td>28</td><td>4</td><td>Reserved</td><td>Padding</td></tr>
+</tbody></table>
+</div>
+<h3 id="flags-bitfield"><a class="header" href="#flags-bitfield">Flags Bitfield</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>Bit</th><th>Meaning</th></tr></thead><tbody>
+<tr><td>0</td><td>Compressed (LZ4)</td></tr>
+<tr><td>1</td><td>Has timing data</td></tr>
+<tr><td>2</td><td>Has string arguments</td></tr>
+</tbody></table>
+</div>
+<h3 id="footer"><a class="header" href="#footer">Footer</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>Size</th><th>Field</th><th>Description</th></tr></thead><tbody>
+<tr><td>4</td><td>Magic</td><td>"RTNR" (reversed)</td></tr>
+</tbody></table>
+</div>
+<h2 id="manifest-format"><a class="header" href="#manifest-format">Manifest Format</a></h2>
+<p>The <code>manifest.json</code> contains trace metadata:</p>
+<pre><code class="language-json">{
+  "version": "1.0.0",
+  "renacer_version": "0.5.0",
+  "created_at": "1734355200",
+  "platform": {
+    "os": "linux",
+    "arch": "x86_64",
+    "kernel": "6.8.0-87-generic"
+  },
+  "command": ["echo", "hello"],
+  "statistics": {
+    "total_syscalls": 42,
+    "total_duration_ms": 1.234,
+    "unique_syscalls": 12
+  },
+  "tolerance": {
+    "timing_percent": 10.0,
+    "syscall_sequence": "exact",
+    "argument_match": "fuzzy"
+  }
+}
+</code></pre>
+<h2 id="cicd-integration-4"><a class="header" href="#cicd-integration-4">CI/CD Integration</a></h2>
+<h3 id="github-actions"><a class="header" href="#github-actions">GitHub Actions</a></h3>
+<pre><code class="language-yaml">name: Regression Detection
+
+on: [push, pull_request]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Renacer
+        run: cargo install renacer
+
+      - name: Validate against golden trace
+        run: |
+          renacer validate --baseline tests/golden/ --output junit -- ./target/release/myapp &gt; results.xml
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-results
+          path: results.xml
+</code></pre>
+<h3 id="jenkins-pipeline"><a class="header" href="#jenkins-pipeline">Jenkins Pipeline</a></h3>
+<pre><code class="language-groovy">pipeline {
+    stages {
+        stage('Validate') {
+            steps {
+                sh 'renacer validate --baseline golden/ --output junit -- ./myapp &gt; validation.xml'
+            }
+            post {
+                always {
+                    junit 'validation.xml'
+                }
+            }
+        }
+    }
+}
+</code></pre>
+<h2 id="comparison-logic"><a class="header" href="#comparison-logic">Comparison Logic</a></h2>
+<h3 id="syscall-sequence-comparison"><a class="header" href="#syscall-sequence-comparison">Syscall Sequence Comparison</a></h3>
+<p>The validator compares syscall sequences index-by-index:</p>
+<ol>
+<li><strong>Length check</strong>: Different lengths = mismatch</li>
+<li><strong>Syscall number check</strong>: Different syscall at same index = mismatch</li>
+<li><strong>Order sensitivity</strong>: Strict ordering by default</li>
+</ol>
+<p>Mismatch types:</p>
+<ul>
+<li><code>DIFFERENT</code>: Different syscall at same position</li>
+<li><code>EXTRA</code>: Syscall in actual but not in baseline</li>
+<li><code>MISSING</code>: Syscall in baseline but not in actual</li>
+</ul>
+<h3 id="timing-regression-detection"><a class="header" href="#timing-regression-detection">Timing Regression Detection</a></h3>
+<p>For each syscall type, the validator checks:</p>
+<pre><code>delta_percent = (actual_mean - baseline_mean) / baseline_mean * 100
+
+if delta_percent &gt; tolerance_percent:
+    return TimingRegression
+</code></pre>
+<h2 id="api-usage"><a class="header" href="#api-usage">API Usage</a></h2>
+<pre><code class="language-rust">use renacer::validate::{
+    compare_syscalls, compare_timing, format_json_report,
+    ComparisonResult, SyscallTimingStats, TraceSyscallEntry,
+    ValidateConfig, ValidateExitCode,
+};
+use std::collections::HashMap;
+
+// Compare syscall sequences
+let baseline = vec![
+    TraceSyscallEntry::simple(257, "openat", 50_000),
+    TraceSyscallEntry::simple(0, "read", 100_000),
+];
+let actual = baseline.clone();
+
+let result = compare_syscalls(&amp;baseline, &amp;actual, false)?;
+assert!(result.passed);
+
+// Compare timing with tolerance
+let mut baseline_stats = HashMap::new();
+baseline_stats.insert("read".to_string(), SyscallTimingStats {
+    count: 100,
+    mean_ns: 100_000,  // 100us baseline
+    ..Default::default()
+});
+
+let mut actual_stats = HashMap::new();
+actual_stats.insert("read".to_string(), SyscallTimingStats {
+    count: 100,
+    mean_ns: 105_000,  // 5% slower
+    ..Default::default()
+});
+
+let regressions = compare_timing(&amp;baseline_stats, &amp;actual_stats, 10.0);
+assert!(regressions.is_empty());  // Within 10% tolerance</code></pre>
+<h2 id="best-practices-16"><a class="header" href="#best-practices-16">Best Practices</a></h2>
+<h3 id="1-multiple-baseline-runs"><a class="header" href="#1-multiple-baseline-runs">1. Multiple Baseline Runs</a></h3>
+<p>Generate baselines from multiple runs to capture natural variance:</p>
+<pre><code class="language-bash">for i in {1..5}; do
+  renacer validate --generate ./golden-run-$i -- ./myapp
+done
+# Then merge statistics
+</code></pre>
+<h3 id="2-platform-specific-baselines"><a class="header" href="#2-platform-specific-baselines">2. Platform-Specific Baselines</a></h3>
+<p>Kernel and hardware differences affect syscall behavior:</p>
+<pre><code class="language-bash"># Store baselines per platform
+renacer validate --generate ./golden/linux-x86_64/ -- ./myapp
+renacer validate --generate ./golden/linux-arm64/ -- ./myapp
+</code></pre>
+<h3 id="3-lenient-tolerance-for-ci"><a class="header" href="#3-lenient-tolerance-for-ci">3. Lenient Tolerance for CI</a></h3>
+<p>Use higher tolerance in CI to reduce false positives from runner variance:</p>
+<pre><code class="language-bash">renacer validate --baseline ./golden --tolerance 25.0 -- ./myapp
+</code></pre>
+<h3 id="4-strict-mode-for-security"><a class="header" href="#4-strict-mode-for-security">4. Strict Mode for Security</a></h3>
+<p>For security-critical validation, use strict mode:</p>
+<pre><code class="language-bash">renacer validate --baseline ./golden --strict -- ./security-critical-app
+</code></pre>
+<h2 id="related-19"><a class="header" href="#related-19">Related</a></h2>
+<ul>
+<li><a href="advanced/./regression-detection.html">Regression Detection</a> - Statistical hypothesis testing</li>
+<li><a href="advanced/./semantic-equivalence.html">Semantic Equivalence</a> - Behavioral equivalence checking</li>
+<li><a href="advanced/./syscall-clustering.html">Syscall Clustering</a> - Group related syscalls</li>
+</ul>
+<h2 id="toyota-way-principles-applied"><a class="header" href="#toyota-way-principles-applied">Toyota Way Principles Applied</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Principle</th><th>Application</th></tr></thead><tbody>
+<tr><td><strong>Jidoka</strong></td><td>Stop CI/CD on regression detection</td></tr>
+<tr><td><strong>Muda</strong></td><td>Eliminate waste from repeated manual testing</td></tr>
+<tr><td><strong>Poka-Yoke</strong></td><td>Prevent defects from reaching production</td></tr>
+<tr><td><strong>Kaizen</strong></td><td>Continuously improve baseline accuracy</td></tr>
+</tbody></table>
+</div><div style="break-before: page; page-break-before: always;"></div><h1 id="anti-pattern-detection"><a class="header" href="#anti-pattern-detection">Anti-Pattern Detection</a></h1>
+<p>Renacer includes an architectural anti-pattern detector that analyzes system traces to identify common performance and design issues. This feature is part of the Quality Gates (Jidoka) system specified in Section 27 of the architecture specification.</p>
+<h2 id="overview-26"><a class="header" href="#overview-26">Overview</a></h2>
+<p>The anti-pattern detector examines syscall traces and identifies four types of architectural anti-patterns:</p>
+<div class="table-wrapper"><table><thead><tr><th>Anti-Pattern</th><th>Description</th><th>Default Threshold</th></tr></thead><tbody>
+<tr><td><strong>GodProcess</strong></td><td>Single process dominates syscall activity</td><td>&gt;80% of syscalls</td></tr>
+<tr><td><strong>TightLoop</strong></td><td>Syscalls occurring at very short intervals</td><td>&lt;10ms between calls</td></tr>
+<tr><td><strong>ExcessiveIO</strong></td><td>I/O operations exceed sustainable rate</td><td>&gt;10,000 ops/sec</td></tr>
+<tr><td><strong>BlockingMainThread</strong></td><td>Long-running operations block main thread</td><td>&gt;100ms duration</td></tr>
+</tbody></table>
+</div>
+<h2 id="quick-start-6"><a class="header" href="#quick-start-6">Quick Start</a></h2>
+<pre><code class="language-rust">use renacer::unified_trace::UnifiedTrace;
+
+// Analyze a trace for anti-patterns
+let trace = UnifiedTrace::new(1234, "my_app".to_string());
+// ... add syscalls to trace ...
+
+if let Some(quality) = trace.architectural_quality() {
+    println!("Quality Score: {:.2}", quality.score);
+
+    for pattern in &amp;quality.anti_patterns {
+        println!("Anti-pattern: {:?}", pattern);
+    }
+
+    for recommendation in &amp;quality.recommendations {
+        println!("Recommendation: {}", recommendation);
+    }
+}</code></pre>
+<h2 id="api-reference-4"><a class="header" href="#api-reference-4">API Reference</a></h2>
+<h3 id="antipatterndetector"><a class="header" href="#antipatterndetector">AntiPatternDetector</a></h3>
+<p>The main entry point for anti-pattern detection:</p>
+<pre><code class="language-rust">use renacer::analysis::anti_pattern::{
+    AntiPatternDetector,
+    AntiPatternThresholds,
+    ArchitecturalQuality,
+};
+
+// Create detector with default thresholds
+let detector = AntiPatternDetector::default();
+
+// Or customize thresholds
+let thresholds = AntiPatternThresholds {
+    god_process_syscall_percent: 90.0,  // More lenient
+    tight_loop_threshold_ms: 5,          // More strict
+    excessive_io_ops_per_sec: 5000,      // More strict
+};
+let detector = AntiPatternDetector::new(thresholds);
+
+// Analyze a trace
+let quality = detector.analyze(&amp;trace);</code></pre>
+<h3 id="architecturalquality"><a class="header" href="#architecturalquality">ArchitecturalQuality</a></h3>
+<p>The result of anti-pattern analysis:</p>
+<pre><code class="language-rust">pub struct ArchitecturalQuality {
+    /// Overall quality score (0.0 - 1.0, where 1.0 is perfect)
+    pub score: f64,
+
+    /// Detected anti-patterns
+    pub anti_patterns: Vec&lt;AntiPattern&gt;,
+
+    /// Actionable recommendations for improvement
+    pub recommendations: Vec&lt;String&gt;,
+}</code></pre>
+<h3 id="antipattern-enum"><a class="header" href="#antipattern-enum">AntiPattern Enum</a></h3>
+<pre><code class="language-rust">pub enum AntiPattern {
+    /// Single process dominates syscall activity
+    GodProcess {
+        process_id: u32,
+        syscall_percent: f64
+    },
+
+    /// Syscalls occurring at very short intervals
+    TightLoop {
+        location: String,
+        interval_ms: u64
+    },
+
+    /// Excessive I/O operations
+    ExcessiveIO {
+        ops_per_sec: u64
+    },
+
+    /// Main thread blocked for extended duration
+    BlockingMainThread {
+        duration_ms: u64
+    },
+}</code></pre>
+<h2 id="anti-pattern-details"><a class="header" href="#anti-pattern-details">Anti-Pattern Details</a></h2>
+<h3 id="god-process"><a class="header" href="#god-process">God Process</a></h3>
+<p>A "God Process" is detected when a single process accounts for more than the threshold percentage of all syscalls. This indicates:</p>
+<ul>
+<li><strong>Problem</strong>: Single point of failure, limits parallelization</li>
+<li><strong>Symptoms</strong>: One process doing 80%+ of all syscalls</li>
+<li><strong>Fix</strong>: Decompose into microservices, use load balancing</li>
+</ul>
+<p><strong>Example Detection:</strong></p>
+<pre><code>Anti-pattern: GodProcess { process_id: 1234, syscall_percent: 95.0 }
+Recommendation: Consider decomposing the dominant process into smaller
+services or distributing work across multiple processes.
+</code></pre>
+<h3 id="tight-loop"><a class="header" href="#tight-loop">Tight Loop</a></h3>
+<p>A "Tight Loop" is detected when syscalls occur at intervals below the threshold. This indicates polling or busy-waiting behavior:</p>
+<ul>
+<li><strong>Problem</strong>: High CPU usage, wasted resources</li>
+<li><strong>Symptoms</strong>: Same syscall repeated at &lt;10ms intervals</li>
+<li><strong>Fix</strong>: Use event-driven I/O, async operations, or proper sleep intervals</li>
+</ul>
+<p><strong>Example Detection:</strong></p>
+<pre><code>Anti-pattern: TightLoop { location: "syscall: futex", interval_ms: 2 }
+Recommendation: Consider using vectorized I/O (readv/writev), buffering,
+or async I/O to reduce syscall frequency.
+</code></pre>
+<h3 id="excessive-io"><a class="header" href="#excessive-io">Excessive I/O</a></h3>
+<p>Detected when the rate of I/O syscalls exceeds a sustainable threshold:</p>
+<ul>
+<li><strong>Problem</strong>: I/O subsystem saturation, latency spikes</li>
+<li><strong>Symptoms</strong>: &gt;10,000 I/O operations per second</li>
+<li><strong>Fix</strong>: Batch operations, use buffered I/O, implement throttling</li>
+</ul>
+<p><strong>I/O syscalls monitored:</strong> <code>read</code>, <code>write</code>, <code>pread64</code>, <code>pwrite64</code>, <code>readv</code>, <code>writev</code>, <code>preadv</code>, <code>pwritev</code>, <code>sendfile</code>, <code>splice</code>, <code>tee</code></p>
+<p><strong>Example Detection:</strong></p>
+<pre><code>Anti-pattern: ExcessiveIO { ops_per_sec: 15000 }
+Recommendation: Consider batching I/O operations, using buffered I/O,
+or implementing I/O throttling.
+</code></pre>
+<h3 id="blocking-main-thread"><a class="header" href="#blocking-main-thread">Blocking Main Thread</a></h3>
+<p>Detected when any syscall duration exceeds 100ms, indicating blocking operations:</p>
+<ul>
+<li><strong>Problem</strong>: UI freezes, request timeouts, poor responsiveness</li>
+<li><strong>Symptoms</strong>: Single syscall taking &gt;100ms</li>
+<li><strong>Fix</strong>: Use async I/O, move to background thread, add timeouts</li>
+</ul>
+<p><strong>Example Detection:</strong></p>
+<pre><code>Anti-pattern: BlockingMainThread { duration_ms: 500 }
+Recommendation: Consider moving blocking operations to a background
+thread or using async I/O to avoid blocking the main thread.
+</code></pre>
+<h2 id="quality-score-calculation"><a class="header" href="#quality-score-calculation">Quality Score Calculation</a></h2>
+<p>The quality score is calculated as:</p>
+<pre><code>score = 1.0 - (num_anti_patterns * 0.2)
+</code></pre>
+<div class="table-wrapper"><table><thead><tr><th>Anti-Patterns Found</th><th>Quality Score</th></tr></thead><tbody>
+<tr><td>0</td><td>1.0 (Perfect)</td></tr>
+<tr><td>1</td><td>0.8</td></tr>
+<tr><td>2</td><td>0.6</td></tr>
+<tr><td>3</td><td>0.4</td></tr>
+<tr><td>4</td><td>0.2</td></tr>
+<tr><td>5+</td><td>0.0</td></tr>
+</tbody></table>
+</div>
+<h2 id="integration-with-trace-analysis"><a class="header" href="#integration-with-trace-analysis">Integration with Trace Analysis</a></h2>
+<p>The <code>UnifiedTrace</code> type provides a convenience method:</p>
+<pre><code class="language-rust">impl UnifiedTrace {
+    /// Analyze trace for architectural quality and anti-patterns
+    pub fn architectural_quality(&amp;self) -&gt; Option&lt;ArchitecturalQuality&gt; {
+        // Returns None for empty traces
+        // Returns Some(quality) for traces with data
+    }
+}</code></pre>
+<h2 id="cicd-integration-5"><a class="header" href="#cicd-integration-5">CI/CD Integration</a></h2>
+<p>Combine anti-pattern detection with build-time assertions:</p>
+<pre><code class="language-toml"># renacer.toml
+[[assertion]]
+name = "no_god_process"
+type = "AntiPattern"
+max_patterns = 0
+fail_on_violation = true
+
+[[assertion]]
+name = "quality_gate"
+type = "Custom"
+expression = "quality_score &gt;= 0.8"
+fail_on_violation = true
+</code></pre>
+<h2 id="toyota-way-jidoka-quality-gates"><a class="header" href="#toyota-way-jidoka-quality-gates">Toyota Way: Jidoka (Quality Gates)</a></h2>
+<p>This feature implements the Toyota Way principle of Jidoka - building quality into the process by detecting defects as they occur. The anti-pattern detector acts as an automated "andon cord" that can stop the build when architectural quality degrades.</p>
+<p><strong>Key Principles:</strong></p>
+<ol>
+<li><strong>Stop and Fix</strong>: When anti-patterns are detected, fix them immediately</li>
+<li><strong>Root Cause Analysis</strong>: Use recommendations to address underlying issues</li>
+<li><strong>Continuous Improvement</strong>: Track quality scores over time</li>
+<li><strong>Prevention</strong>: Integrate into CI/CD to prevent regressions</li>
+</ol>
+<h2 id="peer-reviewed-foundation-3"><a class="header" href="#peer-reviewed-foundation-3">Peer-Reviewed Foundation</a></h2>
+<p>The anti-pattern detection algorithms are based on established research:</p>
+<ul>
+<li><strong>Sambasivan et al. (2016)</strong> "So, you want to trace your distributed system?" - 5 common anti-patterns account for 70% of performance bugs</li>
+<li><strong>Gunawi et al. (2014)</strong> "Why Does the Cloud Stop Computing?" SOSP - 60% of cloud failures from resource exhaustion patterns</li>
+<li><strong>Jeon et al. (2019)</strong> "Analysis of Large-Scale Multi-Tenant GPU Clusters" - PCIe bandwidth saturation patterns</li>
+</ul>
+<h2 id="related-topics-1"><a class="header" href="#related-topics-1">Related Topics</a></h2>
+<ul>
+<li><a href="advanced/../contributing/quality-gates.html">Build-Time Assertions</a> - CI/CD integration</li>
+<li><a href="advanced/./regression-detection.html">Regression Detection</a> - Statistical regression analysis</li>
+<li><a href="advanced/./sequence-mining.html">Sequence Mining</a> - N-gram pattern detection</li>
+<li><a href="advanced/../contributing/toyota-way.html">Toyota Way Principles</a> - Quality philosophy</li>
+</ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="cli-reference-1"><a class="header" href="#cli-reference-1">CLI Reference</a></h1>
 <p>Complete command-line interface documentation for Renacer.</p>
 <hr />
 <h2 id="synopsis"><a class="header" href="#synopsis">Synopsis</a></h2>
 <pre><code>renacer [OPTIONS] [-- &lt;COMMAND&gt;...]
+renacer validate [VALIDATE_OPTIONS] [-- &lt;COMMAND&gt;...]
 </code></pre>
+<h2 id="subcommands"><a class="header" href="#subcommands">Subcommands</a></h2>
+<h3 id="validate"><a class="header" href="#validate"><code>validate</code></a></h3>
+<p>Golden trace validation for regression detection. See <a href="reference/../advanced/golden-trace-validation.html">Golden Trace Validation</a>.</p>
+<p><strong>Generate baseline:</strong></p>
+<pre><code class="language-bash">renacer validate --generate ./golden -- echo "hello"
+</code></pre>
+<p><strong>Validate against baseline:</strong></p>
+<pre><code class="language-bash">renacer validate --baseline ./golden -- echo "hello"
+</code></pre>
+<p><strong>Options:</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Option</th><th>Description</th><th>Default</th></tr></thead><tbody>
+<tr><td><code>--generate &lt;DIR&gt;</code></td><td>Generate baseline to directory</td><td>-</td></tr>
+<tr><td><code>--baseline &lt;DIR&gt;</code></td><td>Compare against baseline directory</td><td>-</td></tr>
+<tr><td><code>--tolerance &lt;PERCENT&gt;</code></td><td>Timing tolerance percentage</td><td>10.0</td></tr>
+<tr><td><code>--strict</code></td><td>Strict mode (zero tolerance)</td><td>false</td></tr>
+<tr><td><code>--ignore-timing</code></td><td>Ignore timing, compare behavior only</td><td>false</td></tr>
+<tr><td><code>--output &lt;FORMAT&gt;</code></td><td>Output format (text, json, junit)</td><td>text</td></tr>
+<tr><td><code>--fail-fast</code></td><td>Stop on first mismatch</td><td>false</td></tr>
+</tbody></table>
+</div>
+<p><strong>Exit Codes:</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Code</th><th>Meaning</th></tr></thead><tbody>
+<tr><td>0</td><td>Validation passed</td></tr>
+<tr><td>1</td><td>Regression detected</td></tr>
+<tr><td>2</td><td>Baseline not found</td></tr>
+<tr><td>3</td><td>Invalid baseline format</td></tr>
+<tr><td>4</td><td>Command execution error</td></tr>
+<tr><td>5</td><td>Configuration error</td></tr>
+</tbody></table>
+</div>
+<hr />
 <h2 id="description"><a class="header" href="#description">Description</a></h2>
 <p>Renacer is a pure Rust system call tracer with source correlation capabilities. It uses ptrace to intercept syscalls and optionally correlates them with source code locations using DWARF debug information.</p>
 <p><strong>Key Features:</strong></p>
@@ -15154,7 +15906,7 @@ renacer -c --stats-extended --anomaly-threshold 2.5 -- ./myapp
 renacer --anomaly-realtime -- ./myapp
 </code></pre>
 <hr />
-<h3 id="output-formats-1"><a class="header" href="#output-formats-1">Output Formats</a></h3>
+<h3 id="output-formats-2"><a class="header" href="#output-formats-2">Output Formats</a></h3>
 <pre><code class="language-bash"># JSON for jq/Python
 renacer --format json -- ls | jq '.syscalls[] | select(.name == "openat")'
 
@@ -15165,7 +15917,7 @@ renacer --format csv -- ls &gt; trace.csv
 renacer --format html -c -- ls &gt; report.html
 </code></pre>
 <hr />
-<h2 id="exit-codes"><a class="header" href="#exit-codes">Exit Codes</a></h2>
+<h2 id="exit-codes-1"><a class="header" href="#exit-codes-1">Exit Codes</a></h2>
 <div class="table-wrapper"><table><thead><tr><th>Code</th><th>Meaning</th></tr></thead><tbody>
 <tr><td>0</td><td>Success (traced program exited successfully)</td></tr>
 <tr><td>1</td><td>Renacer error (invalid arguments, ptrace failure, etc.)</td></tr>
@@ -15174,7 +15926,7 @@ renacer --format html -c -- ls &gt; report.html
 </div>
 <p>See <a href="reference/./exit-codes.html">Exit Codes</a> for detailed codes.</p>
 <hr />
-<h2 id="related-19"><a class="header" href="#related-19">Related</a></h2>
+<h2 id="related-20"><a class="header" href="#related-20">Related</a></h2>
 <ul>
 <li><a href="reference/./filter-syntax.html">Filter Syntax</a> - Complete filtering reference</li>
 <li><a href="reference/./output-formats.html">Output Formats</a> - Format specifications</li>
@@ -15562,7 +16314,7 @@ renacer -e 'trace=/.*at$/' -- ls
 renacer -e trace=process -- make
 </code></pre>
 <hr />
-<h2 id="related-20"><a class="header" href="#related-20">Related</a></h2>
+<h2 id="related-21"><a class="header" href="#related-21">Related</a></h2>
 <ul>
 <li><a href="reference/./cli.html">CLI Reference</a> - Complete command-line options</li>
 <li><a href="reference/../core-concepts/filtering-classes.html">Filtering Classes</a> - Syscall class details</li>
@@ -15634,13 +16386,13 @@ Silhouette change: 0.847 → 0.723 (-14.6%)
 <tr><td><code>--anomaly-threshold N</code></td><td>Z-score threshold</td><td>2.0</td></tr>
 </tbody></table>
 </div>
-<h2 id="related-21"><a class="header" href="#related-21">Related</a></h2>
+<h2 id="related-22"><a class="header" href="#related-22">Related</a></h2>
 <ul>
 <li><a href="reference/../advanced/ml-pipeline.html">ML Pipeline</a> - Detailed ML documentation</li>
 <li><a href="reference/../advanced/model-persistence.html">Model Persistence</a> - .apr format details</li>
 <li><a href="reference/../advanced/machine-learning.html">Machine Learning</a> - KMeans basics</li>
 </ul>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="output-formats-2"><a class="header" href="#output-formats-2">Output Formats</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="output-formats-3"><a class="header" href="#output-formats-3">Output Formats</a></h1>
 <p>Overview of Renacer's output format system and when to use each format.</p>
 <hr />
 <h2 id="synopsis-2"><a class="header" href="#synopsis-2">Synopsis</a></h2>
@@ -15963,7 +16715,7 @@ renacer --format json -- nonexistent_command &gt; trace.json
 <li><a href="reference/./format-html.html">HTML Format</a> - HTML template and interactivity</li>
 </ul>
 <hr />
-<h2 id="related-22"><a class="header" href="#related-22">Related</a></h2>
+<h2 id="related-23"><a class="header" href="#related-23">Related</a></h2>
 <ul>
 <li><a href="reference/./cli.html">CLI Reference</a> - <code>--format</code> flag documentation</li>
 <li><a href="reference/../core-concepts/statistics.html">Statistics Mode</a> - Use with <code>-c</code> flag</li>
@@ -15972,12 +16724,12 @@ renacer --format json -- nonexistent_command &gt; trace.json
 <div style="break-before: page; page-break-before: always;"></div><h1 id="text-format-specification"><a class="header" href="#text-format-specification">Text Format Specification</a></h1>
 <p>Complete technical reference for Renacer's default text output format (strace-compatible).</p>
 <hr />
-<h2 id="overview-25"><a class="header" href="#overview-25">Overview</a></h2>
+<h2 id="overview-27"><a class="header" href="#overview-27">Overview</a></h2>
 <p>The text format provides human-readable syscall trace output optimized for terminal viewing and strace compatibility. It outputs formatted syscall entries to stdout with optional source correlation and timing information.</p>
 <p><strong>Format Identifier:</strong> <code>text</code> (default format)</p>
 <p><strong>Sprints:</strong> 3-4 (initial), 5-6 (DWARF), 9-10 (timing), 13 (function profiling), 20 (real-time anomaly)</p>
 <hr />
-<h2 id="quick-start-5"><a class="header" href="#quick-start-5">Quick Start</a></h2>
+<h2 id="quick-start-7"><a class="header" href="#quick-start-7">Quick Start</a></h2>
 <h3 id="basic-usage-14"><a class="header" href="#basic-usage-14">Basic Usage</a></h3>
 <pre><code class="language-bash"># Default format (no flag needed)
 renacer -- ls
@@ -16483,7 +17235,7 @@ write_output                |      123  |     1 |      123
 </code></pre>
 <p><strong>See Also:</strong> <a href="reference/../advanced/function-profiling.html">Function Profiling</a></p>
 <hr />
-<h2 id="related-23"><a class="header" href="#related-23">Related</a></h2>
+<h2 id="related-24"><a class="header" href="#related-24">Related</a></h2>
 <ul>
 <li><a href="reference/./output-formats.html">Output Formats Overview</a> - Format selection guide</li>
 <li><a href="reference/./format-json.html">JSON Format</a> - Machine-parseable JSON output</li>
@@ -16494,12 +17246,12 @@ write_output                |      123  |     1 |      123
 <div style="break-before: page; page-break-before: always;"></div><h1 id="json-format-specification"><a class="header" href="#json-format-specification">JSON Format Specification</a></h1>
 <p>Complete technical reference for Renacer's JSON output format.</p>
 <hr />
-<h2 id="overview-26"><a class="header" href="#overview-26">Overview</a></h2>
+<h2 id="overview-28"><a class="header" href="#overview-28">Overview</a></h2>
 <p>The JSON format provides machine-parseable syscall trace data for automation, scripting, and data analysis workflows. It outputs structured JSON to stdout with full syscall details and optional statistics.</p>
 <p><strong>Format Identifier:</strong> <code>renacer-json-v1</code></p>
 <p><strong>Sprints:</strong> 9-10 (initial), 23 (ML anomaly integration)</p>
 <hr />
-<h2 id="quick-start-6"><a class="header" href="#quick-start-6">Quick Start</a></h2>
+<h2 id="quick-start-8"><a class="header" href="#quick-start-8">Quick Start</a></h2>
 <h3 id="basic-usage-15"><a class="header" href="#basic-usage-15">Basic Usage</a></h3>
 <pre><code class="language-bash"># Output JSON to stdout
 renacer --format json -- ls
@@ -17091,7 +17843,7 @@ renacer --format json -- ls &gt; trace.json
 ajv validate -s schema.json -d trace.json
 </code></pre>
 <hr />
-<h2 id="related-24"><a class="header" href="#related-24">Related</a></h2>
+<h2 id="related-25"><a class="header" href="#related-25">Related</a></h2>
 <ul>
 <li><a href="reference/./output-formats.html">Output Formats Overview</a> - Format selection guide</li>
 <li><a href="reference/./cli.html">CLI Reference</a> - <code>--format json</code> flag documentation</li>
@@ -17102,12 +17854,12 @@ ajv validate -s schema.json -d trace.json
 <div style="break-before: page; page-break-before: always;"></div><h1 id="csv-format-specification"><a class="header" href="#csv-format-specification">CSV Format Specification</a></h1>
 <p>Complete technical reference for Renacer's CSV output format (spreadsheet-compatible).</p>
 <hr />
-<h2 id="overview-27"><a class="header" href="#overview-27">Overview</a></h2>
+<h2 id="overview-29"><a class="header" href="#overview-29">Overview</a></h2>
 <p>The CSV format provides machine-parseable syscall trace data optimized for spreadsheet analysis (Excel, LibreOffice Calc), statistical tools (R, MATLAB), and database import. It outputs RFC 4180-compliant CSV to stdout with optional timing and source correlation.</p>
 <p><strong>Format Identifier:</strong> <code>csv</code></p>
 <p><strong>Sprints:</strong> 17 (initial CSV implementation)</p>
 <hr />
-<h2 id="quick-start-7"><a class="header" href="#quick-start-7">Quick Start</a></h2>
+<h2 id="quick-start-9"><a class="header" href="#quick-start-9">Quick Start</a></h2>
 <h3 id="basic-usage-16"><a class="header" href="#basic-usage-16">Basic Usage</a></h3>
 <pre><code class="language-bash"># Output CSV to stdout
 renacer --format csv -- ls
@@ -17724,7 +18476,7 @@ csvlint trace.csv
 </div>
 <p><strong>Parsing Tip:</strong> Always read header row to determine schema dynamically.</p>
 <hr />
-<h2 id="related-25"><a class="header" href="#related-25">Related</a></h2>
+<h2 id="related-26"><a class="header" href="#related-26">Related</a></h2>
 <ul>
 <li><a href="reference/./output-formats.html">Output Formats Overview</a> - Format selection guide</li>
 <li><a href="reference/./format-text.html">Text Format</a> - Human-readable text output</li>
@@ -17738,7 +18490,7 @@ csvlint trace.csv
 <blockquote>
 <p><strong>TDD-Verified:</strong> All examples validated by <a href="reference/../../../tests/sprint22_html_output_tests.rs"><code>tests/sprint22_html_output_tests.rs</code></a></p>
 </blockquote>
-<h2 id="overview-28"><a class="header" href="#overview-28">Overview</a></h2>
+<h2 id="overview-30"><a class="header" href="#overview-30">Overview</a></h2>
 <p>HTML output format generates standalone HTML documents containing syscall trace data in a visually appealing, interactive format:</p>
 <ul>
 <li><strong>Standalone Documents:</strong> Self-contained HTML with embedded CSS (no external dependencies)</li>
@@ -18047,16 +18799,148 @@ renacer --format html -- ./app &gt; trace.html  # New HTML format
 <li>✅ <strong>Professional presentation</strong> for non-technical audiences</li>
 </ul>
 <p><strong>All examples tested in:</strong> <a href="reference/../../../tests/sprint22_html_output_tests.rs"><code>tests/sprint22_html_output_tests.rs</code></a></p>
-<h2 id="related-26"><a class="header" href="#related-26">Related</a></h2>
+<h2 id="related-27"><a class="header" href="#related-27">Related</a></h2>
 <ul>
 <li><a href="reference/./format-json.html">JSON Output Format</a> - Machine-readable output</li>
 <li><a href="reference/./format-csv.html">CSV Output Format</a> - Spreadsheet-compatible output</li>
 <li><a href="reference/../core-concepts/statistics.html">Statistics Mode</a> - Call counts and timing</li>
 <li><a href="reference/../examples/html-reports.html">HTML Reports Example</a> - Practical use cases</li>
 </ul>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="exit-codes-1"><a class="header" href="#exit-codes-1">Exit Codes</a></h1>
-<p>📝 <strong>This chapter is under construction.</strong></p>
-<p>All content will be TDD-verified and backed by tests in <code>tests/sprint*.rs</code>.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="exit-codes-2"><a class="header" href="#exit-codes-2">Exit Codes</a></h1>
+<p>Renacer uses distinct exit codes to indicate different outcomes, enabling programmatic response in scripts and CI/CD pipelines.</p>
+<h2 id="tracer-exit-codes"><a class="header" href="#tracer-exit-codes">Tracer Exit Codes</a></h2>
+<p>When running <code>renacer -- &lt;command&gt;</code>:</p>
+<div class="table-wrapper"><table><thead><tr><th>Code</th><th>Meaning</th></tr></thead><tbody>
+<tr><td>0</td><td>Success (traced program exited successfully)</td></tr>
+<tr><td>1</td><td>Renacer error (invalid arguments, ptrace failure, etc.)</td></tr>
+<tr><td>N</td><td>Traced program exit code (if program exited with code N)</td></tr>
+</tbody></table>
+</div>
+<h3 id="examples-3"><a class="header" href="#examples-3">Examples</a></h3>
+<pre><code class="language-bash"># Success - ls exits with 0
+renacer -- ls
+echo $?  # 0
+
+# Command fails - ls on nonexistent file
+renacer -- ls /nonexistent
+echo $?  # 2 (ls exit code)
+
+# Renacer error - invalid option
+renacer --invalid-option
+echo $?  # 1
+</code></pre>
+<h2 id="validate-subcommand-exit-codes"><a class="header" href="#validate-subcommand-exit-codes">Validate Subcommand Exit Codes</a></h2>
+<p>When running <code>renacer validate</code>:</p>
+<div class="table-wrapper"><table><thead><tr><th>Code</th><th>Constant</th><th>Meaning</th><th>CI Response</th></tr></thead><tbody>
+<tr><td>0</td><td><code>Passed</code></td><td>Validation passed</td><td>Continue</td></tr>
+<tr><td>1</td><td><code>Failed</code></td><td>Regression detected</td><td>Block deployment</td></tr>
+<tr><td>2</td><td><code>BaselineNotFound</code></td><td>Baseline directory not found</td><td>Check paths</td></tr>
+<tr><td>3</td><td><code>InvalidBaseline</code></td><td>Invalid/corrupt baseline</td><td>Regenerate baseline</td></tr>
+<tr><td>4</td><td><code>CommandError</code></td><td>Command execution failed</td><td>Check command</td></tr>
+<tr><td>5</td><td><code>ConfigError</code></td><td>Invalid configuration</td><td>Check options</td></tr>
+</tbody></table>
+</div>
+<h3 id="cicd-usage"><a class="header" href="#cicd-usage">CI/CD Usage</a></h3>
+<pre><code class="language-bash">#!/bin/bash
+set -e
+
+renacer validate --baseline ./golden -- ./myapp
+status=$?
+
+case $status in
+    0) echo "Validation passed" ;;
+    1) echo "REGRESSION DETECTED - blocking deployment"; exit 1 ;;
+    2) echo "Baseline not found - generating...";
+       renacer validate --generate ./golden -- ./myapp ;;
+    3) echo "Invalid baseline - regenerating...";
+       rm -rf ./golden
+       renacer validate --generate ./golden -- ./myapp ;;
+    4) echo "Command failed to execute"; exit 1 ;;
+    5) echo "Configuration error"; exit 1 ;;
+esac
+</code></pre>
+<h3 id="github-actions-1"><a class="header" href="#github-actions-1">GitHub Actions</a></h3>
+<pre><code class="language-yaml">- name: Validate traces
+  run: renacer validate --baseline ./golden -- ./myapp
+  continue-on-error: false  # Exit 1 fails the workflow
+</code></pre>
+<h2 id="signal-based-exit-codes"><a class="header" href="#signal-based-exit-codes">Signal-Based Exit Codes</a></h2>
+<p>When the traced program is terminated by a signal:</p>
+<div class="table-wrapper"><table><thead><tr><th>Exit Code</th><th>Signal</th><th>Meaning</th></tr></thead><tbody>
+<tr><td>128 + N</td><td>SIGTERM (15)</td><td>143 = Terminated</td></tr>
+<tr><td>128 + N</td><td>SIGKILL (9)</td><td>137 = Killed</td></tr>
+<tr><td>128 + N</td><td>SIGSEGV (11)</td><td>139 = Segmentation fault</td></tr>
+<tr><td>128 + N</td><td>SIGABRT (6)</td><td>134 = Aborted</td></tr>
+</tbody></table>
+</div>
+<h3 id="example-6"><a class="header" href="#example-6">Example</a></h3>
+<pre><code class="language-bash"># Program crashes with SIGSEGV
+renacer -- ./crash_program
+echo $?  # 139 (128 + 11)
+</code></pre>
+<h2 id="exit-code-constants-rust-api"><a class="header" href="#exit-code-constants-rust-api">Exit Code Constants (Rust API)</a></h2>
+<pre><code class="language-rust">use renacer::validate::ValidateExitCode;
+
+fn handle_validation_result(code: ValidateExitCode) {
+    match code {
+        ValidateExitCode::Passed =&gt; println!("OK"),
+        ValidateExitCode::Failed =&gt; {
+            eprintln!("Regression detected!");
+            std::process::exit(1);
+        }
+        ValidateExitCode::BaselineNotFound =&gt; {
+            eprintln!("Baseline not found");
+            std::process::exit(2);
+        }
+        ValidateExitCode::InvalidBaseline =&gt; {
+            eprintln!("Invalid baseline");
+            std::process::exit(3);
+        }
+        ValidateExitCode::CommandError =&gt; {
+            eprintln!("Command error");
+            std::process::exit(4);
+        }
+        ValidateExitCode::ConfigError =&gt; {
+            eprintln!("Config error");
+            std::process::exit(5);
+        }
+    }
+}</code></pre>
+<h2 id="best-practices-17"><a class="header" href="#best-practices-17">Best Practices</a></h2>
+<h3 id="1-always-check-exit-codes"><a class="header" href="#1-always-check-exit-codes">1. Always Check Exit Codes</a></h3>
+<pre><code class="language-bash">if ! renacer validate --baseline ./golden -- ./myapp; then
+    echo "Validation failed with code $?"
+    exit 1
+fi
+</code></pre>
+<h3 id="2-distinguish-tracer-vs-program-failures"><a class="header" href="#2-distinguish-tracer-vs-program-failures">2. Distinguish Tracer vs Program Failures</a></h3>
+<p>Exit code 1 could mean:</p>
+<ul>
+<li>Renacer internal error (when tracing)</li>
+<li>Regression detected (when validating)</li>
+</ul>
+<p>Use distinct handling:</p>
+<pre><code class="language-bash"># Tracer mode
+renacer -- ./myapp
+if [ $? -eq 1 ]; then
+    echo "Renacer or program error"
+fi
+
+# Validate mode - exit 1 is specifically regression
+renacer validate --baseline ./golden -- ./myapp
+if [ $? -eq 1 ]; then
+    echo "REGRESSION DETECTED"
+fi
+</code></pre>
+<h3 id="3-log-exit-codes-for-debugging"><a class="header" href="#3-log-exit-codes-for-debugging">3. Log Exit Codes for Debugging</a></h3>
+<pre><code class="language-bash">renacer validate --baseline ./golden -- ./myapp
+echo "Validate exit code: $?" &gt;&gt; validation.log
+</code></pre>
+<h2 id="related-28"><a class="header" href="#related-28">Related</a></h2>
+<ul>
+<li><a href="reference/./cli.html">CLI Reference</a> - Full command documentation</li>
+<li><a href="reference/../advanced/golden-trace-validation.html">Golden Trace Validation</a> - Validation details</li>
+</ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="performance-benchmarks"><a class="header" href="#performance-benchmarks">Performance Benchmarks</a></h1>
 <p>Performance comparison: Renacer vs strace across multiple workloads.</p>
 <blockquote>
@@ -18087,7 +18971,7 @@ renacer --format html -- ./app &gt; trace.html  # New HTML format
 </ul>
 <hr />
 <h2 id="running-benchmarks-1"><a class="header" href="#running-benchmarks-1">Running Benchmarks</a></h2>
-<h3 id="quick-start-8"><a class="header" href="#quick-start-8">Quick Start</a></h3>
+<h3 id="quick-start-10"><a class="header" href="#quick-start-10">Quick Start</a></h3>
 <pre><code class="language-bash"># Build release binary
 cargo build --release
 
@@ -18331,7 +19215,7 @@ renacer -- ./myapp  # Faster
 cargo test --release --test benchmark_vs_strace -- --ignored --nocapture
 </code></pre>
 <hr />
-<h2 id="related-27"><a class="header" href="#related-27">Related</a></h2>
+<h2 id="related-29"><a class="header" href="#related-29">Related</a></h2>
 <ul>
 <li><a href="reference/../appendix/performance-tables.html">Performance Tables</a> - Comprehensive benchmark data and analysis</li>
 <li><a href="reference/../appendix/changelog.html">CHANGELOG</a> - Sprint 11-12: benchmark infrastructure</li>
@@ -18581,7 +19465,7 @@ proptest! {
 <p>All content will be TDD-verified and backed by tests in <code>tests/sprint*.rs</code>.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="fuzz-testing"><a class="header" href="#fuzz-testing">Fuzz Testing</a></h1>
 <p>Renacer uses <strong>cargo-fuzz</strong> for coverage-guided fuzz testing to discover edge cases and security vulnerabilities in parser code and other critical components.</p>
-<h2 id="overview-29"><a class="header" href="#overview-29">Overview</a></h2>
+<h2 id="overview-31"><a class="header" href="#overview-31">Overview</a></h2>
 <p>Fuzz testing generates random inputs to test code robustness. Unlike unit tests with specific inputs, fuzzing explores the input space automatically to find crashes, panics, and unexpected behavior.</p>
 <p><strong>When to Use Fuzz Testing:</strong></p>
 <ul>
@@ -18660,7 +19544,7 @@ make test-tier3
 <li>Mutation tests</li>
 <li>Long-running integration tests</li>
 </ol>
-<h2 id="best-practices-16"><a class="header" href="#best-practices-16">Best Practices</a></h2>
+<h2 id="best-practices-18"><a class="header" href="#best-practices-18">Best Practices</a></h2>
 <h3 id="1-test-invariants-not-specific-behavior"><a class="header" href="#1-test-invariants-not-specific-behavior">1. Test Invariants, Not Specific Behavior</a></h3>
 <p>Good fuzz target:</p>
 <pre><code class="language-rust">fuzz_target!(|data: &amp;[u8]| {
@@ -18927,7 +19811,7 @@ cargo test --test core_functionality || exit 1
 
 echo "✅ Tests passed, committing..."
 </code></pre>
-<h2 id="cicd-integration-4"><a class="header" href="#cicd-integration-4">CI/CD Integration</a></h2>
+<h2 id="cicd-integration-6"><a class="header" href="#cicd-integration-6">CI/CD Integration</a></h2>
 <h3 id="github-actions-example-1"><a class="header" href="#github-actions-example-1">GitHub Actions Example</a></h3>
 <pre><code class="language-yaml">name: Tiered Testing
 
@@ -19061,7 +19945,7 @@ cargo test --lib -- --report-time
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="chaos-engineering"><a class="header" href="#chaos-engineering">Chaos Engineering</a></h1>
 <p>Renacer includes <strong>chaos engineering</strong> capabilities for testing system resilience under adverse conditions. This feature was added in Sprint 29, following patterns from the Aprender ML library.</p>
-<h2 id="overview-30"><a class="header" href="#overview-30">Overview</a></h2>
+<h2 id="overview-32"><a class="header" href="#overview-32">Overview</a></h2>
 <p>Chaos engineering intentionally introduces controlled failures to verify system behavior under stress. For a syscall tracer like Renacer, this means testing how the tracer behaves when:</p>
 <ul>
 <li>Memory is limited</li>
@@ -19088,7 +19972,7 @@ let config = ChaosConfig::new()
     .with_timeout(Duration::from_secs(30))
     .with_signal_injection(true)
     .build();</code></pre>
-<h3 id="configuration-options"><a class="header" href="#configuration-options">Configuration Options</a></h3>
+<h3 id="configuration-options-1"><a class="header" href="#configuration-options-1">Configuration Options</a></h3>
 <div class="table-wrapper"><table><thead><tr><th>Parameter</th><th>Description</th><th>Gentle</th><th>Aggressive</th></tr></thead><tbody>
 <tr><td><code>memory_limit</code></td><td>Max memory in bytes</td><td>500MB</td><td>50MB</td></tr>
 <tr><td><code>cpu_limit</code></td><td>CPU fraction (0.0-1.0)</td><td>0.8</td><td>0.2</td></tr>
@@ -19256,7 +20140,7 @@ renacer --chaos-signals -c -- ./app
 renacer --chaos aggressive --chaos-memory-limit 128M -c -- ./stress-test
 </code></pre>
 <p>For detailed usage examples, see the <a href="contributing/../advanced/chaos-testing.html">Chaos Testing Guide</a>.</p>
-<h2 id="use-cases-1"><a class="header" href="#use-cases-1">Use Cases</a></h2>
+<h2 id="use-cases-2"><a class="header" href="#use-cases-2">Use Cases</a></h2>
 <h3 id="1-testing-error-handling"><a class="header" href="#1-testing-error-handling">1. Testing Error Handling</a></h3>
 <pre><code class="language-rust">// Verify tracer handles memory exhaustion
 let config = ChaosConfig::new()
@@ -19427,7 +20311,7 @@ fn test_complete_chaos_scenario() {
 : Matrix showing pairwise correlation coefficients between syscall durations. Identifies related operations.</p>
 <p><strong>K-means Clustering</strong>
 : Unsupervised learning algorithm that groups syscalls into K clusters based on features (duration, frequency). Used for pattern discovery.</p>
-<h2 id="output-formats-3"><a class="header" href="#output-formats-3">Output Formats</a></h2>
+<h2 id="output-formats-4"><a class="header" href="#output-formats-4">Output Formats</a></h2>
 <p><strong>Text Format</strong>
 : Human-readable strace-like output (default). Example: <code>openat(AT_FDCWD, "file", O_RDONLY) = 3</code>.</p>
 <p><strong>JSON Format</strong>
@@ -19909,7 +20793,7 @@ make coverage
 make mutants-quick
 </code></pre>
 <p>See <a href="appendix/../contributing/quality-gates.html">Quality Gates</a>.</p>
-<h2 id="related-28"><a class="header" href="#related-28">Related</a></h2>
+<h2 id="related-30"><a class="header" href="#related-30">Related</a></h2>
 <ul>
 <li><a href="appendix/./glossary.html">Glossary</a> - Technical terms and definitions</li>
 <li><a href="appendix/./changelog.html">CHANGELOG</a> - Sprint history and release notes</li>
@@ -19967,7 +20851,7 @@ make mutants-quick
 <li><strong>Zero Defects</strong>: All clippy checks passing, no warnings</li>
 <li><strong>Dependencies</strong>: aprender 0.7.1, trueno 0.7.0 (SIMD-optimized statistics)</li>
 </ul>
-<h3 id="peer-reviewed-foundation-3"><a class="header" href="#peer-reviewed-foundation-3">Peer-Reviewed Foundation</a></h3>
+<h3 id="peer-reviewed-foundation-4"><a class="header" href="#peer-reviewed-foundation-4">Peer-Reviewed Foundation</a></h3>
 <p>Based on 19 peer-reviewed papers including:</p>
 <ul>
 <li>Zeller (2002): Delta Debugging (FSE)</li>
@@ -20461,7 +21345,7 @@ renacer -e trace=file,network,mmap -- ./myapp
 <li>✅ Zero regressions in quality metrics</li>
 </ul>
 <hr />
-<h2 id="toyota-way-principles-applied"><a class="header" href="#toyota-way-principles-applied">Toyota Way Principles Applied</a></h2>
+<h2 id="toyota-way-principles-applied-1"><a class="header" href="#toyota-way-principles-applied-1">Toyota Way Principles Applied</a></h2>
 <p>Throughout all sprints, Renacer follows Toyota Production System principles:</p>
 <ol>
 <li><strong>STOP THE LINE</strong> - Sprint 29: Eliminated flaky test immediately (zero-tolerance for defects)</li>
@@ -20505,7 +21389,7 @@ renacer -e trace=file,network,mmap -- ./myapp
 <li>BPF CO-RE support</li>
 </ul>
 <hr />
-<h2 id="related-29"><a class="header" href="#related-29">Related</a></h2>
+<h2 id="related-31"><a class="header" href="#related-31">Related</a></h2>
 <ul>
 <li><a href="appendix/./glossary.html">Glossary</a> - Technical terms and definitions</li>
 <li><a href="appendix/./faq.html">FAQ</a> - Frequently asked questions</li>
@@ -20865,7 +21749,7 @@ cargo test --release bench_minimal_syscalls -- --ignored --nocapture
 <li><strong>Tools:</strong> strace, cargo, python3 (optional for HPU)</li>
 </ul>
 <hr />
-<h2 id="related-30"><a class="header" href="#related-30">Related</a></h2>
+<h2 id="related-32"><a class="header" href="#related-32">Related</a></h2>
 <ul>
 <li><a href="appendix/../reference/benchmarks.html">Benchmarks</a> - Benchmark methodology and results</li>
 <li><a href="appendix/./changelog.html">CHANGELOG</a> - Sprint history (Sprint 11-12 introduced benchmarks)</li>

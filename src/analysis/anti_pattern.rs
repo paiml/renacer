@@ -275,7 +275,7 @@ impl AntiPatternDetector {
             "sendfile", "splice", "tee",
         ];
 
-        let io_count: usize = syscalls
+        let io_count = syscalls
             .iter()
             .filter(|s| {
                 let name: &str = &s.name;
@@ -283,7 +283,11 @@ impl AntiPatternDetector {
             })
             .count();
 
-        let ops_per_sec = (io_count as f64 / duration_secs) as u64;
+        #[expect(
+            clippy::cast_precision_loss,
+            reason = "io_count is always small enough for f64"
+        )]
+        let ops_per_sec = ((io_count as f64) / duration_secs) as u64;
 
         // Check against threshold
         if ops_per_sec > self.thresholds.excessive_io_ops_per_sec {

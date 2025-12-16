@@ -163,7 +163,39 @@
 <hr />
 <h2 id="synopsis"><a class="header" href="#synopsis">Synopsis</a></h2>
 <pre><code>renacer [OPTIONS] [-- &lt;COMMAND&gt;...]
+renacer validate [VALIDATE_OPTIONS] [-- &lt;COMMAND&gt;...]
 </code></pre>
+<h2 id="subcommands"><a class="header" href="#subcommands">Subcommands</a></h2>
+<h3 id="validate"><a class="header" href="#validate"><code>validate</code></a></h3>
+<p>Golden trace validation for regression detection. See <a href="../advanced/golden-trace-validation.html">Golden Trace Validation</a>.</p>
+<p><strong>Generate baseline:</strong></p>
+<pre><code class="language-bash">renacer validate --generate ./golden -- echo "hello"
+</code></pre>
+<p><strong>Validate against baseline:</strong></p>
+<pre><code class="language-bash">renacer validate --baseline ./golden -- echo "hello"
+</code></pre>
+<p><strong>Options:</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Option</th><th>Description</th><th>Default</th></tr></thead><tbody>
+<tr><td><code>--generate &lt;DIR&gt;</code></td><td>Generate baseline to directory</td><td>-</td></tr>
+<tr><td><code>--baseline &lt;DIR&gt;</code></td><td>Compare against baseline directory</td><td>-</td></tr>
+<tr><td><code>--tolerance &lt;PERCENT&gt;</code></td><td>Timing tolerance percentage</td><td>10.0</td></tr>
+<tr><td><code>--strict</code></td><td>Strict mode (zero tolerance)</td><td>false</td></tr>
+<tr><td><code>--ignore-timing</code></td><td>Ignore timing, compare behavior only</td><td>false</td></tr>
+<tr><td><code>--output &lt;FORMAT&gt;</code></td><td>Output format (text, json, junit)</td><td>text</td></tr>
+<tr><td><code>--fail-fast</code></td><td>Stop on first mismatch</td><td>false</td></tr>
+</tbody></table>
+</div>
+<p><strong>Exit Codes:</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Code</th><th>Meaning</th></tr></thead><tbody>
+<tr><td>0</td><td>Validation passed</td></tr>
+<tr><td>1</td><td>Regression detected</td></tr>
+<tr><td>2</td><td>Baseline not found</td></tr>
+<tr><td>3</td><td>Invalid baseline format</td></tr>
+<tr><td>4</td><td>Command execution error</td></tr>
+<tr><td>5</td><td>Configuration error</td></tr>
+</tbody></table>
+</div>
+<hr />
 <h2 id="description"><a class="header" href="#description">Description</a></h2>
 <p>Renacer is a pure Rust system call tracer with source correlation capabilities. It uses ptrace to intercept syscalls and optionally correlates them with source code locations using DWARF debug information.</p>
 <p><strong>Key Features:</strong></p>
@@ -532,7 +564,7 @@ renacer --format html -c -- ls &gt; report.html
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../advanced/regression-detection.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../advanced/anti-pattern-detection.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
@@ -546,7 +578,7 @@ renacer --format html -c -- ls &gt; report.html
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../advanced/regression-detection.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../advanced/anti-pattern-detection.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
