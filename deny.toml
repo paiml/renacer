@@ -2,15 +2,11 @@
 # https://embarkstudios.github.io/cargo-deny/
 
 [advisories]
-# Advisory database configuration
-db-path = "~/.cargo/advisory-db"
-db-urls = ["https://github.com/rustsec/advisory-db"]
 version = 2
 ignore = []
 
 [licenses]
-# License policy
-unlicensed = "deny"
+version = 2
 allow = [
     "MIT",
     "Apache-2.0",
@@ -21,11 +17,6 @@ allow = [
     "Unicode-DFS-2016",
     "Zlib",
 ]
-deny = []
-copyleft = "warn"
-allow-osi-fsf-free = "both"
-default = "deny"
-confidence-threshold = 0.8
 
 [licenses.private]
 # Private/unpublished crates are exempt
