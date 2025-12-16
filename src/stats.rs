@@ -408,9 +408,9 @@ mod tests {
         tracker.record("read", 10, 50);
         tracker.record("read", 10, 75);
 
-        assert_eq!(tracker.stats.get("open").unwrap().count, 1);
-        assert_eq!(tracker.stats.get("read").unwrap().count, 2);
-        assert_eq!(tracker.stats.get("read").unwrap().total_time_us, 125);
+        assert_eq!(tracker.stats.get("open").expect("test").count, 1);
+        assert_eq!(tracker.stats.get("read").expect("test").count, 2);
+        assert_eq!(tracker.stats.get("read").expect("test").total_time_us, 125);
     }
 
     #[test]
@@ -420,7 +420,7 @@ mod tests {
         tracker.record("open", -2, 50); // error (ENOENT)
         tracker.record("open", -13, 25); // error (EACCES)
 
-        let stats = tracker.stats.get("open").unwrap();
+        let stats = tracker.stats.get("open").expect("test");
         assert_eq!(stats.count, 3);
         assert_eq!(stats.errors, 2);
         assert_eq!(stats.total_time_us, 175);
@@ -485,10 +485,10 @@ mod tests {
         tracker.record("close", 0, 50);
 
         assert_eq!(tracker.stats.len(), 4);
-        assert_eq!(tracker.stats.get("open").unwrap().count, 1);
-        assert_eq!(tracker.stats.get("read").unwrap().count, 1);
-        assert_eq!(tracker.stats.get("write").unwrap().count, 1);
-        assert_eq!(tracker.stats.get("close").unwrap().count, 1);
+        assert_eq!(tracker.stats.get("open").expect("test").count, 1);
+        assert_eq!(tracker.stats.get("read").expect("test").count, 1);
+        assert_eq!(tracker.stats.get("write").expect("test").count, 1);
+        assert_eq!(tracker.stats.get("close").expect("test").count, 1);
     }
 
     #[test]
@@ -497,7 +497,7 @@ mod tests {
         tracker.record("test", 0, 0);
         tracker.record("test", 0, 0);
 
-        let stats = tracker.stats.get("test").unwrap();
+        let stats = tracker.stats.get("test").expect("test");
         assert_eq!(stats.count, 2);
         assert_eq!(stats.total_time_us, 0);
         // Should not panic on division by zero
@@ -511,7 +511,7 @@ mod tests {
         tracker.record("fail", -2, 20);
         tracker.record("fail", -13, 30);
 
-        let stats = tracker.stats.get("fail").unwrap();
+        let stats = tracker.stats.get("fail").expect("test");
         assert_eq!(stats.count, 3);
         assert_eq!(stats.errors, 3);
         assert_eq!(stats.total_time_us, 60);
@@ -525,7 +525,7 @@ mod tests {
         tracker.record("open", 5, 75); // success
         tracker.record("open", -13, 25); // error
 
-        let stats = tracker.stats.get("open").unwrap();
+        let stats = tracker.stats.get("open").expect("test");
         assert_eq!(stats.count, 4);
         assert_eq!(stats.errors, 2);
         assert_eq!(stats.total_time_us, 250);
@@ -538,7 +538,7 @@ mod tests {
         tracker.record("big", 0, u64::MAX / 2);
         tracker.record("big", 0, u64::MAX / 2);
 
-        let stats = tracker.stats.get("big").unwrap();
+        let stats = tracker.stats.get("big").expect("test");
         assert_eq!(stats.count, 2);
         // Should handle large numbers without overflow
         assert!(stats.total_time_us > 0);
@@ -558,9 +558,9 @@ mod tests {
         tracker.record("medium", 0, 60);
 
         // Verify counts
-        assert_eq!(tracker.stats.get("rare").unwrap().count, 1);
-        assert_eq!(tracker.stats.get("medium").unwrap().count, 2);
-        assert_eq!(tracker.stats.get("common").unwrap().count, 3);
+        assert_eq!(tracker.stats.get("rare").expect("test").count, 1);
+        assert_eq!(tracker.stats.get("medium").expect("test").count, 2);
+        assert_eq!(tracker.stats.get("common").expect("test").count, 3);
 
         // Print should sort by count (descending)
         tracker.print_summary();
@@ -576,8 +576,8 @@ mod tests {
         // Total time: 1000us
         // half: 500us = 50%
         // quarter: 500us = 50% (but 2 calls)
-        let half_stats = tracker.stats.get("half").unwrap();
-        let quarter_stats = tracker.stats.get("quarter").unwrap();
+        let half_stats = tracker.stats.get("half").expect("test");
+        let quarter_stats = tracker.stats.get("quarter").expect("test");
 
         assert_eq!(half_stats.total_time_us, 500);
         assert_eq!(quarter_stats.total_time_us, 500);
@@ -590,7 +590,7 @@ mod tests {
         let mut tracker = StatsTracker::new();
         tracker.record("success", 0, 100);
 
-        let stats = tracker.stats.get("success").unwrap();
+        let stats = tracker.stats.get("success").expect("test");
         assert_eq!(stats.count, 1);
         assert_eq!(stats.errors, 0);
     }
@@ -600,7 +600,7 @@ mod tests {
         let mut tracker = StatsTracker::new();
         tracker.record("read", 1024, 100); // read 1024 bytes
 
-        let stats = tracker.stats.get("read").unwrap();
+        let stats = tracker.stats.get("read").expect("test");
         assert_eq!(stats.count, 1);
         assert_eq!(stats.errors, 0);
     }
@@ -610,7 +610,7 @@ mod tests {
         let mut tracker = StatsTracker::new();
         tracker.record("open", -2, 50); // ENOENT error
 
-        let stats = tracker.stats.get("open").unwrap();
+        let stats = tracker.stats.get("open").expect("test");
         assert_eq!(stats.count, 1);
         assert_eq!(stats.errors, 1);
     }
@@ -625,7 +625,7 @@ mod tests {
         let v = Vector::from_slice(&counts);
 
         // Use Trueno to sum
-        let result = v.sum().unwrap();
+        let result = v.sum().expect("test");
         assert_eq!(result, 100.0);
 
         // This test passes - now we need to actually integrate Trueno into StatsTracker

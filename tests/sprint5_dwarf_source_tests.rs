@@ -13,11 +13,11 @@ use tempfile::TempDir;
 
 /// Helper: Compile a simple Rust program with debug info
 fn compile_test_program(code: &str, opt_level: u8) -> (TempDir, PathBuf) {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let src_file = temp_dir.path().join("test.rs");
     let bin_file = temp_dir.path().join("test_bin");
 
-    fs::write(&src_file, code).unwrap();
+    fs::write(&src_file, code).expect("test");
 
     StdCommand::new("rustc")
         .arg(&src_file)
@@ -125,11 +125,11 @@ fn main() {
 #[test]
 fn test_dwarf_no_debug_info_graceful_fallback() {
     // Test graceful handling when no debug info available
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let src_file = temp_dir.path().join("test.rs");
     let bin_file = temp_dir.path().join("test_bin");
 
-    fs::write(&src_file, "fn main() { println!(\"test\"); }").unwrap();
+    fs::write(&src_file, "fn main() { println!(\"test\"); }").expect("test");
 
     // Compile WITHOUT debug info (-g)
     StdCommand::new("rustc")
@@ -139,7 +139,7 @@ fn test_dwarf_no_debug_info_graceful_fallback() {
         .arg("-C")
         .arg("strip=symbols") // Strip debug info
         .status()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--source")

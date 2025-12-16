@@ -35,7 +35,7 @@ fn test_decy_futex_regression() {
     );
 
     let config = RegressionConfig::default();
-    let assessment = assess_regression(&baseline, &current, &config).unwrap();
+    let assessment = assess_regression(&baseline, &current, &config).expect("test");
 
     // Should detect futex regression
     match assessment.verdict {
@@ -70,7 +70,7 @@ fn test_depyler_telemetry_regression() {
     );
 
     let config = RegressionConfig::default();
-    let assessment = assess_regression(&baseline, &current, &config).unwrap();
+    let assessment = assess_regression(&baseline, &current, &config).expect("test");
 
     // Note: assess_regression only tests syscalls present in BOTH traces
     // Missing/new syscalls require separate sequence analysis (SEQUENCE-001)
@@ -96,7 +96,7 @@ fn test_no_false_positive_natural_variance() {
     );
 
     let config = RegressionConfig::default();
-    let assessment = assess_regression(&baseline, &current, &config).unwrap();
+    let assessment = assess_regression(&baseline, &current, &config).expect("test");
 
     // Should NOT detect regression (distributions similar)
     assert_eq!(assessment.verdict, RegressionVerdict::NoRegression);
@@ -123,7 +123,7 @@ fn test_noise_filtering_removes_high_variance() {
     current.insert("socket".to_string(), vec![6.0, 51.0, 4.0, 46.0, 3.0]);
 
     let config = RegressionConfig::default();
-    let assessment = assess_regression(&baseline, &current, &config).unwrap();
+    let assessment = assess_regression(&baseline, &current, &config).expect("test");
 
     // Should filter socket as noisy
     assert!(assessment.filtered_syscalls.contains(&"socket".to_string()));
@@ -147,11 +147,11 @@ fn test_strict_config_reduces_false_positives() {
 
     // Default config (95% confidence)
     let default_config = RegressionConfig::default();
-    let default_assessment = assess_regression(&baseline, &current, &default_config).unwrap();
+    let default_assessment = assess_regression(&baseline, &current, &default_config).expect("test");
 
     // Strict config (99% confidence)
     let strict_config = RegressionConfig::strict();
-    let strict_assessment = assess_regression(&baseline, &current, &strict_config).unwrap();
+    let strict_assessment = assess_regression(&baseline, &current, &strict_config).expect("test");
 
     // Default might detect, strict should NOT detect (depends on exact p-value)
     // This test validates that strict config has higher bar
@@ -188,7 +188,7 @@ fn test_insufficient_data() {
     current.insert("mmap".to_string(), vec![100.0]);
 
     let config = RegressionConfig::default();
-    let assessment = assess_regression(&baseline, &current, &config).unwrap();
+    let assessment = assess_regression(&baseline, &current, &config).expect("test");
 
     match assessment.verdict {
         RegressionVerdict::InsufficientData { .. } => {
@@ -208,7 +208,7 @@ fn test_report_generation() {
     current.insert("mmap".to_string(), vec![50.0, 52.0, 51.0, 53.0, 50.0]);
 
     let config = RegressionConfig::default();
-    let assessment = assess_regression(&baseline, &current, &config).unwrap();
+    let assessment = assess_regression(&baseline, &current, &config).expect("test");
 
     let report = assessment.to_report_string();
 
@@ -232,7 +232,8 @@ fn test_permissive_config_increases_sensitivity() {
 
     // Permissive config (90% confidence)
     let permissive_config = RegressionConfig::permissive();
-    let permissive_assessment = assess_regression(&baseline, &current, &permissive_config).unwrap();
+    let permissive_assessment =
+        assess_regression(&baseline, &current, &permissive_config).expect("test");
 
     // Should be more likely to detect regression (lower confidence bar)
     // Exact behavior depends on p-value, but permissive should never be stricter
@@ -264,7 +265,7 @@ fn test_multiple_syscalls_mixed_results() {
     current.insert("write".to_string(), vec![30.0, 31.0, 30.0, 32.0, 30.0]); // Stable
 
     let config = RegressionConfig::default();
-    let assessment = assess_regression(&baseline, &current, &config).unwrap();
+    let assessment = assess_regression(&baseline, &current, &config).expect("test");
 
     match assessment.verdict {
         RegressionVerdict::Regression {

@@ -120,7 +120,7 @@ fn bench_pool_cycle(c: &mut Criterion) {
     group.bench_function("acquire_release", |b| {
         let mut pool = SimplePool::new(1024);
         b.iter(|| {
-            let span = pool.acquire().unwrap();
+            let span = pool.acquire().expect("test");
             black_box(&span);
             pool.release(span);
         });

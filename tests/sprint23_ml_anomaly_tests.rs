@@ -12,7 +12,7 @@ use tempfile::TempDir;
 #[test]
 fn test_ml_anomaly_flag_accepted() {
     // Test that --ml-anomaly flag is recognized
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("ml_basic_test");
 
     let source = r#"
@@ -25,7 +25,7 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("ml_basic_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
@@ -47,7 +47,7 @@ int main() {
 #[test]
 fn test_ml_anomaly_produces_cluster_output() {
     // Test that ML anomaly detection produces cluster analysis output
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("ml_cluster_test");
 
     let source = r#"
@@ -66,14 +66,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("ml_cluster_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--ml-anomaly")
@@ -91,7 +91,7 @@ int main() {
 #[test]
 fn test_ml_clusters_configuration() {
     // Test that --ml-clusters configures number of clusters
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("ml_clusters_test");
 
     let source = r#"
@@ -104,14 +104,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("ml_clusters_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--ml-anomaly")
@@ -128,7 +128,7 @@ int main() {
 #[test]
 fn test_ml_silhouette_score_output() {
     // Test that ML analysis outputs silhouette score for clustering quality
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("ml_silhouette_test");
 
     let source = r#"
@@ -148,14 +148,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("ml_silhouette_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--ml-anomaly")
@@ -173,7 +173,7 @@ int main() {
 #[test]
 fn test_ml_compare_with_zscore() {
     // Test --ml-compare shows both ML and z-score results
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("ml_compare_test");
 
     let source = r#"
@@ -194,14 +194,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("ml_compare_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--ml-anomaly")
@@ -224,7 +224,7 @@ int main() {
 #[test]
 fn test_ml_anomaly_with_statistics() {
     // Test --ml-anomaly works with -c statistics mode
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("ml_stats_test");
 
     let source = r#"
@@ -237,14 +237,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("ml_stats_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-c")
@@ -262,7 +262,7 @@ int main() {
 #[test]
 fn test_ml_anomaly_with_filtering() {
     // Test --ml-anomaly works with syscall filtering
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("ml_filter_test");
 
     let source = r#"
@@ -280,14 +280,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("ml_filter_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--ml-anomaly")
@@ -304,7 +304,7 @@ int main() {
 #[test]
 fn test_ml_anomaly_with_multiprocess() {
     // Test --ml-anomaly works with -f (multi-process tracing)
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("ml_fork_test");
 
     let source = r#"
@@ -327,14 +327,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("ml_fork_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-f")
@@ -350,7 +350,7 @@ int main() {
 #[test]
 fn test_ml_anomaly_with_json_output() {
     // Test ML results are included in JSON output
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("ml_json_test");
 
     let source = r#"
@@ -363,14 +363,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("ml_json_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--ml-anomaly")
@@ -393,7 +393,7 @@ int main() {
 #[test]
 fn test_ml_anomaly_insufficient_data() {
     // Test ML handles insufficient data gracefully
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("ml_insufficient_test");
 
     let source = r#"
@@ -407,14 +407,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("ml_insufficient_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--ml-anomaly")
@@ -445,7 +445,7 @@ fn test_ml_clusters_invalid_value() {
 #[test]
 fn test_ml_clusters_minimum_value() {
     // Test minimum cluster count (2)
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("ml_min_clusters_test");
 
     let source = r#"
@@ -458,14 +458,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("ml_min_clusters_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--ml-anomaly")
@@ -482,7 +482,7 @@ int main() {
 #[test]
 fn test_backward_compatibility_without_ml_anomaly() {
     // Test that WITHOUT --ml-anomaly, no ML analysis occurs
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("ml_compat_test");
 
     let source = r#"
@@ -495,14 +495,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("ml_compat_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-c").arg("-T").arg("--").arg(&test_program);
@@ -521,7 +521,7 @@ int main() {
 #[test]
 fn test_ml_detects_outlier_cluster() {
     // Test that ML clustering identifies outlier patterns
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("ml_outlier_test");
 
     let source = r#"
@@ -544,14 +544,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("ml_outlier_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--ml-anomaly")
@@ -569,7 +569,7 @@ int main() {
 #[test]
 fn test_ml_multiple_syscall_types() {
     // Test ML handles multiple syscall types correctly
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("ml_multi_syscall_test");
 
     let source = r#"
@@ -589,14 +589,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("ml_multi_syscall_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--ml-anomaly")
@@ -616,7 +616,7 @@ int main() {
 #[test]
 fn test_ml_anomaly_with_realtime() {
     // Test ML can work alongside realtime anomaly detection
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("ml_realtime_test");
 
     let source = r#"
@@ -629,14 +629,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("ml_realtime_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--ml-anomaly")

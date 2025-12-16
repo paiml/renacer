@@ -330,7 +330,7 @@ fn test_experiment_metadata_from_json() {
     use renacer::experiment_span::ExperimentMetadata;
 
     let json = r#"{"model_name":"test","epoch":5,"step":100,"loss":0.1,"metrics":{}}"#;
-    let metadata = ExperimentMetadata::from_json(json).unwrap();
+    let metadata = ExperimentMetadata::from_json(json).expect("test");
 
     assert_eq!(metadata.model_name, "test");
     assert_eq!(metadata.epoch, Some(5));

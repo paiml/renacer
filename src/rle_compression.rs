@@ -440,7 +440,7 @@ mod tests {
             create_span(3, 2, "open", 100),
         ];
 
-        let compressed = compress_spans(&spans, 10).unwrap();
+        let compressed = compress_spans(&spans, 10).expect("test");
 
         // No repetitions >= 10, so no compression
         assert_eq!(compressed.segments.len(), 0);
@@ -455,7 +455,7 @@ mod tests {
             spans.push(create_span(i as u8, i, "read", 100));
         }
 
-        let compressed = compress_spans(&spans, 10).unwrap();
+        let compressed = compress_spans(&spans, 10).expect("test");
 
         // Should compress into 1 segment
         assert_eq!(compressed.segments.len(), 1);
@@ -478,7 +478,7 @@ mod tests {
             spans.push(create_span(i as u8, i, "write", 100));
         }
 
-        let compressed = compress_spans(&spans, 10).unwrap();
+        let compressed = compress_spans(&spans, 10).expect("test");
 
         // Should have 2 segments
         assert_eq!(compressed.segments.len(), 2);
@@ -496,7 +496,7 @@ mod tests {
             spans.push(create_span((i % 256) as u8, i, "read", 100));
         }
 
-        let compressed = compress_spans(&spans, 10).unwrap();
+        let compressed = compress_spans(&spans, 10).expect("test");
 
         // Should compress into 1 segment
         assert_eq!(compressed.segments.len(), 1);
@@ -518,7 +518,7 @@ mod tests {
             spans.push(create_span(i as u8, i, "read", duration));
         }
 
-        let compressed = compress_spans(&spans, 10).unwrap();
+        let compressed = compress_spans(&spans, 10).expect("test");
 
         assert_eq!(compressed.segments.len(), 1);
         let segment = &compressed.segments[0];
@@ -537,7 +537,7 @@ mod tests {
             spans.push(create_span(i as u8, i, "read", 100));
         }
 
-        let compressed = compress_spans(&spans, 10).unwrap();
+        let compressed = compress_spans(&spans, 10).expect("test");
         assert_eq!(compressed.segments.len(), 1);
 
         // Decompress
@@ -588,7 +588,7 @@ mod tests {
         spans.push(create_span(23, 23, "write", 100));
         spans.push(create_span(24, 24, "write", 100));
 
-        let compressed = compress_spans(&spans, 10).unwrap();
+        let compressed = compress_spans(&spans, 10).expect("test");
 
         assert_eq!(compressed.segments.len(), 1); // 20 reads
         assert_eq!(compressed.uncompressed.len(), 5); // 3 + 2
@@ -598,7 +598,7 @@ mod tests {
     #[test]
     fn test_empty_trace() {
         let spans: Vec<SpanRecord> = vec![];
-        let compressed = compress_spans(&spans, 10).unwrap();
+        let compressed = compress_spans(&spans, 10).expect("test");
 
         assert_eq!(compressed.segments.len(), 0);
         assert_eq!(compressed.uncompressed.len(), 0);
@@ -613,7 +613,7 @@ mod tests {
         }
         spans.push(create_span(50, 50, "write", 100));
 
-        let compressed = compress_spans(&spans, 10).unwrap();
+        let compressed = compress_spans(&spans, 10).expect("test");
 
         // 50 reads compressed, 1 write uncompressed
         assert_eq!(compressed.total_span_count(), 51);

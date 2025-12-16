@@ -20,7 +20,7 @@
 //!     "http://localhost:4317".to_string(),
 //!     "my-gpu-app".to_string(),
 //! );
-//! let otlp_exporter = OtlpExporter::new(otlp_config, None).unwrap();
+//! let otlp_exporter = OtlpExporter::new(otlp_config, None).expect("test");
 //! let otlp_arc = std::sync::Arc::new(otlp_exporter);
 //!
 //! // Setup GPU profiler wrapper
@@ -28,7 +28,7 @@
 //!     Some(otlp_arc.clone()),
 //!     GpuTracerConfig::default(),
 //! )
-//! .unwrap();
+//! .expect("test");
 //!
 //! // Instrument GPU code (standard wgpu-profiler API)
 //! let mut encoder = device.create_command_encoder(&Default::default());
@@ -40,7 +40,7 @@
 //!
 //! gpu_tracer.profiler_mut().resolve_queries(&mut encoder);
 //! queue.submit(Some(encoder.finish()));
-//! gpu_tracer.profiler_mut().end_frame().unwrap();
+//! gpu_tracer.profiler_mut().end_frame().expect("test");
 //!
 //! // Export GPU profiling results to OTLP
 //! let timestamp_period = queue.get_timestamp_period();

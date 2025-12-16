@@ -319,10 +319,10 @@ impl ChaosConfig {
 /// # Examples
 /// ```
 /// use renacer::chaos::parse_memory_size;
-/// assert_eq!(parse_memory_size("64M").unwrap(), 64 * 1024 * 1024);
-/// assert_eq!(parse_memory_size("512K").unwrap(), 512 * 1024);
-/// assert_eq!(parse_memory_size("1G").unwrap(), 1024 * 1024 * 1024);
-/// assert_eq!(parse_memory_size("1024").unwrap(), 1024);
+/// assert_eq!(parse_memory_size("64M").expect("test"), 64 * 1024 * 1024);
+/// assert_eq!(parse_memory_size("512K").expect("test"), 512 * 1024);
+/// assert_eq!(parse_memory_size("1G").expect("test"), 1024 * 1024 * 1024);
+/// assert_eq!(parse_memory_size("1024").expect("test"), 1024);
 /// ```
 pub fn parse_memory_size(s: &str) -> Result<usize, ChaosError> {
     let s = s.trim();
@@ -362,10 +362,10 @@ pub fn parse_memory_size(s: &str) -> Result<usize, ChaosError> {
 /// ```
 /// use renacer::chaos::parse_duration;
 /// use std::time::Duration;
-/// assert_eq!(parse_duration("10s").unwrap(), Duration::from_secs(10));
-/// assert_eq!(parse_duration("2m").unwrap(), Duration::from_secs(120));
-/// assert_eq!(parse_duration("1h").unwrap(), Duration::from_secs(3600));
-/// assert_eq!(parse_duration("30").unwrap(), Duration::from_secs(30));
+/// assert_eq!(parse_duration("10s").expect("test"), Duration::from_secs(10));
+/// assert_eq!(parse_duration("2m").expect("test"), Duration::from_secs(120));
+/// assert_eq!(parse_duration("1h").expect("test"), Duration::from_secs(3600));
+/// assert_eq!(parse_duration("30").expect("test"), Duration::from_secs(30));
 /// ```
 pub fn parse_duration(s: &str) -> Result<Duration, ChaosError> {
     let s = s.trim();
@@ -412,11 +412,11 @@ impl ChaosConfig {
     /// use renacer::chaos::ChaosConfig;
     ///
     /// // Use preset
-    /// let config = ChaosConfig::from_cli(Some("aggressive"), None, None, None, false).unwrap().unwrap();
+    /// let config = ChaosConfig::from_cli(Some("aggressive"), None, None, None, false).expect("test").expect("test");
     /// assert!(config.signal_injection);
     ///
     /// // Custom values
-    /// let config = ChaosConfig::from_cli(None, Some("128M"), Some(0.5), Some("30s"), true).unwrap().unwrap();
+    /// let config = ChaosConfig::from_cli(None, Some("128M"), Some(0.5), Some("30s"), true).expect("test").expect("test");
     /// assert_eq!(config.memory_limit, 128 * 1024 * 1024);
     /// ```
     pub fn from_cli(
@@ -616,35 +616,38 @@ mod tests {
     // Sprint 47: Parse function tests (Issue #17)
     #[test]
     fn test_parse_memory_size_bytes() {
-        assert_eq!(parse_memory_size("1024").unwrap(), 1024);
-        assert_eq!(parse_memory_size("0").unwrap(), 0);
-        assert_eq!(parse_memory_size("67108864").unwrap(), 67108864);
+        assert_eq!(parse_memory_size("1024").expect("test"), 1024);
+        assert_eq!(parse_memory_size("0").expect("test"), 0);
+        assert_eq!(parse_memory_size("67108864").expect("test"), 67108864);
     }
 
     #[test]
     fn test_parse_memory_size_kilobytes() {
-        assert_eq!(parse_memory_size("1K").unwrap(), 1024);
-        assert_eq!(parse_memory_size("512k").unwrap(), 512 * 1024);
-        assert_eq!(parse_memory_size("100K").unwrap(), 100 * 1024);
+        assert_eq!(parse_memory_size("1K").expect("test"), 1024);
+        assert_eq!(parse_memory_size("512k").expect("test"), 512 * 1024);
+        assert_eq!(parse_memory_size("100K").expect("test"), 100 * 1024);
     }
 
     #[test]
     fn test_parse_memory_size_megabytes() {
-        assert_eq!(parse_memory_size("1M").unwrap(), 1024 * 1024);
-        assert_eq!(parse_memory_size("64m").unwrap(), 64 * 1024 * 1024);
-        assert_eq!(parse_memory_size("512M").unwrap(), 512 * 1024 * 1024);
+        assert_eq!(parse_memory_size("1M").expect("test"), 1024 * 1024);
+        assert_eq!(parse_memory_size("64m").expect("test"), 64 * 1024 * 1024);
+        assert_eq!(parse_memory_size("512M").expect("test"), 512 * 1024 * 1024);
     }
 
     #[test]
     fn test_parse_memory_size_gigabytes() {
-        assert_eq!(parse_memory_size("1G").unwrap(), 1024 * 1024 * 1024);
-        assert_eq!(parse_memory_size("2g").unwrap(), 2 * 1024 * 1024 * 1024);
+        assert_eq!(parse_memory_size("1G").expect("test"), 1024 * 1024 * 1024);
+        assert_eq!(
+            parse_memory_size("2g").expect("test"),
+            2 * 1024 * 1024 * 1024
+        );
     }
 
     #[test]
     fn test_parse_memory_size_with_whitespace() {
-        assert_eq!(parse_memory_size(" 64M ").unwrap(), 64 * 1024 * 1024);
-        assert_eq!(parse_memory_size("  100K").unwrap(), 100 * 1024);
+        assert_eq!(parse_memory_size(" 64M ").expect("test"), 64 * 1024 * 1024);
+        assert_eq!(parse_memory_size("  100K").expect("test"), 100 * 1024);
     }
 
     #[test]
@@ -657,35 +660,62 @@ mod tests {
 
     #[test]
     fn test_parse_duration_seconds() {
-        assert_eq!(parse_duration("10s").unwrap(), Duration::from_secs(10));
-        assert_eq!(parse_duration("30S").unwrap(), Duration::from_secs(30));
-        assert_eq!(parse_duration("1s").unwrap(), Duration::from_secs(1));
+        assert_eq!(
+            parse_duration("10s").expect("test"),
+            Duration::from_secs(10)
+        );
+        assert_eq!(
+            parse_duration("30S").expect("test"),
+            Duration::from_secs(30)
+        );
+        assert_eq!(parse_duration("1s").expect("test"), Duration::from_secs(1));
     }
 
     #[test]
     fn test_parse_duration_minutes() {
-        assert_eq!(parse_duration("1m").unwrap(), Duration::from_secs(60));
-        assert_eq!(parse_duration("2M").unwrap(), Duration::from_secs(120));
-        assert_eq!(parse_duration("5m").unwrap(), Duration::from_secs(300));
+        assert_eq!(parse_duration("1m").expect("test"), Duration::from_secs(60));
+        assert_eq!(
+            parse_duration("2M").expect("test"),
+            Duration::from_secs(120)
+        );
+        assert_eq!(
+            parse_duration("5m").expect("test"),
+            Duration::from_secs(300)
+        );
     }
 
     #[test]
     fn test_parse_duration_hours() {
-        assert_eq!(parse_duration("1h").unwrap(), Duration::from_secs(3600));
-        assert_eq!(parse_duration("2H").unwrap(), Duration::from_secs(7200));
+        assert_eq!(
+            parse_duration("1h").expect("test"),
+            Duration::from_secs(3600)
+        );
+        assert_eq!(
+            parse_duration("2H").expect("test"),
+            Duration::from_secs(7200)
+        );
     }
 
     #[test]
     fn test_parse_duration_raw_seconds() {
-        assert_eq!(parse_duration("30").unwrap(), Duration::from_secs(30));
-        assert_eq!(parse_duration("0").unwrap(), Duration::from_secs(0));
-        assert_eq!(parse_duration("3600").unwrap(), Duration::from_secs(3600));
+        assert_eq!(parse_duration("30").expect("test"), Duration::from_secs(30));
+        assert_eq!(parse_duration("0").expect("test"), Duration::from_secs(0));
+        assert_eq!(
+            parse_duration("3600").expect("test"),
+            Duration::from_secs(3600)
+        );
     }
 
     #[test]
     fn test_parse_duration_with_whitespace() {
-        assert_eq!(parse_duration(" 10s ").unwrap(), Duration::from_secs(10));
-        assert_eq!(parse_duration("  5m").unwrap(), Duration::from_secs(300));
+        assert_eq!(
+            parse_duration(" 10s ").expect("test"),
+            Duration::from_secs(10)
+        );
+        assert_eq!(
+            parse_duration("  5m").expect("test"),
+            Duration::from_secs(300)
+        );
     }
 
     #[test]
@@ -698,15 +728,15 @@ mod tests {
 
     #[test]
     fn test_from_cli_no_options() {
-        let result = ChaosConfig::from_cli(None, None, None, None, false).unwrap();
+        let result = ChaosConfig::from_cli(None, None, None, None, false).expect("test");
         assert!(result.is_none());
     }
 
     #[test]
     fn test_from_cli_gentle_preset() {
         let config = ChaosConfig::from_cli(Some("gentle"), None, None, None, false)
-            .unwrap()
-            .unwrap();
+            .expect("test")
+            .expect("test");
         assert_eq!(config.memory_limit, 512 * 1024 * 1024);
         assert!((config.cpu_limit - 0.8).abs() < f64::EPSILON);
         assert_eq!(config.timeout.as_secs(), 120);
@@ -715,8 +745,8 @@ mod tests {
     #[test]
     fn test_from_cli_aggressive_preset() {
         let config = ChaosConfig::from_cli(Some("aggressive"), None, None, None, false)
-            .unwrap()
-            .unwrap();
+            .expect("test")
+            .expect("test");
         assert_eq!(config.memory_limit, 64 * 1024 * 1024);
         assert!((config.cpu_limit - 0.25).abs() < f64::EPSILON);
         assert!(config.signal_injection);
@@ -725,40 +755,40 @@ mod tests {
     #[test]
     fn test_from_cli_custom_memory() {
         let config = ChaosConfig::from_cli(None, Some("128M"), None, None, false)
-            .unwrap()
-            .unwrap();
+            .expect("test")
+            .expect("test");
         assert_eq!(config.memory_limit, 128 * 1024 * 1024);
     }
 
     #[test]
     fn test_from_cli_custom_cpu() {
         let config = ChaosConfig::from_cli(None, None, Some(0.5), None, false)
-            .unwrap()
-            .unwrap();
+            .expect("test")
+            .expect("test");
         assert!((config.cpu_limit - 0.5).abs() < f64::EPSILON);
     }
 
     #[test]
     fn test_from_cli_custom_timeout() {
         let config = ChaosConfig::from_cli(None, None, None, Some("30s"), false)
-            .unwrap()
-            .unwrap();
+            .expect("test")
+            .expect("test");
         assert_eq!(config.timeout.as_secs(), 30);
     }
 
     #[test]
     fn test_from_cli_signals_only() {
         let config = ChaosConfig::from_cli(None, None, None, None, true)
-            .unwrap()
-            .unwrap();
+            .expect("test")
+            .expect("test");
         assert!(config.signal_injection);
     }
 
     #[test]
     fn test_from_cli_preset_with_overrides() {
         let config = ChaosConfig::from_cli(Some("gentle"), Some("256M"), Some(0.5), None, true)
-            .unwrap()
-            .unwrap();
+            .expect("test")
+            .expect("test");
         // Memory overridden from 512M to 256M
         assert_eq!(config.memory_limit, 256 * 1024 * 1024);
         // CPU overridden from 0.8 to 0.5
@@ -869,7 +899,7 @@ mod property_tests {
             let input = format!("{}K", n);
             let result = parse_memory_size(&input);
             prop_assert!(result.is_ok());
-            prop_assert_eq!(result.unwrap(), n * 1024);
+            prop_assert_eq!(result.expect("test"), n * 1024);
         }
 
         /// Property: All valid memory sizes with M suffix should parse correctly
@@ -878,7 +908,7 @@ mod property_tests {
             let input = format!("{}M", n);
             let result = parse_memory_size(&input);
             prop_assert!(result.is_ok());
-            prop_assert_eq!(result.unwrap(), n * 1024 * 1024);
+            prop_assert_eq!(result.expect("test"), n * 1024 * 1024);
         }
 
         /// Property: All valid memory sizes with G suffix should parse correctly
@@ -887,7 +917,7 @@ mod property_tests {
             let input = format!("{}G", n);
             let result = parse_memory_size(&input);
             prop_assert!(result.is_ok());
-            prop_assert_eq!(result.unwrap(), n * 1024 * 1024 * 1024);
+            prop_assert_eq!(result.expect("test"), n * 1024 * 1024 * 1024);
         }
 
         /// Property: Raw byte values should parse correctly
@@ -896,7 +926,7 @@ mod property_tests {
             let input = format!("{}", n);
             let result = parse_memory_size(&input);
             prop_assert!(result.is_ok());
-            prop_assert_eq!(result.unwrap(), n);
+            prop_assert_eq!(result.expect("test"), n);
         }
 
         /// Property: All valid durations with s suffix should parse correctly
@@ -905,7 +935,7 @@ mod property_tests {
             let input = format!("{}s", n);
             let result = parse_duration(&input);
             prop_assert!(result.is_ok());
-            prop_assert_eq!(result.unwrap(), Duration::from_secs(n));
+            prop_assert_eq!(result.expect("test"), Duration::from_secs(n));
         }
 
         /// Property: All valid durations with m suffix should parse correctly
@@ -914,7 +944,7 @@ mod property_tests {
             let input = format!("{}m", n);
             let result = parse_duration(&input);
             prop_assert!(result.is_ok());
-            prop_assert_eq!(result.unwrap(), Duration::from_secs(n * 60));
+            prop_assert_eq!(result.expect("test"), Duration::from_secs(n * 60));
         }
 
         /// Property: All valid durations with h suffix should parse correctly
@@ -923,7 +953,7 @@ mod property_tests {
             let input = format!("{}h", n);
             let result = parse_duration(&input);
             prop_assert!(result.is_ok());
-            prop_assert_eq!(result.unwrap(), Duration::from_secs(n * 3600));
+            prop_assert_eq!(result.expect("test"), Duration::from_secs(n * 3600));
         }
 
         /// Property: Raw second values should parse correctly
@@ -932,7 +962,7 @@ mod property_tests {
             let input = format!("{}", n);
             let result = parse_duration(&input);
             prop_assert!(result.is_ok());
-            prop_assert_eq!(result.unwrap(), Duration::from_secs(n));
+            prop_assert_eq!(result.expect("test"), Duration::from_secs(n));
         }
 
         /// Property: CPU limit is always clamped to 0.0-1.0
@@ -951,7 +981,7 @@ mod property_tests {
             let input = format!("{}{}M{}", prefix, n, suffix);
             let result = parse_memory_size(&input);
             prop_assert!(result.is_ok());
-            prop_assert_eq!(result.unwrap(), n * 1024 * 1024);
+            prop_assert_eq!(result.expect("test"), n * 1024 * 1024);
         }
 
         /// Property: status_line output contains all active settings

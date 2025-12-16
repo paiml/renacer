@@ -330,7 +330,7 @@ impl TruenoDbStorage {
         }
 
         // TODO Sprint 40: Implement actual Parquet write via trueno-db
-        // let _db = self._db.lock().unwrap();
+        // let _db = self._db.lock().expect("test");
         // db.insert_batch(spans)?;
 
         eprintln!(
@@ -381,7 +381,7 @@ impl TruenoDbStorage {
     /// ```
     pub fn query_by_trace_id(&self, trace_id: &[u8; 16]) -> Result<Vec<SpanRecord>> {
         // TODO Sprint 40: Implement actual Parquet query via trueno-db
-        // let _db = self._db.lock().unwrap();
+        // let _db = self._db.lock().expect("test");
         // let spans = db.query("SELECT * FROM spans WHERE trace_id = ?", trace_id)?;
 
         eprintln!(
@@ -652,51 +652,51 @@ mod tests {
 
     #[test]
     fn test_storage_creation() {
-        let tmp_dir = TempDir::new().unwrap();
+        let tmp_dir = TempDir::new().expect("test");
         let path = tmp_dir.path().join("test.parquet");
 
-        let storage = TruenoDbStorage::new(&path).unwrap();
+        let storage = TruenoDbStorage::new(&path).expect("test");
         assert_eq!(storage.path(), path);
     }
 
     #[test]
     fn test_insert_batch_empty() {
-        let tmp_dir = TempDir::new().unwrap();
+        let tmp_dir = TempDir::new().expect("test");
         let path = tmp_dir.path().join("test.parquet");
 
-        let storage = TruenoDbStorage::new(&path).unwrap();
-        storage.insert_batch(&[]).unwrap();
+        let storage = TruenoDbStorage::new(&path).expect("test");
+        storage.insert_batch(&[]).expect("test");
     }
 
     #[test]
     fn test_insert_batch_single() {
-        let tmp_dir = TempDir::new().unwrap();
+        let tmp_dir = TempDir::new().expect("test");
         let path = tmp_dir.path().join("test.parquet");
 
-        let storage = TruenoDbStorage::new(&path).unwrap();
+        let storage = TruenoDbStorage::new(&path).expect("test");
         let spans = vec![create_test_span(0)];
-        storage.insert_batch(&spans).unwrap();
+        storage.insert_batch(&spans).expect("test");
     }
 
     #[test]
     fn test_insert_batch_multiple() {
-        let tmp_dir = TempDir::new().unwrap();
+        let tmp_dir = TempDir::new().expect("test");
         let path = tmp_dir.path().join("test.parquet");
 
-        let storage = TruenoDbStorage::new(&path).unwrap();
+        let storage = TruenoDbStorage::new(&path).expect("test");
         let spans: Vec<_> = (0..100).map(create_test_span).collect();
-        storage.insert_batch(&spans).unwrap();
+        storage.insert_batch(&spans).expect("test");
     }
 
     #[test]
     fn test_query_by_trace_id() {
-        let tmp_dir = TempDir::new().unwrap();
+        let tmp_dir = TempDir::new().expect("test");
         let path = tmp_dir.path().join("test.parquet");
 
-        let storage = TruenoDbStorage::new(&path).unwrap();
+        let storage = TruenoDbStorage::new(&path).expect("test");
 
         let trace_id = [0x4b; 16];
-        let result = storage.query_by_trace_id(&trace_id).unwrap();
+        let result = storage.query_by_trace_id(&trace_id).expect("test");
 
         // Placeholder implementation returns empty
         assert_eq!(result.len(), 0);
@@ -704,11 +704,11 @@ mod tests {
 
     #[test]
     fn test_storage_stats() {
-        let tmp_dir = TempDir::new().unwrap();
+        let tmp_dir = TempDir::new().expect("test");
         let path = tmp_dir.path().join("test.parquet");
 
-        let storage = TruenoDbStorage::new(&path).unwrap();
-        let stats = storage.stats().unwrap();
+        let storage = TruenoDbStorage::new(&path).expect("test");
+        let stats = storage.stats().expect("test");
 
         assert_eq!(stats.total_spans, 0);
     }
@@ -728,90 +728,92 @@ mod tests {
 
     #[test]
     fn test_flush() {
-        let tmp_dir = TempDir::new().unwrap();
+        let tmp_dir = TempDir::new().expect("test");
         let path = tmp_dir.path().join("test.parquet");
 
-        let storage = TruenoDbStorage::new(&path).unwrap();
-        storage.flush().unwrap();
+        let storage = TruenoDbStorage::new(&path).expect("test");
+        storage.flush().expect("test");
     }
 
     #[test]
     fn test_query_by_process_id() {
-        let tmp_dir = TempDir::new().unwrap();
+        let tmp_dir = TempDir::new().expect("test");
         let path = tmp_dir.path().join("test.parquet");
 
-        let storage = TruenoDbStorage::new(&path).unwrap();
-        let result = storage.query_by_process_id(1234).unwrap();
+        let storage = TruenoDbStorage::new(&path).expect("test");
+        let result = storage.query_by_process_id(1234).expect("test");
         assert!(result.is_empty());
     }
 
     #[test]
     fn test_query_errors() {
-        let tmp_dir = TempDir::new().unwrap();
+        let tmp_dir = TempDir::new().expect("test");
         let path = tmp_dir.path().join("test.parquet");
 
-        let storage = TruenoDbStorage::new(&path).unwrap();
-        let result = storage.query_errors().unwrap();
+        let storage = TruenoDbStorage::new(&path).expect("test");
+        let result = storage.query_errors().expect("test");
         assert!(result.is_empty());
     }
 
     #[test]
     fn test_query_optimized_all_none() {
-        let tmp_dir = TempDir::new().unwrap();
+        let tmp_dir = TempDir::new().expect("test");
         let path = tmp_dir.path().join("test.parquet");
 
-        let storage = TruenoDbStorage::new(&path).unwrap();
-        let result = storage.query_optimized(None, None, None, None).unwrap();
+        let storage = TruenoDbStorage::new(&path).expect("test");
+        let result = storage
+            .query_optimized(None, None, None, None)
+            .expect("test");
         assert!(result.is_empty());
     }
 
     #[test]
     fn test_query_optimized_with_trace_id() {
-        let tmp_dir = TempDir::new().unwrap();
+        let tmp_dir = TempDir::new().expect("test");
         let path = tmp_dir.path().join("test.parquet");
 
-        let storage = TruenoDbStorage::new(&path).unwrap();
+        let storage = TruenoDbStorage::new(&path).expect("test");
         let trace_id = [0x4b; 16];
         let result = storage
             .query_optimized(Some(&trace_id), None, None, None)
-            .unwrap();
+            .expect("test");
         assert!(result.is_empty());
     }
 
     #[test]
     fn test_query_optimized_with_time_range() {
-        let tmp_dir = TempDir::new().unwrap();
+        let tmp_dir = TempDir::new().expect("test");
         let path = tmp_dir.path().join("test.parquet");
 
-        let storage = TruenoDbStorage::new(&path).unwrap();
+        let storage = TruenoDbStorage::new(&path).expect("test");
         let result = storage
             .query_optimized(None, Some(1000), Some(2000), None)
-            .unwrap();
+            .expect("test");
         assert!(result.is_empty());
     }
 
     #[test]
     fn test_query_optimized_with_process_id() {
-        let tmp_dir = TempDir::new().unwrap();
+        let tmp_dir = TempDir::new().expect("test");
         let path = tmp_dir.path().join("test.parquet");
 
-        let storage = TruenoDbStorage::new(&path).unwrap();
+        let storage = TruenoDbStorage::new(&path).expect("test");
         let result = storage
             .query_optimized(None, None, None, Some(1234))
-            .unwrap();
+            .expect("test");
         assert!(result.is_empty());
     }
 
     #[test]
     fn test_query_optimized_all_filters() {
-        let tmp_dir = TempDir::new().unwrap();
+        let tmp_dir = TempDir::new().expect("test");
         let path = tmp_dir.path().join("test.parquet");
 
-        let storage = TruenoDbStorage::new(&path).unwrap();
+        let storage = TruenoDbStorage::new(&path).expect("test");
         let trace_id = [0x4b; 16];
         let result = storage
             .query_optimized(Some(&trace_id), Some(1000), Some(2000), Some(5678))
-            .unwrap();
+            .expect("test");
         assert!(result.is_empty());
     }
 
@@ -826,10 +828,10 @@ mod tests {
 
     #[test]
     fn test_storage_config() {
-        let tmp_dir = TempDir::new().unwrap();
+        let tmp_dir = TempDir::new().expect("test");
         let path = tmp_dir.path().join("test.parquet");
 
-        let storage = TruenoDbStorage::new(&path).unwrap();
+        let storage = TruenoDbStorage::new(&path).expect("test");
         let config = storage.config();
         assert_eq!(config.row_group_size, 10_000);
     }

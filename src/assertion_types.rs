@@ -311,7 +311,7 @@ mod tests {
             fail_on_violation = true
         "#;
 
-        let assertion: Assertion = toml::from_str(toml).unwrap();
+        let assertion: Assertion = toml::from_str(toml).expect("test");
 
         assert_eq!(assertion.name, "api_latency");
         assert!(assertion.fail_on_violation);
@@ -336,7 +336,7 @@ mod tests {
             fail_on_violation = true
         "#;
 
-        let assertion: Assertion = toml::from_str(toml).unwrap();
+        let assertion: Assertion = toml::from_str(toml).expect("test");
 
         assert_eq!(assertion.name, "no_god_process");
 
@@ -357,7 +357,7 @@ mod tests {
             max_spans = 1000
         "#;
 
-        let assertion: Assertion = toml::from_str(toml).unwrap();
+        let assertion: Assertion = toml::from_str(toml).expect("test");
 
         match assertion.assertion_type {
             AssertionType::SpanCount(sc) => {
@@ -376,7 +376,7 @@ mod tests {
             tracking_mode = "allocations"
         "#;
 
-        let assertion: Assertion = toml::from_str(toml).unwrap();
+        let assertion: Assertion = toml::from_str(toml).expect("test");
 
         match assertion.assertion_type {
             AssertionType::MemoryUsage(mu) => {
@@ -395,7 +395,7 @@ mod tests {
             expression = "trace.spans.len() < 100"
         "#;
 
-        let assertion: Assertion = toml::from_str(toml).unwrap();
+        let assertion: Assertion = toml::from_str(toml).expect("test");
 
         match assertion.assertion_type {
             AssertionType::Custom(c) => {
@@ -440,7 +440,7 @@ mod tests {
             max_duration_ms = 100
         "#;
 
-        let assertion: Assertion = toml::from_str(toml).unwrap();
+        let assertion: Assertion = toml::from_str(toml).expect("test");
 
         // Default values should be true
         assert!(assertion.fail_on_violation);
@@ -456,7 +456,7 @@ mod tests {
             enabled = false
         "#;
 
-        let assertion: Assertion = toml::from_str(toml).unwrap();
+        let assertion: Assertion = toml::from_str(toml).expect("test");
 
         assert!(!assertion.enabled);
     }

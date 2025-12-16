@@ -12,7 +12,7 @@ fn test_regex_prefix_pattern() {
         .arg("cat")
         .arg("/dev/null");
 
-    let output = cmd.output().unwrap();
+    let output = cmd.output().expect("test");
     assert!(output.status.success());
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -45,7 +45,7 @@ fn test_regex_suffix_pattern() {
         .arg("cat")
         .arg("/dev/null");
 
-    let output = cmd.output().unwrap();
+    let output = cmd.output().expect("test");
     assert!(output.status.success());
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -74,7 +74,7 @@ fn test_regex_or_pattern() {
         .arg("echo")
         .arg("test");
 
-    let output = cmd.output().unwrap();
+    let output = cmd.output().expect("test");
     assert!(output.status.success());
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -103,7 +103,7 @@ fn test_invalid_regex_error() {
         .arg("echo")
         .arg("test");
 
-    let output = cmd.output().unwrap();
+    let output = cmd.output().expect("test");
     // Should fail with invalid regex
     assert!(!output.status.success());
 
@@ -125,7 +125,7 @@ fn test_mixed_regex_and_literal() {
         .arg("cat")
         .arg("/dev/null");
 
-    let output = cmd.output().unwrap();
+    let output = cmd.output().expect("test");
     assert!(output.status.success());
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -160,7 +160,7 @@ fn test_regex_with_negation() {
         .arg("cat")
         .arg("/dev/null");
 
-    let output = cmd.output().unwrap();
+    let output = cmd.output().expect("test");
     assert!(output.status.success());
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -187,7 +187,7 @@ fn test_regex_with_statistics() {
         .arg("cat")
         .arg("/dev/null");
 
-    let output = cmd.output().unwrap();
+    let output = cmd.output().expect("test");
     assert!(output.status.success());
 
     let stderr = String::from_utf8_lossy(&output.stderr);
@@ -210,7 +210,7 @@ fn test_regex_case_insensitive() {
         .arg("cat")
         .arg("/dev/null");
 
-    let output = cmd.output().unwrap();
+    let output = cmd.output().expect("test");
     assert!(output.status.success());
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -233,7 +233,7 @@ fn test_empty_regex_pattern() {
         .arg("echo")
         .arg("test");
 
-    let output = cmd.output().unwrap();
+    let output = cmd.output().expect("test");
     // Should either succeed with no matches or provide clear error
     // We'll validate behavior based on implementation decision
     let stderr = String::from_utf8_lossy(&output.stderr);

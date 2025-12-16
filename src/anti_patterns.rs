@@ -492,9 +492,9 @@ mod tests {
     #[test]
     fn test_no_anti_patterns() {
         let root = create_span(1, None, 0, 1000, "root", 1);
-        let graph = CausalGraph::from_spans(&[root]).unwrap();
+        let graph = CausalGraph::from_spans(&[root]).expect("test");
 
-        let patterns = detect_anti_patterns(&graph).unwrap();
+        let patterns = detect_anti_patterns(&graph).expect("test");
         assert_eq!(patterns.len(), 0);
     }
 
@@ -504,8 +504,8 @@ mod tests {
         let root = create_span(1, None, 0, 10000, "root", 1234);
         let child = create_span(2, Some(1), 1, 1000, "child", 9999);
 
-        let graph = CausalGraph::from_spans(&[root, child]).unwrap();
-        let patterns = detect_anti_patterns(&graph).unwrap();
+        let graph = CausalGraph::from_spans(&[root, child]).expect("test");
+        let patterns = detect_anti_patterns(&graph).expect("test");
 
         // Should detect God Process (10000 / 11000 = 90.9%)
         assert_eq!(patterns.len(), 1);
@@ -533,8 +533,8 @@ mod tests {
             spans.push(create_span(i as u8, Some(0), i as u64, 10, "read", 1234));
         }
 
-        let graph = CausalGraph::from_spans(&spans).unwrap();
-        let patterns = detect_anti_patterns(&graph).unwrap();
+        let graph = CausalGraph::from_spans(&spans).expect("test");
+        let patterns = detect_anti_patterns(&graph).expect("test");
 
         // Should detect Tight Loop (1500 > 1000 threshold)
         let tight_loop = patterns
@@ -565,8 +565,8 @@ mod tests {
             create_span(4, Some(1), 3, 4000, "memcpy_D2H", 1234), // Transfer
         ];
 
-        let graph = CausalGraph::from_spans(&spans).unwrap();
-        let patterns = detect_anti_patterns(&graph).unwrap();
+        let graph = CausalGraph::from_spans(&spans).expect("test");
+        let patterns = detect_anti_patterns(&graph).expect("test");
 
         // Should detect PCIe bottleneck (9000 / 3000 = 300%)
         let pcie = patterns

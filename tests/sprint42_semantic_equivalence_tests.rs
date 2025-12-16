@@ -190,7 +190,7 @@ fn test_performance_comparison_api() {
 
     // Add memory comparison
     let perf_with_mem = perf.with_memory(1_000_000, 500_000);
-    let mem_delta = perf_with_mem.memory_delta.unwrap();
+    let mem_delta = perf_with_mem.memory_delta.expect("test");
 
     assert_eq!(mem_delta.original_bytes, 1_000_000);
     assert_eq!(mem_delta.transpiled_bytes, 500_000);

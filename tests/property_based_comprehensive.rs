@@ -161,7 +161,7 @@ proptest! {
         assert!(json_result.is_ok());
 
         // Should successfully deserialize back
-        let json_str = json_result.unwrap();
+        let json_str = json_result.expect("test");
         let parsed: Result<JsonOutput, _> = serde_json::from_str(&json_str);
         assert!(parsed.is_ok());
     }
@@ -426,7 +426,7 @@ mod deterministic_core_feature_tests {
         // This test ensures all major modules can be instantiated together
         // without conflicts - validates the overall architecture
 
-        let filter = filter::SyscallFilter::from_expr("trace=read,write").unwrap();
+        let filter = filter::SyscallFilter::from_expr("trace=read,write").expect("test");
         let mut tracker = stats::StatsTracker::new();
         let mut profiler = function_profiler::FunctionProfiler::new();
         let mut json_out = json_output::JsonOutput::new();
@@ -474,16 +474,16 @@ mod deterministic_core_feature_tests {
         use renacer::filter::SyscallFilter;
 
         // Test all filter classes work
-        let file_filter = SyscallFilter::from_expr("trace=file").unwrap();
+        let file_filter = SyscallFilter::from_expr("trace=file").expect("test");
         assert!(file_filter.should_trace("read"));
 
-        let network_filter = SyscallFilter::from_expr("trace=network").unwrap();
+        let network_filter = SyscallFilter::from_expr("trace=network").expect("test");
         assert!(network_filter.should_trace("socket"));
 
-        let process_filter = SyscallFilter::from_expr("trace=process").unwrap();
+        let process_filter = SyscallFilter::from_expr("trace=process").expect("test");
         assert!(process_filter.should_trace("fork"));
 
-        let memory_filter = SyscallFilter::from_expr("trace=memory").unwrap();
+        let memory_filter = SyscallFilter::from_expr("trace=memory").expect("test");
         assert!(memory_filter.should_trace("mmap"));
     }
 

@@ -17,7 +17,7 @@
 //! use renacer::decision_trace::DecisionTrace;
 //!
 //! let config = DecisionExportConfig::default();
-//! let mut exporter = DecisionExporter::new(config).unwrap();
+//! let mut exporter = DecisionExporter::new(config).expect("test");
 //!
 //! // Queue decisions for export
 //! let decision = DecisionTrace {
@@ -427,7 +427,7 @@ mod tests {
     #[test]
     fn test_exporter_queue() {
         let config = DecisionExportConfig::default();
-        let mut exporter = DecisionExporter::new(config).unwrap();
+        let mut exporter = DecisionExporter::new(config).expect("test");
 
         let decision = DecisionTrace {
             timestamp_us: 1000,
@@ -446,7 +446,7 @@ mod tests {
     #[test]
     fn test_exporter_is_empty() {
         let config = DecisionExportConfig::default();
-        let mut exporter = DecisionExporter::new(config).unwrap();
+        let mut exporter = DecisionExporter::new(config).expect("test");
 
         assert!(exporter.is_empty());
 
@@ -460,7 +460,7 @@ mod tests {
             queue_size: 3,
             ..Default::default()
         };
-        let mut exporter = DecisionExporter::new(config).unwrap();
+        let mut exporter = DecisionExporter::new(config).expect("test");
 
         // Queue 5 decisions (exceeds queue_size of 3)
         for i in 1..=5 {
@@ -480,7 +480,7 @@ mod tests {
     #[test]
     fn test_exporter_queue_all() {
         let config = DecisionExportConfig::default();
-        let mut exporter = DecisionExporter::new(config).unwrap();
+        let mut exporter = DecisionExporter::new(config).expect("test");
 
         let decisions: Vec<_> = (1..=5).map(make_decision).collect();
         exporter.queue_all(decisions);
@@ -495,7 +495,7 @@ mod tests {
             batch_size: 3,
             ..Default::default()
         };
-        let mut exporter = DecisionExporter::new(config).unwrap();
+        let mut exporter = DecisionExporter::new(config).expect("test");
 
         // Queue 5 decisions
         for i in 1..=5 {
@@ -520,7 +520,7 @@ mod tests {
     #[test]
     fn test_exporter_record_stats() {
         let config = DecisionExportConfig::default();
-        let mut exporter = DecisionExporter::new(config).unwrap();
+        let mut exporter = DecisionExporter::new(config).expect("test");
 
         exporter.record_batch_success(10);
         assert_eq!(exporter.stats().decisions_exported, 10);
@@ -541,7 +541,7 @@ mod tests {
             flush_interval_ms: 2000,
             ..Default::default()
         };
-        let exporter = DecisionExporter::new(config).unwrap();
+        let exporter = DecisionExporter::new(config).expect("test");
 
         assert_eq!(exporter.endpoint(), "http://custom:8080");
         assert_eq!(exporter.auth_token(), Some("secret123"));
@@ -555,7 +555,7 @@ mod tests {
     #[test]
     fn test_exporter_no_auth_token() {
         let config = DecisionExportConfig::default();
-        let exporter = DecisionExporter::new(config).unwrap();
+        let exporter = DecisionExporter::new(config).expect("test");
 
         assert_eq!(exporter.auth_token(), None);
     }

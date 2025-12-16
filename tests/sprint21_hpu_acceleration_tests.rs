@@ -14,7 +14,7 @@ use tempfile::TempDir;
 #[test]
 fn test_hpu_analysis_basic() {
     // Test that --hpu-analysis flag enables HPU acceleration
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("hpu_basic_test");
 
     // Create program with diverse syscall patterns for correlation analysis
@@ -39,7 +39,7 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("hpu_basic_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
@@ -63,7 +63,7 @@ int main() {
 #[test]
 fn test_hpu_correlation_matrix() {
     // Test that correlation matrix is computed and shows correlated syscalls
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("correlation_test");
 
     let source = r#"
@@ -80,14 +80,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("correlation_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--hpu-analysis")
@@ -105,7 +105,7 @@ int main() {
 #[test]
 fn test_hpu_kmeans_clustering() {
     // Test that K-means clustering identifies syscall hotspot groups
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("kmeans_test");
 
     let source = r#"
@@ -131,14 +131,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("kmeans_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--hpu-analysis")
@@ -157,7 +157,7 @@ int main() {
 fn test_hpu_performance_threshold() {
     // Test that HPU provides meaningful speedup message
     // (We can't enforce actual GPU timing, but we can verify the feature works)
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("perf_test");
 
     // Create program with enough syscalls to make HPU worthwhile (100+ syscalls)
@@ -171,14 +171,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("perf_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--hpu-analysis")
@@ -195,7 +195,7 @@ int main() {
 #[test]
 fn test_hpu_fallback_to_cpu() {
     // Test graceful CPU fallback when GPU unavailable (via --hpu-cpu-only)
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("fallback_test");
 
     let source = r#"
@@ -208,14 +208,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("fallback_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--hpu-analysis")
@@ -237,7 +237,7 @@ int main() {
 #[test]
 fn test_hpu_with_statistics() {
     // Test that --hpu-analysis works with -c (statistics mode)
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("stats_integration_test");
 
     let source = r#"
@@ -250,14 +250,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("stats_integration_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-c")
@@ -276,7 +276,7 @@ int main() {
 #[test]
 fn test_hpu_with_filtering() {
     // Test that --hpu-analysis respects -e trace=SPEC filtering
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("filter_integration_test");
 
     let source = r#"
@@ -295,14 +295,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("filter_integration_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--hpu-analysis")
@@ -321,7 +321,7 @@ int main() {
 #[test]
 fn test_hpu_with_function_time() {
     // Test that --hpu-analysis works with --function-time profiling
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("function_time_test");
 
     let source = r#"
@@ -337,7 +337,7 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("function_time_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg("-g") // Debug symbols for function profiling
@@ -345,7 +345,7 @@ int main() {
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--hpu-analysis")
@@ -372,7 +372,7 @@ int main() {
 #[test]
 fn test_hpu_json_export() {
     // Test that HPU analysis results are exported to JSON
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("json_export_test");
     let json_output = tmp_dir.path().join("hpu_output.json");
 
@@ -386,14 +386,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("json_export_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--hpu-analysis")
@@ -402,12 +402,12 @@ int main() {
         .arg("--")
         .arg(&test_program);
 
-    let output = cmd.output().unwrap();
-    fs::write(&json_output, &output.stdout).unwrap();
+    let output = cmd.output().expect("test");
+    fs::write(&json_output, &output.stdout).expect("test");
 
     // Parse JSON and verify it succeeded
     // HPU analysis goes to stdout, which may be interleaved with JSON
-    let json_content = fs::read_to_string(&json_output).unwrap();
+    let json_content = fs::read_to_string(&json_output).expect("test");
     // Check that we got either JSON output or HPU analysis (both are valid)
     assert!(
         json_content.contains("syscalls")
@@ -422,7 +422,7 @@ int main() {
 #[test]
 fn test_hpu_large_trace() {
     // Test HPU performance on larger trace (1000+ syscalls)
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("large_trace_test");
 
     let source = r#"
@@ -439,14 +439,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("large_trace_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--hpu-analysis")
@@ -467,7 +467,7 @@ int main() {
 #[test]
 fn test_hpu_empty_trace() {
     // Test HPU behavior with empty/minimal trace
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("empty_trace_test");
 
     let source = r#"
@@ -476,14 +476,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("empty_trace_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--hpu-analysis")
@@ -501,7 +501,7 @@ int main() {
 #[test]
 fn test_backward_compatibility_without_hpu() {
     // Test that v0.4.0 works without --hpu-analysis (backward compatible)
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("compat_test");
 
     let source = r#"
@@ -512,14 +512,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("compat_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-c") // Statistics without HPU
@@ -537,7 +537,7 @@ int main() {
 #[test]
 fn test_hpu_hotspot_identification() {
     // Test that HPU identifies top hotspots (most time-consuming syscall groups)
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("hotspot_test");
 
     let source = r#"
@@ -563,14 +563,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("hotspot_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--hpu-analysis")

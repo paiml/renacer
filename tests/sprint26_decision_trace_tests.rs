@@ -15,7 +15,7 @@ fn test_decision_trace_capture_basic() {
     // Test that renacer captures decision traces written to stderr
     // Expected: DecisionTracer should parse `[DECISION]` lines from stderr
 
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let test_bin = temp_dir.path().join("decision_writer");
 
     // Create a simple test program that writes decision traces to stderr
@@ -29,7 +29,7 @@ fn main() {
 
     // Compile the test program
     let src_file = temp_dir.path().join("decision_writer.rs");
-    fs::write(&src_file, test_program).unwrap();
+    fs::write(&src_file, test_program).expect("test");
 
     let compile_status = std::process::Command::new("rustc")
         .arg(&src_file)
@@ -41,7 +41,7 @@ fn main() {
     assert!(compile_status.success(), "Failed to compile test program");
 
     // Run renacer with --trace-transpiler-decisions flag
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     let output = cmd
         .arg("--trace-transpiler-decisions")
         .arg("-c") // Use statistics mode to suppress noise
@@ -74,7 +74,7 @@ fn main() {
 #[test]
 fn test_decision_trace_disabled_by_default() {
     // Verify that decision tracing is disabled by default (no overhead)
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let test_bin = temp_dir.path().join("decision_writer");
 
     let test_program = r#"
@@ -85,7 +85,7 @@ fn main() {
 "#;
 
     let src_file = temp_dir.path().join("decision_writer.rs");
-    fs::write(&src_file, test_program).unwrap();
+    fs::write(&src_file, test_program).expect("test");
 
     std::process::Command::new("rustc")
         .arg(&src_file)
@@ -95,7 +95,7 @@ fn main() {
         .expect("Failed to compile");
 
     // Run without --trace-transpiler-decisions flag
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     let output = cmd
         .arg("-c")
         .arg("--")
@@ -113,7 +113,7 @@ fn main() {
 #[test]
 fn test_decision_trace_multiple_decisions() {
     // Test capturing multiple decision traces in sequence
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let test_bin = temp_dir.path().join("multi_decision");
 
     let test_program = r#"
@@ -126,23 +126,23 @@ fn main() {
 "#;
 
     let src_file = temp_dir.path().join("multi_decision.rs");
-    fs::write(&src_file, test_program).unwrap();
+    fs::write(&src_file, test_program).expect("test");
 
     std::process::Command::new("rustc")
         .arg(&src_file)
         .arg("-o")
         .arg(&test_bin)
         .status()
-        .unwrap();
+        .expect("test");
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     let output = cmd
         .arg("--trace-transpiler-decisions")
         .arg("-c")
         .arg("--")
         .arg(&test_bin)
         .output()
-        .unwrap();
+        .expect("test");
 
     assert!(output.status.success());
 
@@ -168,7 +168,7 @@ fn main() {
 #[test]
 fn test_decision_trace_ignores_non_decision_stderr() {
     // Verify that normal stderr output is not parsed as decisions
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let test_bin = temp_dir.path().join("mixed_stderr");
 
     let test_program = r#"
@@ -180,23 +180,23 @@ fn main() {
 "#;
 
     let src_file = temp_dir.path().join("mixed_stderr.rs");
-    fs::write(&src_file, test_program).unwrap();
+    fs::write(&src_file, test_program).expect("test");
 
     std::process::Command::new("rustc")
         .arg(&src_file)
         .arg("-o")
         .arg(&test_bin)
         .status()
-        .unwrap();
+        .expect("test");
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     let output = cmd
         .arg("--trace-transpiler-decisions")
         .arg("-c")
         .arg("--")
         .arg(&test_bin)
         .output()
-        .unwrap();
+        .expect("test");
 
     assert!(output.status.success());
 

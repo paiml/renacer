@@ -17,7 +17,7 @@ use tempfile::TempDir;
 #[test]
 fn test_dl_anomaly_flag_accepted() {
     // Test that --dl-anomaly flag is accepted
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("--dl-anomaly").arg("--").arg("echo").arg("test");
 
     // Should not error on flag parsing
@@ -30,7 +30,7 @@ fn test_dl_anomaly_flag_accepted() {
 
 #[test]
 fn test_dl_anomaly_with_statistics() {
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("-c")
         .arg("--dl-anomaly")
         .arg("--")
@@ -46,7 +46,7 @@ fn test_dl_anomaly_with_statistics() {
 
 #[test]
 fn test_dl_anomaly_detects_anomalies() {
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("dl_anomaly_test");
 
     // Create program with normal and anomalous syscalls
@@ -68,7 +68,7 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("dl_anomaly_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
@@ -77,7 +77,7 @@ int main() {
         .output()
         .expect("Failed to compile test program");
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("-c")
         .arg("--dl-anomaly")
         .arg("--")
@@ -96,7 +96,7 @@ int main() {
 
 #[test]
 fn test_dl_threshold_configuration() {
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("-c")
         .arg("--dl-anomaly")
         .arg("--dl-threshold")
@@ -114,7 +114,7 @@ fn test_dl_threshold_configuration() {
 
 #[test]
 fn test_dl_anomaly_json_export() {
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("--format")
         .arg("json")
         .arg("--dl-anomaly")
@@ -133,7 +133,7 @@ fn test_dl_anomaly_json_export() {
 
 #[test]
 fn test_dl_anomaly_with_filtering() {
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("-c")
         .arg("--dl-anomaly")
         .arg("-e")
@@ -152,7 +152,7 @@ fn test_dl_anomaly_with_filtering() {
 #[test]
 fn test_dl_anomaly_minimum_samples() {
     // Test that Autoencoder requires minimum samples
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("min_samples_test");
 
     let source = r#"
@@ -165,16 +165,16 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("min_samples.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("-c")
         .arg("--dl-anomaly")
         .arg("--")
@@ -191,7 +191,7 @@ int main() {
 #[test]
 fn test_backward_compatibility_without_dl_anomaly() {
     // Ensure existing functionality works without --dl-anomaly flag
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("-c").arg("--").arg("echo").arg("test");
 
     cmd.assert().success();
@@ -203,7 +203,7 @@ fn test_backward_compatibility_without_dl_anomaly() {
 
 #[test]
 fn test_dl_anomaly_with_timing() {
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("-c")
         .arg("-T")
         .arg("--dl-anomaly")
@@ -220,7 +220,7 @@ fn test_dl_anomaly_with_timing() {
 
 #[test]
 fn test_dl_anomaly_with_other_ml() {
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("-c")
         .arg("--dl-anomaly")
         .arg("--ml-anomaly") // Also enable KMeans
@@ -239,7 +239,7 @@ fn test_dl_anomaly_with_other_ml() {
 
 #[test]
 fn test_dl_anomaly_with_explainability() {
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("-c")
         .arg("--dl-anomaly")
         .arg("--explain")
@@ -257,7 +257,7 @@ fn test_dl_anomaly_with_explainability() {
 
 #[test]
 fn test_dl_hidden_size_configuration() {
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("-c")
         .arg("--dl-anomaly")
         .arg("--dl-hidden-size")
@@ -275,7 +275,7 @@ fn test_dl_hidden_size_configuration() {
 
 #[test]
 fn test_dl_epochs_configuration() {
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("-c")
         .arg("--dl-anomaly")
         .arg("--dl-epochs")

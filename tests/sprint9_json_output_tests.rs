@@ -31,15 +31,15 @@ fn test_json_output_parses() {
         .arg("echo")
         .arg("test");
 
-    let output = cmd.output().unwrap();
+    let output = cmd.output().expect("test");
     let stdout = String::from_utf8_lossy(&output.stdout);
 
     // Find JSON output (skip the "test" line from echo)
-    let json_start = stdout.find('{').unwrap();
+    let json_start = stdout.find('{').expect("test");
     let json_str = &stdout[json_start..];
 
     // Should parse as valid JSON
-    let parsed: serde_json::Value = serde_json::from_str(json_str).unwrap();
+    let parsed: serde_json::Value = serde_json::from_str(json_str).expect("test");
     assert_eq!(parsed["format"], "renacer-json-v1");
     assert!(parsed["syscalls"].is_array());
     assert!(parsed["summary"].is_object());
@@ -56,18 +56,18 @@ fn test_json_with_timing() {
         .arg("echo")
         .arg("test");
 
-    let output = cmd.output().unwrap();
+    let output = cmd.output().expect("test");
     let stdout = String::from_utf8_lossy(&output.stdout);
-    let json_start = stdout.find('{').unwrap();
+    let json_start = stdout.find('{').expect("test");
     let json_str = &stdout[json_start..];
 
-    let parsed: serde_json::Value = serde_json::from_str(json_str).unwrap();
+    let parsed: serde_json::Value = serde_json::from_str(json_str).expect("test");
 
     // Should have total_time_us in summary
     assert!(parsed["summary"]["total_time_us"].is_number());
 
     // At least some syscalls should have duration_us
-    let syscalls = parsed["syscalls"].as_array().unwrap();
+    let syscalls = parsed["syscalls"].as_array().expect("test");
     let has_duration = syscalls.iter().any(|s| s["duration_us"].is_number());
     assert!(
         has_duration,
@@ -87,13 +87,13 @@ fn test_json_with_filtering() {
         .arg("echo")
         .arg("test");
 
-    let output = cmd.output().unwrap();
+    let output = cmd.output().expect("test");
     let stdout = String::from_utf8_lossy(&output.stdout);
-    let json_start = stdout.find('{').unwrap();
+    let json_start = stdout.find('{').expect("test");
     let json_str = &stdout[json_start..];
 
-    let parsed: serde_json::Value = serde_json::from_str(json_str).unwrap();
-    let syscalls = parsed["syscalls"].as_array().unwrap();
+    let parsed: serde_json::Value = serde_json::from_str(json_str).expect("test");
+    let syscalls = parsed["syscalls"].as_array().expect("test");
 
     // All syscalls should be "write"
     for syscall in syscalls {
@@ -107,12 +107,12 @@ fn test_json_summary_fields() {
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--format").arg("json").arg("--").arg("true"); // Simple command
 
-    let output = cmd.output().unwrap();
+    let output = cmd.output().expect("test");
     let stdout = String::from_utf8_lossy(&output.stdout);
-    let json_start = stdout.find('{').unwrap();
+    let json_start = stdout.find('{').expect("test");
     let json_str = &stdout[json_start..];
 
-    let parsed: serde_json::Value = serde_json::from_str(json_str).unwrap();
+    let parsed: serde_json::Value = serde_json::from_str(json_str).expect("test");
     let summary = &parsed["summary"];
 
     assert!(summary["total_syscalls"].is_number());

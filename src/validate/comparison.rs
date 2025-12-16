@@ -269,7 +269,8 @@ mod tests {
             TraceSyscallEntry::simple(2, "write", 200),
         ];
 
-        let result = compare_syscalls(&baseline, &actual, false).unwrap();
+        let result =
+            compare_syscalls(&baseline, &actual, false).expect("comparison should succeed");
         assert!(result.passed);
         assert!(result.syscall_mismatches.is_empty());
     }
@@ -279,7 +280,8 @@ mod tests {
         let baseline = vec![TraceSyscallEntry::simple(1, "read", 100)];
         let actual = vec![TraceSyscallEntry::simple(2, "write", 100)];
 
-        let result = compare_syscalls(&baseline, &actual, false).unwrap();
+        let result =
+            compare_syscalls(&baseline, &actual, false).expect("comparison should succeed");
         assert!(!result.passed);
         assert_eq!(result.syscall_mismatches.len(), 1);
         assert_eq!(
@@ -301,7 +303,8 @@ mod tests {
         assert!(result.is_err());
 
         // Non-strict mode should report mismatches but continue
-        let result = compare_syscalls(&baseline, &actual, false).unwrap();
+        let result =
+            compare_syscalls(&baseline, &actual, false).expect("comparison should succeed");
         assert!(!result.passed);
         assert_eq!(result.syscall_mismatches.len(), 1); // 1 missing
     }
@@ -315,7 +318,8 @@ mod tests {
             TraceSyscallEntry::simple(3, "close", 50),
         ];
 
-        let result = compare_syscalls(&baseline, &actual, false).unwrap();
+        let result =
+            compare_syscalls(&baseline, &actual, false).expect("comparison should succeed");
         assert!(!result.passed);
         assert_eq!(result.syscall_mismatches.len(), 2); // 2 extra
         assert!(result
@@ -333,7 +337,8 @@ mod tests {
         ];
         let actual = vec![TraceSyscallEntry::simple(1, "read", 100)];
 
-        let result = compare_syscalls(&baseline, &actual, false).unwrap();
+        let result =
+            compare_syscalls(&baseline, &actual, false).expect("comparison should succeed");
         assert!(!result.passed);
         assert_eq!(result.syscall_mismatches.len(), 2); // 2 missing
         assert!(result
@@ -347,7 +352,8 @@ mod tests {
         let baseline: Vec<TraceSyscallEntry> = vec![];
         let actual: Vec<TraceSyscallEntry> = vec![];
 
-        let result = compare_syscalls(&baseline, &actual, false).unwrap();
+        let result =
+            compare_syscalls(&baseline, &actual, false).expect("comparison should succeed");
         assert!(result.passed);
         assert!(result.syscall_mismatches.is_empty());
     }
@@ -362,7 +368,7 @@ mod tests {
     fn test_timing_exceeds_tolerance() {
         let result = is_timing_regression("read", 100_000, 120_000, 10.0);
         assert!(result.is_some()); // 20% exceeds 10% tolerance
-        let regression = result.unwrap();
+        let regression = result.expect("regression should be detected");
         assert!((regression.delta_percent - 20.0).abs() < 0.1);
     }
 
@@ -567,7 +573,7 @@ mod tests {
             false,
             false,
         )
-        .unwrap();
+        .expect("validation should succeed");
         assert!(!result.passed);
         assert_eq!(result.timing_regressions.len(), 1);
     }
@@ -649,7 +655,7 @@ mod tests {
             false,
             true,
         )
-        .unwrap();
+        .expect("validation should succeed");
         assert!(result.passed); // Should pass because timing is ignored
         assert!(result.timing_regressions.is_empty());
     }
@@ -703,7 +709,8 @@ mod tests {
             TraceSyscallEntry::simple(3, "close", 50),
         ];
 
-        let result = compare_syscalls(&baseline, &actual, false).unwrap();
+        let result =
+            compare_syscalls(&baseline, &actual, false).expect("comparison should succeed");
         assert_eq!(result.summary.total_compared, 3);
         assert_eq!(result.summary.matches, 2); // 2 match (index 0 and 2)
         assert_eq!(result.summary.mismatches, 1); // 1 different

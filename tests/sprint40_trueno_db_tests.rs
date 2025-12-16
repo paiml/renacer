@@ -55,31 +55,31 @@ fn create_span(
 
 #[test]
 fn test_trueno_db_creation() {
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let path = tmp_dir.path().join("traces.parquet");
 
-    let storage = TruenoDbStorage::new(&path).unwrap();
+    let storage = TruenoDbStorage::new(&path).expect("test");
     assert_eq!(storage.path(), path);
 }
 
 #[test]
 fn test_trueno_db_insert_single_span() {
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let path = tmp_dir.path().join("traces.parquet");
 
-    let storage = TruenoDbStorage::new(&path).unwrap();
+    let storage = TruenoDbStorage::new(&path).expect("test");
 
     let span = create_span([1; 16], [1; 8], None, "test_span", 1, StatusCode::Ok);
 
-    storage.insert_batch(&[span]).unwrap();
+    storage.insert_batch(&[span]).expect("test");
 }
 
 #[test]
 fn test_trueno_db_insert_batch() {
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let path = tmp_dir.path().join("traces.parquet");
 
-    let storage = TruenoDbStorage::new(&path).unwrap();
+    let storage = TruenoDbStorage::new(&path).expect("test");
 
     // Create batch of 100 spans
     let trace_id = [0x4b; 16];
@@ -97,15 +97,15 @@ fn test_trueno_db_insert_batch() {
         batch.push(span);
     }
 
-    storage.insert_batch(&batch).unwrap();
+    storage.insert_batch(&batch).expect("test");
 }
 
 #[test]
 fn test_trueno_db_query_by_trace_id() {
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let path = tmp_dir.path().join("traces.parquet");
 
-    let storage = TruenoDbStorage::new(&path).unwrap();
+    let storage = TruenoDbStorage::new(&path).expect("test");
 
     let trace_id = [
         0x4b, 0xf9, 0x2f, 0x3c, 0x7b, 0x64, 0x4b, 0xf9, 0x2f, 0x3c, 0x7b, 0x64, 0x4b, 0xf9, 0x2f,
@@ -125,10 +125,10 @@ fn test_trueno_db_query_by_trace_id() {
         );
         batch.push(span);
     }
-    storage.insert_batch(&batch).unwrap();
+    storage.insert_batch(&batch).expect("test");
 
     // Query by trace ID
-    let results = storage.query_by_trace_id(&trace_id).unwrap();
+    let results = storage.query_by_trace_id(&trace_id).expect("test");
 
     // TODO Sprint 40: Once integrated with trueno-db, verify:
     // assert_eq!(results.len(), 10);
@@ -142,10 +142,10 @@ fn test_trueno_db_query_by_trace_id() {
 
 #[test]
 fn test_trueno_db_query_by_time_range() {
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let path = tmp_dir.path().join("traces.parquet");
 
-    let storage = TruenoDbStorage::new(&path).unwrap();
+    let storage = TruenoDbStorage::new(&path).expect("test");
 
     let trace_id = [0x4b; 16];
 
@@ -162,7 +162,7 @@ fn test_trueno_db_query_by_time_range() {
         );
         batch.push(span);
     }
-    storage.insert_batch(&batch).unwrap();
+    storage.insert_batch(&batch).expect("test");
 
     // Query time range: [20, 30)
     let start = 20 * 1000;
@@ -170,7 +170,7 @@ fn test_trueno_db_query_by_time_range() {
 
     let results = storage
         .query_by_trace_id_and_time(&trace_id, start, end)
-        .unwrap();
+        .expect("test");
 
     // TODO Sprint 40: Verify results
     // assert_eq!(results.len(), 10);
@@ -181,10 +181,10 @@ fn test_trueno_db_query_by_time_range() {
 
 #[test]
 fn test_trueno_db_query_by_process_id() {
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let path = tmp_dir.path().join("traces.parquet");
 
-    let storage = TruenoDbStorage::new(&path).unwrap();
+    let storage = TruenoDbStorage::new(&path).expect("test");
 
     // Insert spans from different processes
     let mut batch = vec![];
@@ -200,10 +200,10 @@ fn test_trueno_db_query_by_process_id() {
         span.process_id = (i % 3) as u32; // 3 different processes
         batch.push(span);
     }
-    storage.insert_batch(&batch).unwrap();
+    storage.insert_batch(&batch).expect("test");
 
     // Query process 1
-    let results = storage.query_by_process_id(1).unwrap();
+    let results = storage.query_by_process_id(1).expect("test");
 
     // TODO Sprint 40: Verify results
     // assert_eq!(results.len(), 33 or 34); // ~100/3
@@ -214,10 +214,10 @@ fn test_trueno_db_query_by_process_id() {
 
 #[test]
 fn test_trueno_db_query_errors() {
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let path = tmp_dir.path().join("traces.parquet");
 
-    let storage = TruenoDbStorage::new(&path).unwrap();
+    let storage = TruenoDbStorage::new(&path).expect("test");
 
     // Insert mix of OK and ERROR spans
     let mut batch = vec![];
@@ -237,10 +237,10 @@ fn test_trueno_db_query_errors() {
         );
         batch.push(span);
     }
-    storage.insert_batch(&batch).unwrap();
+    storage.insert_batch(&batch).expect("test");
 
     // Query errors
-    let results = storage.query_errors().unwrap();
+    let results = storage.query_errors().expect("test");
 
     // TODO Sprint 40: Verify results
     // assert_eq!(results.len(), 10); // 10% error rate
@@ -251,10 +251,10 @@ fn test_trueno_db_query_errors() {
 
 #[test]
 fn test_trueno_db_stats() {
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let path = tmp_dir.path().join("traces.parquet");
 
-    let storage = TruenoDbStorage::new(&path).unwrap();
+    let storage = TruenoDbStorage::new(&path).expect("test");
 
     // Insert spans
     let mut batch = vec![];
@@ -269,10 +269,10 @@ fn test_trueno_db_stats() {
         );
         batch.push(span);
     }
-    storage.insert_batch(&batch).unwrap();
+    storage.insert_batch(&batch).expect("test");
 
     // Get stats
-    let stats = storage.stats().unwrap();
+    let stats = storage.stats().expect("test");
 
     // TODO Sprint 40: Verify actual stats
     // assert_eq!(stats.total_spans, 1000);
@@ -286,38 +286,38 @@ fn test_trueno_db_stats() {
 
 #[test]
 fn test_trueno_db_flush() {
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let path = tmp_dir.path().join("traces.parquet");
 
-    let storage = TruenoDbStorage::new(&path).unwrap();
+    let storage = TruenoDbStorage::new(&path).expect("test");
 
     // Insert spans
     let span = create_span([1; 16], [1; 8], None, "test", 1, StatusCode::Ok);
-    storage.insert_batch(&[span]).unwrap();
+    storage.insert_batch(&[span]).expect("test");
 
     // Flush to disk
-    storage.flush().unwrap();
+    storage.flush().expect("test");
 
     // No panic = success
 }
 
 #[test]
 fn test_trueno_db_empty_batch_insert() {
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let path = tmp_dir.path().join("traces.parquet");
 
-    let storage = TruenoDbStorage::new(&path).unwrap();
+    let storage = TruenoDbStorage::new(&path).expect("test");
 
     // Insert empty batch (should be no-op)
-    storage.insert_batch(&[]).unwrap();
+    storage.insert_batch(&[]).expect("test");
 }
 
 #[test]
 fn test_trueno_db_large_batch_insert() {
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let path = tmp_dir.path().join("traces.parquet");
 
-    let storage = TruenoDbStorage::new(&path).unwrap();
+    let storage = TruenoDbStorage::new(&path).expect("test");
 
     // Large batch: 10,000 spans
     let mut batch = vec![];
@@ -333,16 +333,16 @@ fn test_trueno_db_large_batch_insert() {
         batch.push(span);
     }
 
-    storage.insert_batch(&batch).unwrap();
+    storage.insert_batch(&batch).expect("test");
 }
 
 #[test]
 fn test_trueno_db_trace_with_hierarchy() {
     // Test inserting a trace with parent-child relationships
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let path = tmp_dir.path().join("traces.parquet");
 
-    let storage = TruenoDbStorage::new(&path).unwrap();
+    let storage = TruenoDbStorage::new(&path).expect("test");
 
     let trace_id = [0x4b; 16];
     let mut batch = vec![];
@@ -364,10 +364,10 @@ fn test_trueno_db_trace_with_hierarchy() {
         batch.push(child);
     }
 
-    storage.insert_batch(&batch).unwrap();
+    storage.insert_batch(&batch).expect("test");
 
     // Query should return all spans in order
-    let results = storage.query_by_trace_id(&trace_id).unwrap();
+    let results = storage.query_by_trace_id(&trace_id).expect("test");
 
     // TODO Sprint 40: Verify hierarchy
     // assert_eq!(results.len(), 10);
@@ -386,10 +386,10 @@ fn test_trueno_db_concurrent_inserts() {
     use std::sync::Arc;
     use std::thread;
 
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let path = tmp_dir.path().join("traces.parquet");
 
-    let storage = Arc::new(TruenoDbStorage::new(&path).unwrap());
+    let storage = Arc::new(TruenoDbStorage::new(&path).expect("test"));
     let mut handles = vec![];
 
     // Spawn 5 threads, each inserting 100 spans
@@ -408,27 +408,27 @@ fn test_trueno_db_concurrent_inserts() {
                 );
                 batch.push(span);
             }
-            storage_clone.insert_batch(&batch).unwrap();
+            storage_clone.insert_batch(&batch).expect("test");
         });
         handles.push(handle);
     }
 
     for handle in handles {
-        handle.join().unwrap();
+        handle.join().expect("test");
     }
 
     // TODO Sprint 40: Verify all 500 spans inserted
-    // let stats = storage.stats().unwrap();
+    // let stats = storage.stats().expect("test");
     // assert_eq!(stats.total_spans, 500);
 }
 
 #[test]
 fn test_span_record_with_attributes() {
     // Test that span attributes are properly stored
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let path = tmp_dir.path().join("traces.parquet");
 
-    let storage = TruenoDbStorage::new(&path).unwrap();
+    let storage = TruenoDbStorage::new(&path).expect("test");
 
     let mut attributes = HashMap::new();
     attributes.insert("syscall.name".to_string(), "read".to_string());
@@ -456,7 +456,7 @@ fn test_span_record_with_attributes() {
         5678,
     );
 
-    storage.insert_batch(&[span]).unwrap();
+    storage.insert_batch(&[span]).expect("test");
 
     // TODO Sprint 40: Query and verify attributes
 }

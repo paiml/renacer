@@ -57,7 +57,7 @@ impl fmt::Display for TimeAttribution {
 /// use renacer::unified_trace::SyscallSpan;
 /// use std::borrow::Cow;
 ///
-/// let registry = ClusterRegistry::default_transpiler_clusters().unwrap();
+/// let registry = ClusterRegistry::default_transpiler_clusters().expect("test");
 /// let spans = vec![
 ///     SyscallSpan {
 ///         span_id: 1,
@@ -151,7 +151,7 @@ mod tests {
 
     #[test]
     fn test_time_attribution_basic() {
-        let registry = ClusterRegistry::default_transpiler_clusters().unwrap();
+        let registry = ClusterRegistry::default_transpiler_clusters().expect("test");
         let spans = vec![
             make_span("mmap", 1000),  // MemoryAllocation
             make_span("read", 9000),  // FileIO (90% of time)
@@ -164,14 +164,17 @@ mod tests {
         assert_eq!(attributions.len(), 2);
 
         // FileIO should dominate (10ms out of 11ms)
-        let file_io = attributions.iter().find(|a| a.cluster == "FileIO").unwrap();
+        let file_io = attributions
+            .iter()
+            .find(|a| a.cluster == "FileIO")
+            .expect("test");
         assert!((file_io.percentage - 90.9).abs() < 0.1); // ~90.9%
         assert_eq!(file_io.call_count, 2);
     }
 
     #[test]
     fn test_time_attribution_sorted() {
-        let registry = ClusterRegistry::default_transpiler_clusters().unwrap();
+        let registry = ClusterRegistry::default_transpiler_clusters().expect("test");
         let spans = vec![
             make_span("mmap", 1000),  // MemoryAllocation: 1μs
             make_span("read", 9000),  // FileIO: 9μs
@@ -186,7 +189,7 @@ mod tests {
 
     #[test]
     fn test_time_attribution_empty() {
-        let registry = ClusterRegistry::default_transpiler_clusters().unwrap();
+        let registry = ClusterRegistry::default_transpiler_clusters().expect("test");
         let spans: Vec<SyscallSpan> = vec![];
 
         let attributions = calculate_time_attribution(&spans, &registry);
@@ -195,7 +198,7 @@ mod tests {
 
     #[test]
     fn test_time_attribution_zero_duration() {
-        let registry = ClusterRegistry::default_transpiler_clusters().unwrap();
+        let registry = ClusterRegistry::default_transpiler_clusters().expect("test");
         let spans = vec![make_span("mmap", 0), make_span("read", 0)];
 
         let attributions = calculate_time_attribution(&spans, &registry);
@@ -204,7 +207,7 @@ mod tests {
 
     #[test]
     fn test_avg_per_call() {
-        let registry = ClusterRegistry::default_transpiler_clusters().unwrap();
+        let registry = ClusterRegistry::default_transpiler_clusters().expect("test");
         let spans = vec![
             make_span("read", 1000),  // FileIO
             make_span("read", 3000),  // FileIO
@@ -212,7 +215,10 @@ mod tests {
         ];
 
         let attributions = calculate_time_attribution(&spans, &registry);
-        let file_io = attributions.iter().find(|a| a.cluster == "FileIO").unwrap();
+        let file_io = attributions
+            .iter()
+            .find(|a| a.cluster == "FileIO")
+            .expect("test");
 
         // Total: 6000ns, 3 calls = 2000ns avg
         assert_eq!(file_io.avg_per_call, Duration::from_nanos(2000));

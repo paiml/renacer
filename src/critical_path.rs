@@ -373,8 +373,8 @@ mod tests {
 
     #[test]
     fn test_empty_graph() {
-        let graph = CausalGraph::from_spans(&[]).unwrap();
-        let result = find_critical_path(&graph).unwrap();
+        let graph = CausalGraph::from_spans(&[]).expect("test");
+        let result = find_critical_path(&graph).expect("test");
 
         assert_eq!(result.path.len(), 0);
         assert_eq!(result.total_duration, 0);
@@ -383,9 +383,9 @@ mod tests {
     #[test]
     fn test_single_span() {
         let root = create_span(1, None, 0, 1000);
-        let graph = CausalGraph::from_spans(&[root]).unwrap();
+        let graph = CausalGraph::from_spans(&[root]).expect("test");
 
-        let result = find_critical_path(&graph).unwrap();
+        let result = find_critical_path(&graph).expect("test");
 
         assert_eq!(result.path.len(), 1);
         assert_eq!(result.total_duration, 1000);
@@ -398,8 +398,8 @@ mod tests {
         let child = create_span(2, Some(1), 1, 500);
         let grandchild = create_span(3, Some(2), 2, 700);
 
-        let graph = CausalGraph::from_spans(&[root, child, grandchild]).unwrap();
-        let result = find_critical_path(&graph).unwrap();
+        let graph = CausalGraph::from_spans(&[root, child, grandchild]).expect("test");
+        let result = find_critical_path(&graph).expect("test");
 
         assert_eq!(result.path.len(), 3);
         assert_eq!(result.total_duration, 1000 + 500 + 700);
@@ -413,8 +413,8 @@ mod tests {
         let child_short = create_span(2, Some(1), 1, 500);
         let child_long = create_span(3, Some(1), 2, 2000);
 
-        let graph = CausalGraph::from_spans(&[root, child_short, child_long]).unwrap();
-        let result = find_critical_path(&graph).unwrap();
+        let graph = CausalGraph::from_spans(&[root, child_short, child_long]).expect("test");
+        let result = find_critical_path(&graph).expect("test");
 
         // Critical path should go through the longer child
         assert_eq!(result.path.len(), 2);
@@ -433,9 +433,9 @@ mod tests {
         let grandchild1 = create_span(4, Some(2), 3, 300);
         let grandchild2 = create_span(5, Some(3), 4, 1200);
 
-        let graph =
-            CausalGraph::from_spans(&[root, child1, child2, grandchild1, grandchild2]).unwrap();
-        let result = find_critical_path(&graph).unwrap();
+        let graph = CausalGraph::from_spans(&[root, child1, child2, grandchild1, grandchild2])
+            .expect("test");
+        let result = find_critical_path(&graph).expect("test");
 
         // Critical path: root → child2 → grandchild2
         assert_eq!(result.path.len(), 3);
@@ -449,10 +449,10 @@ mod tests {
         let child = create_span(2, Some(1), 1, 2000); // Longest
         let grandchild = create_span(3, Some(2), 2, 300);
 
-        let graph = CausalGraph::from_spans(&[root, child, grandchild]).unwrap();
-        let result = find_critical_path(&graph).unwrap();
+        let graph = CausalGraph::from_spans(&[root, child, grandchild]).expect("test");
+        let result = find_critical_path(&graph).expect("test");
 
-        let (longest_node, duration) = result.longest_span().unwrap();
+        let (longest_node, duration) = result.longest_span().expect("test");
         assert_eq!(duration, 2000);
         assert_eq!(result.node_durations.get(&longest_node), Some(&2000));
     }
@@ -463,8 +463,8 @@ mod tests {
         let child1 = create_span(2, Some(1), 1, 500);
         let child2 = create_span(3, Some(1), 2, 2000);
 
-        let graph = CausalGraph::from_spans(&[root, child1, child2]).unwrap();
-        let result = find_critical_path(&graph).unwrap();
+        let graph = CausalGraph::from_spans(&[root, child1, child2]).expect("test");
+        let result = find_critical_path(&graph).expect("test");
 
         assert!(result.is_on_critical_path(NodeId(0))); // root
         assert!(result.is_on_critical_path(NodeId(2))); // child2
@@ -476,8 +476,8 @@ mod tests {
         let root = create_span(1, None, 0, 1000);
         let child = create_span(2, Some(1), 1, 2000);
 
-        let graph = CausalGraph::from_spans(&[root, child]).unwrap();
-        let result = find_critical_path(&graph).unwrap();
+        let graph = CausalGraph::from_spans(&[root, child]).expect("test");
+        let result = find_critical_path(&graph).expect("test");
 
         // Critical path is 3000ns, if total trace is 5000ns
         let percentage = result.critical_path_percentage(5000);

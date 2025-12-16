@@ -13,7 +13,7 @@ fn test_stack_frame_struct() {
         .arg("echo")
         .arg("test");
 
-    let output = cmd.output().unwrap();
+    let output = cmd.output().expect("test");
     assert!(output.status.success());
 }
 
@@ -26,7 +26,7 @@ fn test_stack_unwinding_with_simple_program() {
         .arg("--")
         .arg("true"); // Simplest possible program
 
-    let output = cmd.output().unwrap();
+    let output = cmd.output().expect("test");
     assert!(output.status.success());
 
     let stderr = String::from_utf8_lossy(&output.stderr);
@@ -45,7 +45,7 @@ fn test_stack_unwinding_does_not_crash() {
         .arg("ls")
         .arg("-la");
 
-    let output = cmd.output().unwrap();
+    let output = cmd.output().expect("test");
     assert!(output.status.success());
 }
 
@@ -58,7 +58,7 @@ fn test_stack_unwinding_with_function_time_disabled() {
         .arg("echo")
         .arg("test");
 
-    let output = cmd.output().unwrap();
+    let output = cmd.output().expect("test");
     assert!(output.status.success());
 
     let stderr = String::from_utf8_lossy(&output.stderr);
@@ -80,7 +80,7 @@ fn test_stack_unwinding_max_depth_protection() {
     let output = cmd
         .timeout(std::time::Duration::from_secs(5))
         .output()
-        .unwrap();
+        .expect("test");
 
     // Should complete within timeout
     assert!(output.status.success());

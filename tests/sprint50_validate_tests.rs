@@ -417,7 +417,7 @@ fn test_load_baseline_valid() {
     let loaded = load_baseline(&baseline_path);
     assert!(loaded.is_ok());
 
-    let baseline = loaded.unwrap();
+    let baseline = loaded.expect("test");
     assert_eq!(baseline.manifest.command, vec!["echo", "test"]);
 }
 
@@ -583,9 +583,12 @@ fn test_cli_validate_subcommand_exists() {
     ]);
 
     assert!(cli.subcommand.is_some());
-    match cli.subcommand.unwrap() {
+    match cli.subcommand.expect("test") {
         Commands::Validate(args) => {
-            assert_eq!(args.generate.unwrap().to_str().unwrap(), "/tmp/golden");
+            assert_eq!(
+                args.generate.expect("test").to_str().expect("test"),
+                "/tmp/golden"
+            );
             assert_eq!(args.command, vec!["echo", "test"]);
         }
     }
@@ -607,9 +610,12 @@ fn test_cli_validate_baseline_flag() {
         "test",
     ]);
 
-    match cli.subcommand.unwrap() {
+    match cli.subcommand.expect("test") {
         Commands::Validate(args) => {
-            assert_eq!(args.baseline.unwrap().to_str().unwrap(), "/golden/baseline");
+            assert_eq!(
+                args.baseline.expect("test").to_str().expect("test"),
+                "/golden/baseline"
+            );
         }
     }
 }
@@ -632,7 +638,7 @@ fn test_cli_validate_tolerance_flag() {
         "test",
     ]);
 
-    match cli.subcommand.unwrap() {
+    match cli.subcommand.expect("test") {
         Commands::Validate(args) => {
             assert!((args.tolerance - 15.0).abs() < f32::EPSILON);
         }
@@ -656,7 +662,7 @@ fn test_cli_validate_strict_flag() {
         "test",
     ]);
 
-    match cli.subcommand.unwrap() {
+    match cli.subcommand.expect("test") {
         Commands::Validate(args) => {
             assert!(args.strict);
         }
@@ -682,7 +688,7 @@ fn test_cli_validate_output_format() {
         "test",
     ]);
 
-    match cli.subcommand.unwrap() {
+    match cli.subcommand.expect("test") {
         Commands::Validate(args) => {
             assert_eq!(args.output, ValidationOutputFormat::Json);
         }
@@ -701,7 +707,7 @@ fn test_cli_validate_output_format() {
         "test",
     ]);
 
-    match cli.subcommand.unwrap() {
+    match cli.subcommand.expect("test") {
         Commands::Validate(args) => {
             assert_eq!(args.output, ValidationOutputFormat::Junit);
         }
@@ -724,7 +730,7 @@ fn test_cli_validate_tolerance_default() {
         "test",
     ]);
 
-    match cli.subcommand.unwrap() {
+    match cli.subcommand.expect("test") {
         Commands::Validate(args) => {
             assert!((args.tolerance - 10.0).abs() < f32::EPSILON); // Default is 10.0
         }

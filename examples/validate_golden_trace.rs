@@ -79,7 +79,7 @@ fn main() {
 
     // Identical sequence should pass
     let identical = baseline.clone();
-    let result = compare_syscalls(&baseline, &identical, false).unwrap();
+    let result = compare_syscalls(&baseline, &identical, false).expect("test");
     println!("   Identical sequences:");
     println!("      Passed: {} ✓", result.passed);
     println!("      Mismatches: {}", result.syscall_mismatches.len());
@@ -91,7 +91,7 @@ fn main() {
         TraceSyscallEntry::simple(0, "read", 100_000),
         TraceSyscallEntry::simple(3, "close", 10_000),
     ];
-    let result = compare_syscalls(&baseline, &different, false).unwrap();
+    let result = compare_syscalls(&baseline, &different, false).expect("test");
     println!("\n   Different sequences:");
     println!("      Passed: {}", result.passed);
     println!("      Mismatches: {} ✗", result.syscall_mismatches.len());

@@ -114,7 +114,7 @@ mod tests {
             fail_on_violation = true
         "#;
 
-        let config = AssertionConfig::from_toml_str(toml).unwrap();
+        let config = AssertionConfig::from_toml_str(toml).expect("test");
 
         assert_eq!(config.assertion.len(), 1);
 
@@ -140,7 +140,7 @@ mod tests {
             threshold = 0.8
         "#;
 
-        let config = AssertionConfig::from_toml_str(toml).unwrap();
+        let config = AssertionConfig::from_toml_str(toml).expect("test");
 
         assert_eq!(config.assertion.len(), 1);
 
@@ -176,7 +176,7 @@ mod tests {
             max_spans = 1000
         "#;
 
-        let config = AssertionConfig::from_toml_str(toml).unwrap();
+        let config = AssertionConfig::from_toml_str(toml).expect("test");
 
         assert_eq!(config.assertion.len(), 3);
         assert_eq!(config.assertion[0].name, "critical_path_max_latency");
@@ -194,7 +194,7 @@ mod tests {
             enabled = false
         "#;
 
-        let config = AssertionConfig::from_toml_str(toml).unwrap();
+        let config = AssertionConfig::from_toml_str(toml).expect("test");
 
         assert_eq!(config.assertion.len(), 1);
         assert!(!config.assertion[0].enabled);
@@ -224,7 +224,7 @@ mod tests {
             max_duration_ms = 100
         "#;
 
-        let config = AssertionConfig::from_toml_str(toml).unwrap();
+        let config = AssertionConfig::from_toml_str(toml).expect("test");
 
         assert_eq!(config.assertion.len(), 3);
         assert_eq!(config.enabled_assertions().len(), 2);
@@ -251,7 +251,7 @@ mod tests {
             max_duration_ms = 100
         "#;
 
-        let config = AssertionConfig::from_toml_str(toml).unwrap();
+        let config = AssertionConfig::from_toml_str(toml).expect("test");
 
         assert_eq!(config.assertion.len(), 3);
         assert_eq!(config.fail_on_violation_assertions().len(), 2);
@@ -259,9 +259,9 @@ mod tests {
 
     #[test]
     fn test_parse_empty_config() {
-        let toml = r#""#;
+        let toml = r"";
 
-        let config = AssertionConfig::from_toml_str(toml).unwrap();
+        let config = AssertionConfig::from_toml_str(toml).expect("parse should succeed");
 
         assert_eq!(config.assertion.len(), 0);
     }
@@ -276,7 +276,7 @@ mod tests {
             trace_name_pattern = "api_.*"
         "#;
 
-        let config = AssertionConfig::from_toml_str(toml).unwrap();
+        let config = AssertionConfig::from_toml_str(toml).expect("test");
 
         match &config.assertion[0].assertion_type {
             AssertionType::CriticalPath(cp) => {
@@ -358,7 +358,7 @@ mod tests {
             fail_on_violation = true
         "#;
 
-        let config = AssertionConfig::from_toml_str(toml).unwrap();
+        let config = AssertionConfig::from_toml_str(toml).expect("test");
 
         assert_eq!(config.assertion.len(), 6);
         assert_eq!(config.enabled_assertions().len(), 6);

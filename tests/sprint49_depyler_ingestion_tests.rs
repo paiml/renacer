@@ -4,7 +4,7 @@
 //!
 //! Reference: paiml/depyler docs/specifications/decision-traces-signal-spec.md
 
-use renacer::depyler_ingest::{DepylerIngestConfig, DepylerWatcher, IngestStats};
+use renacer::depyler_ingest::{DepylerIngestConfig, DepylerWatcher};
 use std::path::PathBuf;
 use tempfile::TempDir;
 
@@ -36,7 +36,7 @@ remote_sample_rate = 0.05
 max_remote_rate = 500
 "#;
 
-    let config: DepylerIngestConfig = toml::from_str(toml).unwrap();
+    let config: DepylerIngestConfig = toml::from_str(toml).expect("test");
 
     assert_eq!(config.watch_paths.len(), 2);
     assert_eq!(config.poll_interval_ms, 50);
@@ -51,7 +51,7 @@ fn test_depyler_ingest_config_partial_toml() {
 poll_interval_ms = 200
 "#;
 
-    let config: DepylerIngestConfig = toml::from_str(toml).unwrap();
+    let config: DepylerIngestConfig = toml::from_str(toml).expect("test");
 
     assert_eq!(config.poll_interval_ms, 200);
     // Defaults for missing fields
@@ -75,7 +75,7 @@ fn test_depyler_watcher_creation() {
 #[test]
 fn test_depyler_watcher_poll_empty_file() {
     // AC: Polling non-existent file returns empty
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let msgpack_path = temp_dir.path().join("decisions.msgpack");
 
     let config = DepylerIngestConfig {
@@ -85,8 +85,8 @@ fn test_depyler_watcher_poll_empty_file() {
         max_remote_rate: 1000,
     };
 
-    let mut watcher = DepylerWatcher::new(config).unwrap();
-    let decisions = watcher.poll().unwrap();
+    let mut watcher = DepylerWatcher::new(config).expect("test");
+    let decisions = watcher.poll().expect("test");
 
     assert!(decisions.is_empty());
 }
@@ -96,7 +96,7 @@ fn test_depyler_watcher_poll_with_decisions() {
     // AC: Polling file with decisions returns them
     use renacer::decision_trace::{generate_decision_id, DecisionTrace};
 
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let msgpack_path = temp_dir.path().join("decisions.msgpack");
 
     // Write test decisions
@@ -115,8 +115,8 @@ fn test_depyler_watcher_poll_with_decisions() {
         )),
     }];
 
-    let packed = rmp_serde::to_vec(&traces).unwrap();
-    std::fs::write(&msgpack_path, packed).unwrap();
+    let packed = rmp_serde::to_vec(&traces).expect("test");
+    std::fs::write(&msgpack_path, packed).expect("test");
 
     let config = DepylerIngestConfig {
         watch_paths: vec![msgpack_path],
@@ -125,8 +125,8 @@ fn test_depyler_watcher_poll_with_decisions() {
         max_remote_rate: 1000,
     };
 
-    let mut watcher = DepylerWatcher::new(config).unwrap();
-    let decisions = watcher.poll().unwrap();
+    let mut watcher = DepylerWatcher::new(config).expect("test");
+    let decisions = watcher.poll().expect("test");
 
     assert_eq!(decisions.len(), 1);
     assert_eq!(decisions[0].category, "TypeMapping");
@@ -135,9 +135,9 @@ fn test_depyler_watcher_poll_with_decisions() {
 #[test]
 fn test_depyler_watcher_incremental_poll() {
     // AC: Watcher only returns NEW decisions since last poll
-    use renacer::decision_trace::{generate_decision_id, DecisionTrace};
+    use renacer::decision_trace::DecisionTrace;
 
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let msgpack_path = temp_dir.path().join("decisions.msgpack");
 
     let config = DepylerIngestConfig {
@@ -147,7 +147,7 @@ fn test_depyler_watcher_incremental_poll() {
         max_remote_rate: 1000,
     };
 
-    let mut watcher = DepylerWatcher::new(config).unwrap();
+    let mut watcher = DepylerWatcher::new(config).expect("test");
 
     // First write
     let traces1 = vec![DecisionTrace {
@@ -159,9 +159,9 @@ fn test_depyler_watcher_incremental_poll() {
         source_location: None,
         decision_id: Some(1),
     }];
-    std::fs::write(&msgpack_path, rmp_serde::to_vec(&traces1).unwrap()).unwrap();
+    std::fs::write(&msgpack_path, rmp_serde::to_vec(&traces1).expect("test")).expect("test");
 
-    let poll1 = watcher.poll().unwrap();
+    let poll1 = watcher.poll().expect("test");
     assert_eq!(poll1.len(), 1);
 
     // Second write (append)
@@ -177,9 +177,9 @@ fn test_depyler_watcher_incremental_poll() {
             decision_id: Some(2),
         },
     ];
-    std::fs::write(&msgpack_path, rmp_serde::to_vec(&traces2).unwrap()).unwrap();
+    std::fs::write(&msgpack_path, rmp_serde::to_vec(&traces2).expect("test")).expect("test");
 
-    let poll2 = watcher.poll().unwrap();
+    let poll2 = watcher.poll().expect("test");
     // Note: Incremental polling requires file offset tracking which may not be implemented
     // For now, accept either 0 (not tracking) or 1 (tracking) new decisions
     assert!(poll2.len() <= 1, "Should return at most 1 new decision");
@@ -194,7 +194,7 @@ fn test_depyler_watcher_sampling() {
     // AC: Sampling rate controls which decisions are exported
     use renacer::decision_trace::DecisionTrace;
 
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let msgpack_path = temp_dir.path().join("decisions.msgpack");
 
     // Write 1000 decisions
@@ -210,7 +210,7 @@ fn test_depyler_watcher_sampling() {
         })
         .collect();
 
-    std::fs::write(&msgpack_path, rmp_serde::to_vec(&traces).unwrap()).unwrap();
+    std::fs::write(&msgpack_path, rmp_serde::to_vec(&traces).expect("test")).expect("test");
 
     // 10% sampling rate
     let config = DepylerIngestConfig {
@@ -220,8 +220,8 @@ fn test_depyler_watcher_sampling() {
         max_remote_rate: 10000,
     };
 
-    let mut watcher = DepylerWatcher::new(config).unwrap();
-    let sampled = watcher.poll_sampled().unwrap();
+    let mut watcher = DepylerWatcher::new(config).expect("test");
+    let sampled = watcher.poll_sampled().expect("test");
 
     // Should be approximately 10% (allow 50% variance for randomness)
     assert!(
@@ -236,7 +236,7 @@ fn test_depyler_watcher_circuit_breaker() {
     // AC: Circuit breaker limits decisions per second
     use renacer::decision_trace::DecisionTrace;
 
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let msgpack_path = temp_dir.path().join("decisions.msgpack");
 
     // Write 5000 decisions
@@ -252,7 +252,7 @@ fn test_depyler_watcher_circuit_breaker() {
         })
         .collect();
 
-    std::fs::write(&msgpack_path, rmp_serde::to_vec(&traces).unwrap()).unwrap();
+    std::fs::write(&msgpack_path, rmp_serde::to_vec(&traces).expect("test")).expect("test");
 
     // Circuit breaker at 1000/sec
     let config = DepylerIngestConfig {
@@ -262,8 +262,8 @@ fn test_depyler_watcher_circuit_breaker() {
         max_remote_rate: 1000,   // But circuit breaker
     };
 
-    let mut watcher = DepylerWatcher::new(config).unwrap();
-    let exported = watcher.poll_with_circuit_breaker().unwrap();
+    let mut watcher = DepylerWatcher::new(config).expect("test");
+    let exported = watcher.poll_with_circuit_breaker().expect("test");
 
     // Should be capped at max_remote_rate
     assert!(
@@ -281,7 +281,7 @@ fn test_depyler_watcher_circuit_breaker() {
 fn test_depyler_watcher_stats() {
     // AC: Watcher tracks ingestion statistics
     let config = DepylerIngestConfig::default();
-    let watcher = DepylerWatcher::new(config).unwrap();
+    let watcher = DepylerWatcher::new(config).expect("test");
 
     let stats = watcher.stats();
 
@@ -309,7 +309,7 @@ fn test_depyler_monitor_toml_example_exists() {
     );
 
     // Should be valid TOML
-    let contents = std::fs::read_to_string(&example_path).unwrap();
+    let contents = std::fs::read_to_string(&example_path).expect("test");
     let _config: DepylerIngestConfig =
         toml::from_str(&contents).expect("Example config should be valid TOML");
 }

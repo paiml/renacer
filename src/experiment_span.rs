@@ -558,7 +558,7 @@ mod tests {
     #[test]
     fn test_experiment_metadata_from_json() {
         let json = r#"{"model_name":"test","epoch":5,"step":100,"loss":0.1,"metrics":{}}"#;
-        let meta = ExperimentMetadata::from_json(json).unwrap();
+        let meta = ExperimentMetadata::from_json(json).expect("test");
         assert_eq!(meta.model_name, "test");
         assert_eq!(meta.epoch, Some(5));
     }
@@ -648,18 +648,18 @@ mod tests {
     #[test]
     fn test_span_type_serialize_deserialize() {
         let syscall = SpanType::Syscall;
-        let json = serde_json::to_string(&syscall).unwrap();
-        let deser: SpanType = serde_json::from_str(&json).unwrap();
+        let json = serde_json::to_string(&syscall).expect("test");
+        let deser: SpanType = serde_json::from_str(&json).expect("test");
         assert_eq!(deser, SpanType::Syscall);
 
         let gpu = SpanType::Gpu;
-        let json = serde_json::to_string(&gpu).unwrap();
-        let deser: SpanType = serde_json::from_str(&json).unwrap();
+        let json = serde_json::to_string(&gpu).expect("test");
+        let deser: SpanType = serde_json::from_str(&json).expect("test");
         assert_eq!(deser, SpanType::Gpu);
 
         let experiment = SpanType::Experiment;
-        let json = serde_json::to_string(&experiment).unwrap();
-        let deser: SpanType = serde_json::from_str(&json).unwrap();
+        let json = serde_json::to_string(&experiment).expect("test");
+        let deser: SpanType = serde_json::from_str(&json).expect("test");
         assert_eq!(deser, SpanType::Experiment);
     }
 

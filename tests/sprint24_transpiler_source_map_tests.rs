@@ -21,7 +21,7 @@ use tempfile::TempDir;
 
 #[test]
 fn test_transpiler_map_flag_accepted() {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let source_map = temp_dir.path().join("test.rs.sourcemap.json");
 
     // Create minimal valid source map
@@ -33,10 +33,10 @@ fn test_transpiler_map_flag_accepted() {
         "mappings": [],
         "function_map": {}
     }"#;
-    fs::write(&source_map, map_content).unwrap();
+    fs::write(&source_map, map_content).expect("test");
 
     // Test that --transpiler-map flag is accepted
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("--transpiler-map")
         .arg(&source_map)
         .arg("--")
@@ -53,7 +53,7 @@ fn test_transpiler_map_flag_accepted() {
 
 #[test]
 fn test_transpiler_map_basic_parsing() {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let source_map = temp_dir.path().join("simulation.rs.sourcemap.json");
 
     // Create realistic source map from Python→Rust transpilation
@@ -90,10 +90,10 @@ fn test_transpiler_map_basic_parsing() {
             "_cse_temp_7_handler": "inline lambda from process_queue:89"
         }
     }"#;
-    fs::write(&source_map, map_content).unwrap();
+    fs::write(&source_map, map_content).expect("test");
 
     // Run with source map
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("--transpiler-map")
         .arg(&source_map)
         .arg("--")
@@ -109,13 +109,13 @@ fn test_transpiler_map_basic_parsing() {
 
 #[test]
 fn test_transpiler_map_invalid_json() {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let source_map = temp_dir.path().join("invalid.sourcemap.json");
 
     // Create invalid JSON
-    fs::write(&source_map, "{ this is not valid json }").unwrap();
+    fs::write(&source_map, "{ this is not valid json }").expect("test");
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("--transpiler-map")
         .arg(&source_map)
         .arg("--")
@@ -133,7 +133,7 @@ fn test_transpiler_map_invalid_json() {
 
 #[test]
 fn test_transpiler_map_missing_file() {
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("--transpiler-map")
         .arg("/nonexistent/path/to/map.json")
         .arg("--")
@@ -151,7 +151,7 @@ fn test_transpiler_map_missing_file() {
 
 #[test]
 fn test_transpiler_map_function_name_lookup() {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let source_map = temp_dir.path().join("test.sourcemap.json");
 
     let map_content = r#"{
@@ -166,9 +166,9 @@ fn test_transpiler_map_function_name_lookup() {
             "calculate_walk_distance": "calculate_walk_distance"
         }
     }"#;
-    fs::write(&source_map, map_content).unwrap();
+    fs::write(&source_map, map_content).expect("test");
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("--transpiler-map")
         .arg(&source_map)
         .arg("--")
@@ -184,7 +184,7 @@ fn test_transpiler_map_function_name_lookup() {
 
 #[test]
 fn test_transpiler_map_line_number_lookup() {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let source_map = temp_dir.path().join("test.sourcemap.json");
 
     let map_content = r#"{
@@ -210,9 +210,9 @@ fn test_transpiler_map_line_number_lookup() {
         ],
         "function_map": {}
     }"#;
-    fs::write(&source_map, map_content).unwrap();
+    fs::write(&source_map, map_content).expect("test");
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("--transpiler-map")
         .arg(&source_map)
         .arg("--")
@@ -228,7 +228,7 @@ fn test_transpiler_map_line_number_lookup() {
 
 #[test]
 fn test_transpiler_map_with_tracing() {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let source_map = temp_dir.path().join("test.sourcemap.json");
 
     let map_content = r#"{
@@ -249,10 +249,10 @@ fn test_transpiler_map_with_tracing() {
             "main": "main"
         }
     }"#;
-    fs::write(&source_map, map_content).unwrap();
+    fs::write(&source_map, map_content).expect("test");
 
     // Test that tracing still works with source map loaded
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("--transpiler-map")
         .arg(&source_map)
         .arg("--")
@@ -270,7 +270,7 @@ fn test_transpiler_map_with_tracing() {
 
 #[test]
 fn test_transpiler_map_empty_mappings() {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let source_map = temp_dir.path().join("empty.sourcemap.json");
 
     let map_content = r#"{
@@ -281,9 +281,9 @@ fn test_transpiler_map_empty_mappings() {
         "mappings": [],
         "function_map": {}
     }"#;
-    fs::write(&source_map, map_content).unwrap();
+    fs::write(&source_map, map_content).expect("test");
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("--transpiler-map")
         .arg(&source_map)
         .arg("--")
@@ -298,7 +298,7 @@ fn test_transpiler_map_empty_mappings() {
 
 #[test]
 fn test_transpiler_map_python_source() {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let source_map = temp_dir.path().join("python.sourcemap.json");
 
     let map_content = r#"{
@@ -319,9 +319,9 @@ fn test_transpiler_map_python_source() {
             "process_list": "process_list"
         }
     }"#;
-    fs::write(&source_map, map_content).unwrap();
+    fs::write(&source_map, map_content).expect("test");
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("--transpiler-map")
         .arg(&source_map)
         .arg("--")
@@ -337,7 +337,7 @@ fn test_transpiler_map_python_source() {
 
 #[test]
 fn test_transpiler_map_missing_required_fields() {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let source_map = temp_dir.path().join("incomplete.sourcemap.json");
 
     // Missing "mappings" field
@@ -346,9 +346,9 @@ fn test_transpiler_map_missing_required_fields() {
         "source_language": "python",
         "source_file": "test.py"
     }"#;
-    fs::write(&source_map, map_content).unwrap();
+    fs::write(&source_map, map_content).expect("test");
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("--transpiler-map")
         .arg(&source_map)
         .arg("--")
@@ -366,7 +366,7 @@ fn test_transpiler_map_missing_required_fields() {
 
 #[test]
 fn test_transpiler_map_unsupported_version() {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let source_map = temp_dir.path().join("unsupported.sourcemap.json");
 
     let map_content = r#"{
@@ -377,9 +377,9 @@ fn test_transpiler_map_unsupported_version() {
         "mappings": [],
         "function_map": {}
     }"#;
-    fs::write(&source_map, map_content).unwrap();
+    fs::write(&source_map, map_content).expect("test");
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("--transpiler-map")
         .arg(&source_map)
         .arg("--")

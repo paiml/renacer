@@ -20,7 +20,7 @@ use tempfile::TempDir;
 
 #[test]
 fn test_function_name_correlation_basic() {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let source_map = temp_dir.path().join("test.sourcemap.json");
 
     // Create source map with function mappings
@@ -36,10 +36,10 @@ fn test_function_name_correlation_basic() {
             "main": "main"
         }
     }"#;
-    fs::write(&source_map, map_content).unwrap();
+    fs::write(&source_map, map_content).expect("test");
 
     // Run with --function-time and --transpiler-map
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("--transpiler-map")
         .arg(&source_map)
         .arg("--function-time")
@@ -60,7 +60,7 @@ fn test_function_name_correlation_basic() {
 
 #[test]
 fn test_function_name_with_source_context() {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let source_map = temp_dir.path().join("simulation.sourcemap.json");
 
     let map_content = r#"{
@@ -83,9 +83,9 @@ fn test_function_name_with_source_context() {
             "_cse_temp_0": "temp: len(data) > 0"
         }
     }"#;
-    fs::write(&source_map, map_content).unwrap();
+    fs::write(&source_map, map_content).expect("test");
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("--transpiler-map")
         .arg(&source_map)
         .arg("--function-time")
@@ -104,7 +104,7 @@ fn test_function_name_with_source_context() {
 
 #[test]
 fn test_show_transpiler_context_flag() {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let source_map = temp_dir.path().join("app.sourcemap.json");
 
     let map_content = r#"{
@@ -118,10 +118,10 @@ fn test_show_transpiler_context_flag() {
             "_cse_temp_7_handler": "inline lambda from process_queue:89"
         }
     }"#;
-    fs::write(&source_map, map_content).unwrap();
+    fs::write(&source_map, map_content).expect("test");
 
     // Test that --show-transpiler-context is accepted
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("--transpiler-map")
         .arg(&source_map)
         .arg("--function-time")
@@ -142,7 +142,7 @@ fn test_show_transpiler_context_flag() {
 
 #[test]
 fn test_fallback_to_rust_names() {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let source_map = temp_dir.path().join("partial.sourcemap.json");
 
     // Source map with only SOME functions mapped
@@ -156,9 +156,9 @@ fn test_fallback_to_rust_names() {
             "main": "main"
         }
     }"#;
-    fs::write(&source_map, map_content).unwrap();
+    fs::write(&source_map, map_content).expect("test");
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("--transpiler-map")
         .arg(&source_map)
         .arg("--function-time")
@@ -177,7 +177,7 @@ fn test_fallback_to_rust_names() {
 
 #[test]
 fn test_function_correlation_with_source_flag() {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let source_map = temp_dir.path().join("test.sourcemap.json");
 
     let map_content = r#"{
@@ -198,10 +198,10 @@ fn test_function_correlation_with_source_flag() {
             "main": "main (hello.py:1)"
         }
     }"#;
-    fs::write(&source_map, map_content).unwrap();
+    fs::write(&source_map, map_content).expect("test");
 
     // Combine --transpiler-map + --function-time + --source
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("--transpiler-map")
         .arg(&source_map)
         .arg("--function-time")
@@ -219,7 +219,7 @@ fn test_function_correlation_with_source_flag() {
 
 #[test]
 fn test_typescript_source_language() {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let source_map = temp_dir.path().join("app.sourcemap.json");
 
     let map_content = r#"{
@@ -233,9 +233,9 @@ fn test_typescript_source_language() {
             "handleRequest": "handleRequest (app.ts:42)"
         }
     }"#;
-    fs::write(&source_map, map_content).unwrap();
+    fs::write(&source_map, map_content).expect("test");
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("--transpiler-map")
         .arg(&source_map)
         .arg("--function-time")
@@ -254,7 +254,7 @@ fn test_typescript_source_language() {
 
 #[test]
 fn test_multiple_temp_variables() {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let source_map = temp_dir.path().join("complex.sourcemap.json");
 
     let map_content = r#"{
@@ -271,9 +271,9 @@ fn test_multiple_temp_variables() {
             "calculate_distance": "calculate_distance"
         }
     }"#;
-    fs::write(&source_map, map_content).unwrap();
+    fs::write(&source_map, map_content).expect("test");
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("--transpiler-map")
         .arg(&source_map)
         .arg("--function-time")
@@ -289,7 +289,7 @@ fn test_multiple_temp_variables() {
 
 #[test]
 fn test_function_correlation_with_statistics() {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let source_map = temp_dir.path().join("test.sourcemap.json");
 
     let map_content = r#"{
@@ -303,10 +303,10 @@ fn test_function_correlation_with_statistics() {
             "main": "main"
         }
     }"#;
-    fs::write(&source_map, map_content).unwrap();
+    fs::write(&source_map, map_content).expect("test");
 
     // Combine --transpiler-map + --function-time + -c
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("--transpiler-map")
         .arg(&source_map)
         .arg("--function-time")
@@ -324,7 +324,7 @@ fn test_function_correlation_with_statistics() {
 
 #[test]
 fn test_empty_function_map() {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let source_map = temp_dir.path().join("empty_funcs.sourcemap.json");
 
     let map_content = r#"{
@@ -335,9 +335,9 @@ fn test_empty_function_map() {
         "mappings": [],
         "function_map": {}
     }"#;
-    fs::write(&source_map, map_content).unwrap();
+    fs::write(&source_map, map_content).expect("test");
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("--transpiler-map")
         .arg(&source_map)
         .arg("--function-time")
@@ -354,7 +354,7 @@ fn test_empty_function_map() {
 
 #[test]
 fn test_source_map_without_function_time() {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let source_map = temp_dir.path().join("test.sourcemap.json");
 
     let map_content = r#"{
@@ -367,11 +367,11 @@ fn test_source_map_without_function_time() {
             "main": "main"
         }
     }"#;
-    fs::write(&source_map, map_content).unwrap();
+    fs::write(&source_map, map_content).expect("test");
 
     // Source map loaded but --function-time NOT enabled
     // Should still succeed, just not use function mapping
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("--transpiler-map")
         .arg(&source_map)
         .arg("--")

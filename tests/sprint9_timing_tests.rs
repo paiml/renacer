@@ -52,7 +52,7 @@ fn test_timing_format_is_seconds() {
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-T").arg("--").arg("echo").arg("test");
 
-    let output = cmd.output().unwrap();
+    let output = cmd.output().expect("test");
     let stdout = String::from_utf8_lossy(&output.stdout);
 
     // Timing should be in format <0.000123> (seconds with 6 decimal places)

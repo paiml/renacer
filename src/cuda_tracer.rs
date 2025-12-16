@@ -20,7 +20,7 @@
 //!     "http://localhost:4317".to_string(),
 //!     "my-cuda-app".to_string(),
 //! );
-//! let otlp_exporter = OtlpExporter::new(otlp_config, None).unwrap();
+//! let otlp_exporter = OtlpExporter::new(otlp_config, None).expect("test");
 //! let otlp_arc = std::sync::Arc::new(otlp_exporter);
 //!
 //! // Setup CUDA tracer wrapper
@@ -28,7 +28,7 @@
 //!     Some(otlp_arc.clone()),
 //!     CudaTracerConfig::default(),
 //! )
-//! .unwrap();
+//! .expect("test");
 //!
 //! // Launch CUDA kernels (your existing CUDA code)
 //! // ...kernels execute...
@@ -415,7 +415,7 @@ mod tests {
                 let device_info = wrapper.get_device_info();
                 assert!(device_info.is_ok());
 
-                let info = device_info.unwrap();
+                let info = device_info.expect("test");
                 assert_eq!(info.device_id, 0);
                 assert!(!info.device_name.is_empty());
                 assert!(!info.compute_capability.is_empty());

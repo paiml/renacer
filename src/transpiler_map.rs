@@ -138,9 +138,9 @@ mod tests {
     use tempfile::NamedTempFile;
 
     fn create_temp_source_map(content: &str) -> NamedTempFile {
-        let mut file = NamedTempFile::new().unwrap();
-        file.write_all(content.as_bytes()).unwrap();
-        file.flush().unwrap();
+        let mut file = NamedTempFile::new().expect("test");
+        file.write_all(content.as_bytes()).expect("test");
+        file.flush().expect("test");
         file
     }
 
@@ -166,7 +166,7 @@ mod tests {
         }"#;
 
         let temp_file = create_temp_source_map(map_json);
-        let map = TranspilerMap::from_file(temp_file.path()).unwrap();
+        let map = TranspilerMap::from_file(temp_file.path()).expect("test");
 
         assert_eq!(map.version, 1);
         assert_eq!(map.source_language, "python");
@@ -196,9 +196,9 @@ mod tests {
         }"#;
 
         let temp_file = create_temp_source_map(map_json);
-        let map = TranspilerMap::from_file(temp_file.path()).unwrap();
+        let map = TranspilerMap::from_file(temp_file.path()).expect("test");
 
-        let mapping = map.lookup_line(192).unwrap();
+        let mapping = map.lookup_line(192).expect("test");
         assert_eq!(mapping.python_line, 143);
         assert_eq!(mapping.python_function, "process_data");
 
@@ -220,14 +220,14 @@ mod tests {
         }"#;
 
         let temp_file = create_temp_source_map(map_json);
-        let map = TranspilerMap::from_file(temp_file.path()).unwrap();
+        let map = TranspilerMap::from_file(temp_file.path()).expect("test");
 
         assert_eq!(
-            map.lookup_function("_cse_temp_0").unwrap(),
+            map.lookup_function("_cse_temp_0").expect("test"),
             "temporary for: len(data) > 0"
         );
         assert_eq!(
-            map.lookup_function("calculate_distance").unwrap(),
+            map.lookup_function("calculate_distance").expect("test"),
             "calculate_distance"
         );
         assert!(map.lookup_function("nonexistent").is_none());
@@ -289,7 +289,7 @@ mod tests {
         }"#;
 
         let temp_file = create_temp_source_map(map_json);
-        let map = TranspilerMap::from_file(temp_file.path()).unwrap();
+        let map = TranspilerMap::from_file(temp_file.path()).expect("test");
 
         assert_eq!(map.mapping_count(), 0);
         assert_eq!(map.function_mapping_count(), 0);
@@ -317,7 +317,7 @@ mod tests {
         }"#;
 
         let temp_file = create_temp_source_map(map_json);
-        let map = TranspilerMap::from_file(temp_file.path()).unwrap();
+        let map = TranspilerMap::from_file(temp_file.path()).expect("test");
 
         assert_eq!(map.source_language(), "typescript");
         assert_eq!(map.source_file(), Path::new("app.ts"));
@@ -350,7 +350,7 @@ mod tests {
         }"#;
 
         let temp_file = create_temp_source_map(map_json);
-        let map = TranspilerMap::from_file(temp_file.path()).unwrap();
+        let map = TranspilerMap::from_file(temp_file.path()).expect("test");
 
         assert_eq!(map.source_language(), "c");
         assert_eq!(map.source_file(), Path::new("algorithm.c"));
@@ -359,13 +359,13 @@ mod tests {
         assert_eq!(map.function_mapping_count(), 2);
 
         // Verify mapping lookup works for C source
-        let mapping = map.lookup_line(45).unwrap();
+        let mapping = map.lookup_line(45).expect("test");
         assert_eq!(mapping.python_line, 23);
         assert_eq!(mapping.python_function, "sort_array");
 
         // Verify function lookup for Decy temp variables
         assert_eq!(
-            map.lookup_function("_decy_temp_0").unwrap(),
+            map.lookup_function("_decy_temp_0").expect("test"),
             "temporary: sizeof(struct data)"
         );
     }

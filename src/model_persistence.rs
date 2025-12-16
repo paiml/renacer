@@ -350,7 +350,7 @@ mod tests {
 
     #[test]
     fn test_save_and_load_kmeans_model() {
-        let temp_dir = TempDir::new().unwrap();
+        let temp_dir = TempDir::new().expect("test");
         let model_path = temp_dir.path().join("test_kmeans.apr");
 
         let model = SerializableKMeansModel {
@@ -387,7 +387,7 @@ mod tests {
 
     #[test]
     fn test_save_and_load_kmeans_uncompressed() {
-        let temp_dir = TempDir::new().unwrap();
+        let temp_dir = TempDir::new().expect("test");
         let model_path = temp_dir.path().join("test_kmeans_uncompressed.apr");
 
         let model = SerializableKMeansModel {
@@ -421,7 +421,7 @@ mod tests {
 
     #[test]
     fn test_save_and_load_isolation_forest_model() {
-        let temp_dir = TempDir::new().unwrap();
+        let temp_dir = TempDir::new().expect("test");
         let model_path = temp_dir.path().join("test_iforest.apr");
 
         let model = SerializableIsolationForestModel {
@@ -456,7 +456,7 @@ mod tests {
 
     #[test]
     fn test_validate_model_file_kmeans() {
-        let temp_dir = TempDir::new().unwrap();
+        let temp_dir = TempDir::new().expect("test");
         let model_path = temp_dir.path().join("validate_test.apr");
 
         let model = SerializableKMeansModel {
@@ -466,7 +466,7 @@ mod tests {
             metadata: ModelMetadata::new(42).with_description("Validation test"),
         };
 
-        save_kmeans_model(&model, &model_path, PersistenceOptions::new()).unwrap();
+        save_kmeans_model(&model, &model_path, PersistenceOptions::new()).expect("test");
 
         let metadata = validate_model_file(&model_path).expect("Validation failed");
         assert_eq!(metadata.training_samples, 42);
@@ -482,7 +482,7 @@ mod tests {
             n_clusters in 1usize..10,
             n_features in 1usize..5,
         )| {
-            let temp_dir = TempDir::new().unwrap();
+            let temp_dir = TempDir::new().expect("test");
             let model_path = temp_dir.path().join("proptest.apr");
 
             // Generate random centroids
@@ -497,8 +497,8 @@ mod tests {
                 metadata: ModelMetadata::new(100),
             };
 
-            save_kmeans_model(&model, &model_path, PersistenceOptions::new()).unwrap();
-            let loaded = load_kmeans_model(&model_path).unwrap();
+            save_kmeans_model(&model, &model_path, PersistenceOptions::new()).expect("test");
+            let loaded = load_kmeans_model(&model_path).expect("test");
 
             prop_assert_eq!(loaded.n_clusters, n_clusters);
             prop_assert_eq!(loaded.n_features, n_features);
@@ -508,7 +508,7 @@ mod tests {
 
     #[test]
     fn test_metadata_preserved_through_roundtrip() {
-        let temp_dir = TempDir::new().unwrap();
+        let temp_dir = TempDir::new().expect("test");
         let model_path = temp_dir.path().join("metadata_test.apr");
 
         let model = SerializableKMeansModel {
@@ -521,8 +521,8 @@ mod tests {
                 .with_description("Detailed description here"),
         };
 
-        save_kmeans_model(&model, &model_path, PersistenceOptions::new()).unwrap();
-        let loaded = load_kmeans_model(&model_path).unwrap();
+        save_kmeans_model(&model, &model_path, PersistenceOptions::new()).expect("test");
+        let loaded = load_kmeans_model(&model_path).expect("test");
 
         assert_eq!(loaded.metadata.training_samples, 999);
         assert_eq!(
@@ -541,7 +541,7 @@ mod tests {
 
     #[test]
     fn test_large_model_roundtrip() {
-        let temp_dir = TempDir::new().unwrap();
+        let temp_dir = TempDir::new().expect("test");
         let model_path = temp_dir.path().join("large_model.apr");
 
         // Create a larger model (10 clusters, 50 features)
@@ -559,10 +559,10 @@ mod tests {
         };
 
         // Save with compression
-        save_kmeans_model(&model, &model_path, PersistenceOptions::new()).unwrap();
+        save_kmeans_model(&model, &model_path, PersistenceOptions::new()).expect("test");
 
         // Verify file is smaller than uncompressed would be
-        let file_size = std::fs::metadata(&model_path).unwrap().len();
+        let file_size = std::fs::metadata(&model_path).expect("test").len();
         let uncompressed_estimate = n_clusters * n_features * 4; // 4 bytes per f32
         assert!(
             file_size < uncompressed_estimate as u64 * 2,
@@ -570,7 +570,7 @@ mod tests {
         );
 
         // Load and verify
-        let loaded = load_kmeans_model(&model_path).unwrap();
+        let loaded = load_kmeans_model(&model_path).expect("test");
         assert_eq!(loaded.n_clusters, n_clusters);
         assert_eq!(loaded.n_features, n_features);
     }

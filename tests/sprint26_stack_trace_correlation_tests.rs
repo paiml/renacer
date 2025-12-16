@@ -20,7 +20,7 @@ use tempfile::TempDir;
 
 #[test]
 fn test_rewrite_stacktrace_flag_accepted() {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let source_map = temp_dir.path().join("test.sourcemap.json");
 
     let map_content = r#"{
@@ -31,9 +31,9 @@ fn test_rewrite_stacktrace_flag_accepted() {
         "mappings": [],
         "function_map": {}
     }"#;
-    fs::write(&source_map, map_content).unwrap();
+    fs::write(&source_map, map_content).expect("test");
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("--transpiler-map")
         .arg(&source_map)
         .arg("--rewrite-stacktrace")
@@ -50,7 +50,7 @@ fn test_rewrite_stacktrace_flag_accepted() {
 
 #[test]
 fn test_stack_trace_rewriting_with_mappings() {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let source_map = temp_dir.path().join("simulation.sourcemap.json");
 
     // Source map with detailed line mappings
@@ -80,9 +80,9 @@ fn test_stack_trace_rewriting_with_mappings() {
             "calculate_distance": "calculate_distance"
         }
     }"#;
-    fs::write(&source_map, map_content).unwrap();
+    fs::write(&source_map, map_content).expect("test");
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("--transpiler-map")
         .arg(&source_map)
         .arg("--rewrite-stacktrace")
@@ -102,7 +102,7 @@ fn test_stack_trace_rewriting_with_mappings() {
 
 #[test]
 fn test_display_python_context() {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let source_map = temp_dir.path().join("app.sourcemap.json");
 
     let map_content = r#"{
@@ -123,9 +123,9 @@ fn test_display_python_context() {
             "main": "main"
         }
     }"#;
-    fs::write(&source_map, map_content).unwrap();
+    fs::write(&source_map, map_content).expect("test");
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("--transpiler-map")
         .arg(&source_map)
         .arg("--rewrite-stacktrace")
@@ -143,7 +143,7 @@ fn test_display_python_context() {
 
 #[test]
 fn test_temp_variable_rewriting() {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let source_map = temp_dir.path().join("complex.sourcemap.json");
 
     // Test that temp variables are mapped back to original expressions
@@ -167,9 +167,9 @@ fn test_temp_variable_rewriting() {
             "_cse_temp_7_handler": "inline lambda from process_queue:89"
         }
     }"#;
-    fs::write(&source_map, map_content).unwrap();
+    fs::write(&source_map, map_content).expect("test");
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("--transpiler-map")
         .arg(&source_map)
         .arg("--rewrite-stacktrace")
@@ -187,7 +187,7 @@ fn test_temp_variable_rewriting() {
 
 #[test]
 fn test_rewrite_stacktrace_with_function_time() {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let source_map = temp_dir.path().join("perf.sourcemap.json");
 
     let map_content = r#"{
@@ -208,9 +208,9 @@ fn test_rewrite_stacktrace_with_function_time() {
             "hot_function": "hot_function (perf.py:150)"
         }
     }"#;
-    fs::write(&source_map, map_content).unwrap();
+    fs::write(&source_map, map_content).expect("test");
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("--transpiler-map")
         .arg(&source_map)
         .arg("--rewrite-stacktrace")
@@ -230,7 +230,7 @@ fn test_rewrite_stacktrace_with_function_time() {
 
 #[test]
 fn test_rewrite_stacktrace_typescript() {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let source_map = temp_dir.path().join("app.sourcemap.json");
 
     let map_content = r#"{
@@ -251,9 +251,9 @@ fn test_rewrite_stacktrace_typescript() {
             "handleRequest": "handleRequest (app.ts:20)"
         }
     }"#;
-    fs::write(&source_map, map_content).unwrap();
+    fs::write(&source_map, map_content).expect("test");
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("--transpiler-map")
         .arg(&source_map)
         .arg("--rewrite-stacktrace")
@@ -270,7 +270,7 @@ fn test_rewrite_stacktrace_typescript() {
 
 #[test]
 fn test_backward_compatibility_without_rewrite() {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let source_map = temp_dir.path().join("test.sourcemap.json");
 
     let map_content = r#"{
@@ -291,10 +291,10 @@ fn test_backward_compatibility_without_rewrite() {
             "main": "main"
         }
     }"#;
-    fs::write(&source_map, map_content).unwrap();
+    fs::write(&source_map, map_content).expect("test");
 
     // Use source map WITHOUT --rewrite-stacktrace
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("--transpiler-map")
         .arg(&source_map)
         .arg("--")
@@ -310,7 +310,7 @@ fn test_backward_compatibility_without_rewrite() {
 
 #[test]
 fn test_rewrite_stacktrace_empty_mappings() {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let source_map = temp_dir.path().join("empty.sourcemap.json");
 
     let map_content = r#"{
@@ -321,9 +321,9 @@ fn test_rewrite_stacktrace_empty_mappings() {
         "mappings": [],
         "function_map": {}
     }"#;
-    fs::write(&source_map, map_content).unwrap();
+    fs::write(&source_map, map_content).expect("test");
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("--transpiler-map")
         .arg(&source_map)
         .arg("--rewrite-stacktrace")
@@ -340,7 +340,7 @@ fn test_rewrite_stacktrace_empty_mappings() {
 
 #[test]
 fn test_rewrite_stacktrace_with_statistics() {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let source_map = temp_dir.path().join("stats.sourcemap.json");
 
     let map_content = r#"{
@@ -354,9 +354,9 @@ fn test_rewrite_stacktrace_with_statistics() {
             "main": "main"
         }
     }"#;
-    fs::write(&source_map, map_content).unwrap();
+    fs::write(&source_map, map_content).expect("test");
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("--transpiler-map")
         .arg(&source_map)
         .arg("--rewrite-stacktrace")
@@ -374,7 +374,7 @@ fn test_rewrite_stacktrace_with_statistics() {
 
 #[test]
 fn test_multiple_line_mappings() {
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("test");
     let source_map = temp_dir.path().join("multi.sourcemap.json");
 
     // Multiple mappings to test lookup efficiency
@@ -420,9 +420,9 @@ fn test_multiple_line_mappings() {
             "main": "main"
         }
     }"#;
-    fs::write(&source_map, map_content).unwrap();
+    fs::write(&source_map, map_content).expect("test");
 
-    let mut cmd = Command::cargo_bin("renacer").unwrap();
+    let mut cmd = Command::cargo_bin("renacer").expect("test");
     cmd.arg("--transpiler-map")
         .arg(&source_map)
         .arg("--rewrite-stacktrace")

@@ -12,7 +12,7 @@ use tempfile::TempDir;
 #[test]
 fn test_stats_extended_calculates_percentiles() {
     // Test that --stats-extended flag shows percentile calculations
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("stats_test");
 
     // Create a program with many write syscalls to get statistical data
@@ -26,7 +26,7 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("stats_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
@@ -54,7 +54,7 @@ int main() {
 #[test]
 fn test_stats_extended_shows_min_max() {
     // Test that --stats-extended shows min/max durations
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("minmax_test");
 
     let source = r#"
@@ -71,14 +71,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("minmax_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-c")
@@ -97,7 +97,7 @@ int main() {
 #[test]
 fn test_stats_extended_with_timing() {
     // Test --stats-extended works with -T timing mode
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("timing_test");
 
     let source = r#"
@@ -110,14 +110,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("timing_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-c")
@@ -141,7 +141,7 @@ int main() {
 #[test]
 fn test_anomaly_detection_slow_syscall() {
     // Test that unusually slow syscalls are flagged as anomalies
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("anomaly_test");
 
     let source = r#"
@@ -160,14 +160,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("anomaly_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-c")
@@ -185,7 +185,7 @@ int main() {
 #[test]
 fn test_anomaly_threshold_configuration() {
     // Test that anomaly detection can be configured with custom threshold
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("threshold_test");
 
     let source = r#"
@@ -198,14 +198,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("threshold_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-c")
@@ -226,7 +226,7 @@ int main() {
 #[test]
 fn test_stats_extended_with_filtering() {
     // Test --stats-extended works with syscall filtering
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("filter_stats_test");
 
     let source = r#"
@@ -245,14 +245,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("filter_stats_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-c")
@@ -273,7 +273,7 @@ int main() {
 #[test]
 fn test_stats_extended_with_multiprocess() {
     // Test --stats-extended works with -f (multi-process tracing)
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("fork_stats_test");
 
     let source = r#"
@@ -298,14 +298,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("fork_stats_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-f")
@@ -324,7 +324,7 @@ int main() {
 #[test]
 fn test_stats_extended_json_output() {
     // Test --stats-extended with JSON output shows extended stats in stderr
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("json_stats_test");
 
     let source = r#"
@@ -337,14 +337,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("json_stats_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-c")
@@ -368,7 +368,7 @@ int main() {
 #[test]
 fn test_stats_extended_csv_output() {
     // Test --stats-extended with CSV output shows extended stats in stderr
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("csv_stats_test");
 
     let source = r#"
@@ -381,14 +381,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("csv_stats_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-c")
@@ -416,7 +416,7 @@ int main() {
 #[test]
 fn test_stats_extended_single_syscall() {
     // Test extended stats with only one syscall (no variance)
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("single_test");
 
     let source = r#"
@@ -427,14 +427,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("single_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-c")
@@ -452,7 +452,7 @@ int main() {
 #[test]
 fn test_stats_extended_no_timing_data() {
     // Test --stats-extended without -T flag (no duration data)
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("no_timing_test");
 
     let source = r#"
@@ -465,14 +465,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("no_timing_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-c")
@@ -489,7 +489,7 @@ int main() {
 #[test]
 fn test_stats_extended_large_dataset() {
     // Test extended stats with large number of syscalls
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("large_test");
 
     let source = r#"
@@ -502,14 +502,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("large_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-c")
@@ -528,7 +528,7 @@ int main() {
 #[test]
 fn test_backward_compatibility_without_stats_extended() {
     // Test that WITHOUT --stats-extended, output matches v0.3.0 behavior
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("compat_test");
 
     let source = r#"
@@ -541,14 +541,14 @@ int main() {
 }
 "#;
     let source_file = tmp_dir.path().join("compat_test.c");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     std::process::Command::new("gcc")
         .arg(&source_file)
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-c").arg("--").arg(&test_program);

@@ -21,7 +21,7 @@
 //!     "http://localhost:4317".to_string(),
 //!     "trueno-app".to_string(),
 //! );
-//! let otlp_exporter = OtlpExporter::new(otlp_config, None).unwrap();
+//! let otlp_exporter = OtlpExporter::new(otlp_config, None).expect("test");
 //! let otlp_arc = std::sync::Arc::new(otlp_exporter);
 //!
 //! let backend = AdaptiveBackend::new(Some(otlp_arc));
@@ -432,7 +432,7 @@ mod tests {
 
         let stats = backend.get_performance_stats("matrix_multiply", 10_000);
         assert!(stats.is_some());
-        let (best_backend, avg_duration) = stats.unwrap();
+        let (best_backend, avg_duration) = stats.expect("test");
         assert_eq!(best_backend, Backend::GPU);
         assert_eq!(avg_duration, 500.0);
     }
@@ -446,7 +446,7 @@ mod tests {
 
         let stats = backend.get_performance_stats("matrix_multiply", 10_000);
         assert!(stats.is_some());
-        let (best_backend, avg_duration) = stats.unwrap();
+        let (best_backend, avg_duration) = stats.expect("test");
         assert_eq!(best_backend, Backend::GPU); // Fastest
         assert_eq!(avg_duration, 500.0);
     }
@@ -525,7 +525,7 @@ mod tests {
 
         let stats = backend.get_performance_stats("operation", 1_000);
         assert!(stats.is_some());
-        let (_, avg_duration) = stats.unwrap();
+        let (_, avg_duration) = stats.expect("test");
         assert_eq!(avg_duration, 200.0); // (100 + 200 + 300) / 3 = 200
     }
 }

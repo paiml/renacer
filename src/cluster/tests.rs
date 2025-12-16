@@ -25,7 +25,7 @@ fn test_default_transpiler_clusters() {
     assert!(registry.get_cluster("Networking").is_some());
 
     // Verify critical severity for networking
-    let networking = registry.get_cluster("Networking").unwrap();
+    let networking = registry.get_cluster("Networking").expect("test");
     assert_eq!(networking.severity, Severity::Critical);
     assert_eq!(networking.anomaly_threshold, 0.0);
 }
@@ -33,7 +33,7 @@ fn test_default_transpiler_clusters() {
 /// Test classification of standard syscalls
 #[test]
 fn test_classify_standard_syscalls() {
-    let registry = ClusterRegistry::default_transpiler_clusters().unwrap();
+    let registry = ClusterRegistry::default_transpiler_clusters().expect("test");
     let fds = FdTable::new();
 
     // Memory allocation
@@ -90,7 +90,7 @@ fn test_classify_standard_syscalls() {
 /// Test future-proof syscall support (mmap3, clone3)
 #[test]
 fn test_future_proof_syscalls() {
-    let registry = ClusterRegistry::default_transpiler_clusters().unwrap();
+    let registry = ClusterRegistry::default_transpiler_clusters().expect("test");
     let fds = FdTable::new();
 
     // New kernel syscalls should be pre-configured
@@ -111,7 +111,7 @@ fn test_future_proof_syscalls() {
 /// Test GPU cluster with args_filter (context-aware classification)
 #[test]
 fn test_gpu_cluster_with_filter() {
-    let registry = ClusterRegistry::default_transpiler_clusters().unwrap();
+    let registry = ClusterRegistry::default_transpiler_clusters().expect("test");
 
     // ioctl without GPU fd → no GPU cluster match
     let fds = FdTable::new();
@@ -124,21 +124,21 @@ fn test_gpu_cluster_with_filter() {
     fds_gpu.insert(3, "/dev/nvidia0".to_string());
     let cluster = registry.classify("ioctl", &["3".to_string()], &fds_gpu);
     assert!(cluster.is_some());
-    assert_eq!(cluster.unwrap().name, "GPU");
+    assert_eq!(cluster.expect("test").name, "GPU");
 }
 
 /// Test anomaly detection thresholds
 #[test]
 fn test_anomaly_detection() {
-    let registry = ClusterRegistry::default_transpiler_clusters().unwrap();
+    let registry = ClusterRegistry::default_transpiler_clusters().expect("test");
 
     // MemoryAllocation: 50% threshold
-    let mem_cluster = registry.get_cluster("MemoryAllocation").unwrap();
+    let mem_cluster = registry.get_cluster("MemoryAllocation").expect("test");
     assert!(!mem_cluster.is_anomalous(100, 140)); // +40% = acceptable
     assert!(mem_cluster.is_anomalous(100, 160)); // +60% = anomaly
 
     // Networking: 0% threshold (ANY networking is anomaly)
-    let net_cluster = registry.get_cluster("Networking").unwrap();
+    let net_cluster = registry.get_cluster("Networking").expect("test");
     assert!(net_cluster.is_anomalous(0, 1)); // New networking = CRITICAL
     assert!(!net_cluster.is_anomalous(0, 0)); // No networking = OK
 }
@@ -177,7 +177,7 @@ arg_contains = "libtensorflow"
         &FdTable::new(),
     );
     assert!(cluster.is_some());
-    assert_eq!(cluster.unwrap().name, "TensorFlow");
+    assert_eq!(cluster.expect("test").name, "TensorFlow");
 
     Ok(())
 }
@@ -185,7 +185,7 @@ arg_contains = "libtensorflow"
 /// Test Poka-Yoke: duplicate syscall detection
 #[test]
 fn test_duplicate_syscall_error() {
-    let mut file = NamedTempFile::new().unwrap();
+    let mut file = NamedTempFile::new().expect("test");
     writeln!(
         file,
         r#"
@@ -206,8 +206,8 @@ anomaly_threshold = 0.5
 severity = "medium"
 "#
     )
-    .unwrap();
-    file.flush().unwrap();
+    .expect("test");
+    file.flush().expect("test");
 
     let result = ClusterRegistry::from_toml(file.path());
     assert!(result.is_err());
@@ -220,19 +220,19 @@ severity = "medium"
 /// Test expected_for_transpiler flag
 #[test]
 fn test_expected_for_transpiler() {
-    let registry = ClusterRegistry::default_transpiler_clusters().unwrap();
+    let registry = ClusterRegistry::default_transpiler_clusters().expect("test");
 
     // Expected clusters
     assert!(
         registry
             .get_cluster("MemoryAllocation")
-            .unwrap()
+            .expect("test")
             .expected_for_transpiler
     );
     assert!(
         registry
             .get_cluster("FileIO")
-            .unwrap()
+            .expect("test")
             .expected_for_transpiler
     );
 
@@ -240,27 +240,32 @@ fn test_expected_for_transpiler() {
     assert!(
         !registry
             .get_cluster("Networking")
-            .unwrap()
+            .expect("test")
             .expected_for_transpiler
     );
     assert!(
         !registry
             .get_cluster("Synchronization")
-            .unwrap()
+            .expect("test")
             .expected_for_transpiler
     );
-    assert!(!registry.get_cluster("GPU").unwrap().expected_for_transpiler);
+    assert!(
+        !registry
+            .get_cluster("GPU")
+            .expect("test")
+            .expected_for_transpiler
+    );
 }
 
 /// Test severity ordering for prioritization
 #[test]
 fn test_severity_prioritization() {
-    let registry = ClusterRegistry::default_transpiler_clusters().unwrap();
+    let registry = ClusterRegistry::default_transpiler_clusters().expect("test");
 
-    let networking = registry.get_cluster("Networking").unwrap();
-    let synchronization = registry.get_cluster("Synchronization").unwrap();
-    let process_control = registry.get_cluster("ProcessControl").unwrap();
-    let memory = registry.get_cluster("MemoryAllocation").unwrap();
+    let networking = registry.get_cluster("Networking").expect("test");
+    let synchronization = registry.get_cluster("Synchronization").expect("test");
+    let process_control = registry.get_cluster("ProcessControl").expect("test");
+    let memory = registry.get_cluster("MemoryAllocation").expect("test");
 
     // Critical > High > Medium
     assert!(networking.severity == Severity::Critical);

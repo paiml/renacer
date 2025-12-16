@@ -109,7 +109,7 @@ fn test_ring_buffer_concurrent_producers() {
 
     // Wait for all producers
     for handle in handles {
-        handle.join().unwrap();
+        handle.join().expect("test");
     }
 
     // Give sidecar thread time to drain
@@ -264,7 +264,7 @@ fn test_ring_buffer_high_throughput() {
     }
 
     for handle in handles {
-        handle.join().unwrap();
+        handle.join().expect("test");
     }
 
     let elapsed = start.elapsed();

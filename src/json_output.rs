@@ -566,7 +566,7 @@ mod tests {
         });
         output.set_exit_code(0);
 
-        let json = output.to_json().unwrap();
+        let json = output.to_json().expect("test");
         assert!(json.contains("\"name\": \"openat\""));
         assert!(json.contains("\"format\": \"renacer-json-v1\""));
         assert!(json.contains("\"file\": \"main.rs\""));
@@ -583,7 +583,7 @@ mod tests {
             source: None,
         };
 
-        let json = serde_json::to_string(&syscall).unwrap();
+        let json = serde_json::to_string(&syscall).expect("test");
         // Optional None fields should be omitted
         assert!(!json.contains("duration_us"));
         assert!(!json.contains("source"));
@@ -596,7 +596,7 @@ mod tests {
             line: 10,
             function: None,
         };
-        let json = serde_json::to_string(&loc).unwrap();
+        let json = serde_json::to_string(&loc).expect("test");
         // Compact format doesn't have spaces after colons
         assert!(json.contains("\"file\":\"test.rs\"") || json.contains("\"file\": \"test.rs\""));
         assert!(!json.contains("function"));
@@ -618,7 +618,7 @@ mod tests {
             }
         }"#;
 
-        let output: JsonOutput = serde_json::from_str(json).unwrap();
+        let output: JsonOutput = serde_json::from_str(json).expect("test");
         assert_eq!(output.syscalls.len(), 1);
         assert_eq!(output.syscalls[0].name, "write");
         assert_eq!(output.summary.total_syscalls, 1);

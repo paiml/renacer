@@ -41,8 +41,8 @@ fn test_linear_critical_path() {
         create_span(3, Some(2), 2, 1500, "step3"),
     ];
 
-    let graph = CausalGraph::from_spans(&spans).unwrap();
-    let result = find_critical_path(&graph).unwrap();
+    let graph = CausalGraph::from_spans(&spans).expect("test");
+    let result = find_critical_path(&graph).expect("test");
 
     assert_eq!(result.path.len(), 3);
     assert_eq!(result.total_duration, 1000 + 2000 + 1500);
@@ -50,7 +50,7 @@ fn test_linear_critical_path() {
 
     // All nodes should be on critical path
     for i in 0..3 {
-        let node = graph.get_node_by_span_id(&[i + 1; 8]).unwrap();
+        let node = graph.get_node_by_span_id(&[i + 1; 8]).expect("test");
         assert!(result.is_on_critical_path(node));
     }
 }
@@ -66,8 +66,8 @@ fn test_fan_out_critical_path() {
         create_span(4, Some(1), 3, 80, "child3"),
     ];
 
-    let graph = CausalGraph::from_spans(&spans).unwrap();
-    let result = find_critical_path(&graph).unwrap();
+    let graph = CausalGraph::from_spans(&spans).expect("test");
+    let result = find_critical_path(&graph).expect("test");
 
     // Critical path: root → child2
     assert_eq!(result.path.len(), 2);
@@ -76,8 +76,8 @@ fn test_fan_out_critical_path() {
     assert!(result.span_names.contains(&"child2".to_string()));
 
     // child1 and child3 should NOT be on critical path
-    let child1_node = graph.get_node_by_span_id(&[2; 8]).unwrap();
-    let child3_node = graph.get_node_by_span_id(&[4; 8]).unwrap();
+    let child1_node = graph.get_node_by_span_id(&[2; 8]).expect("test");
+    let child3_node = graph.get_node_by_span_id(&[4; 8]).expect("test");
     assert!(!result.is_on_critical_path(child1_node));
     assert!(!result.is_on_critical_path(child3_node));
 }
@@ -95,8 +95,8 @@ fn test_microservice_critical_path() {
         create_span(5, Some(3), 4, 5_000, "cache.get"),
     ];
 
-    let graph = CausalGraph::from_spans(&spans).unwrap();
-    let result = find_critical_path(&graph).unwrap();
+    let graph = CausalGraph::from_spans(&spans).expect("test");
+    let result = find_critical_path(&graph).expect("test");
 
     // Critical path: http.request → api.handler → db.query
     assert_eq!(result.path.len(), 3);
@@ -107,15 +107,15 @@ fn test_microservice_critical_path() {
     );
 
     // auth.verify and cache.get should NOT be on critical path
-    let auth_node = graph.get_node_by_span_id(&[2; 8]).unwrap();
-    let cache_node = graph.get_node_by_span_id(&[5; 8]).unwrap();
+    let auth_node = graph.get_node_by_span_id(&[2; 8]).expect("test");
+    let cache_node = graph.get_node_by_span_id(&[5; 8]).expect("test");
     assert!(!result.is_on_critical_path(auth_node));
     assert!(!result.is_on_critical_path(cache_node));
 
     // api.handler should be the longest span
-    let (longest_node, longest_duration) = result.longest_span().unwrap();
+    let (longest_node, longest_duration) = result.longest_span().expect("test");
     assert_eq!(longest_duration, 80_000);
-    let longest_span = graph.get_span(longest_node).unwrap();
+    let longest_span = graph.get_span(longest_node).expect("test");
     assert_eq!(longest_span.span_name, "api.handler");
 }
 
@@ -138,8 +138,8 @@ fn test_complex_distributed_trace_critical_path() {
         create_span(7, Some(5), 6, 30_000, "index.scan"),
     ];
 
-    let graph = CausalGraph::from_spans(&spans).unwrap();
-    let result = find_critical_path(&graph).unwrap();
+    let graph = CausalGraph::from_spans(&spans).expect("test");
+    let result = find_critical_path(&graph).expect("test");
 
     // Critical path: gateway → api.service → productdb.query → index.scan
     assert_eq!(result.path.len(), 4);
@@ -150,8 +150,8 @@ fn test_complex_distributed_trace_critical_path() {
     );
 
     // Verify auth path is NOT on critical path
-    let auth_node = graph.get_node_by_span_id(&[2; 8]).unwrap();
-    let userdb_node = graph.get_node_by_span_id(&[4; 8]).unwrap();
+    let auth_node = graph.get_node_by_span_id(&[2; 8]).expect("test");
+    let userdb_node = graph.get_node_by_span_id(&[4; 8]).expect("test");
     assert!(!result.is_on_critical_path(auth_node));
     assert!(!result.is_on_critical_path(userdb_node));
 }
@@ -165,8 +165,8 @@ fn test_critical_path_percentage() {
         create_span(3, Some(1), 2, 150_000, "child2"),
     ];
 
-    let graph = CausalGraph::from_spans(&spans).unwrap();
-    let result = find_critical_path(&graph).unwrap();
+    let graph = CausalGraph::from_spans(&spans).expect("test");
+    let result = find_critical_path(&graph).expect("test");
 
     // Critical path: root → child2 = 250,000ns
     // Total trace duration (assuming sequential): 100,000 + 150,000 = 250,000ns
@@ -190,8 +190,8 @@ fn test_critical_path_with_equal_branches() {
         create_span(3, Some(1), 2, 200, "child2"),
     ];
 
-    let graph = CausalGraph::from_spans(&spans).unwrap();
-    let result = find_critical_path(&graph).unwrap();
+    let graph = CausalGraph::from_spans(&spans).expect("test");
+    let result = find_critical_path(&graph).expect("test");
 
     // Critical path should be root + one of the children
     assert_eq!(result.path.len(), 2);
@@ -213,15 +213,15 @@ fn test_deep_recursion_critical_path() {
         spans.push(create_span(i, parent, i as u64, 100, "recursive"));
     }
 
-    let graph = CausalGraph::from_spans(&spans).unwrap();
-    let result = find_critical_path(&graph).unwrap();
+    let graph = CausalGraph::from_spans(&spans).expect("test");
+    let result = find_critical_path(&graph).expect("test");
 
     assert_eq!(result.path.len(), depth as usize);
     assert_eq!(result.total_duration, depth as u64 * 100);
 
     // All nodes should be on critical path
     for i in 0..depth {
-        let node = graph.get_node_by_span_id(&[i; 8]).unwrap();
+        let node = graph.get_node_by_span_id(&[i; 8]).expect("test");
         assert!(result.is_on_critical_path(node));
     }
 }
@@ -240,15 +240,15 @@ fn test_parallel_workers_critical_path() {
         create_span(6, Some(1), 5, 20_000, "reducer"),
     ];
 
-    let graph = CausalGraph::from_spans(&spans).unwrap();
-    let result = find_critical_path(&graph).unwrap();
+    let graph = CausalGraph::from_spans(&spans).expect("test");
+    let result = find_critical_path(&graph).expect("test");
 
     // Critical path should go through slowest worker (worker2)
     assert!(result.span_names.contains(&"coordinator".to_string()));
     assert!(result.span_names.contains(&"worker2".to_string()));
 
     // worker2 should be the longest span
-    let (_longest_node, longest_duration) = result.longest_span().unwrap();
+    let (_longest_node, longest_duration) = result.longest_span().expect("test");
     assert_eq!(longest_duration, 120_000);
 }
 
@@ -261,15 +261,15 @@ fn test_critical_path_node_durations() {
         create_span(3, Some(2), 2, 3000, "c"),
     ];
 
-    let graph = CausalGraph::from_spans(&spans).unwrap();
-    let result = find_critical_path(&graph).unwrap();
+    let graph = CausalGraph::from_spans(&spans).expect("test");
+    let result = find_critical_path(&graph).expect("test");
 
     // Verify each node's duration is recorded
     assert_eq!(result.node_durations.len(), 3);
 
-    let node_a = graph.get_node_by_span_id(&[1; 8]).unwrap();
-    let node_b = graph.get_node_by_span_id(&[2; 8]).unwrap();
-    let node_c = graph.get_node_by_span_id(&[3; 8]).unwrap();
+    let node_a = graph.get_node_by_span_id(&[1; 8]).expect("test");
+    let node_b = graph.get_node_by_span_id(&[2; 8]).expect("test");
+    let node_c = graph.get_node_by_span_id(&[3; 8]).expect("test");
 
     assert_eq!(result.node_durations.get(&node_a), Some(&1000));
     assert_eq!(result.node_durations.get(&node_b), Some(&2000));
@@ -289,14 +289,14 @@ fn test_bottleneck_identification() {
         create_span(4, Some(3), 3, 10_000_000, "postprocess"),
     ];
 
-    let graph = CausalGraph::from_spans(&spans).unwrap();
-    let result = find_critical_path(&graph).unwrap();
+    let graph = CausalGraph::from_spans(&spans).expect("test");
+    let result = find_critical_path(&graph).expect("test");
 
     // DB query should be the longest span on critical path
-    let (bottleneck_node, bottleneck_duration) = result.longest_span().unwrap();
+    let (bottleneck_node, bottleneck_duration) = result.longest_span().expect("test");
     assert_eq!(bottleneck_duration, 500_000_000);
 
-    let bottleneck_span = graph.get_span(bottleneck_node).unwrap();
+    let bottleneck_span = graph.get_span(bottleneck_node).expect("test");
     assert_eq!(bottleneck_span.span_name, "db.query");
 
     // Critical path should include all spans

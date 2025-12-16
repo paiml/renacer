@@ -76,7 +76,7 @@ fn test_realistic_microservice_trace() {
         create_span(4, Some(1), 3, 10_000, "http.response"),
     ];
 
-    let graph = CausalGraph::from_spans(&spans).unwrap();
+    let graph = CausalGraph::from_spans(&spans).expect("test");
 
     // Verify structure
     assert_eq!(graph.node_count(), 4);
@@ -84,10 +84,10 @@ fn test_realistic_microservice_trace() {
     assert_eq!(graph.roots().len(), 1);
 
     // Verify DAG property
-    assert!(graph.is_dag().unwrap());
+    assert!(graph.is_dag().expect("test"));
 
     // Verify span metadata retrieval
-    let root_span = graph.get_span_by_id(&[1; 8]).unwrap();
+    let root_span = graph.get_span_by_id(&[1; 8]).expect("test");
     assert_eq!(root_span.span_name, "http.request");
     assert_eq!(root_span.duration_nanos, 50_000);
 }
@@ -102,22 +102,22 @@ fn test_parallel_execution_graph() {
         create_span(4, Some(1), 3, 50_000, "worker.3"),
     ];
 
-    let graph = CausalGraph::from_spans(&spans).unwrap();
+    let graph = CausalGraph::from_spans(&spans).expect("test");
 
     assert_eq!(graph.node_count(), 4);
     assert_eq!(graph.edge_count(), 3);
 
     // Root should have 3 children
-    let root_node = graph.get_node_by_span_id(&[1; 8]).unwrap();
-    let children = graph.children(root_node).unwrap();
+    let root_node = graph.get_node_by_span_id(&[1; 8]).expect("test");
+    let children = graph.children(root_node).expect("test");
     assert_eq!(children.len(), 3);
 
     // Verify edge weights (should be child durations for critical path)
-    let worker2_node = graph.get_node_by_span_id(&[3; 8]).unwrap();
+    let worker2_node = graph.get_node_by_span_id(&[3; 8]).expect("test");
     let (_, weight) = children
         .iter()
         .find(|(node, _)| *node == worker2_node)
-        .unwrap();
+        .expect("test");
     assert_eq!(*weight as u64, 60_000); // worker.2 duration
 }
 
@@ -130,22 +130,22 @@ fn test_deep_call_stack() {
         spans.push(create_span(i, parent, i as u64, 100, "recursive_call"));
     }
 
-    let graph = CausalGraph::from_spans(&spans).unwrap();
+    let graph = CausalGraph::from_spans(&spans).expect("test");
 
     assert_eq!(graph.node_count(), 20);
     assert_eq!(graph.edge_count(), 19); // Linear chain
-    assert!(graph.is_dag().unwrap());
+    assert!(graph.is_dag().expect("test"));
 
     // Verify linear structure
     for i in 0..19 {
-        let node = graph.get_node_by_span_id(&[i; 8]).unwrap();
-        let children = graph.children(node).unwrap();
+        let node = graph.get_node_by_span_id(&[i; 8]).expect("test");
+        let children = graph.children(node).expect("test");
         assert_eq!(children.len(), 1, "Node {} should have 1 child", i);
     }
 
     // Last node should have no children
-    let last_node = graph.get_node_by_span_id(&[19; 8]).unwrap();
-    let children = graph.children(last_node).unwrap();
+    let last_node = graph.get_node_by_span_id(&[19; 8]).expect("test");
+    let children = graph.children(last_node).expect("test");
     assert_eq!(children.len(), 0);
 }
 
@@ -161,11 +161,11 @@ fn test_multiple_root_traces() {
         create_span(4, Some(3), 3, 800, "trace2.child"),
     ];
 
-    let graph = CausalGraph::from_spans(&spans).unwrap();
+    let graph = CausalGraph::from_spans(&spans).expect("test");
 
     assert_eq!(graph.node_count(), 4);
     assert_eq!(graph.roots().len(), 2); // Two independent traces
-    assert!(graph.is_dag().unwrap());
+    assert!(graph.is_dag().expect("test"));
 }
 
 #[test]
@@ -186,24 +186,24 @@ fn test_complex_distributed_trace() {
         create_span(7, Some(5), 6, 15_000, "index.scan"),
     ];
 
-    let graph = CausalGraph::from_spans(&spans).unwrap();
+    let graph = CausalGraph::from_spans(&spans).expect("test");
 
     assert_eq!(graph.node_count(), 7);
-    assert!(graph.is_dag().unwrap());
+    assert!(graph.is_dag().expect("test"));
 
     // Verify gateway has 2 children
-    let gateway_node = graph.get_node_by_span_id(&[1; 8]).unwrap();
-    let gateway_children = graph.children(gateway_node).unwrap();
+    let gateway_node = graph.get_node_by_span_id(&[1; 8]).expect("test");
+    let gateway_children = graph.children(gateway_node).expect("test");
     assert_eq!(gateway_children.len(), 2);
 
     // Verify API service has 2 children
-    let api_node = graph.get_node_by_span_id(&[3; 8]).unwrap();
-    let api_children = graph.children(api_node).unwrap();
+    let api_node = graph.get_node_by_span_id(&[3; 8]).expect("test");
+    let api_children = graph.children(api_node).expect("test");
     assert_eq!(api_children.len(), 2);
 
     // Verify leaf nodes have no children
-    let cache_node = graph.get_node_by_span_id(&[6; 8]).unwrap();
-    let cache_children = graph.children(cache_node).unwrap();
+    let cache_node = graph.get_node_by_span_id(&[6; 8]).expect("test");
+    let cache_children = graph.children(cache_node).expect("test");
     assert_eq!(cache_children.len(), 0);
 }
 
@@ -217,18 +217,18 @@ fn test_lamport_clock_causality() {
         create_span(4, Some(3), 3, 1000, "event.3"),
     ];
 
-    let graph = CausalGraph::from_spans(&spans).unwrap();
+    let graph = CausalGraph::from_spans(&spans).expect("test");
 
     // Verify causally ordered
     for i in 1..=4 {
-        let span = graph.get_span_by_id(&[i; 8]).unwrap();
+        let span = graph.get_span_by_id(&[i; 8]).expect("test");
         assert_eq!(span.logical_clock, (i - 1) as u64);
     }
 
     // Verify parent happens-before child
     for i in 2..=4 {
-        let child = graph.get_span_by_id(&[i; 8]).unwrap();
-        let parent = graph.get_span_by_id(&[(i - 1); 8]).unwrap();
+        let child = graph.get_span_by_id(&[i; 8]).expect("test");
+        let parent = graph.get_span_by_id(&[(i - 1); 8]).expect("test");
         assert!(parent.logical_clock < child.logical_clock);
     }
 }
@@ -243,7 +243,7 @@ fn test_graph_statistics() {
         create_span(4, Some(2), 3, 1000, "grandchild1"),
     ];
 
-    let graph = CausalGraph::from_spans(&spans).unwrap();
+    let graph = CausalGraph::from_spans(&spans).expect("test");
 
     assert_eq!(graph.node_count(), 4);
     assert_eq!(graph.edge_count(), 3);
@@ -264,16 +264,16 @@ fn test_edge_weight_accuracy() {
         create_span(2, Some(1), 1, 5_000, "child"),
     ];
 
-    let graph = CausalGraph::from_spans(&spans).unwrap();
+    let graph = CausalGraph::from_spans(&spans).expect("test");
 
-    let parent_node = graph.get_node_by_span_id(&[1; 8]).unwrap();
-    let children = graph.children(parent_node).unwrap();
+    let parent_node = graph.get_node_by_span_id(&[1; 8]).expect("test");
+    let children = graph.children(parent_node).expect("test");
 
     assert_eq!(children.len(), 1);
     let (child_node, weight) = children[0];
 
     // Weight should equal child span duration
-    let child_span = graph.get_span(child_node).unwrap();
+    let child_span = graph.get_span(child_node).expect("test");
     assert_eq!(weight as u64, child_span.duration_nanos);
     assert_eq!(weight as u64, 5_000);
 }
@@ -292,11 +292,11 @@ fn test_performance_1k_spans() {
     }
 
     let start = Instant::now();
-    let graph = CausalGraph::from_spans(&spans).unwrap();
+    let graph = CausalGraph::from_spans(&spans).expect("test");
     let duration = start.elapsed();
 
     assert_eq!(graph.node_count(), 1023);
-    assert!(graph.is_dag().unwrap());
+    assert!(graph.is_dag().expect("test"));
 
     // Target: <100ms for 1K spans
     println!("Graph construction for 1023 spans took: {:?}", duration);

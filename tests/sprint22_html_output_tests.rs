@@ -12,7 +12,7 @@ fn test_html_format_flag_accepted() {
         .arg("echo")
         .arg("test");
 
-    let output = cmd.output().unwrap();
+    let output = cmd.output().expect("test");
     assert!(output.status.success(), "HTML format should be accepted");
 }
 
@@ -26,7 +26,7 @@ fn test_html_output_basic() {
         .arg("echo")
         .arg("hello");
 
-    let output = cmd.output().unwrap();
+    let output = cmd.output().expect("test");
     assert!(output.status.success());
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -49,7 +49,7 @@ fn test_html_output_contains_syscalls() {
         .arg("echo")
         .arg("test");
 
-    let output = cmd.output().unwrap();
+    let output = cmd.output().expect("test");
     assert!(output.status.success());
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -72,7 +72,7 @@ fn test_html_output_with_statistics() {
         .arg("echo")
         .arg("test");
 
-    let output = cmd.output().unwrap();
+    let output = cmd.output().expect("test");
     assert!(output.status.success());
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -95,7 +95,7 @@ fn test_html_output_with_timing() {
         .arg("echo")
         .arg("test");
 
-    let output = cmd.output().unwrap();
+    let output = cmd.output().expect("test");
     assert!(output.status.success());
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -119,7 +119,7 @@ fn test_html_output_with_filtering() {
         .arg("echo")
         .arg("test");
 
-    let output = cmd.output().unwrap();
+    let output = cmd.output().expect("test");
     assert!(output.status.success());
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -143,7 +143,7 @@ fn test_html_output_standalone() {
         .arg("echo")
         .arg("test");
 
-    let output = cmd.output().unwrap();
+    let output = cmd.output().expect("test");
     assert!(output.status.success());
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -167,7 +167,7 @@ fn test_html_output_escape_special_chars() {
         .arg("echo")
         .arg("<script>alert('xss')</script>");
 
-    let output = cmd.output().unwrap();
+    let output = cmd.output().expect("test");
     assert!(output.status.success());
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -201,7 +201,7 @@ fn test_html_output_has_table_structure() {
         .arg("echo")
         .arg("test");
 
-    let output = cmd.output().unwrap();
+    let output = cmd.output().expect("test");
     assert!(output.status.success());
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -227,7 +227,7 @@ fn test_html_output_backward_compatibility() {
         .arg("echo")
         .arg("test");
 
-    let output = cmd.output().unwrap();
+    let output = cmd.output().expect("test");
     assert!(output.status.success());
 
     let stdout = String::from_utf8_lossy(&output.stdout);

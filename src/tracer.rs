@@ -2093,7 +2093,7 @@ mod tests {
         };
         assert_eq!(entry.name, "read");
         assert!(entry.source.is_some());
-        let src = entry.source.unwrap();
+        let src = entry.source.expect("test");
         assert_eq!(src.file, "test.rs");
         assert_eq!(src.line, 42);
         assert_eq!(src.function, Some("main".to_string()));
@@ -3564,7 +3564,7 @@ mod tests {
         let tracker = Some(create_populated_stats_tracker());
         let result = generate_ml_analysis_for_json(&tracker, 3);
         assert!(result.is_some());
-        let report = result.unwrap();
+        let report = result.expect("test");
         assert!(report.total_samples > 0);
     }
 

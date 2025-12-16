@@ -41,7 +41,7 @@ mod cuda_kernel_tests {
                 let device_info = wrapper.get_device_info();
                 assert!(device_info.is_ok(), "Failed to get device info");
 
-                let info = device_info.unwrap();
+                let info = device_info.expect("test");
                 assert_eq!(info.device_id, 0);
                 assert!(
                     !info.device_name.is_empty(),

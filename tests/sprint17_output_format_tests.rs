@@ -47,7 +47,7 @@ fn test_csv_with_timing() {
 #[test]
 fn test_csv_with_source_correlation() {
     // Test CSV output with --source flag includes source_location column
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("test_program");
 
     // Create a simple test program with debug symbols
@@ -57,7 +57,7 @@ fn main() {
 }
 "#;
     let source_file = tmp_dir.path().join("test.rs");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     // Compile with debug symbols
     std::process::Command::new("rustc")
@@ -66,7 +66,7 @@ fn main() {
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--format")
@@ -83,7 +83,7 @@ fn main() {
 #[test]
 fn test_csv_with_all_flags() {
     // Test CSV output with all flags combined (-T + --source)
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("test_program");
 
     // Create a simple test program with debug symbols
@@ -93,7 +93,7 @@ fn main() {
 }
 "#;
     let source_file = tmp_dir.path().join("test.rs");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     // Compile with debug symbols
     std::process::Command::new("rustc")
@@ -102,7 +102,7 @@ fn main() {
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--format")
@@ -177,7 +177,7 @@ fn test_json_with_timing() {
 #[test]
 fn test_json_with_source_correlation() {
     // Test JSON output works with --source flag (source info is optional per syscall)
-    let tmp_dir = TempDir::new().unwrap();
+    let tmp_dir = TempDir::new().expect("test");
     let test_program = tmp_dir.path().join("test_program");
 
     // Create a simple test program with debug symbols
@@ -187,7 +187,7 @@ fn main() {
 }
 "#;
     let source_file = tmp_dir.path().join("test.rs");
-    fs::write(&source_file, source).unwrap();
+    fs::write(&source_file, source).expect("test");
 
     // Compile with debug symbols
     std::process::Command::new("rustc")
@@ -196,7 +196,7 @@ fn main() {
         .arg("-o")
         .arg(&test_program)
         .output()
-        .unwrap();
+        .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--format")

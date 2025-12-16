@@ -423,7 +423,7 @@ mod tests {
 
     #[test]
     fn test_empty_graph() {
-        let graph = CausalGraph::from_spans(&[]).unwrap();
+        let graph = CausalGraph::from_spans(&[]).expect("test");
         assert_eq!(graph.node_count(), 0);
         assert_eq!(graph.edge_count(), 0);
     }
@@ -431,7 +431,7 @@ mod tests {
     #[test]
     fn test_single_node() {
         let span = create_test_span(1, None, 0, 1000);
-        let graph = CausalGraph::from_spans(&[span]).unwrap();
+        let graph = CausalGraph::from_spans(&[span]).expect("test");
 
         assert_eq!(graph.node_count(), 1);
         assert_eq!(graph.edge_count(), 0);
@@ -443,14 +443,14 @@ mod tests {
         let root = create_test_span(1, None, 0, 1000);
         let child = create_test_span(2, Some(1), 1, 2000);
 
-        let graph = CausalGraph::from_spans(&[root, child]).unwrap();
+        let graph = CausalGraph::from_spans(&[root, child]).expect("test");
 
         assert_eq!(graph.node_count(), 2);
         assert_eq!(graph.edge_count(), 1);
         assert_eq!(graph.roots().len(), 1);
 
         // Verify parent → child edge exists
-        let children = graph.children(NodeId(0)).unwrap();
+        let children = graph.children(NodeId(0)).expect("test");
         assert_eq!(children.len(), 1);
         assert_eq!(children[0].0, NodeId(1));
         assert_eq!(children[0].1, 2000.0); // Duration of child
@@ -463,31 +463,31 @@ mod tests {
         let child2 = create_test_span(3, Some(1), 2, 700);
         let grandchild = create_test_span(4, Some(2), 3, 300);
 
-        let graph = CausalGraph::from_spans(&[root, child1, child2, grandchild]).unwrap();
+        let graph = CausalGraph::from_spans(&[root, child1, child2, grandchild]).expect("test");
 
         assert_eq!(graph.node_count(), 4);
         assert_eq!(graph.edge_count(), 3); // root→child1, root→child2, child1→grandchild
         assert_eq!(graph.roots().len(), 1);
 
         // Root has 2 children
-        let children = graph.children(NodeId(0)).unwrap();
+        let children = graph.children(NodeId(0)).expect("test");
         assert_eq!(children.len(), 2);
 
         // child1 has 1 child (grandchild)
-        let grandchildren = graph.children(NodeId(1)).unwrap();
+        let grandchildren = graph.children(NodeId(1)).expect("test");
         assert_eq!(grandchildren.len(), 1);
 
         // child2 has no children
-        let leaf_children = graph.children(NodeId(2)).unwrap();
+        let leaf_children = graph.children(NodeId(2)).expect("test");
         assert_eq!(leaf_children.len(), 0);
     }
 
     #[test]
     fn test_get_span_metadata() {
         let root = create_test_span(1, None, 0, 1000);
-        let graph = CausalGraph::from_spans(std::slice::from_ref(&root)).unwrap();
+        let graph = CausalGraph::from_spans(std::slice::from_ref(&root)).expect("test");
 
-        let span = graph.get_span(NodeId(0)).unwrap();
+        let span = graph.get_span(NodeId(0)).expect("test");
         assert_eq!(span.span_name, "span_1");
         assert_eq!(span.logical_clock, 0);
     }
@@ -499,9 +499,9 @@ mod tests {
         let child2 = create_test_span(3, Some(1), 2, 700);
         let grandchild = create_test_span(4, Some(2), 3, 300);
 
-        let graph = CausalGraph::from_spans(&[root, child1, child2, grandchild]).unwrap();
+        let graph = CausalGraph::from_spans(&[root, child1, child2, grandchild]).expect("test");
 
-        let desc = graph.descendants(NodeId(0)).unwrap();
+        let desc = graph.descendants(NodeId(0)).expect("test");
         assert_eq!(desc.len(), 4); // All nodes reachable from root
     }
 
@@ -510,9 +510,9 @@ mod tests {
         let root = create_test_span(1, None, 0, 1000);
         let child = create_test_span(2, Some(1), 1, 500);
 
-        let graph = CausalGraph::from_spans(&[root, child]).unwrap();
+        let graph = CausalGraph::from_spans(&[root, child]).expect("test");
 
-        assert!(graph.is_dag().unwrap());
+        assert!(graph.is_dag().expect("test"));
     }
 
     #[test]
