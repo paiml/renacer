@@ -12,11 +12,9 @@ env:
 
 jobs:
   check:
-    name: Check (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+    name: Check
+    # Linux-only: renacer uses ptrace which is not available on macOS/Windows
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
