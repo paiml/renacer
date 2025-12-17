@@ -342,6 +342,7 @@ pub fn print_stats(path: &std::path::Path) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
 
     fn make_decision(id: u64) -> DecisionTrace {
         DecisionTrace {
@@ -397,6 +398,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_export_config_from_env() {
         // Set env vars
         std::env::set_var("RENACER_OTLP_ENDPOINT", "http://test:4317");
@@ -413,6 +415,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_export_config_from_env_defaults() {
         // Ensure env vars are not set
         std::env::remove_var("RENACER_OTLP_ENDPOINT");
