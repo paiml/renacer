@@ -1,6 +1,6 @@
 [package]
 name = "renacer"
-version = "0.9.0"
+version = "0.9.1"
 edition = "2021"
 authors = ["Pragmatic AI Labs <info@paiml.com>"]
 description = "Pure Rust system call tracer with source-aware correlation for Rust binaries"
@@ -20,7 +20,7 @@ libc = "0.2"
 
 # Error handling
 anyhow = "1.0"
-thiserror = "1.0"
+thiserror = "2.0"
 
 # JSON serialization
 serde = { version = "1.0", features = ["derive"] }
@@ -52,10 +52,10 @@ aprender = "0.19"
 crossbeam = "0.8"
 
 # Parquet storage for golden thread traces (Sprint 40)
-trueno-db = "0.3.7"
+trueno-db = "0.3.9"
 
 # Graph database for causal analysis (Sprint 41)
-trueno-graph = "0.1.4"
+trueno-graph = "0.1.6"
 
 # SHA-256 hashing for state-based semantic equivalence (Sprint 42)
 sha2 = "0.10"
