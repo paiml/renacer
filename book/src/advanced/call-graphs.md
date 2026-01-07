@@ -10,7 +10,7 @@ Call graph analysis reveals the parent-child relationships between functions, he
 
 A **call graph** shows the hierarchical relationships between functions in your program:
 
-```
+```text
 main
 ├─ setup_logging
 │  └─ open_log_file → openat() syscall
@@ -80,7 +80,7 @@ $ renacer --function-time --source -- cargo build
 ```
 
 **Example Output:**
-```
+```text
 openat(AT_FDCWD, "Cargo.toml", O_RDONLY) = 3   [src/main.rs:42 in load_manifest]
 read(3, "package]\\nname = \\"renacer\\"\\n...", 832) = 832   [src/config.rs:78 in parse_toml]
 close(3) = 0   [src/config.rs:95 in parse_toml]
@@ -104,7 +104,7 @@ src/config.rs:95             1        12 μs         12 μs       0
 
 The function profiling summary groups syscalls by the function that made them:
 
-```
+```text
 Function                     Calls    Total Time    Avg Time    Slow I/O
 ──────────────────────────────────────────────────────────────────────────
 src/db.rs:execute_query      150      234567 μs     1563 μs     148  ⚠️
@@ -129,7 +129,7 @@ $ renacer --function-time --source -e trace=file -- ./myapp
 ```
 
 **Output:**
-```
+```text
 openat(AT_FDCWD, "/tmp/data.txt", O_RDONLY) = 3   [src/main.rs:15 in load_data]
 read(3, "test data\\n", 4096) = 10   [src/main.rs:20 in load_data]
 close(3) = 0   [src/main.rs:23 in load_data]
@@ -300,7 +300,7 @@ $ renacer --function-time --source -- ./my-app
 **Cause:** Compiler inlining (function body copied to call site).
 
 **Example:**
-```rust
+```rust,ignore
 #[inline(always)]
 fn log_debug(msg: &str) {
     write(fd, msg.as_bytes());  // Inlined - won't appear in call graph
@@ -312,7 +312,7 @@ fn main() {
 ```
 
 **Workaround:** Disable inlining for profiling:
-```rust
+```rust,ignore
 #[inline(never)]  // Force function to appear in call graph
 fn log_debug(msg: &str) {
     write(fd, msg.as_bytes());

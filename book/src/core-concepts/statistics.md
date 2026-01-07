@@ -110,7 +110,7 @@ By default, output is sorted by **Total Time** (descending) - showing most time-
 
 **Example:**
 
-```
+```text
 System Call Summary:
 ====================
 Syscall          Calls    Errors    Total Time    Avg Time
@@ -144,7 +144,7 @@ fsync            100      5.678s        56.78ms  12.34ms  45.67ms  89.01ms  123.
 
 **Example: `read` syscall**
 
-```
+```text
 Avg: 0.691ms  p50: 0.567ms  p90: 1.234ms  p99: 2.345ms  Max: 5.678ms
 ```
 
@@ -447,7 +447,7 @@ renacer -c --format json -- ./app > stats-$(date +%Y%m%d).json
 
 ### High Call Count, Low Total Time
 
-```
+```text
 Syscall          Calls    Total Time    Avg Time
 getpid           10000    0.123s        0.012ms
 ```
@@ -456,7 +456,7 @@ getpid           10000    0.123s        0.012ms
 
 ### Low Call Count, High Total Time
 
-```
+```text
 Syscall          Calls    Total Time    Avg Time
 fsync            10       5.678s        567.8ms
 ```
@@ -465,7 +465,7 @@ fsync            10       5.678s        567.8ms
 
 ### High Error Rate
 
-```
+```text
 Syscall          Calls    Errors    Total Time
 openat           1000     500       2.345s      # 50% failure rate!
 ```
@@ -474,7 +474,7 @@ openat           1000     500       2.345s      # 50% failure rate!
 
 ### Large Variance (p99 >> p50)
 
-```
+```text
 Syscall          p50      p90      p99      Max
 read             1.2ms    3.4ms    45.6ms   234.5ms
 ```

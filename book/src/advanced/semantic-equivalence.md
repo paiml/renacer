@@ -18,7 +18,7 @@ Not Observable: Internal memory layout, CPU registers, stack frames
 ### Example: Equivalent Optimizations
 
 **Before** (unoptimized):
-```rust
+```rust,ignore
 // Multiple small writes
 write(fd, "Hello", 5);
 write(fd, " ", 1);
@@ -26,7 +26,7 @@ write(fd, "World", 5);
 ```
 
 **After** (optimized):
-```rust
+```rust,ignore
 // Buffered single write
 write(fd, "Hello World", 11);
 ```
@@ -40,7 +40,7 @@ write(fd, "Hello World", 11);
 
 Renacer compares **final state** rather than execution trace:
 
-```rust
+```rust,ignore
 use renacer::semantic_equivalence::{compare_file_states, FileStateComparison};
 
 let baseline_state = extract_file_state(&baseline_trace);
@@ -64,7 +64,7 @@ if comparison.is_equivalent {
 
 Files created, modified, or deleted are the same:
 
-```rust
+```rust,ignore
 pub struct FileState {
     pub path: String,
     pub operations: Vec<FileOperation>,  // read, write, create, delete
@@ -84,7 +84,7 @@ Result: ✅ Equivalent (same final state)
 
 Network connections and data sent are the same:
 
-```rust
+```rust,ignore
 pub struct NetworkState {
     pub connections: Vec<Connection>,  // host, port, protocol
     pub bytes_sent: HashMap<String, u64>,
@@ -103,7 +103,7 @@ Result: ✅ Equivalent
 
 Child processes spawned are the same:
 
-```rust
+```rust,ignore
 pub struct ProcessState {
     pub child_processes: Vec<ChildProcess>,
     pub exit_codes: HashMap<u32, i32>,
@@ -120,7 +120,7 @@ Result: ✅ Equivalent
 ## Real-World Example: Memory Allocation Optimization
 
 **Baseline** (naive allocator):
-```rust
+```rust,ignore
 for _ in 0..100 {
     let ptr = mmap(...);  // 100 separate allocations
     // ... use memory ...
@@ -129,7 +129,7 @@ for _ in 0..100 {
 ```
 
 **Optimized** (arena allocator):
-```rust
+```rust,ignore
 let arena = mmap(...);  // Single large allocation
 for i in 0..100 {
     let ptr = arena + (i * chunk_size);  // Pointer arithmetic
@@ -203,7 +203,7 @@ Some differences are **acceptable** and don't violate equivalence:
 
 ## Implementation
 
-```rust
+```rust,ignore
 use renacer::semantic_equivalence::{
     extract_file_state,
     extract_network_state,

@@ -79,7 +79,7 @@ severity = "critical"
 
 Renacer ships with a default cluster pack optimized for **transpiler analysis**:
 
-```rust
+```rust,ignore
 use renacer::cluster::ClusterRegistry;
 
 // Load default transpiler-optimized clusters
@@ -99,7 +99,7 @@ The default pack includes:
 
 ### Load Custom Clusters
 
-```rust
+```rust,ignore
 use renacer::cluster::ClusterRegistry;
 
 let registry = ClusterRegistry::from_toml("my-clusters.toml")?;
@@ -107,7 +107,7 @@ let registry = ClusterRegistry::from_toml("my-clusters.toml")?;
 
 ### Classify a Syscall
 
-```rust
+```rust,ignore
 use renacer::cluster::{ClusterRegistry, FdTable};
 
 let registry = ClusterRegistry::default_transpiler_clusters()?;
@@ -178,7 +178,7 @@ severity = "critical"
 
 ### ClusterRegistry API
 
-```rust
+```rust,ignore
 pub struct ClusterRegistry {
     clusters: Vec<ClusterDefinition>,
     syscall_to_cluster: HashMap<String, String>,  // Fast lookup

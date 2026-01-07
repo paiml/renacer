@@ -85,7 +85,7 @@ Each decision trace contains:
 
 Decision traces flow to entrenar's pattern store:
 
-```
+```text
 ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
 │   renacer   │───▶│    OTLP     │───▶│  entrenar   │
 │  (tracing)  │    │  (export)   │    │   (CITL)    │
@@ -109,7 +109,7 @@ Renacer batches decision traces for efficient export:
 
 If the queue fills (network outage), oldest decisions are dropped:
 
-```rust
+```rust,ignore
 // Stats available via API
 exporter.stats().decisions_dropped  // Count of dropped decisions
 exporter.stats().decisions_exported // Successfully exported
@@ -132,7 +132,7 @@ Exponential backoff with jitter:
 
 Export metrics for observability:
 
-```rust
+```rust,ignore
 let stats = exporter.stats();
 println!("Queued: {}", stats.decisions_queued);
 println!("Exported: {}", stats.decisions_exported);

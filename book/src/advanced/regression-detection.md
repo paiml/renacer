@@ -30,7 +30,7 @@ The difference is just natural variance, not a true regression.
 
 ### Statistical Comparison
 
-```rust
+```rust,ignore
 use renacer::regression::{assess_regression, RegressionConfig};
 use std::collections::HashMap;
 
@@ -64,7 +64,7 @@ match assessment.verdict {
 ## Configuration Profiles
 
 ### Default (Balanced)
-```rust
+```rust,ignore
 RegressionConfig::default()
 // - 95% confidence (p < 0.05)
 // - 5 samples minimum
@@ -72,7 +72,7 @@ RegressionConfig::default()
 ```
 
 ### Strict (Fewer False Positives)
-```rust
+```rust,ignore
 RegressionConfig::strict()
 // - 99% confidence (p < 0.01)
 // - 10 samples minimum
@@ -80,7 +80,7 @@ RegressionConfig::strict()
 ```
 
 ### Permissive (Catch Early)
-```rust
+```rust,ignore
 RegressionConfig::permissive()
 // - 90% confidence (p < 0.10)
 // - 3 samples minimum
@@ -91,7 +91,7 @@ RegressionConfig::permissive()
 
 Based on **Zeller (2002)** Delta Debugging, Renacer filters out "noisy" syscalls before testing:
 
-```rust
+```rust,ignore
 // Coefficient of Variation (CV) = std_dev / mean
 //
 // CV > threshold → noisy → filtered out
@@ -114,7 +114,7 @@ Noisy syscall:
 
 Renacer uses **Welch's t-test** (unequal variances) from the aprender library:
 
-```rust
+```rust,ignore
 use aprender::stats::hypothesis::ttest_ind;
 
 // Compare two distributions
@@ -158,7 +158,7 @@ The difference is **statistically significant** - not just noise.
 
 ## Report Format
 
-```rust
+```rust,ignore
 let report = assessment.to_report_string();
 println!("{}", report);
 ```
@@ -196,7 +196,7 @@ Filtered: 1 (socket)
 
 ### Build-Time Assertion
 
-```rust
+```rust,ignore
 #[test]
 fn test_no_performance_regression() {
     let baseline = load_golden_trace("golden.trace");
@@ -231,7 +231,7 @@ fn test_no_performance_regression() {
 
 ### RegressionConfig
 
-```rust
+```rust,ignore
 pub struct RegressionConfig {
     pub significance_level: f64,     // p-value threshold (default: 0.05)
     pub min_sample_size: usize,      // Minimum samples (default: 5)
@@ -242,7 +242,7 @@ pub struct RegressionConfig {
 
 ### RegressionVerdict
 
-```rust
+```rust,ignore
 pub enum RegressionVerdict {
     Regression {
         regressed_syscalls: Vec<String>,

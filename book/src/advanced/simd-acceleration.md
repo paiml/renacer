@@ -28,7 +28,7 @@ The `visualize` module uses SIMD for real-time TUI rendering:
 
 ### HistoryBuffer (Ring Buffer)
 
-```rust
+```rust,ignore
 use renacer::visualize::ring_buffer::HistoryBuffer;
 
 // Create a buffer for metric history
@@ -51,7 +51,7 @@ let (min, max, mean) = buffer.stats();  // simd_statistics via trueno-viz
 
 ### Sparkline Generation
 
-```rust
+```rust,ignore
 use renacer::visualize::theme::{sparkline, normalize_batch};
 
 // SIMD-accelerated sparkline (uses simd_min/simd_max)
@@ -65,7 +65,7 @@ let normalized = normalize_batch(&values);  // [0.0, ..., 1.0]
 ## How SIMD Works
 
 **Vector processing:**
-```
+```text
 Scalar (1 value at a time):
   [1234] → process → result
 

@@ -33,7 +33,7 @@ cargo fuzz run filter_parser
 
 Tests the `SyscallFilter::from_expr()` parser with arbitrary byte sequences:
 
-```rust
+```rust,ignore
 #![no_main]
 
 use libfuzzer_sys::fuzz_target;
@@ -106,7 +106,7 @@ This runs:
 ### 1. Test Invariants, Not Specific Behavior
 
 Good fuzz target:
-```rust
+```rust,ignore
 fuzz_target!(|data: &[u8]| {
     if let Ok(input) = std::str::from_utf8(data) {
         // Should never panic
@@ -116,7 +116,7 @@ fuzz_target!(|data: &[u8]| {
 ```
 
 Bad fuzz target:
-```rust
+```rust,ignore
 fuzz_target!(|data: &[u8]| {
     // Too specific - won't discover interesting inputs
     assert_eq!(parse_number(data), expected_value);
@@ -132,7 +132,7 @@ For complex inputs:
 arbitrary = { version = "1.3", features = ["derive"], optional = true }
 ```
 
-```rust
+```rust,ignore
 use arbitrary::Arbitrary;
 
 #[derive(Arbitrary, Debug)]

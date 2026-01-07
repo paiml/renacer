@@ -26,7 +26,7 @@ aprender's binary format with:
 
 ### File Structure
 
-```
+```text
 ┌────────────────────────────────┐
 │ Magic: "APR\x00"               │ 4 bytes
 ├────────────────────────────────┤
@@ -48,7 +48,7 @@ aprender's binary format with:
 
 ### ModelMetadata
 
-```rust
+```rust,ignore
 let metadata = ModelMetadata::new(1000)  // training samples
     .with_hyperparameter("n_clusters", "5")
     .with_hyperparameter("eps", "0.5")
@@ -65,7 +65,7 @@ let metadata = ModelMetadata::new(1000)  // training samples
 
 ### PersistenceOptions
 
-```rust
+```rust,ignore
 let options = PersistenceOptions::new()
     .with_compression(true)      // default: true
     .with_name("baseline-v1")
@@ -74,7 +74,7 @@ let options = PersistenceOptions::new()
 
 ### Save/Load Functions
 
-```rust
+```rust,ignore
 // KMeans
 save_kmeans_model(&model, "model.apr", options)?;
 let model = load_kmeans_model("model.apr")?;

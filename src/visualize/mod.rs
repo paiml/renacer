@@ -102,6 +102,19 @@ pub struct VisualizeConfig {
 
     /// OTLP endpoint for span export
     pub otlp_endpoint: Option<String>,
+
+    // Sprint 56: Metrics and Alerting Configuration
+    /// Enable metrics collection panel (counters, gauges, histograms)
+    pub enable_metrics: bool,
+
+    /// Enable alerting panel (threshold/rate/absence alerts)
+    pub enable_alerts: bool,
+
+    /// Alert threshold for syscall latency anomaly (microseconds)
+    pub alert_latency_threshold_us: u64,
+
+    /// Alert threshold for error rate percentage
+    pub alert_error_rate_percent: f32,
 }
 
 impl Default for VisualizeConfig {
@@ -119,6 +132,10 @@ impl Default for VisualizeConfig {
             enable_source: false,
             filter: None,
             otlp_endpoint: None,
+            enable_metrics: false,
+            enable_alerts: false,
+            alert_latency_threshold_us: 10_000,
+            alert_error_rate_percent: 5.0,
         }
     }
 }
@@ -410,5 +427,135 @@ mod tests {
         assert_eq!(cloned.tick_rate_ms, 100);
         assert!(cloned.enable_ml);
         assert_eq!(cloned.ml_clusters, 5);
+    }
+
+    #[test]
+    fn test_config_all_fields() {
+        let config = VisualizeConfig {
+            tick_rate_ms: 100,
+            enable_anomaly: false,
+            enable_ml: true,
+            ml_clusters: 5,
+            anomaly_threshold: 2.5,
+            history_size: 500,
+            deterministic: true,
+            show_fps: true,
+            pid: Some(1234),
+            enable_source: true,
+            filter: Some("read|write".to_string()),
+            otlp_endpoint: Some("http://localhost:4317".to_string()),
+            enable_metrics: true,
+            enable_alerts: true,
+            alert_latency_threshold_us: 5000,
+            alert_error_rate_percent: 2.5,
+        };
+
+        assert_eq!(config.tick_rate_ms, 100);
+        assert!(!config.enable_anomaly);
+        assert!(config.enable_ml);
+        assert_eq!(config.ml_clusters, 5);
+        assert!((config.anomaly_threshold - 2.5).abs() < f32::EPSILON);
+        assert_eq!(config.history_size, 500);
+        assert!(config.deterministic);
+        assert!(config.show_fps);
+        assert_eq!(config.pid, Some(1234));
+        assert!(config.enable_source);
+        assert_eq!(config.filter, Some("read|write".to_string()));
+        assert_eq!(
+            config.otlp_endpoint,
+            Some("http://localhost:4317".to_string())
+        );
+        assert!(config.enable_metrics);
+        assert!(config.enable_alerts);
+        assert_eq!(config.alert_latency_threshold_us, 5000);
+        assert!((config.alert_error_rate_percent - 2.5).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn test_inject_demo_data() {
+        let config = VisualizeConfig::default();
+        let mut app = app::VisualizeApp::new(config);
+
+        // Initial state
+        assert_eq!(app.total_syscalls, 0);
+
+        // Inject demo data for several ticks
+        for tick in 0..10 {
+            inject_demo_data(&mut app, tick);
+        }
+
+        // After injecting, should have syscalls recorded
+        assert!(app.total_syscalls > 0);
+
+        // Should have some latency data
+        assert!(!app.latency_history.is_empty());
+    }
+
+    #[test]
+    fn test_inject_demo_data_deterministic() {
+        let config = VisualizeConfig::default();
+        let mut app1 = app::VisualizeApp::new(config.clone());
+        let mut app2 = app::VisualizeApp::new(config);
+
+        // Same tick should produce deterministic results
+        inject_demo_data(&mut app1, 42);
+        inject_demo_data(&mut app2, 42);
+
+        assert_eq!(app1.total_syscalls, app2.total_syscalls);
+    }
+
+    #[test]
+    fn test_inject_demo_data_distribution() {
+        let config = VisualizeConfig::default();
+        let mut app = app::VisualizeApp::new(config);
+
+        // Inject enough data to get good distribution
+        for tick in 0..100 {
+            inject_demo_data(&mut app, tick);
+        }
+
+        // Should have substantial syscall count
+        assert!(app.total_syscalls > 500);
+
+        // Should have some errors (2% rate)
+        assert!(app.total_errors > 0);
+
+        // Should have some anomalies
+        assert!(app.anomaly_count > 0);
+    }
+
+    #[test]
+    fn test_config_debug() {
+        let config = VisualizeConfig::default();
+        let debug_str = format!("{:?}", config);
+        assert!(debug_str.contains("tick_rate_ms"));
+        assert!(debug_str.contains("enable_anomaly"));
+    }
+
+    #[test]
+    fn test_sprint56_config_defaults() {
+        let config = VisualizeConfig::default();
+
+        // Sprint 56 defaults
+        assert!(!config.enable_metrics);
+        assert!(!config.enable_alerts);
+        assert_eq!(config.alert_latency_threshold_us, 10_000);
+        assert!((config.alert_error_rate_percent - 5.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn test_config_with_sprint56_features() {
+        let config = VisualizeConfig {
+            enable_metrics: true,
+            enable_alerts: true,
+            alert_latency_threshold_us: 20_000,
+            alert_error_rate_percent: 10.0,
+            ..Default::default()
+        };
+
+        assert!(config.enable_metrics);
+        assert!(config.enable_alerts);
+        assert_eq!(config.alert_latency_threshold_us, 20_000);
+        assert!((config.alert_error_rate_percent - 10.0).abs() < f32::EPSILON);
     }
 }

@@ -14,7 +14,7 @@ $ renacer -e 'trace=network' -- curl https://example.com
 
 **Output:**
 
-```
+```text
 socket(AF_INET, SOCK_STREAM, IPPROTO_TCP) = 3
 connect(3, {sa_family=AF_INET, sin_port=htons(443), sin_addr=inet_addr("93.184.216.34")}, 16) = 0
 sendto(3, "\x16\x03\x01\x02\x00...", 517, MSG_NOSIGNAL, NULL, 0) = 517
@@ -37,7 +37,7 @@ $ renacer -e 'trace=connect' -- curl http://localhost:9999
 
 **Output:**
 
-```
+```text
 socket(AF_INET, SOCK_STREAM, IPPROTO_TCP) = 3
 connect(3, {sa_family=AF_INET, sin_port=htons(9999), sin_addr=inet_addr("127.0.0.1")}, 16) = -ECONNREFUSED
 close(3) = 0
@@ -53,7 +53,7 @@ $ renacer --source -e 'trace=network' -- ./http-client
 
 **Output:**
 
-```
+```text
 socket(AF_INET, SOCK_STREAM, IPPROTO_TCP) = 3   [src/client.rs:45 in connect_to_server]
 connect(3, {...}, 16) = -ETIMEDOUT   [src/client.rs:52 in connect_to_server]
 ```
@@ -72,7 +72,7 @@ $ renacer -c -e 'trace=network' -- curl https://api.example.com/data
 
 **Output:**
 
-```
+```text
 System Call Summary:
 ====================
 Syscall          Calls    Total Time    Avg Time    p50      p90      p99
@@ -100,13 +100,13 @@ $ renacer -c -e 'trace=recvfrom' -- curl https://api.example.com/data
 ```
 
 **First Request:**
-```
+```text
 Syscall          Calls    Total Time
 recvfrom         12       3456.78ms
 ```
 
 **Second Request:**
-```
+```text
 Syscall          Calls    Total Time
 recvfrom         12       234.56ms
 ```
@@ -125,7 +125,7 @@ $ renacer -e 'trace=socket,connect,send,recv,close' -- ./websocket-client
 
 **Output:**
 
-```
+```text
 socket(AF_INET, SOCK_STREAM, IPPROTO_TCP) = 3
 connect(3, {sin_addr=inet_addr("192.168.1.100"), sin_port=htons(8080)}, 16) = 0
 sendto(3, "GET /ws HTTP/1.1\r\nUpgrade: websocket\r\n...", 234, MSG_NOSIGNAL, NULL, 0) = 234
@@ -151,7 +151,7 @@ $ renacer -e 'trace=network' -- ./websocket-client 2>&1 | grep -E "close|shutdow
 
 **Output:**
 
-```
+```text
 recvfrom(3, "", 4096, 0, NULL, NULL) = 0
 close(3) = 0
 ```
@@ -160,7 +160,7 @@ close(3) = 0
 
 **Abnormal example:**
 
-```
+```text
 recvfrom(3, ..., 4096, 0, NULL, NULL) = -ECONNRESET
 close(3) = 0
 ```
@@ -181,7 +181,7 @@ $ renacer -e 'trace=socket,connect,send,recv' -- host example.com
 
 **Output:**
 
-```
+```text
 socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP) = 3
 connect(3, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("8.8.8.8")}, 16) = 0
 sendto(3, "\x12\x34\x01\x00\x00\x01...", 32, MSG_NOSIGNAL, NULL, 0) = 32
@@ -202,7 +202,7 @@ $ renacer -c -e 'trace=network' -- getent hosts api.example.com
 
 **Output:**
 
-```
+```text
 System Call Summary:
 ====================
 Syscall          Calls    Total Time    Avg Time
@@ -223,7 +223,7 @@ $ renacer -e 'trace=connect' -- host slow-domain.example.com
 
 **Output:**
 
-```
+```text
 socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP) = 3
 connect(3, {sin_addr=inet_addr("192.168.1.1"), sin_port=htons(53)}, 16) = 0
 # ... long wait ...
@@ -247,7 +247,7 @@ $ renacer -e 'trace=setsockopt,getsockopt' -- curl https://example.com
 
 **Output:**
 
-```
+```text
 setsockopt(3, SOL_SOCKET, SO_KEEPALIVE, [1], 4) = 0
 setsockopt(3, SOL_TCP, TCP_NODELAY, [1], 4) = 0
 setsockopt(3, SOL_SOCKET, SO_RCVTIMEO, {tv_sec=30, tv_usec=0}, 16) = 0
@@ -267,7 +267,7 @@ $ renacer --source -e 'trace=setsockopt,recvfrom' -- ./slow-client
 
 **Output:**
 
-```
+```text
 setsockopt(3, SOL_SOCKET, SO_RCVTIMEO, {tv_sec=5, tv_usec=0}, 16) = 0   [src/client.rs:78]
 # ... 5 seconds later ...
 recvfrom(3, ..., 4096, 0, NULL, NULL) = -EAGAIN   [src/client.rs:92]
@@ -287,7 +287,7 @@ $ renacer -c -e 'trace=sendto,recvfrom' -- curl http://example.com
 
 **Output:**
 
-```
+```text
 System Call Summary:
 ====================
 Syscall          Calls    Total Time
@@ -307,7 +307,7 @@ $ renacer -e 'trace=send,recv' -- ./http-client 2>&1 | grep "= -"
 
 **Output:**
 
-```
+```text
 sendto(3, "GET /api/data HTTP/1.1\r\n...", 145, MSG_NOSIGNAL, NULL, 0) = 145
 recvfrom(3, "HTTP/1.1 400 Bad Request\r\n...", 4096, 0, NULL, NULL) = 123
 ```
@@ -323,7 +323,7 @@ $ jq '.syscalls[] | select(.name == "sendto") | .return.value' network.json
 
 **Output:**
 
-```
+```text
 145
 234
 67
@@ -345,7 +345,7 @@ $ renacer -e 'trace=send,recv' -- openssl s_client -connect example.com:443
 
 **Output:**
 
-```
+```text
 socket(AF_INET, SOCK_STREAM, IPPROTO_TCP) = 3
 connect(3, {sin_addr=inet_addr("93.184.216.34"), sin_port=htons(443)}, 16) = 0
 # Client Hello
@@ -372,7 +372,7 @@ $ renacer -c -e 'trace=network' -- curl https://example.com
 
 **Output:**
 
-```
+```text
 System Call Summary:
 ====================
 Syscall          Calls    Total Time    Avg Time
@@ -399,7 +399,7 @@ $ diff http.txt https.txt
 ```
 
 **Difference:**
-```
+```text
 HTTP:  connect=45ms, total=234ms
 HTTPS: connect=45ms, total=705ms (+470ms for TLS)
 ```
@@ -416,7 +416,7 @@ $ renacer -c -e 'trace=recvfrom' -- vlc http://stream.example.com/live.mp4
 
 **Output:**
 
-```
+```text
 System Call Summary:
 ====================
 Syscall          Calls    Total Time    Avg Time    p50      p90      p99
@@ -436,7 +436,7 @@ $ renacer -e 'trace=recv' -- ./video-player stream.m3u8 2>&1 | grep "= 0"
 
 **Output:**
 
-```
+```text
 recvfrom(3, "...", 65536, 0, NULL, NULL) = 8192
 recvfrom(3, "...", 65536, 0, NULL, NULL) = 8192
 recvfrom(3, "", 65536, 0, NULL, NULL) = 0
@@ -452,7 +452,7 @@ socket(AF_INET, SOCK_STREAM, IPPROTO_TCP) = 4
 
 **Symptom:**
 
-```
+```text
 connect(3, {...}, 16) = -ECONNREFUSED
 ```
 
@@ -467,7 +467,7 @@ connect(3, {...}, 16) = -ECONNREFUSED
 
 **Symptom:**
 
-```
+```text
 connect(3, {...}, 16) = -ETIMEDOUT
 ```
 
@@ -482,7 +482,7 @@ connect(3, {...}, 16) = -ETIMEDOUT
 
 **Symptom:**
 
-```
+```text
 recvfrom(3, ..., 4096, 0, NULL, NULL) = -ECONNRESET
 ```
 
@@ -497,7 +497,7 @@ recvfrom(3, ..., 4096, 0, NULL, NULL) = -ECONNRESET
 
 **Symptom:**
 
-```
+```text
 sendto(3, ..., 1024, MSG_NOSIGNAL, NULL, 0) = -EPIPE
 ```
 
@@ -659,7 +659,7 @@ recvfrom(3, "\x17\x03\x03\x04\x56...", 16384, 0, NULL, NULL) = 1110
 
 **Symptoms:**
 
-```
+```text
 Syscall          Calls    Total Time
 recvfrom         50000    12345.67ms
 ```

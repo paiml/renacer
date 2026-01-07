@@ -25,7 +25,7 @@ $ renacer -p 12345 -c -e 'trace=file'
 
 **Output:**
 
-```
+```text
 Attaching to process 12345...
 Attached successfully. Press Ctrl+C to detach.
 
@@ -51,7 +51,7 @@ $ renacer -p 12345 --source -e 'trace=fsync'
 
 **Output:**
 
-```
+```text
 Attaching to process 12345...
 fsync(3) = 0   [/usr/lib/myservice/logger.so:89 in flush_logs]
 fsync(3) = 0   [/usr/lib/myservice/logger.so:89 in flush_logs]
@@ -62,13 +62,13 @@ fsync(3) = 0   [/usr/lib/myservice/logger.so:89 in flush_logs]
 
 ### Step 4: Detach Cleanly
 
-```
+```text
 Press Ctrl+C
 ```
 
 **Output:**
 
-```
+```text
 ^C
 Detaching from process 12345...
 Detached successfully. Process continues running.
@@ -97,7 +97,7 @@ $ renacer -p 23456
 
 **Output:**
 
-```
+```text
 Attaching to process 23456...
 read(3, "", 8192) = 0
 read(3, "", 8192) = 0
@@ -115,7 +115,7 @@ $ renacer -p 23456 --source -e 'trace=read' | head -10
 
 **Output:**
 
-```
+```text
 read(3, "", 8192) = 0   [src/parser.rs:156 in read_next_line]
 read(3, "", 8192) = 0   [src/parser.rs:156 in read_next_line]
 read(3, "", 8192) = 0   [src/parser.rs:156 in read_next_line]
@@ -137,7 +137,7 @@ $ renacer -p 34567 -e 'trace=network'
 
 **Output:**
 
-```
+```text
 Attaching to process 34567...
 accept(6, {sa_family=AF_INET, sin_port=htons(54321), sin_addr=inet_addr("192.168.1.100")}, [16]) = 8
 recvfrom(8, "GET /api/users HTTP/1.1\r\nHost: example.com\r\n...", 4096, 0, NULL, NULL) = 234
@@ -163,7 +163,7 @@ $ renacer -p 34567 -c -e 'trace=accept,recvfrom,sendto'
 
 **Output:**
 
-```
+```text
 System Call Summary (60 seconds):
 ====================
 Syscall          Calls    Total Time    Avg Time
@@ -186,7 +186,7 @@ $ renacer -p 45678 -c -e 'trace=memory'
 
 **Output:**
 
-```
+```text
 System Call Summary (60 seconds):
 ====================
 Syscall          Calls    Total Time    Avg Time
@@ -205,7 +205,7 @@ $ renacer -p 45678 --source -e 'trace=mmap,munmap'
 
 **Output:**
 
-```
+```text
 mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f... [src/cache.rs:67 in allocate_entry]
 mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f... [src/cache.rs:67 in allocate_entry]
 mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f... [src/cache.rs:67 in allocate_entry]
@@ -226,7 +226,7 @@ $ renacer -p 56789 -e 'trace=connect,close'
 
 **Output:**
 
-```
+```text
 Attaching to process 56789...
 connect(3, {sa_family=AF_INET, sin_port=htons(5432), sin_addr=inet_addr("10.0.1.50")}, 16) = 0
 # ... connection used ...
@@ -330,7 +330,7 @@ $ renacer -p 12345 --format csv -c > profile.csv
 
 ### Step 5: Detach Gracefully
 
-```
+```text
 Press Ctrl+C
 ```
 
@@ -456,7 +456,7 @@ $ renacer -p 12345
 
 **Output shows threads:**
 
-```
+```text
 [pid 12345] read(3, ...) = 1024
 [pid 12346] write(4, ...) = 2048   # Thread 1
 [pid 12347] read(5, ...) = 512     # Thread 2

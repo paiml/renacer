@@ -3146,7 +3146,7 @@ checksum = "7a2d987857b319362043e95f5353c0535c1f58eec5336fdfcf626430af7def58"
 
 [[package]]
 name = "renacer"
-version = "0.9.4"
+version = "0.9.5"
 dependencies = [
  "addr2line",
  "anyhow",
@@ -3159,6 +3159,7 @@ dependencies = [
  "crossbeam",
  "crossterm",
  "cudarc",
+ "dashmap",
  "fnv",
  "gimli",
  "hex",

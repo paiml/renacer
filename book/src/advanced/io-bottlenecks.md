@@ -28,7 +28,7 @@ Any I/O syscall taking longer than 1ms is flagged as a potential bottleneck. Thi
 
 ### Tracked I/O Syscalls
 
-```rust
+```rust,ignore
 // From src/function_profiler.rs:18-35
 const IO_SYSCALLS: &[&str] = &[
     // File I/O
@@ -60,7 +60,7 @@ renacer --function-time -- ./my-app
 ```
 
 **Output includes "Slow I/O" column:**
-```
+```text
 === Function Profiling Summary ===
 Function                     Calls    Total Time    Avg Time    Slow I/O
 ──────────────────────────────────────────────────────────────────────────
@@ -83,7 +83,7 @@ The "Slow I/O" column shows:
 - **Not the total count** - Only slow operations
 
 **Example:**
-```
+```text
 Function                     Calls    Total Time    Avg Time    Slow I/O
 ──────────────────────────────────────────────────────────────────────────
 src/db.rs:flush              100      150000 μs     1500 μs     95  ⚠️
@@ -106,7 +106,7 @@ Calculate slow I/O percentage: `Slow I/O / Calls * 100`
 - **>50%** - Severe bottleneck (fix immediately!)
 
 **Example:**
-```
+```text
 Function                     Calls    Total Time    Avg Time    Slow I/O
 ──────────────────────────────────────────────────────────────────────────
 read_config                  1        1234 μs       1234 μs     1  ⚠️       (100% - one-time startup, OK)
@@ -133,7 +133,7 @@ $ renacer --function-time --source -e trace=fsync -- pgbench -c 10 -t 100
 ```
 
 **Output:**
-```
+```text
 === Function Profiling Summary ===
 Function                     Calls    Total Time    Avg Time    Slow I/O
 ──────────────────────────────────────────────────────────────────────────
@@ -160,7 +160,7 @@ $ renacer --function-time --source -e trace=fsync -- pgbench -c 10 -t 100
 ```
 
 **Expected:**
-```
+```text
 Function                     Calls    Total Time    Avg Time    Slow I/O
 ──────────────────────────────────────────────────────────────────────────
 src/wal.c:write_wal          1000     150000 μs     150 μs      0
@@ -178,7 +178,7 @@ $ renacer --function-time --source -e trace=network -- ./http_server
 ```
 
 **Output:**
-```
+```text
 === Function Profiling Summary ===
 Function                     Calls    Total Time    Avg Time    Slow I/O
 ──────────────────────────────────────────────────────────────────────────
@@ -201,7 +201,7 @@ src/cache.rs:get_value       1000     5000 μs       5 μs        0
 4. **Async I/O** - Use tokio/async-std for non-blocking network calls
 
 **Verify fix (after adding Redis cache):**
-```
+```text
 Function                     Calls    Total Time    Avg Time    Slow I/O
 ──────────────────────────────────────────────────────────────────────────
 src/api.rs:call_backend      20       89000 μs      4450 μs     20  ⚠️       (90% cache hit rate!)
@@ -219,7 +219,7 @@ $ renacer --function-time -c -e trace=read -- ./csv_parser data.csv
 ```
 
 **Output:**
-```
+```text
 === Function Profiling Summary ===
 Function                     Calls    Total Time    Avg Time    Slow I/O
 ──────────────────────────────────────────────────────────────────────────
@@ -233,7 +233,7 @@ src/parser.rs:read_line      10000    50000 μs      5 μs        0
 
 **Optimization:** Use buffered I/O instead
 
-```rust
+```rust,ignore
 // Before: Line-by-line (many syscalls)
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -247,7 +247,7 @@ for line in reader.lines() {
 ```
 
 **After optimization:**
-```
+```text
 Function                     Calls    Total Time    Avg Time    Slow I/O
 ──────────────────────────────────────────────────────────────────────────
 src/parser.rs:read_chunk     20       1000 μs       50 μs       0           (500x fewer syscalls!)
@@ -264,7 +264,7 @@ $ renacer --function-time -c -e trace=file -- cargo build
 ```
 
 **Output:**
-```
+```text
 === Function Profiling Summary ===
 Function                     Calls    Total Time    Avg Time    Slow I/O
 ──────────────────────────────────────────────────────────────────────────
@@ -297,7 +297,7 @@ cargo:fetch_crate            10       123456 μs     12345 μs    10  ⚠️
 - Average time: 3-10ms (HDD) or 0.5-2ms (SSD)
 
 **Example:**
-```
+```text
 Function                     Calls    Total Time    Avg Time    Slow I/O
 ──────────────────────────────────────────────────────────────────────────
 db_commit                    500      2500000 μs    5000 μs     500  ⚠️
@@ -312,7 +312,7 @@ db_commit                    500      2500000 μs    5000 μs     500  ⚠️
 - Average time: 10-100ms (remote), 0.1-1ms (local)
 
 **Example:**
-```
+```text
 Function                     Calls    Total Time    Avg Time    Slow I/O
 ──────────────────────────────────────────────────────────────────────────
 http_request                 100      4500000 μs    45000 μs    100  ⚠️
@@ -327,7 +327,7 @@ http_request                 100      4500000 μs    45000 μs    100  ⚠️
 - Average time: 5-15ms (HDD seek time)
 
 **Example:**
-```
+```text
 Function                     Calls    Total Time    Avg Time    Slow I/O
 ──────────────────────────────────────────────────────────────────────────
 database_lookup              1000     8000000 μs    8000 μs     980  ⚠️
@@ -342,7 +342,7 @@ database_lookup              1000     8000000 μs    8000 μs     980  ⚠️
 - Total time high despite low individual times
 
 **Example:**
-```
+```text
 Function                     Calls    Total Time    Avg Time    Slow I/O
 ──────────────────────────────────────────────────────────────────────────
 log_message                  50000    250000 μs     5 μs        0
@@ -375,7 +375,7 @@ log_message                  50000    250000 μs     5 μs        0
 - **Database query cache** - MySQL query cache, PostgreSQL shared buffers
 
 **Example:**
-```rust
+```rust,ignore
 // Add simple LRU cache
 use lru::LruCache;
 
@@ -402,7 +402,7 @@ fn get_user(id: u64) -> User {
 - **Buffer writes** - Accumulate data, flush periodically
 
 **Example:**
-```rust
+```rust,ignore
 // Before: 1000 individual inserts (1000 slow I/O operations)
 for record in records {
     db.execute("INSERT INTO users VALUES (?)", record)?;  // fsync per insert!
@@ -429,7 +429,7 @@ db.transaction(|tx| {
 - **Thread pool** - Offload blocking I/O to separate threads
 
 **Example:**
-```rust
+```rust,ignore
 // Before: Blocking I/O (waits for each request)
 for url in urls {
     let response = reqwest::blocking::get(url)?;  // Blocks until complete
@@ -459,7 +459,7 @@ for response in responses {
 - **Lazy loading** - Defer I/O until actually needed
 
 **Example:**
-```rust
+```rust,ignore
 // Before: Random access (many seeks)
 for id in user_ids {
     let user = db.query_by_id(id)?;  // Random disk seek per query
@@ -500,7 +500,7 @@ $ renacer --function-time -c -- ./my-app
 ```
 
 **Output:**
-```
+```text
 [Syscall statistics - stderr]
 % time     seconds  usecs/call     calls    errors syscall
 ------ ----------- ----------- --------- --------- ----------------
@@ -555,7 +555,7 @@ $ jq '.function_profile | sort_by(-.avg_time_us)' profile.json
 **Problem:** One-time startup I/O flagged as slow
 
 **Example:**
-```
+```text
 Function                     Calls    Total Time    Avg Time    Slow I/O
 ──────────────────────────────────────────────────────────────────────────
 load_config                  1        5678 μs       5678 μs     1  ⚠️
@@ -570,7 +570,7 @@ load_config                  1        5678 μs       5678 μs     1  ⚠️
 **Problem:** Many fast I/O operations that add up to slow total time
 
 **Example:**
-```
+```text
 Function                     Calls    Total Time    Avg Time    Slow I/O
 ──────────────────────────────────────────────────────────────────────────
 log_debug                    100000   500000 μs     5 μs        0

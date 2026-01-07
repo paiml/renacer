@@ -66,7 +66,7 @@ renacer --otlp-endpoint http://localhost:4318 --otlp-protocol http -- ./my-app
 
 Renacer creates a hierarchical span structure:
 
-```
+```text
 Root Span (Process)
 ├── Syscall Span: openat
 ├── Syscall Span: read
@@ -227,7 +227,7 @@ Each process gets its own root span with unique `process.pid`.
 
 ### Connection Refused
 
-```
+```text
 Error: Failed to export spans: connection refused
 ```
 
@@ -243,7 +243,7 @@ curl http://localhost:4318/v1/traces
 
 ### Authentication Failed
 
-```
+```text
 Error: OTLP export failed: 401 Unauthorized
 ```
 
@@ -265,7 +265,7 @@ renacer --otlp-endpoint https://api.example.com \
 
 ### Protocol Mismatch
 
-```
+```text
 Error: Protocol error: expected gRPC, got HTTP
 ```
 

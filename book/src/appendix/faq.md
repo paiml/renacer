@@ -76,7 +76,7 @@ cargo build --release
 ```
 
 **Without debug symbols:**
-```
+```text
 renacer --source -- ./myapp
 # Warning: No DWARF debug info found in ./myapp
 # Source correlation disabled
@@ -165,7 +165,7 @@ renacer -f -- ./build.sh
 ```
 
 **Output shows PID:**
-```
+```text
 [12345] openat(AT_FDCWD, "file", O_RDONLY) = 3
 [12346] execve("/bin/gcc", ...) = 0       ← child process
 [12345] waitpid(12346, ...) = 12346
@@ -405,7 +405,7 @@ renacer --function-time -- ./myapp
 ```
 
 **Output shows:**
-```
+```text
 Function: read_config (config.c:42)
   openat: 2.3ms
   read: 45.8ms       ← Bottleneck!

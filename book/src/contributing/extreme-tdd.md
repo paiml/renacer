@@ -24,7 +24,7 @@ Every feature in Renacer follows this exact cycle:
 
 Example from Sprint 16 (Regex Filtering):
 
-```rust
+```rust,ignore
 // tests/sprint16_regex_filtering_tests.rs
 #[test]
 fn test_regex_prefix_pattern() {
@@ -54,7 +54,7 @@ cargo test --test sprint16_regex_filtering_tests
 
 **Rule:** Write JUST enough code to make tests pass.
 
-```rust
+```rust,ignore
 // src/filter.rs
 pub struct SyscallFilter {
     // ... existing fields ...
@@ -83,7 +83,7 @@ cargo test --test sprint16_regex_filtering_tests
 **Rule:** Add unit tests, property tests, and mutation tests. Fix complexity.
 
 1. **Add Unit Tests** (14 added for regex feature):
-```rust
+```rust,ignore
 #[test]
 fn test_parse_regex_pattern_valid() {
     assert!(parse_regex_pattern("/^open/").is_some());
@@ -119,7 +119,7 @@ cargo mutants
 
 Each feature is a "sprint" with its own test file:
 
-```
+```text
 tests/
 ├── sprint1_mvp_tests.rs          # Basic tracing
 ├── sprint3_full_syscalls_tests.rs # All 335 syscalls
@@ -164,7 +164,7 @@ These are enforced via pre-commit hook (`.git/hooks/pre-commit`).
 ## Real Example: Sprint 16 Complete Cycle
 
 ### Initial Commit (RED Phase)
-```
+```text
 test: Sprint 16 - Add regex filtering tests (RED phase)
 
 Created 9 integration tests for regex pattern matching:
@@ -178,7 +178,7 @@ Result: 7/9 tests failed ✅ (expected - feature not implemented)
 ```
 
 ### Implementation Commit (GREEN Phase)
-```
+```text
 feat: Sprint 16 - Implement regex filtering (GREEN phase)
 
 Modified src/filter.rs:
@@ -190,7 +190,7 @@ Result: All 9 integration tests passing ✅
 ```
 
 ### Final Commit (REFACTOR Phase)
-```
+```text
 feat: Sprint 16 - Advanced Filtering with Regex Patterns (COMPLETE)
 
 REFACTOR Phase:
@@ -227,7 +227,7 @@ renacer -e trace=file -- cat /etc/hostname
 
 Beyond unit tests, we use `proptest` for comprehensive edge case coverage:
 
-```rust
+```rust,ignore
 use proptest::prelude::*;
 
 proptest! {

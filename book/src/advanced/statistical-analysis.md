@@ -109,7 +109,7 @@ Percentiles show the latency distribution:
 
 **Example Interpretation:**
 
-```
+```text
 read (42 calls):
   Median (P50): 3890.00 μs   # Typical latency
   P95:          7123.00 μs   # 95% complete under 7ms
@@ -325,7 +325,7 @@ Ensures existing users see no behavior change.
 
 Uses Trueno library for high-performance vector operations:
 
-```rust
+```rust,ignore
 use trueno::Vector;
 
 // Convert durations to vector
@@ -351,7 +351,7 @@ Percentiles calculated via interpolation on sorted data:
 4. **Result:** P90 = 280μs
 
 **Implementation:**
-```rust
+```rust,ignore
 fn calculate_percentile(sorted_data: &[f32], percentile: f32) -> f32 {
     let index = (percentile / 100.0) * (sorted_data.len() - 1) as f32;
     let lower = index.floor() as usize;
@@ -370,12 +370,12 @@ fn calculate_percentile(sorted_data: &[f32], percentile: f32) -> f32 {
 
 Anomalies identified using statistical Z-score:
 
-```
+```text
 Z-score = (duration - mean) / stddev
 ```
 
 **Example:**
-```
+```text
 write syscall: duration = 5234μs
 Baseline: mean = 1023μs, stddev = 987μs
 

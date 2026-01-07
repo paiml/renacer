@@ -17,7 +17,7 @@ $ renacer -c -- ./myapp
 
 **Output:**
 
-```
+```text
 System Call Summary:
 ====================
 Syscall          Calls    Errors    Total Time    Avg Time    p50      p90      p99
@@ -41,7 +41,7 @@ $ renacer -e 'trace=openat' -- ./myapp | head -50
 
 **Output:**
 
-```
+```text
 openat(AT_FDCWD, "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", O_RDONLY) = 3
 openat(AT_FDCWD, "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", O_RDONLY) = 3
 openat(AT_FDCWD, "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf", O_RDONLY) = 3
@@ -58,7 +58,7 @@ $ renacer --source -e 'trace=openat' -- ./myapp | grep "ttf" | head -3
 
 **Output:**
 
-```
+```text
 openat(AT_FDCWD, "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", O_RDONLY) = 3   [src/ui/fonts.rs:67 in load_all_fonts]
 openat(AT_FDCWD, "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", O_RDONLY) = 3   [src/ui/fonts.rs:67 in load_all_fonts]
 openat(AT_FDCWD, "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf", O_RDONLY) = 3   [src/ui/fonts.rs:67 in load_all_fonts]
@@ -76,7 +76,7 @@ $ renacer -c -- ./myapp-optimized
 
 **Output:**
 
-```
+```text
 System Call Summary:
 ====================
 Syscall          Calls    Errors    Total Time    Avg Time
@@ -107,7 +107,7 @@ $ ab -n 1000 -c 10 http://localhost:8080/
 
 **Output:**
 
-```
+```text
 System Call Summary:
 ====================
 Syscall          Calls    Total Time    Avg Time    p50      p90      p99
@@ -129,7 +129,7 @@ $ curl http://localhost:8080/api/data
 
 **Output:**
 
-```
+```text
 fsync(3) = 0   [src/logger.rs:89 in log_request]
 fsync(3) = 0   [src/logger.rs:89 in log_request]
 fsync(3) = 0   [src/logger.rs:89 in log_request]
@@ -147,7 +147,7 @@ $ ab -n 1000 -c 10 http://localhost:8080/
 
 **Output:**
 
-```
+```text
 System Call Summary:
 ====================
 Syscall          Calls    Total Time    Avg Time    p50      p90      p99
@@ -171,7 +171,7 @@ $ ab -n 1000 -c 10 http://localhost:8080/
 
 **Output:**
 
-```
+```text
 System Call Summary:
 ====================
 Syscall          Calls    Total Time    Avg Time    p50      p90      p99
@@ -195,7 +195,7 @@ $ renacer -c -e 'trace=file' -- ./process-traditional large-file.dat
 
 **Output:**
 
-```
+```text
 System Call Summary:
 ====================
 Syscall          Calls    Total Time    Avg Time
@@ -214,7 +214,7 @@ $ renacer -c -e 'trace=file,memory' -- ./process-mmap large-file.dat
 
 **Output:**
 
-```
+```text
 System Call Summary:
 ====================
 Syscall          Calls    Total Time    Avg Time
@@ -240,7 +240,7 @@ $ renacer -e 'trace=memory' -- ./process-mmap large-file.dat 2>&1 | grep -E 'mma
 
 **Output:**
 
-```
+```text
 mmap(NULL, 104857600, PROT_READ, MAP_PRIVATE, 3, 0) = 0x7f1234000000
 # Processing happens via page faults (not visible to ptrace)
 munmap(0x7f1234000000, 104857600) = 0
@@ -260,7 +260,7 @@ $ renacer -c -e 'trace=network' -- curl -O https://example.com/large-file.zip
 
 **Output:**
 
-```
+```text
 System Call Summary:
 ====================
 Syscall          Calls    Total Time    Avg Time    p50      p90      p99
@@ -285,7 +285,7 @@ $ renacer -c -e 'trace=file,network' -- curl -O https://example.com/large-file.z
 
 **Output:**
 
-```
+```text
 System Call Summary:
 ====================
 Syscall          Calls    Total Time    Avg Time
@@ -310,7 +310,7 @@ $ renacer --source -c -e 'trace=file' -- ./app
 
 **Output (with source):**
 
-```
+```text
 System Call Summary:
 ====================
 Syscall          Calls    Total Time    Avg Time    Source
@@ -332,7 +332,7 @@ $ renacer --source -e 'trace=read' -- ./app 2>&1 | grep "parse_line"
 
 **Output:**
 
-```
+```text
 read(3, "line 1\n", 8192) = 7   [src/parser.rs:42 in parse_line]
 read(3, "line 2\n", 8192) = 7   [src/parser.rs:42 in parse_line]
 read(3, "line 3\n", 8192) = 7   [src/parser.rs:42 in parse_line]
@@ -349,7 +349,7 @@ read(3, "line 3\n", 8192) = 7   [src/parser.rs:42 in parse_line]
 
 **Symptom:**
 
-```
+```text
 System Call Summary:
 Syscall          Calls    Total Time    Avg Time
 read             50000    2345.67ms     0.047ms
@@ -363,7 +363,7 @@ read             50000    2345.67ms     0.047ms
 
 **Symptom:**
 
-```
+```text
 System Call Summary:
 Syscall          Calls    Total Time    Avg Time
 fsync            5000     12345.67ms    2.469ms
@@ -377,7 +377,7 @@ fsync            5000     12345.67ms    2.469ms
 
 **Symptom:**
 
-```
+```text
 System Call Summary:
 Syscall          Calls    Total Time    Avg Time
 fstat            10000    123.45ms      0.012ms
@@ -391,7 +391,7 @@ fstat            10000    123.45ms      0.012ms
 
 **Symptom:**
 
-```
+```text
 System Call Summary:
 Syscall          Calls    Total Time    Avg Time
 mmap             5000     1234.56ms     0.247ms
@@ -598,7 +598,7 @@ Total syscall time: 1.2s
 
 **Symptoms:**
 
-```
+```text
 Syscall          Calls    Total Time
 getpid           10000    5.67ms
 ```
@@ -611,7 +611,7 @@ getpid           10000    5.67ms
 
 **Symptoms:**
 
-```
+```text
 Syscall          Calls    Total Time
 connect          1        5234.56ms
 ```

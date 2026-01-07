@@ -49,7 +49,7 @@ renacer -- ls /tmp
 ```
 
 **Output:**
-```
+```text
 execve("/usr/bin/ls", ["ls", "/tmp"], ...) = 0
 openat(AT_FDCWD, "/tmp", O_RDONLY|O_DIRECTORY) = 3
 getdents64(3, /* 42 entries */, 32768) = 1344
@@ -206,7 +206,7 @@ renacer --format html -c -- ls /tmp > report.html
 - **Responsive design** - Mobile-friendly
 
 **Screenshot:**
-```
+```text
 ┌────────────────────────────────────────┐
 │  Renacer Report: ls /tmp              │
 ├────────────────────────────────────────┤
@@ -236,7 +236,7 @@ See [HTML Format Specification](./format-html.md) for complete implementation.
 
 ### Quick Decision Tree
 
-```
+```text
 Need human-readable output?
 ├─ Yes → Terminal or presentation?
 │  ├─ Terminal → TEXT (default)

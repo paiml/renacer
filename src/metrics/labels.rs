@@ -97,13 +97,15 @@ impl LabelValidator {
 
     /// Add allowed labels
     pub fn allow_labels(mut self, labels: impl IntoIterator<Item = impl Into<String>>) -> Self {
-        self.allowed_labels.extend(labels.into_iter().map(Into::into));
+        self.allowed_labels
+            .extend(labels.into_iter().map(Into::into));
         self
     }
 
     /// Add labels that can have numeric values
     pub fn allow_numeric(mut self, labels: impl IntoIterator<Item = impl Into<String>>) -> Self {
-        self.numeric_allowed.extend(labels.into_iter().map(Into::into));
+        self.numeric_allowed
+            .extend(labels.into_iter().map(Into::into));
         self
     }
 
@@ -197,6 +199,7 @@ fn looks_numeric(s: &str) -> bool {
 }
 
 /// Helper to create labels from tuples
+#[allow(dead_code)]
 pub fn labels_from_pairs<I, K, V>(pairs: I) -> Labels
 where
     I: IntoIterator<Item = (K, V)>,
@@ -247,7 +250,7 @@ mod tests {
         match validator.validate(&labels) {
             Err(LabelError::ValueTooLong { key, len, max }) => {
                 assert_eq!(key, "key");
-                assert_eq!(len, 21);
+                assert_eq!(len, 20); // "this is way too long" is 20 chars
                 assert_eq!(max, 10);
             }
             _ => panic!("expected ValueTooLong error"),

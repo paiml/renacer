@@ -71,7 +71,7 @@ renacer -e 'trace=file' -- ls
 
 **Shows:**
 
-```
+```text
 openat(AT_FDCWD, ".", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 3
 getdents64(3, [...], 32768) = 1024
 write(1, "file1.txt\nfile2.txt\n", 20) = 20
@@ -86,7 +86,7 @@ renacer -e 'trace=network' -- curl https://example.com
 
 **Shows:**
 
-```
+```text
 socket(AF_INET, SOCK_STREAM, IPPROTO_TCP) = 3
 connect(3, {sa_family=AF_INET, sin_port=htons(443), ...}, 16) = 0
 sendto(3, "\x16\x03\x01...", 517, MSG_NOSIGNAL, NULL, 0) = 517
@@ -102,7 +102,7 @@ renacer -e 'trace=process' -- sh -c 'echo hello'
 
 **Shows:**
 
-```
+```text
 clone(child_stack=NULL, flags=CLONE_CHILD_CLEARTID|CLONE_CHILD_SETTID|SIGCHLD) = 12345
 wait4(12345, [{WIFEXITED(s) && WEXITSTATUS(s) == 0}], 0, NULL) = 12345
 exit_group(0) = ?
@@ -116,7 +116,7 @@ renacer -e 'trace=memory' -- python3 -c 'print("hi")'
 
 **Shows:**
 
-```
+```text
 brk(NULL) = 0x55e8f1a00000
 brk(0x55e8f1a21000) = 0x55e8f1a21000
 mmap(NULL, 262144, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f9a2c000000
@@ -135,7 +135,7 @@ renacer -e 'trace=openat' -- ls
 
 **Shows only `openat` calls:**
 
-```
+```text
 openat(AT_FDCWD, "/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 3
 openat(AT_FDCWD, "/lib/x86_64-linux-gnu/libselinux.so.1", O_RDONLY|O_CLOEXEC) = 3
 openat(AT_FDCWD, ".", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 3
@@ -151,7 +151,7 @@ renacer -e 'trace=read,write' -- cat file.txt
 
 **Shows only `read` and `write` calls:**
 
-```
+```text
 read(3, "file contents here\n", 131072) = 19
 write(1, "file contents here\n", 19) = 19
 ```
@@ -190,7 +190,7 @@ renacer -e 'trace=file,!/fstat/' -- ls
 
 **Example Output:**
 
-```
+```text
 openat(AT_FDCWD, ".", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 3
 # fstat calls are hidden
 getdents64(3, [...], 32768) = 1024
@@ -232,7 +232,7 @@ renacer -e 'trace=/^open.*/' -- ls
 
 **Shows:**
 
-```
+```text
 openat(AT_FDCWD, "/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 3
 openat(AT_FDCWD, ".", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 3
 ```
@@ -255,7 +255,7 @@ renacer -e 'trace=/read|write/' -- cat file
 
 **Shows:**
 
-```
+```text
 read(3, "contents...", 131072) = 42
 write(1, "contents...", 42) = 42
 ```
@@ -424,7 +424,7 @@ renacer -e 'trace=file' -- complex-app
 
 ### Syntax
 
-```
+```text
 trace=<filter1>,<filter2>,<filter3>,...
 ```
 

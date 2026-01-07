@@ -26,7 +26,7 @@ renacer --transpiler-map app.map.json -- ./app
 ```
 
 **Output:**
-```
+```text
 read(3, buf, 1024) = 42    [app.py:15 in read_config]  ← Original Python!
 ```
 
@@ -44,7 +44,7 @@ renacer --transpiler-map main.map.json -- ./main
 ```
 
 **Output:**
-```
+```text
 write(1, "Hello", 5) = 5   [main.c:42 in printf_wrapper]  ← Original C!
 ```
 
@@ -116,7 +116,7 @@ renacer --transpiler-map source.map.json -- ./app
 ```
 
 Shows original source locations:
-```
+```text
 openat(AT_FDCWD, "/config.json", O_RDONLY) = 3
   [config.py:10 in load_settings]
 
@@ -142,7 +142,7 @@ renacer --function-time --transpiler-map source.map.json -- ./app
 ```
 
 **Output:**
-```
+```text
 Function Profiling Summary:
 ========================
 Top 10 Hot Paths (by total time):
@@ -196,7 +196,7 @@ renacer --transpiler-map source.map.json --show-transpiler-decisions -- ./app
 ```
 
 **Output:**
-```
+```text
 read(3, buf, 8192) = 8192
   [data.py:50 in process_batch]
   💡 Transpiler: simd_vectorization (Loop with constant stride, vectorizable)
@@ -251,7 +251,7 @@ renacer \
 ```
 
 Renacer emits special spans for SIMD compute blocks:
-```
+```text
 Span: simd_block
   source.file: stats.py
   source.line: 100
@@ -285,7 +285,7 @@ decy convert input.c \
 
 If building your own transpiler, implement source map generation:
 
-```rust
+```rust,ignore
 use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize)]
@@ -350,7 +350,7 @@ Renacer validates source maps on load:
 
 ### Version Check
 
-```
+```text
 Error: Unsupported source map version: 2 (expected: 1)
 ```
 
@@ -358,7 +358,7 @@ Error: Unsupported source map version: 2 (expected: 1)
 
 ### Required Fields
 
-```
+```text
 Error: Missing required field: source_language
 ```
 
@@ -366,7 +366,7 @@ Error: Missing required field: source_language
 
 ### Line Number Bounds
 
-```
+```text
 Warning: Mapping references line 1000 in output.rs (file only has 500 lines)
 ```
 
@@ -428,7 +428,7 @@ renacer \
 
 ### Source Map Not Found
 
-```
+```text
 Error: Failed to read source map: No such file or directory
 ```
 
@@ -443,7 +443,7 @@ renacer --transpiler-map /absolute/path/to/output.map.json -- ./app
 
 ### Mappings Not Applied
 
-```
+```text
 Warning: No mapping found for output.rs:150
 ```
 
@@ -456,7 +456,7 @@ Warning: No mapping found for output.rs:150
 
 ### Conflicting Mappings
 
-```
+```text
 Warning: Multiple mappings for output.rs:100 (using first)
 ```
 
@@ -468,7 +468,7 @@ jq '.mappings[] | select(.generated_line == 100)' output.map.json
 
 ### Original File Not Found
 
-```
+```text
 Warning: Original file not found: input.py
 ```
 

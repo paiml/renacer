@@ -20,7 +20,7 @@ Time-weighted (reality):
 
 One blocking `read()` can dominate 1000 fast `mmap()` calls:
 
-```rust
+```rust,ignore
 // 1000 fast allocations
 for _ in 0..1000 {
     mmap(...); // 1μs each = 1ms total
@@ -37,7 +37,7 @@ read(fd, buf, size); // 99ms (disk I/O)
 
 ### Calculate Time Attribution
 
-```rust
+```rust,ignore
 use renacer::time_attribution::calculate_time_attribution;
 use renacer::cluster::ClusterRegistry;
 
@@ -62,7 +62,7 @@ DynamicLinking: 12ms (9.6%)
 
 ### Identify Hotspots
 
-```rust
+```rust,ignore
 use renacer::time_attribution::identify_hotspots;
 
 let hotspots = identify_hotspots(&attributions);
@@ -123,7 +123,7 @@ Renacer knows what's normal for transpilers:
 
 Each hotspot includes a human-readable explanation:
 
-```rust
+```rust,ignore
 pub struct Hotspot {
     pub cluster: String,
     pub time: Duration,
@@ -183,7 +183,7 @@ renacer trace ./transpiler input.py --flamegraph
 
 ### TimeAttribution
 
-```rust
+```rust,ignore
 pub struct TimeAttribution {
     pub cluster: String,
     pub total_time: Duration,
@@ -195,7 +195,7 @@ pub struct TimeAttribution {
 
 ### Hotspot
 
-```rust
+```rust,ignore
 pub struct Hotspot {
     pub cluster: String,
     pub time: Duration,

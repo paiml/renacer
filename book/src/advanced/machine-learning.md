@@ -31,7 +31,7 @@ $ renacer -c --ml-anomaly -- ./my-app
 ```
 
 **Example Output:**
-```
+```text
 === ML Anomaly Detection Report ===
 Clusters: 3
 Samples: 5
@@ -82,7 +82,7 @@ renacer -c --ml-anomaly --ml-compare -- ./app
 **Tested by:** `test_ml_compare_with_zscore`
 
 **Example Output:**
-```
+```text
 === ML vs Z-Score Comparison ===
 Common anomalies: 3
 ML-only anomalies: ["mmap", "mremap"]
@@ -180,7 +180,7 @@ $ renacer --ml-anomaly -e trace=write -T -- echo "test"
 ```
 
 **Output:**
-```
+```text
 === ML Anomaly Detection Report ===
 Insufficient data for ML analysis
 (Need at least 3 syscall types, found 2)
@@ -241,7 +241,7 @@ $ renacer -c --ml-anomaly -T -e trace=file -- pg_bench
 ```
 
 **Output:**
-```
+```text
 Clusters: 3
   Cluster 0: Fast reads (10-50 μs)
   Cluster 1: Normal writes (100-500 μs)
@@ -261,7 +261,7 @@ $ renacer -c --ml-anomaly -e trace=network -- ./http_server
 ```
 
 **Output:**
-```
+```text
 Clusters: 2
   Cluster 0: Fast sendto (20-100 μs)
   Cluster 1: Slow recvfrom (500+ μs) ⚠️ ANOMALY

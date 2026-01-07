@@ -34,6 +34,9 @@ use opentelemetry_sdk::{
 
 use crate::trace_context::TraceContext; // Sprint 33
 
+// Sprint 56: Metrics registry for OTLP export
+use crate::metrics::Registry;
+
 /// Configuration for OTLP exporter (Sprint 36: added batch config)
 #[derive(Debug, Clone)]
 pub struct OtlpConfig {
@@ -185,6 +188,130 @@ pub struct GpuMemoryTransfer {
     pub buffer_usage: Option<String>,
     /// Whether this transfer exceeded the slow threshold (>100μs)
     pub is_slow: bool,
+}
+
+/// Metrics snapshot for OTLP export (Sprint 56)
+///
+/// Contains all metrics collected at a point in time for export.
+#[derive(Debug, Clone, Default)]
+pub struct MetricsSnapshot {
+    /// Timestamp in nanoseconds since epoch
+    pub timestamp_nanos: u64,
+    /// Counter metrics
+    pub counters: Vec<CounterSnapshot>,
+    /// Gauge metrics
+    pub gauges: Vec<GaugeSnapshot>,
+    /// Histogram metrics
+    pub histograms: Vec<HistogramSnapshot>,
+}
+
+/// Snapshot of a counter metric
+#[derive(Debug, Clone)]
+pub struct CounterSnapshot {
+    pub name: String,
+    pub labels: Vec<(String, String)>,
+    pub value: u64,
+}
+
+/// Snapshot of a gauge metric
+#[derive(Debug, Clone)]
+pub struct GaugeSnapshot {
+    pub name: String,
+    pub labels: Vec<(String, String)>,
+    pub value: i64,
+}
+
+/// Snapshot of a histogram metric
+#[derive(Debug, Clone)]
+pub struct HistogramSnapshot {
+    pub name: String,
+    pub labels: Vec<(String, String)>,
+    pub count: u64,
+    pub sum: f64,
+    pub buckets: Vec<(f64, u64)>, // (le, cumulative_count)
+}
+
+impl MetricsSnapshot {
+    /// Create a new metrics snapshot from a registry
+    pub fn from_registry(registry: &Registry) -> Self {
+        use std::time::{SystemTime, UNIX_EPOCH};
+
+        let timestamp_nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_nanos() as u64)
+            .unwrap_or(0);
+
+        let counters = registry
+            .counters()
+            .iter()
+            .map(|c| CounterSnapshot {
+                name: c.name().to_string(),
+                labels: c
+                    .labels()
+                    .iter()
+                    .map(|(k, v)| (k.clone(), v.clone()))
+                    .collect(),
+                value: c.get(),
+            })
+            .collect();
+
+        let gauges = registry
+            .gauges()
+            .iter()
+            .map(|g| GaugeSnapshot {
+                name: g.name().to_string(),
+                labels: g
+                    .labels()
+                    .iter()
+                    .map(|(k, v)| (k.clone(), v.clone()))
+                    .collect(),
+                value: g.get(),
+            })
+            .collect();
+
+        let histograms = registry
+            .histograms()
+            .iter()
+            .map(|h| {
+                let cumulative = h.cumulative_counts();
+                let buckets: Vec<(f64, u64)> = h
+                    .buckets()
+                    .iter()
+                    .zip(cumulative.iter())
+                    .map(|(&bound, &count)| (bound, count))
+                    .collect();
+
+                HistogramSnapshot {
+                    name: h.name().to_string(),
+                    labels: h
+                        .labels()
+                        .iter()
+                        .map(|(k, v)| (k.clone(), v.clone()))
+                        .collect(),
+                    count: h.get_count(),
+                    sum: h.get_sum(),
+                    buckets,
+                }
+            })
+            .collect();
+
+        MetricsSnapshot {
+            timestamp_nanos,
+            counters,
+            gauges,
+            histograms,
+        }
+    }
+
+    /// Check if snapshot is empty
+    pub fn is_empty(&self) -> bool {
+        self.counters.is_empty() && self.gauges.is_empty() && self.histograms.is_empty()
+    }
+
+    /// Get total metric count
+    pub fn len(&self) -> usize {
+        self.counters.len() + self.gauges.len() + self.histograms.len()
+    }
 }
 
 impl GpuMemoryTransfer {
@@ -620,6 +747,75 @@ impl OtlpExporter {
         Ok(())
     }
 
+    /// Record metrics from a snapshot (Sprint 56)
+    ///
+    /// Exports metrics as span events on the root span. This is a simple
+    /// integration that doesn't require the full OTLP metrics pipeline.
+    /// For production use, consider using opentelemetry-metrics.
+    ///
+    /// # Arguments
+    ///
+    /// * `snapshot` - Metrics snapshot to export
+    pub fn record_metrics(&mut self, snapshot: &MetricsSnapshot) {
+        if let Some(ref mut span) = self.root_span {
+            // Export counters as events
+            for counter in &snapshot.counters {
+                let mut attrs = vec![
+                    KeyValue::new("metric.type", "counter"),
+                    KeyValue::new("metric.name", counter.name.clone()),
+                    KeyValue::new("metric.value", counter.value as i64),
+                ];
+                for (k, v) in &counter.labels {
+                    attrs.push(KeyValue::new(format!("metric.label.{k}"), v.clone()));
+                }
+                span.add_event("metric", attrs);
+            }
+
+            // Export gauges as events
+            for gauge in &snapshot.gauges {
+                let mut attrs = vec![
+                    KeyValue::new("metric.type", "gauge"),
+                    KeyValue::new("metric.name", gauge.name.clone()),
+                    KeyValue::new("metric.value", gauge.value),
+                ];
+                for (k, v) in &gauge.labels {
+                    attrs.push(KeyValue::new(format!("metric.label.{k}"), v.clone()));
+                }
+                span.add_event("metric", attrs);
+            }
+
+            // Export histograms as events
+            for histogram in &snapshot.histograms {
+                let mut attrs = vec![
+                    KeyValue::new("metric.type", "histogram"),
+                    KeyValue::new("metric.name", histogram.name.clone()),
+                    KeyValue::new("metric.count", histogram.count as i64),
+                    KeyValue::new("metric.sum", histogram.sum),
+                ];
+                for (k, v) in &histogram.labels {
+                    attrs.push(KeyValue::new(format!("metric.label.{k}"), v.clone()));
+                }
+                // Add bucket info as JSON
+                let buckets_json: String = histogram
+                    .buckets
+                    .iter()
+                    .map(|(le, count)| format!("{{\"le\":{le},\"count\":{count}}}"))
+                    .collect::<Vec<_>>()
+                    .join(",");
+                attrs.push(KeyValue::new("metric.buckets", format!("[{buckets_json}]")));
+                span.add_event("metric", attrs);
+            }
+        }
+    }
+
+    /// Export metrics from a registry (Sprint 56)
+    ///
+    /// Convenience method that creates a snapshot and exports it.
+    pub fn export_metrics(&mut self, registry: &std::sync::Arc<Registry>) {
+        let snapshot = MetricsSnapshot::from_registry(registry);
+        self.record_metrics(&snapshot);
+    }
+
     /// Shutdown the exporter and flush remaining spans
     pub fn shutdown(&mut self) {
         // Span processor automatically flushes on drop
@@ -667,6 +863,10 @@ impl OtlpExporter {
         _timestamp_us: u64,
     ) {
     }
+
+    pub fn record_metrics(&mut self, _snapshot: &MetricsSnapshot) {}
+
+    pub fn export_metrics(&mut self, _registry: &std::sync::Arc<Registry>) {}
 
     pub fn end_root_span(&mut self, _exit_code: i32) {}
 

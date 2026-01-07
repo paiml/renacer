@@ -10,7 +10,7 @@ A **system call** (syscall) is the interface between user programs and the opera
 
 Programs run in two modes:
 
-```
+```text
 ┌─────────────────────────────┐
 │   User Space (Your Code)    │
 │  - Application logic         │
@@ -44,7 +44,7 @@ Programs run in two modes:
 
 **Example Flow:**
 
-```rust
+```rust,ignore
 // Your Rust code
 let file = File::open("/etc/passwd")?;
 ```
@@ -65,7 +65,7 @@ let file = File::open("/etc/passwd")?;
 **Without tracing:** Guessing which paths it checks.
 
 **With tracing:**
-```
+```text
 openat(AT_FDCWD, "/etc/myapp/config.toml", O_RDONLY) = -ENOENT
 openat(AT_FDCWD, "/home/user/.config/myapp.toml", O_RDONLY) = -ENOENT
 openat(AT_FDCWD, "./config.toml", O_RDONLY) = 3
@@ -78,7 +78,7 @@ openat(AT_FDCWD, "./config.toml", O_RDONLY) = 3
 **Problem**: Your program is slow during startup.
 
 **With statistics mode:**
-```
+```text
 Syscall          Calls    Total Time    % Time
 openat           1247     450.2ms       45%
 fstat            1247     89.3ms        9%
@@ -92,7 +92,7 @@ read             3891     234.1ms       23%
 **Problem**: Is this program accessing sensitive files?
 
 **Trace shows:**
-```
+```text
 openat(AT_FDCWD, "/home/user/.ssh/id_rsa", O_RDONLY) = 3
 read(3, "-----BEGIN RSA PRIVATE KEY-----\n", 4096) = 1679
 ```
@@ -104,7 +104,7 @@ read(3, "-----BEGIN RSA PRIVATE KEY-----\n", 4096) = 1679
 **Problem**: How does `cargo build` work internally?
 
 **Trace reveals:**
-```
+```text
 fork() = 12345
 [pid 12345] execve("/usr/bin/rustc", ["rustc", "src/main.rs"], ...) = 0
 [pid 12345] openat(..., "target/debug/deps/libmycrate.rlib", ...) = 3
@@ -117,7 +117,7 @@ fork() = 12345
 **Problem**: Program freezes, no output.
 
 **Live trace shows:**
-```
+```text
 connect(3, {sa_family=AF_INET, sin_port=htons(80), ...}, 16) = -EINPROGRESS
 poll([{fd=3, events=POLLOUT}], 1, -1
 ```
@@ -130,7 +130,7 @@ poll([{fd=3, events=POLLOUT}], 1, -1
 
 Renacer (like `strace`) uses the **ptrace** system call to observe other processes:
 
-```
+```text
 ┌──────────────┐
 │   Renacer    │  ← Tracer (observer)
 │   (tracer)   │
@@ -154,14 +154,14 @@ Renacer (like `strace`) uses the **ptrace** system call to observe other process
 
 Each syscall has **two events**:
 
-```
+```text
 syscall entry  →  [kernel executes]  →  syscall exit
    (arguments)                            (return value)
 ```
 
 **Example:**
 
-```
+```text
 → read(3, <buf>, 1024)        # Entry: see FD and size
   [kernel reads from FD 3]
 ← read(3, "hello\n", 1024) = 6  # Exit: see data and bytes read
@@ -193,7 +193,7 @@ Tracing adds overhead:
 
 ### 1. I/O Patterns
 
-```
+```text
 openat(..., "data.csv", O_RDONLY) = 3
 read(3, buf, 4096) = 4096
 read(3, buf, 4096) = 4096
@@ -206,7 +206,7 @@ close(3) = 0
 
 ### 2. Error Handling
 
-```
+```text
 openat(..., "/var/log/app.log", O_WRONLY|O_CREAT) = -EACCES
 openat(..., "/tmp/app.log", O_WRONLY|O_CREAT) = 3
 ```
@@ -215,7 +215,7 @@ openat(..., "/tmp/app.log", O_WRONLY|O_CREAT) = 3
 
 ### 3. Resource Leaks
 
-```
+```text
 open("file1.txt", ...) = 3
 open("file2.txt", ...) = 4
 open("file3.txt", ...) = 5
@@ -227,7 +227,7 @@ open("file3.txt", ...) = 5
 
 ### 4. Concurrency Issues
 
-```
+```text
 [pid 100] write(1, "Processing item 1\n", 18) = 18
 [pid 101] write(1, "Processing item 2\n", 18) = 18
 [pid 100] write(1, "Processing item 3\n", 18) = 18
@@ -237,7 +237,7 @@ open("file3.txt", ...) = 5
 
 ### 5. Timing and Bottlenecks
 
-```
+```text
 read(3, buf, 1048576) = 1048576     [took 234ms]
 write(4, buf, 1048576) = 1048576    [took 456ms]
 ```

@@ -100,13 +100,13 @@ strip target/release/myapp
 
 ### Source Annotation Format
 
-```
+```text
 syscall_name(args...) = return_value         [file:line in function_name]
 ```
 
 **Example:**
 
-```
+```text
 read(3, buf, 1024) = 42         [src/main.rs:15 in process_input]
 ```
 
@@ -121,7 +121,7 @@ read(3, buf, 1024) = 42         [src/main.rs:15 in process_input]
 
 **Rust code** (`src/server.rs`):
 
-```rust
+```rust,ignore
 // src/server.rs
 pub fn start_server(port: u16) -> Result<()> {
     let listener = TcpListener::bind(("0.0.0.0", port))?;  // Line 42
@@ -166,7 +166,7 @@ close(4) = 0                                                      [src/server.rs
 
 Renacer uses the **gimli** crate to parse DWARF debug information:
 
-```
+```text
 ┌─────────────────────────────┐
 │   Traced Binary (ELF)       │
 │  - Executable code           │
@@ -212,7 +212,7 @@ renacer --source --function-time -- cargo test
 
 **Output:**
 
-```
+```text
 Function Profiling Summary:
 ========================
 Top 10 Hot Paths (by total time):
@@ -317,7 +317,7 @@ openat(AT_FDCWD, ".", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 3
 
 Compiler optimizations can make correlation less precise:
 
-```
+```text
 read(3, buf, 1024) = 42         [src/main.rs:15 in <unknown>]
 ```
 
@@ -346,7 +346,7 @@ $ renacer --source -- python3 script.py
 
 If binary is built with relative paths, correlation shows relative to build directory:
 
-```
+```text
 read(3, buf, 1024) = 42         [../../src/main.rs:15 in foo]
 ```
 
@@ -428,7 +428,7 @@ debug = true  # Keep symbols for release builds in CI
 
 When filing bug reports, include source correlation output:
 
-```
+```text
 Bug: Excessive file access during startup
 
 Trace shows:

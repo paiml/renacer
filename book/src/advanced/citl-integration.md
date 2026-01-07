@@ -8,7 +8,7 @@ Renacer integrates with entrenar's Compiler-in-the-Loop Training (CITL) module t
 
 The goal: use expensive LLM calls during development to build a pattern library, then operate cost-free in production using local ML oracles.
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │                    CITL WORKFLOW                             │
 ├─────────────────────────────────────────────────────────────┤
@@ -47,7 +47,7 @@ renacer --trace-transpiler-decisions \
 
 ### 2. Error Occurs
 
-```
+```text
 error[E0382]: borrow of moved value: `data`
  --> app.rs:42:5
 ```
@@ -56,7 +56,7 @@ error[E0382]: borrow of moved value: `data`
 
 entrenar's oracle queries accumulated patterns:
 
-```rust
+```rust,ignore
 let oracle = DecisionPatternStore::load_apr("patterns.apr")?;
 let suggestions = oracle.suggest_fix("E0382", &context, 5)?;
 
@@ -71,7 +71,7 @@ if let Some(fix) = suggestions.first() {
 
 Successful fixes are recorded:
 
-```rust
+```rust,ignore
 pattern.record_success();  // Increases future ranking
 oracle.index_fix(pattern)?;
 oracle.save_apr("patterns.apr")?;
@@ -112,7 +112,7 @@ depyler transpile app.py \
 
 Renacer can ingest decision traces from depyler's msgpack files:
 
-```rust
+```rust,ignore
 use renacer::depyler_ingest::{DepylerIngestConfig, DepylerWatcher};
 
 let config = DepylerIngestConfig {

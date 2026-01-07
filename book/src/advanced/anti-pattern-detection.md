@@ -15,7 +15,7 @@ The anti-pattern detector examines syscall traces and identifies four types of a
 
 ## Quick Start
 
-```rust
+```rust,ignore
 use renacer::unified_trace::UnifiedTrace;
 
 // Analyze a trace for anti-patterns
@@ -41,7 +41,7 @@ if let Some(quality) = trace.architectural_quality() {
 
 The main entry point for anti-pattern detection:
 
-```rust
+```rust,ignore
 use renacer::analysis::anti_pattern::{
     AntiPatternDetector,
     AntiPatternThresholds,
@@ -67,7 +67,7 @@ let quality = detector.analyze(&trace);
 
 The result of anti-pattern analysis:
 
-```rust
+```rust,ignore
 pub struct ArchitecturalQuality {
     /// Overall quality score (0.0 - 1.0, where 1.0 is perfect)
     pub score: f64,
@@ -82,7 +82,7 @@ pub struct ArchitecturalQuality {
 
 ### AntiPattern Enum
 
-```rust
+```rust,ignore
 pub enum AntiPattern {
     /// Single process dominates syscall activity
     GodProcess {
@@ -119,7 +119,7 @@ A "God Process" is detected when a single process accounts for more than the thr
 - **Fix**: Decompose into microservices, use load balancing
 
 **Example Detection:**
-```
+```text
 Anti-pattern: GodProcess { process_id: 1234, syscall_percent: 95.0 }
 Recommendation: Consider decomposing the dominant process into smaller
 services or distributing work across multiple processes.
@@ -134,7 +134,7 @@ A "Tight Loop" is detected when syscalls occur at intervals below the threshold.
 - **Fix**: Use event-driven I/O, async operations, or proper sleep intervals
 
 **Example Detection:**
-```
+```text
 Anti-pattern: TightLoop { location: "syscall: futex", interval_ms: 2 }
 Recommendation: Consider using vectorized I/O (readv/writev), buffering,
 or async I/O to reduce syscall frequency.
@@ -151,7 +151,7 @@ Detected when the rate of I/O syscalls exceeds a sustainable threshold:
 **I/O syscalls monitored:** `read`, `write`, `pread64`, `pwrite64`, `readv`, `writev`, `preadv`, `pwritev`, `sendfile`, `splice`, `tee`
 
 **Example Detection:**
-```
+```text
 Anti-pattern: ExcessiveIO { ops_per_sec: 15000 }
 Recommendation: Consider batching I/O operations, using buffered I/O,
 or implementing I/O throttling.
@@ -166,7 +166,7 @@ Detected when any syscall duration exceeds 100ms, indicating blocking operations
 - **Fix**: Use async I/O, move to background thread, add timeouts
 
 **Example Detection:**
-```
+```text
 Anti-pattern: BlockingMainThread { duration_ms: 500 }
 Recommendation: Consider moving blocking operations to a background
 thread or using async I/O to avoid blocking the main thread.
@@ -176,7 +176,7 @@ thread or using async I/O to avoid blocking the main thread.
 
 The quality score is calculated as:
 
-```
+```text
 score = 1.0 - (num_anti_patterns * 0.2)
 ```
 
@@ -193,7 +193,7 @@ score = 1.0 - (num_anti_patterns * 0.2)
 
 The `UnifiedTrace` type provides a convenience method:
 
-```rust
+```rust,ignore
 impl UnifiedTrace {
     /// Analyze trace for architectural quality and anti-patterns
     pub fn architectural_quality(&self) -> Option<ArchitecturalQuality> {

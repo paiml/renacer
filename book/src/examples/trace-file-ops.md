@@ -13,7 +13,7 @@ $ renacer -e 'trace=file' -- ./myapp
 ```
 
 **Output:**
-```
+```text
 openat(AT_FDCWD, "/etc/myapp/config.toml", O_RDONLY) = -ENOENT
 openat(AT_FDCWD, "/home/user/.config/myapp.toml", O_RDONLY) = -ENOENT
 openat(AT_FDCWD, "./config.toml", O_RDONLY) = 3
@@ -35,7 +35,7 @@ $ renacer -e 'trace=openat' -- ./myapp
 ```
 
 **Output:**
-```
+```text
 openat(AT_FDCWD, "/etc/myapp/config.toml", O_RDONLY) = -ENOENT
 openat(AT_FDCWD, "/home/user/.config/myapp.toml", O_RDONLY) = -ENOENT
 openat(AT_FDCWD, "./config.toml", O_RDONLY) = 3
@@ -52,7 +52,7 @@ $ renacer --source -e 'trace=openat' -- ./myapp
 ```
 
 **Output:**
-```
+```text
 openat(AT_FDCWD, "/etc/myapp/config.toml", O_RDONLY) = -ENOENT   [src/config.rs:42 in load_config]
 openat(AT_FDCWD, "/home/user/.config/myapp.toml", O_RDONLY) = -ENOENT   [src/config.rs:43 in load_config]
 openat(AT_FDCWD, "./config.toml", O_RDONLY) = 3   [src/config.rs:44 in load_config]
@@ -71,7 +71,7 @@ $ renacer -c -e 'trace=file' -- ./slow-app
 ```
 
 **Output:**
-```
+```text
 System Call Summary:
 ====================
 Syscall          Calls    Total Time    Avg Time
@@ -90,7 +90,7 @@ $ renacer -e 'trace=openat' -- ./slow-app | head -20
 ```
 
 **Output:**
-```
+```text
 openat(AT_FDCWD, "/usr/share/icons/hicolor/16x16/apps/icon001.png", O_RDONLY) = 3
 openat(AT_FDCWD, "/usr/share/icons/hicolor/16x16/apps/icon002.png", O_RDONLY) = 3
 openat(AT_FDCWD, "/usr/share/icons/hicolor/16x16/apps/icon003.png", O_RDONLY) = 3
@@ -112,7 +112,7 @@ $ renacer -e 'trace=file' -- ./app 2>&1 | grep -E 'EACCES|EPERM'
 ```
 
 **Output:**
-```
+```text
 openat(AT_FDCWD, "/var/log/myapp.log", O_WRONLY|O_CREAT|O_APPEND, 0644) = -EACCES
 ```
 
@@ -129,7 +129,7 @@ $ renacer -e 'trace=openat,write' -- ./app
 ```
 
 **Output:**
-```
+```text
 openat(AT_FDCWD, "/home/user/.local/share/myapp/log", O_WRONLY|O_CREAT|O_APPEND, 0644) = 3
 write(3, "[INFO] Application started\n", 28) = 28
 ```
@@ -147,7 +147,7 @@ $ renacer -e 'trace=write,openat' -- ./data-processor input.csv
 ```
 
 **Output:**
-```
+```text
 openat(AT_FDCWD, "input.csv", O_RDONLY) = 3
 openat(AT_FDCWD, "output.csv", O_WRONLY|O_CREAT|O_TRUNC, 0666) = 4
 write(4, "name,age,email\n", 15) = 15
@@ -183,7 +183,7 @@ $ renacer -e 'trace=openat,close' -- ./leaky-app
 ```
 
 **Output:**
-```
+```text
 openat(AT_FDCWD, "file1.txt", O_RDONLY) = 3
 openat(AT_FDCWD, "file2.txt", O_RDONLY) = 4
 openat(AT_FDCWD, "file3.txt", O_RDONLY) = 5
@@ -200,7 +200,7 @@ $ renacer -c -e 'trace=openat,close' -- ./leaky-app
 ```
 
 **Output:**
-```
+```text
 Syscall          Calls    Errors
 openat           100      0
 close            0        0

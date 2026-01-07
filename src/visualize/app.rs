@@ -721,4 +721,483 @@ mod tests {
         assert_eq!(*app.syscall_counts.get("read").unwrap(), 1);
         assert_eq!(*app.syscall_counts.get("write").unwrap(), 1);
     }
+
+    #[test]
+    fn test_new_deterministic() {
+        let app = VisualizeApp::new_deterministic(42);
+        assert!(app.config.deterministic);
+        assert_eq!(app.total_syscalls, 0);
+    }
+
+    #[test]
+    fn test_update_clusters() {
+        let mut app = VisualizeApp::new(VisualizeConfig::default());
+
+        let points = vec![
+            (1.0, 2.0, 0u8),
+            (2.0, 3.0, 0),
+            (10.0, 10.0, 1),
+            (5.0, 5.0, 255), // outlier
+            (6.0, 6.0, 255), // outlier
+        ];
+
+        app.update_clusters(points, 0.85);
+
+        assert_eq!(app.cluster_points.len(), 5);
+        assert_eq!(app.outlier_count, 2);
+        assert!((app.silhouette_score - 0.85).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_sorted_processes() {
+        let mut app = VisualizeApp::new(VisualizeConfig::default());
+        app.processes = vec![
+            ProcessSyscallStats {
+                pid: 1,
+                name: "init".to_string(),
+                cpu_percent: 5.0,
+                calls_per_sec: 100.0,
+                error_count: 0,
+                ..Default::default()
+            },
+            ProcessSyscallStats {
+                pid: 2,
+                name: "bash".to_string(),
+                cpu_percent: 10.0,
+                calls_per_sec: 50.0,
+                error_count: 5,
+                ..Default::default()
+            },
+            ProcessSyscallStats {
+                pid: 3,
+                name: "vim".to_string(),
+                cpu_percent: 2.0,
+                calls_per_sec: 200.0,
+                error_count: 1,
+                ..Default::default()
+            },
+        ];
+
+        // Default sort by PID descending
+        app.sort_column = SortColumn::Pid;
+        let sorted = app.sorted_processes();
+        assert_eq!(sorted[0].pid, 3);
+        assert_eq!(sorted[2].pid, 1);
+
+        // Sort by name ascending
+        app.sort_column = SortColumn::Name;
+        app.sort_descending = false;
+        let sorted = app.sorted_processes();
+        assert_eq!(sorted[0].name, "bash");
+        assert_eq!(sorted[2].name, "vim");
+
+        // Sort by CPU descending
+        app.sort_column = SortColumn::Cpu;
+        app.sort_descending = true;
+        let sorted = app.sorted_processes();
+        assert!((sorted[0].cpu_percent - 10.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_sorted_processes_with_filter() {
+        let mut app = VisualizeApp::new(VisualizeConfig::default());
+        app.processes = vec![
+            ProcessSyscallStats {
+                pid: 123,
+                name: "process_a".to_string(),
+                ..Default::default()
+            },
+            ProcessSyscallStats {
+                pid: 456,
+                name: "process_b".to_string(),
+                ..Default::default()
+            },
+        ];
+
+        // Filter by name
+        app.filter = "process_a".to_string();
+        let sorted = app.sorted_processes();
+        assert_eq!(sorted.len(), 1);
+        assert_eq!(sorted[0].name, "process_a");
+
+        // Filter by PID
+        app.filter = "456".to_string();
+        let sorted = app.sorted_processes();
+        assert_eq!(sorted.len(), 1);
+        assert_eq!(sorted[0].pid, 456);
+    }
+
+    #[test]
+    fn test_count_top_panels() {
+        let mut app = VisualizeApp::new(VisualizeConfig::default());
+
+        // Default should have syscall_heatmap, anomaly_timeline, stats_summary
+        // Note: process_syscalls is NOT counted by count_top_panels()
+        app.panels = PanelVisibility::default();
+        let count = app.count_top_panels();
+        assert_eq!(count, 3); // syscall_heatmap + anomaly_timeline + stats_summary
+
+        // Disable some
+        app.panels.syscall_heatmap = false;
+        app.panels.anomaly_timeline = false;
+        let count = app.count_top_panels();
+        assert_eq!(count, 1); // only stats_summary
+
+        // Enable all top panels
+        app.panels.syscall_heatmap = true;
+        app.panels.anomaly_timeline = true;
+        app.panels.ml_scatter = true;
+        app.panels.trace_waterfall = true;
+        app.panels.stats_summary = true;
+        let count = app.count_top_panels();
+        assert_eq!(count, 5); // All top panels enabled
+    }
+
+    #[test]
+    fn test_panel_reset() {
+        let mut app = VisualizeApp::new(VisualizeConfig::default());
+
+        // Disable all panels
+        app.panels.syscall_heatmap = false;
+        app.panels.anomaly_timeline = false;
+        app.panels.process_syscalls = false;
+        app.panels.stats_summary = false;
+
+        // Press '0' to reset
+        app.handle_key(KeyCode::Char('0'), KeyModifiers::empty());
+
+        // Should be back to defaults
+        assert!(app.panels.syscall_heatmap);
+        assert!(app.panels.process_syscalls);
+        assert!(app.panels.stats_summary);
+    }
+
+    #[test]
+    fn test_navigation_bounds() {
+        let mut app = VisualizeApp::new(VisualizeConfig::default());
+        app.processes = vec![
+            ProcessSyscallStats {
+                pid: 1,
+                ..Default::default()
+            },
+            ProcessSyscallStats {
+                pid: 2,
+                ..Default::default()
+            },
+            ProcessSyscallStats {
+                pid: 3,
+                ..Default::default()
+            },
+        ];
+
+        // Test 'g' - go to top
+        app.process_selected = 2;
+        app.handle_key(KeyCode::Char('g'), KeyModifiers::empty());
+        assert_eq!(app.process_selected, 0);
+
+        // Test 'G' - go to bottom
+        app.handle_key(KeyCode::Char('G'), KeyModifiers::empty());
+        assert_eq!(app.process_selected, 2);
+
+        // Test down arrow
+        app.process_selected = 0;
+        app.handle_key(KeyCode::Down, KeyModifiers::empty());
+        assert_eq!(app.process_selected, 1);
+
+        // Test up arrow
+        app.handle_key(KeyCode::Up, KeyModifiers::empty());
+        assert_eq!(app.process_selected, 0);
+
+        // Test boundary - can't go below 0
+        app.handle_key(KeyCode::Up, KeyModifiers::empty());
+        assert_eq!(app.process_selected, 0);
+
+        // Test boundary - can't go past last
+        app.process_selected = 2;
+        app.handle_key(KeyCode::Down, KeyModifiers::empty());
+        assert_eq!(app.process_selected, 2);
+    }
+
+    #[test]
+    fn test_page_navigation() {
+        let mut app = VisualizeApp::new(VisualizeConfig::default());
+        // Create 25 processes
+        app.processes = (1..=25)
+            .map(|i| ProcessSyscallStats {
+                pid: i,
+                ..Default::default()
+            })
+            .collect();
+
+        // Page down from start
+        app.process_selected = 0;
+        app.handle_key(KeyCode::PageDown, KeyModifiers::empty());
+        assert_eq!(app.process_selected, 10);
+
+        // Page down again (should stop at end)
+        app.handle_key(KeyCode::PageDown, KeyModifiers::empty());
+        assert_eq!(app.process_selected, 20);
+
+        // Page down past end
+        app.handle_key(KeyCode::PageDown, KeyModifiers::empty());
+        assert_eq!(app.process_selected, 24); // Last item
+
+        // Page up
+        app.handle_key(KeyCode::PageUp, KeyModifiers::empty());
+        assert_eq!(app.process_selected, 14);
+
+        // Page up to start
+        app.handle_key(KeyCode::PageUp, KeyModifiers::empty());
+        assert_eq!(app.process_selected, 4);
+
+        app.handle_key(KeyCode::PageUp, KeyModifiers::empty());
+        assert_eq!(app.process_selected, 0); // Can't go below 0
+    }
+
+    #[test]
+    fn test_filter_backspace_and_escape() {
+        let mut app = VisualizeApp::new(VisualizeConfig::default());
+
+        // Enter filter mode
+        app.handle_key(KeyCode::Char('/'), KeyModifiers::empty());
+        assert!(app.show_filter_input);
+
+        // Type something
+        app.handle_key(KeyCode::Char('a'), KeyModifiers::empty());
+        app.handle_key(KeyCode::Char('b'), KeyModifiers::empty());
+        app.handle_key(KeyCode::Char('c'), KeyModifiers::empty());
+        assert_eq!(app.filter, "abc");
+
+        // Backspace
+        app.handle_key(KeyCode::Backspace, KeyModifiers::empty());
+        assert_eq!(app.filter, "ab");
+
+        // Escape cancels filter mode
+        app.handle_key(KeyCode::Esc, KeyModifiers::empty());
+        assert!(!app.show_filter_input);
+    }
+
+    #[test]
+    fn test_filter_clear_with_delete() {
+        let mut app = VisualizeApp::new(VisualizeConfig::default());
+        app.filter = "test".to_string();
+
+        app.handle_key(KeyCode::Delete, KeyModifiers::empty());
+        assert!(app.filter.is_empty());
+    }
+
+    #[test]
+    fn test_sort_toggle() {
+        let mut app = VisualizeApp::new(VisualizeConfig::default());
+        assert!(app.sort_descending);
+
+        app.handle_key(KeyCode::Char('r'), KeyModifiers::empty());
+        assert!(!app.sort_descending);
+
+        app.handle_key(KeyCode::Char('r'), KeyModifiers::empty());
+        assert!(app.sort_descending);
+    }
+
+    #[test]
+    fn test_sort_column_change() {
+        let mut app = VisualizeApp::new(VisualizeConfig::default());
+        assert_eq!(app.sort_column, SortColumn::Pid);
+
+        // 's' key
+        app.handle_key(KeyCode::Char('s'), KeyModifiers::empty());
+        assert_eq!(app.sort_column, SortColumn::Name);
+
+        // Tab key
+        app.handle_key(KeyCode::Tab, KeyModifiers::empty());
+        assert_eq!(app.sort_column, SortColumn::Cpu);
+    }
+
+    #[test]
+    fn test_panel_toggles_all() {
+        let mut app = VisualizeApp::new(VisualizeConfig::default());
+
+        // Test all panel toggles
+        let initial = app.panels.anomaly_timeline;
+        app.handle_key(KeyCode::Char('2'), KeyModifiers::empty());
+        assert_ne!(app.panels.anomaly_timeline, initial);
+
+        let initial = app.panels.ml_scatter;
+        app.handle_key(KeyCode::Char('3'), KeyModifiers::empty());
+        assert_ne!(app.panels.ml_scatter, initial);
+
+        let initial = app.panels.trace_waterfall;
+        app.handle_key(KeyCode::Char('4'), KeyModifiers::empty());
+        assert_ne!(app.panels.trace_waterfall, initial);
+
+        let initial = app.panels.process_syscalls;
+        app.handle_key(KeyCode::Char('5'), KeyModifiers::empty());
+        assert_ne!(app.panels.process_syscalls, initial);
+
+        let initial = app.panels.stats_summary;
+        app.handle_key(KeyCode::Char('6'), KeyModifiers::empty());
+        assert_ne!(app.panels.stats_summary, initial);
+    }
+
+    #[test]
+    fn test_help_toggle_f1() {
+        let mut app = VisualizeApp::new(VisualizeConfig::default());
+        assert!(!app.show_help);
+
+        app.handle_key(KeyCode::F(1), KeyModifiers::empty());
+        assert!(app.show_help);
+    }
+
+    #[test]
+    fn test_syscall_category_names() {
+        assert_eq!(SyscallCategory::File.name(), "file");
+        assert_eq!(SyscallCategory::Network.name(), "net");
+        assert_eq!(SyscallCategory::Memory.name(), "mem");
+        assert_eq!(SyscallCategory::Process.name(), "proc");
+        assert_eq!(SyscallCategory::Other.name(), "other");
+    }
+
+    #[test]
+    fn test_syscall_category_more_syscalls() {
+        // File syscalls
+        assert_eq!(SyscallCategory::from_name("write"), SyscallCategory::File);
+        assert_eq!(SyscallCategory::from_name("openat"), SyscallCategory::File);
+        assert_eq!(SyscallCategory::from_name("statx"), SyscallCategory::File);
+
+        // Network syscalls
+        assert_eq!(
+            SyscallCategory::from_name("connect"),
+            SyscallCategory::Network
+        );
+        assert_eq!(
+            SyscallCategory::from_name("accept4"),
+            SyscallCategory::Network
+        );
+        assert_eq!(SyscallCategory::from_name("poll"), SyscallCategory::Network);
+
+        // Memory syscalls
+        assert_eq!(SyscallCategory::from_name("brk"), SyscallCategory::Memory);
+        assert_eq!(
+            SyscallCategory::from_name("mprotect"),
+            SyscallCategory::Memory
+        );
+
+        // Process syscalls
+        assert_eq!(
+            SyscallCategory::from_name("clone3"),
+            SyscallCategory::Process
+        );
+        assert_eq!(
+            SyscallCategory::from_name("execve"),
+            SyscallCategory::Process
+        );
+        assert_eq!(
+            SyscallCategory::from_name("futex"),
+            SyscallCategory::Process
+        );
+    }
+
+    #[test]
+    fn test_anomaly_overflow() {
+        let mut app = VisualizeApp::new(VisualizeConfig::default());
+
+        // Add more than 100 anomalies
+        for i in 0..110 {
+            app.record_anomaly(format!("syscall_{}", i), 1000, 3.5, None, None);
+        }
+
+        // Should only keep last 100
+        assert_eq!(app.anomaly_count, 100);
+        assert_eq!(app.anomalies.len(), 100);
+
+        // First anomaly should be syscall_10 (first 10 were removed)
+        assert_eq!(app.anomalies[0].syscall, "syscall_10");
+    }
+
+    #[test]
+    fn test_collect_metrics_updates_history() {
+        let mut app = VisualizeApp::new(VisualizeConfig::default());
+
+        // Record some syscalls with latency
+        app.record_syscall("read", 100, 0);
+        app.record_syscall("read", 200, 0);
+
+        // Set syscall rate
+        app.syscall_rate = 500.0;
+
+        // Set category rate
+        app.category_rates.insert(SyscallCategory::File, 100.0);
+
+        // Collect
+        app.collect_metrics();
+
+        // Rate history should have the value
+        assert!(!app.rate_history.is_empty());
+    }
+
+    #[test]
+    fn test_collect_metrics_anomaly_average() {
+        let mut app = VisualizeApp::new(VisualizeConfig::default());
+
+        // Add some recent anomalies
+        app.record_anomaly("a".to_string(), 1000, 3.0, None, None);
+        app.record_anomaly("b".to_string(), 2000, 5.0, None, None);
+
+        app.collect_metrics();
+
+        // Anomaly history should have average z-score (4.0)
+        let last_z = app.anomaly_history.last();
+        assert!(last_z.is_some());
+    }
+
+    #[test]
+    fn test_panel_visibility_default() {
+        let panels = PanelVisibility::default();
+        assert!(panels.syscall_heatmap);
+        assert!(panels.anomaly_timeline);
+        assert!(!panels.ml_scatter);
+        assert!(!panels.trace_waterfall);
+        assert!(panels.process_syscalls);
+        assert!(panels.stats_summary);
+    }
+
+    #[test]
+    fn test_sort_column_default() {
+        let col = SortColumn::default();
+        assert_eq!(col, SortColumn::Pid);
+    }
+
+    #[test]
+    fn test_process_syscall_stats_default() {
+        let stats = ProcessSyscallStats::default();
+        assert_eq!(stats.pid, 0);
+        assert!(stats.name.is_empty());
+        assert!((stats.cpu_percent - 0.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_ctrl_l_key_handling() {
+        let mut app = VisualizeApp::new(VisualizeConfig::default());
+        // Ctrl+L should not panic (it's handled but does nothing visible in tests)
+        app.handle_key(KeyCode::Char('l'), KeyModifiers::CONTROL);
+    }
+
+    #[test]
+    fn test_unhandled_key() {
+        let mut app = VisualizeApp::new(VisualizeConfig::default());
+        let initial_state = app.total_syscalls;
+
+        // Random unhandled key should not change state
+        app.handle_key(KeyCode::Char('z'), KeyModifiers::empty());
+        assert_eq!(app.total_syscalls, initial_state);
+    }
+
+    #[test]
+    fn test_unhandled_filter_key() {
+        let mut app = VisualizeApp::new(VisualizeConfig::default());
+        app.show_filter_input = true;
+
+        // Unhandled key in filter mode
+        app.handle_key(KeyCode::Home, KeyModifiers::empty());
+        // Should not panic or change filter
+    }
 }

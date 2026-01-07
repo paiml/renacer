@@ -43,7 +43,7 @@ renacer -e trace=socket,connect,send,recv -- curl example.com
 ```
 
 **Output:**
-```
+```text
 openat(AT_FDCWD, "file.txt", O_RDONLY) = 3
 read(3, "hello world", 4096) = 11
 close(3) = 0
@@ -75,7 +75,7 @@ renacer -e trace=file -- ls -la
 ```
 
 **Output:**
-```
+```text
 openat(AT_FDCWD, "/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 3
 fstat(3, {...}) = 0
 read(3, "\177ELF\2\1\1...", 832) = 832
@@ -100,7 +100,7 @@ renacer -e trace=network -- curl https://example.com
 ```
 
 **Output:**
-```
+```text
 socket(AF_INET, SOCK_STREAM, IPPROTO_TCP) = 3
 connect(3, {sa_family=AF_INET, sin_port=htons(443), ...}) = 0
 send(3, "GET / HTTP/1.1\r\n...", 78) = 78
@@ -124,7 +124,7 @@ renacer -e trace=process -- sh -c "echo hello"
 ```
 
 **Output:**
-```
+```text
 clone(child_stack=NULL, flags=CLONE_CHILD_CLEARTID|...) = 12345
 execve("/bin/echo", ["echo", "hello"], ...) = 0
 exit_group(0) = ?
@@ -146,7 +146,7 @@ renacer -e trace=memory -- python3 -c "x = [1]*1000000"
 ```
 
 **Output:**
-```
+```text
 brk(NULL) = 0x55555555a000
 brk(0x55555557b000) = 0x55555557b000
 mmap(NULL, 4194304, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7ffff7a00000

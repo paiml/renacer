@@ -89,7 +89,7 @@ $ renacer -c --hpu-analysis -- ./file-io-app
 ```
 
 **Example Output:**
-```
+```text
 --- Correlation Matrix ---
               open     write     close     read
 open         1.000     0.987     0.923     0.456
@@ -124,7 +124,7 @@ $ renacer -c --hpu-analysis -T -- ./heavy-io-app
 **Tested by:** `test_hpu_kmeans_clustering`
 
 **Example Output:**
-```
+```text
 --- K-means Clustering ---
 Number of clusters: 2
 
@@ -175,7 +175,7 @@ renacer -c --hpu-analysis --hpu-cpu-only -- ./app
 **Tested by:** `test_hpu_fallback_to_cpu`
 
 **Output:**
-```
+```text
 === HPU Analysis Report ===
 HPU Backend: CPU
 Compute time: 345us
@@ -280,7 +280,7 @@ $ renacer -c --hpu-analysis -- true
 ```
 
 **Output:**
-```
+```text
 === HPU Analysis Report ===
 Insufficient data for HPU analysis
 (Need at least 3 syscall types, found 1)
@@ -343,7 +343,7 @@ This ensures:
 
 For each pair of syscalls (i, j):
 
-```
+```text
 correlation[i][j] = count_ratio(i, j)
 
 count_ratio(i, j) = min(count_i, count_j) / max(count_i, count_j)
@@ -367,7 +367,7 @@ count_ratio(i, j) = min(count_i, count_j) / max(count_i, count_j)
 5. **Compute centroids:** Average count per cluster
 
 **Example:**
-```
+```text
 Syscalls: open (100), write (100), close (100), read (50), mmap (10)
 
 Step 1: Sort by count:
@@ -389,7 +389,7 @@ $ renacer -c --hpu-analysis -e trace=file -- pg_bench
 ```
 
 **Output:**
-```
+```text
 --- K-means Clustering ---
 Cluster 0: File I/O Hotspot (90% of time)
   - pread64 (1500 calls)
@@ -413,7 +413,7 @@ $ renacer -c --hpu-analysis -e trace=network -- ./http_server
 ```
 
 **Output:**
-```
+```text
 --- Correlation Matrix ---
               sendto    recvfrom   epoll_wait
 sendto        1.000      0.956      0.823
@@ -434,7 +434,7 @@ $ renacer -c --hpu-analysis -T -- make test
 ```
 
 **Output:**
-```
+```text
 --- K-means Clustering ---
 Cluster 0: Build Hotspot
   - read (5000 calls, 2.3s total)

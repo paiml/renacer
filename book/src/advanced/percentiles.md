@@ -48,7 +48,7 @@ jq -r '.syscalls[] | .duration_ns' stats.json | \
 ```
 
 **Example Output:**
-```
+```text
 p50: 1234 ns
 p95: 5678 ns
 p99: 12345 ns
@@ -65,7 +65,7 @@ $ renacer -c --format json -e trace=network -- ./db-app > db-stats.json
 ```
 
 **Calculate percentiles:**
-```
+```text
 p50: 2000 μs (median - typical query)
 p95: 8000 μs (95% complete within 8ms)
 p99: 25000 μs (99% complete within 25ms)
@@ -79,14 +79,14 @@ p99: 25000 μs (99% complete within 25ms)
 ### Example 2: Identifying Tail Latency
 
 **Before optimization:**
-```
+```text
 p50: 100 μs
 p95: 500 μs (5× median)
 p99: 5000 μs (50× median!) ← High tail latency
 ```
 
 **After adding caching:**
-```
+```text
 p50: 95 μs (5% faster)
 p95: 450 μs (10% faster)
 p99: 800 μs (6.25× faster!) ← Tail latency improved!
@@ -126,7 +126,7 @@ for name, durations in sorted(by_syscall.items()):
 ```
 
 **Output:**
-```
+```text
 read            p50:  1234 p95:  5678 p99: 12345 ns
 write           p50:   890 p95:  4567 p99:  9876 ns
 openat          p50:  2345 p95:  6789 p99: 23456 ns

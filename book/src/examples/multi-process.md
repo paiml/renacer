@@ -47,7 +47,7 @@ $ renacer -f -- ./fork-example
 ```
 
 **Example Output:**
-```
+```text
 [pid 1234] clone(CLONE_CHILD_CLEARTID|CLONE_CHILD_SETTID|SIGCHLD) = 1235
 [pid 1235] write(1, "child process\n", 14) = 14
 [pid 1234] wait4(1235, NULL, 0, NULL) = 1235
@@ -85,7 +85,7 @@ $ renacer -f -- sh -c "ls /tmp"
 **Tested by:** `test_follow_forks_with_exec`
 
 **Example Output:**
-```
+```text
 [pid 1234] clone(...) = 1235
 [pid 1235] execve("/bin/ls", ["ls", "/tmp"], ...) = 0
 [pid 1235] openat(AT_FDCWD, "/tmp", O_RDONLY|O_DIRECTORY) = 3
@@ -110,7 +110,7 @@ $ renacer -f -- make -j4
 **Tested by:** `test_follow_multiple_forks`
 
 **Output shows:**
-```
+```text
 [pid 1234] clone(...) = 1235  # Spawn compiler 1
 [pid 1234] clone(...) = 1236  # Spawn compiler 2
 [pid 1234] clone(...) = 1237  # Spawn compiler 3
@@ -152,7 +152,7 @@ renacer -f -c -- make -j8
 **Tested by:** `test_follow_forks_with_statistics`
 
 **Example Output:**
-```
+```text
 % time     seconds  usecs/call     calls    errors syscall
 ------ ----------- ----------- --------- --------- ----------------
  35.23    0.123456         123      1000         0 read
@@ -283,7 +283,7 @@ $ renacer -f -c -e trace=file -- make -j8
 - I/O bottlenecks in build system
 
 **Example findings:**
-```
+```text
 [pid 1235] open("/usr/include/stdio.h", O_RDONLY) = 3  # Compiler 1
 [pid 1236] open("/usr/include/stdio.h", O_RDONLY) = 3  # Compiler 2
 [pid 1237] open("/usr/include/stdio.h", O_RDONLY) = 3  # Compiler 3
@@ -299,7 +299,7 @@ $ renacer -f -- bash ./deploy.sh
 **Use case:** Trace all commands executed by shell script.
 
 **Output shows:**
-```
+```text
 [pid 1234] clone(...) = 1235  # bash forks
 [pid 1235] execve("/usr/bin/rsync", [...]) = 0  # rsync command
 [pid 1235] connect(3, {sa_family=AF_INET, ...}) = 0  # Network call
@@ -339,7 +339,7 @@ $ renacer -f -- docker run alpine ls
 **Use case:** Trace container creation and execution.
 
 **Output reveals:**
-```
+```text
 [pid 1234] clone(CLONE_NEWNS|CLONE_NEWPID|...) = 1235  # Container init
 [pid 1235] mount("proc", "/proc", "proc", ...) = 0  # Namespace setup
 [pid 1235] execve("/bin/ls", ["ls"], ...) = 0  # Container command

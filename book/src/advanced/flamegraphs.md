@@ -21,7 +21,7 @@ Flamegraphs are a powerful visualization technique for profiling data, showing c
 - **Shareable analysis** - Export as SVG for reports
 
 **Example flamegraph:**
-```
+```text
 ┌─────────────────────────────────────────────┐ 100% (main)
 │                main()                      │
 ├─────────────┬───────────────────────────────┤

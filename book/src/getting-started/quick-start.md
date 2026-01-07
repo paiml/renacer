@@ -12,7 +12,7 @@ renacer -- ls
 
 You'll see output like:
 
-```
+```text
 openat(AT_FDCWD, "/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 3
 openat(AT_FDCWD, "/lib/x86_64-linux-gnu/libc.so.6", O_RDONLY|O_CLOEXEC) = 3
 openat(AT_FDCWD, ".", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 3
@@ -36,7 +36,7 @@ renacer -e trace=file -- cat /etc/hostname
 
 Output shows only file-related syscalls (openat, read, close):
 
-```
+```text
 openat(AT_FDCWD, "/etc/hostname", O_RDONLY) = 3
 read(3, "my-hostname\n", 4096) = 12
 close(3) = 0
@@ -52,7 +52,7 @@ renacer -c -- echo "test"
 
 Output:
 
-```
+```text
 % time     seconds  usecs/call     calls    errors syscall
 ------ ----------- ----------- --------- --------- ----------------
  45.23    0.000123         123         1         0 write

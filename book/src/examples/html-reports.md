@@ -362,7 +362,7 @@ echo "Report saved: reports/${REPORT}"
 ```
 
 **Organization:**
-```
+```text
 reports/
 ├── perf-v1.0.0-2025-01-15.html
 ├── perf-v1.1.0-2025-02-01.html
