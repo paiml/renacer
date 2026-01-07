@@ -20,7 +20,7 @@ renacer validate --generate ./golden -- echo "hello"
 ```
 
 This creates:
-```
+```text
 golden/
   manifest.json     # Trace metadata (version, platform, command)
   syscalls.trace    # Binary syscall sequence (RNTR format)
@@ -88,7 +88,7 @@ renacer validate --baseline ./golden --output junit -- ./myapp > results.xml
 
 ### Text Output
 
-```
+```text
 === Validation Report ===
 
 Status: FAILED
@@ -275,7 +275,7 @@ Mismatch types:
 
 For each syscall type, the validator checks:
 
-```
+```text
 delta_percent = (actual_mean - baseline_mean) / baseline_mean * 100
 
 if delta_percent > tolerance_percent:
@@ -284,7 +284,7 @@ if delta_percent > tolerance_percent:
 
 ## API Usage
 
-```rust
+```rust,ignore
 use renacer::validate::{
     compare_syscalls, compare_timing, format_json_report,
     ComparisonResult, SyscallTimingStats, TraceSyscallEntry,

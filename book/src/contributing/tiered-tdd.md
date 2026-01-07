@@ -35,7 +35,7 @@ cargo test --doc  # Doctests
 ```
 
 **Example output:**
-```
+```text
 running 97 tests
 test result: ok. 97 passed; 0 failed; 0 ignored; 0 measured
 Duration: 2.3s ✅
@@ -65,7 +65,7 @@ cargo test --tests  # All integration tests
 ```
 
 **Example output:**
-```
+```text
 running 51 integration tests
 test result: ok. 51 passed; 0 failed; 0 ignored
 Duration: 24.7s ✅
@@ -98,7 +98,7 @@ cargo mutants --in-place -t 180  # 3 minute timeout per mutant
 ```
 
 **Example output:**
-```
+```text
 Fuzz tests: 15,347 runs in 60s ✅
 Mutation tests: 12/15 mutants caught (80%) ✅
 Duration: 4m 32s ✅

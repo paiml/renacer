@@ -14,7 +14,7 @@ This traces all system calls made by `ls`. The `--` separates Renacer's options 
 
 **Example Output:**
 
-```
+```text
 openat(AT_FDCWD, "/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 3
 openat(AT_FDCWD, "/lib/x86_64-linux-gnu/libselinux.so.1", O_RDONLY|O_CLOEXEC) = 3
 fstat(3, {...}) = 0
@@ -71,7 +71,7 @@ renacer -- curl -s https://example.com
 
 Renacer uses a format similar to `strace` for familiarity:
 
-```
+```text
 syscall_name(arg1, arg2, ...) = return_value
 ```
 
@@ -116,7 +116,7 @@ renacer -c -- ls
 
 Instead of showing each syscall, displays a summary:
 
-```
+```text
 System Call Summary:
 ====================
 Syscall          Calls    Errors    Total Time    Avg Time
@@ -165,7 +165,7 @@ This filters syscalls to only show file-related ones (using syscall classes - mo
 
 The basic syntax is:
 
-```
+```text
 renacer [options] -- command [args...]
 ```
 

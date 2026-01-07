@@ -43,7 +43,7 @@ $ renacer --function-time --source -- cargo build
 **Tested by:** `test_function_time_output_format`
 
 **Example Output:**
-```
+```text
 write(1, "   Compiling renacer v0.3.0\n", 28) = 28
 read(3, buf, 832) = 832
 close(3) = 0
@@ -79,7 +79,7 @@ gcc -g my_program.c -o my_program
 **Tested by:** `test_stack_frame_struct`
 
 Without debug symbols, you'll see:
-```
+```text
 === Function Profiling Summary ===
 No function profiling data collected
 (Binary may lack DWARF debug information)
@@ -96,7 +96,7 @@ renacer --profile-self -- cargo test
 **Tested by:** `test_profile_self_flag_outputs_summary`
 
 **Example Output:**
-```
+```text
 === Renacer Self-Profiling Results ===
 Total syscalls traced:     1,234
 Total wall time:           123.45 ms
@@ -161,7 +161,7 @@ renacer --function-time --source -- ./my-app
 4. **Aggregate stats** - Count syscalls and time per function
 
 **Algorithm (from `src/stack_unwind.rs:43-80`):**
-```rust
+```rust,ignore
 // Simplified algorithm
 fn unwind_stack(pid: Pid) -> Result<Vec<StackFrame>> {
     let regs = ptrace::getregs(pid)?;
@@ -246,7 +246,7 @@ renacer --function-time -c -- ./my-app
 - **Statistics summary** - Overall call counts and timing
 
 **Output structure:**
-```
+```text
 [Syscall trace - stdout]
 write(1, "test", 4) = 4
 
@@ -297,7 +297,7 @@ Function profiler automatically detects slow I/O operations:
 
 ### I/O Syscalls Tracked
 
-```rust
+```rust,ignore
 // From src/function_profiler.rs:18-35
 const IO_SYSCALLS: &[&str] = &[
     "read", "write", "readv", "writev",
@@ -319,7 +319,7 @@ $ renacer --function-time --source -- ./database-app
 ```
 
 **Example Output:**
-```
+```text
 === Function Profiling Summary ===
 Function                     Calls    Total Time    Avg Time    Slow I/O
 ──────────────────────────────────────────────────────────────────────────
@@ -344,7 +344,7 @@ $ renacer --function-time --source -e trace=file -- pg_bench
 **Use case:** Identify which database functions cause I/O bottlenecks.
 
 **Expected Output:**
-```
+```text
 === Function Profiling Summary ===
 Function                     Calls    Total Time    Avg Time    Slow I/O
 ──────────────────────────────────────────────────────────────────────────
@@ -404,7 +404,7 @@ $ renacer --profile-self -c -- ./large-io-app
 - **User time** - Time in Renacer's own processing
 
 **Example result:**
-```
+```text
 Total syscalls traced:     10,234
 Total wall time:           1234.56 ms
 Kernel time (ptrace):      456.78 ms  (37%)
@@ -525,7 +525,7 @@ If Renacer overhead >50%, consider:
 
 Uses `std::time::Instant` to measure operation duration:
 
-```rust
+```rust,ignore
 // From src/profiling.rs:81-90
 pub fn measure<F, R>(&mut self, category: ProfilingCategory, f: F) -> R
 where
@@ -540,7 +540,7 @@ where
 ```
 
 **Example usage:**
-```rust
+```rust,ignore
 let result = profiling_ctx.measure(ProfilingCategory::DwarfLookup, || {
     dwarf_info.find_function_name(rip)
 });
@@ -548,7 +548,7 @@ let result = profiling_ctx.measure(ProfilingCategory::DwarfLookup, || {
 
 ### Stack Frame Layout (x86_64)
 
-```
+```text
 High addresses
 ┌─────────────────┐
 │ Return address  │  RBP + 8  (RIP for caller)

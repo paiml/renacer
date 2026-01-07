@@ -51,7 +51,7 @@ for i in range(3):
 ```
 
 **Example Output:**
-```
+```text
 Cluster 0:  # Fast syscalls
   Count: 8500
   Mean: 1234 ns

@@ -46,7 +46,7 @@ renacer -c --ml-anomaly --baseline baseline.apr -- cargo build
 
 ### Output with --save-model
 
-```
+```text
 === ML Anomaly Detection Report ===
 Clusters: 3
 Silhouette Score: 0.847
@@ -59,7 +59,7 @@ Model saved: baseline.apr
 
 ### Output with --baseline
 
-```
+```text
 === Regression Analysis ===
 Baseline: baseline.apr (v0.6.3, 47 samples)
 Current:  52 syscalls

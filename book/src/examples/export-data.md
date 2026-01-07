@@ -110,7 +110,7 @@ $ jq -r '.syscalls[].name' trace.json | sort | uniq
 
 **Output:**
 
-```
+```text
 close
 getdents64
 openat
@@ -305,7 +305,7 @@ $ csvstat trace.csv
 
 **Output:**
 
-```
+```text
 Column: name
   Unique values: 10
   Most common: read (1000x)
@@ -352,7 +352,7 @@ $ tail -n +2 trace.csv | awk -F',' '{
 
 **Output:**
 
-```
+```text
 fsync: avg 4567.89 us
 read: avg 123.45 us
 write: avg 98.76 us
@@ -366,7 +366,7 @@ $ tail -n +2 trace.csv | awk -F',' '$4 != "" {errors[$4]++} END {for (e in error
 
 **Output:**
 
-```
+```text
 ENOENT 15
 EACCES 3
 EINVAL 1
@@ -407,7 +407,7 @@ print(stats.sort_values(('duration_ns', 'mean'), ascending=False))
 
 **Output:**
 
-```
+```text
             duration_ns                              return_error
                   count      mean       std    min        max        count
 name
@@ -442,7 +442,7 @@ print(error_summary)
 
 **Output:**
 
-```
+```text
             name  close  open  read  stat
 return_error
 EACCES              0     3     0     0
@@ -624,7 +624,7 @@ curl -X POST --data-binary @metrics.prom http://pushgateway:9091/metrics/job/app
 
 **Result:**
 
-```
+```text
 syscall_duration_seconds{read} 0.123456
 syscall_duration_seconds{write} 0.098765
 syscall_duration_seconds{fsync} 0.045678

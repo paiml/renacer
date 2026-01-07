@@ -6,13 +6,13 @@ Once you've traced a program with Renacer, you'll see lines showing system calls
 
 Every traced system call follows this format:
 
-```
+```text
 syscall_name(arg1, arg2, arg3, ...) = return_value
 ```
 
 ### Example Breakdown
 
-```
+```text
 openat(AT_FDCWD, "/etc/passwd", O_RDONLY|O_CLOEXEC) = 3
 ```
 
@@ -29,7 +29,7 @@ openat(AT_FDCWD, "/etc/passwd", O_RDONLY|O_CLOEXEC) = 3
 
 #### `openat` - Open a File
 
-```
+```text
 openat(AT_FDCWD, "/path/to/file", O_RDONLY) = 3
 ```
 
@@ -40,7 +40,7 @@ openat(AT_FDCWD, "/path/to/file", O_RDONLY) = 3
 
 #### `read` - Read from File
 
-```
+```text
 read(3, "file contents...", 4096) = 42
 ```
 
@@ -51,7 +51,7 @@ read(3, "file contents...", 4096) = 42
 
 #### `write` - Write to File
 
-```
+```text
 write(1, "Hello\n", 6) = 6
 ```
 
@@ -62,7 +62,7 @@ write(1, "Hello\n", 6) = 6
 
 #### `close` - Close File
 
-```
+```text
 close(3) = 0
 ```
 
@@ -73,7 +73,7 @@ close(3) = 0
 
 #### `mmap` - Memory Mapping
 
-```
+```text
 mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f8a2c000000
 ```
 
@@ -87,7 +87,7 @@ mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f8
 
 #### `brk` - Change Data Segment Size
 
-```
+```text
 brk(0x55e8f1a2d000) = 0x55e8f1a2d000
 ```
 
@@ -98,7 +98,7 @@ brk(0x55e8f1a2d000) = 0x55e8f1a2d000
 
 #### `clone` - Create Child Process/Thread
 
-```
+```text
 clone(child_stack=NULL, flags=CLONE_CHILD_CLEARTID|CLONE_CHILD_SETTID|SIGCHLD) = 12345
 ```
 
@@ -108,7 +108,7 @@ clone(child_stack=NULL, flags=CLONE_CHILD_CLEARTID|CLONE_CHILD_SETTID|SIGCHLD) =
 
 #### `wait4` - Wait for Process
 
-```
+```text
 wait4(12345, [{WIFEXITED(s) && WEXITSTATUS(s) == 0}], 0, NULL) = 12345
 ```
 
@@ -120,7 +120,7 @@ wait4(12345, [{WIFEXITED(s) && WEXITSTATUS(s) == 0}], 0, NULL) = 12345
 
 #### `execve` - Execute Program
 
-```
+```text
 execve("/bin/ls", ["ls", "-la"], [/* 48 vars */]) = 0
 ```
 
@@ -133,7 +133,7 @@ execve("/bin/ls", ["ls", "-la"], [/* 48 vars */]) = 0
 
 #### `socket` - Create Socket
 
-```
+```text
 socket(AF_INET, SOCK_STREAM, IPPROTO_TCP) = 3
 ```
 
@@ -144,7 +144,7 @@ socket(AF_INET, SOCK_STREAM, IPPROTO_TCP) = 3
 
 #### `connect` - Connect to Address
 
-```
+```text
 connect(3, {sa_family=AF_INET, sin_port=htons(80), sin_addr=inet_addr("93.184.216.34")}, 16) = 0
 ```
 
@@ -155,7 +155,7 @@ connect(3, {sa_family=AF_INET, sin_port=htons(80), sin_addr=inet_addr("93.184.21
 
 #### `sendto` / `recvfrom` - Send/Receive Data
 
-```
+```text
 sendto(3, "GET / HTTP/1.1\r\n", 16, 0, NULL, 0) = 16
 recvfrom(3, "HTTP/1.1 200 OK\r\n...", 4096, 0, NULL, NULL) = 1234
 ```
@@ -189,7 +189,7 @@ Negative values are errno codes (errors):
 
 **Example**:
 
-```
+```text
 openat(AT_FDCWD, "/nonexistent", O_RDONLY) = -ENOENT
 ```
 
@@ -212,7 +212,7 @@ This means: Attempted to open "/nonexistent", but file doesn't exist.
 
 **Combined with OR** (`|`):
 
-```
+```text
 O_RDWR|O_CREAT|O_TRUNC  = open for read/write, create if missing, truncate if exists
 ```
 
@@ -240,13 +240,13 @@ O_RDWR|O_CREAT|O_TRUNC  = open for read/write, create if missing, truncate if ex
 
 Readable strings are shown in quotes:
 
-```
+```text
 write(1, "Hello, World!\n", 14) = 14
 ```
 
 Binary data is shown in hex or abbreviated:
 
-```
+```text
 read(3, "\x7fELF\x02\x01\x01...", 4096) = 4096
 ```
 
@@ -254,7 +254,7 @@ read(3, "\x7fELF\x02\x01\x01...", 4096) = 4096
 
 Complex structures are abbreviated:
 
-```
+```text
 fstat(3, {st_mode=S_IFREG|0644, st_size=1234, ...}) = 0
 ```
 
@@ -264,7 +264,7 @@ Use `-v` (verbose) flag for full struct details (not yet implemented in v0.4.1).
 
 Arrays and buffers are shown as:
 
-```
+```text
 getdents64(3, [{d_ino=123, d_name="file1.txt"}, ...], 32768) = 1024
 ```
 
@@ -274,7 +274,7 @@ Large arrays are abbreviated with `[...]`.
 
 With statistics mode (`-c`), see timing:
 
-```
+```text
 System Call Summary:
 ====================
 Syscall          Calls    Errors    Total Time    Avg Time
@@ -299,7 +299,7 @@ renacer --source -- ./my-program
 
 **Enhanced output**:
 
-```
+```text
 read(3, buf, 1024) = 42          [src/main.rs:15 in my_function]
 write(1, "result", 6) = 6        [src/main.rs:20 in my_function]
 ```
@@ -318,7 +318,7 @@ renacer -e 'trace=file' -- ls
 
 **Output**:
 
-```
+```text
 openat(AT_FDCWD, "/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 3
 openat(AT_FDCWD, ".", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 3
 close(3) = 0
@@ -336,7 +336,7 @@ Only shows `open`, `read`, and `write` calls.
 
 With `-f` (follow forks):
 
-```
+```text
 [pid 12345] clone(...) = 12346
 [pid 12346] execve("/bin/ls", ...) = 0
 [pid 12346] openat(...) = 3
@@ -349,7 +349,7 @@ Each line is prefixed with `[pid XXXXX]` to distinguish processes.
 
 ### Successful File Read
 
-```
+```text
 openat(AT_FDCWD, "/path/file", O_RDONLY) = 3
 read(3, "contents...", 4096) = 1234
 close(3) = 0
@@ -359,7 +359,7 @@ close(3) = 0
 
 ### Failed File Access
 
-```
+```text
 openat(AT_FDCWD, "/missing/file", O_RDONLY) = -ENOENT
 ```
 
@@ -367,7 +367,7 @@ openat(AT_FDCWD, "/missing/file", O_RDONLY) = -ENOENT
 
 ### Memory Allocation
 
-```
+```text
 brk(NULL) = 0x55e8f1a00000
 brk(0x55e8f1a21000) = 0x55e8f1a21000
 ```
@@ -376,7 +376,7 @@ brk(0x55e8f1a21000) = 0x55e8f1a21000
 
 ### Network Connection
 
-```
+```text
 socket(AF_INET, SOCK_STREAM, IPPROTO_TCP) = 3
 connect(3, {sa_family=AF_INET, sin_port=htons(80), ...}, 16) = 0
 sendto(3, "GET / HTTP/1.1\r\n", 16, 0, NULL, 0) = 16

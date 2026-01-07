@@ -42,12 +42,12 @@ renacer -f -- make
 ### Basic Syscall Format
 
 **Pattern:**
-```
+```text
 syscall_name(arg1, arg2, arg3, ...) = result
 ```
 
 **Example:**
-```
+```text
 openat(AT_FDCWD, "/etc/passwd", O_RDONLY) = 3
 read(3, "root:x:0:0:root:/root:/bin/bash\n"..., 4096) = 1024
 close(3) = 0
@@ -69,7 +69,7 @@ Arguments are formatted based on their type and semantic meaning:
 
 #### File Descriptors
 
-```
+```text
 read(3, ...) = 256
 close(5) = 0
 ```
@@ -80,14 +80,14 @@ close(5) = 0
 
 #### File Paths (Strings)
 
-```
+```text
 openat(AT_FDCWD, "/tmp/test.txt", O_RDONLY) = 3
 ```
 
 **Format:** Double-quoted string (`"path"`)
 
 **Truncation:** Long paths are truncated with `...`:
-```
+```text
 openat(AT_FDCWD, "/very/long/path/to/file/that/ex"..., O_RDONLY) = 3
 ```
 
@@ -97,7 +97,7 @@ openat(AT_FDCWD, "/very/long/path/to/file/that/ex"..., O_RDONLY) = 3
 
 #### Flags and Bitmasks
 
-```
+```text
 openat(AT_FDCWD, "/tmp/file", O_RDONLY|O_CLOEXEC) = 3
 mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f...
 ```
@@ -113,7 +113,7 @@ mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f.
 
 #### Special Constants
 
-```
+```text
 openat(AT_FDCWD, "file.txt", O_RDONLY) = 3
 fstatat(AT_FDCWD, ".", {...}, AT_SYMLINK_NOFOLLOW) = 0
 ```
@@ -129,7 +129,7 @@ fstatat(AT_FDCWD, ".", {...}, AT_SYMLINK_NOFOLLOW) = 0
 
 #### Buffers and Data
 
-```
+```text
 read(3, "hello world\n", 4096) = 12
 write(1, "output\n", 7) = 7
 ```
@@ -140,7 +140,7 @@ write(1, "output\n", 7) = 7
 - **Binary data:** Truncated with byte count
 
 **Binary Data Example:**
-```
+```text
 read(3, "\x7fELF\x02\x01\x01\x00\x00\x00\x00\x00"..., 832) = 832
 ```
 
@@ -148,7 +148,7 @@ read(3, "\x7fELF\x02\x01\x01\x00\x00\x00\x00\x00"..., 832) = 832
 
 #### Pointers
 
-```
+```text
 mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7ffff7a00000
 brk(0x555555560000) = 0x555555560000
 ```
@@ -161,7 +161,7 @@ brk(0x555555560000) = 0x555555560000
 
 #### Structures
 
-```
+```text
 fstat(3, {st_mode=S_IFREG|0644, st_size=1234, ...}) = 0
 stat("/tmp/file", {st_dev=makedev(0x8, 0x1), ...}) = 0
 ```
@@ -176,7 +176,7 @@ stat("/tmp/file", {st_dev=makedev(0x8, 0x1), ...}) = 0
 
 #### Success (Non-Negative)
 
-```
+```text
 open("/tmp/file", O_RDONLY) = 3
 read(3, "hello", 5) = 5
 ```
@@ -191,7 +191,7 @@ read(3, "hello", 5) = 5
 
 #### Errors (Negative)
 
-```
+```text
 open("/nonexistent", O_RDONLY) = -1 ENOENT (No such file or directory)
 read(99, ..., 4096) = -1 EBADF (Bad file descriptor)
 ```
@@ -211,7 +211,7 @@ read(99, ..., 4096) = -1 EBADF (Bad file descriptor)
 
 #### Unfinished Syscalls
 
-```
+```text
 exit_group(0) = ?
 ```
 
@@ -225,13 +225,13 @@ exit_group(0) = ?
 
 When `--source` flag is used and DWARF debug info is available:
 
-```
+```text
 src/main.rs:42 read_config openat(AT_FDCWD, "/etc/config", O_RDONLY) = 3
 src/main.rs:45 read_config read(3, "key=value\n", 4096) = 10
 ```
 
 **Format:**
-```
+```text
 <file>:<line> <function> <syscall>
 ```
 
@@ -255,14 +255,14 @@ src/main.rs:45 read_config read(3, "key=value\n", 4096) = 10
 
 When `--timing` (or `-T`) flag is used:
 
-```
+```text
 openat(AT_FDCWD, "/etc/passwd", O_RDONLY) = 3 <0.000234>
 read(3, "root:x:0:0:root:/root:/bin/bash\n"..., 4096) = 1024 <0.000089>
 close(3) = 0 <0.000012>
 ```
 
 **Format:**
-```
+```text
 syscall(...) = result <seconds>
 ```
 
@@ -272,7 +272,7 @@ syscall(...) = result <seconds>
 - **Delimiters:** Angle brackets `<...>`
 
 **Combined with Source:**
-```
+```text
 src/main.rs:42 read_config openat(AT_FDCWD, "/etc/config", O_RDONLY) = 3 <0.000145>
 ```
 
@@ -326,7 +326,7 @@ close(3) = 0
 ```
 
 **Anomaly Format (stderr):**
-```
+```text
 ⚠️  ANOMALY: <syscall> took <duration> μs (<z-score>σ from baseline <baseline> μs) - <severity>
 ```
 
@@ -370,7 +370,7 @@ renacer -- ls > trace.txt
 - Error messages
 
 **Example Messages:**
-```
+```text
 [renacer: DWARF debug info loaded from ./target/debug/myapp]
 [renacer: Attached to process 12345]
 [renacer: Warning - failed to load DWARF: No debug sections found]
@@ -527,7 +527,7 @@ renacer -- ls | sed -n '/ = [0-9]/p'
 
 ### Basic File Operations
 
-```
+```text
 openat(AT_FDCWD, "/tmp/test.txt", O_WRONLY|O_CREAT|O_TRUNC, 0644) = 3
 write(3, "hello world\n", 12) = 12
 fsync(3) = 0
@@ -538,7 +538,7 @@ close(3) = 0
 
 ### Error Handling
 
-```
+```text
 openat(AT_FDCWD, "/nonexistent", O_RDONLY) = -1 ENOENT (No such file or directory)
 access("/etc/shadow", R_OK) = -1 EACCES (Permission denied)
 read(99, ..., 4096) = -1 EBADF (Bad file descriptor)
@@ -548,7 +548,7 @@ read(99, ..., 4096) = -1 EBADF (Bad file descriptor)
 
 ### Network Operations
 
-```
+```text
 socket(AF_INET, SOCK_STREAM, IPPROTO_TCP) = 3
 connect(3, {sa_family=AF_INET, sin_port=htons(443), sin_addr=inet_addr("93.184.216.34")}, 16) = 0
 send(3, "GET / HTTP/1.1\r\nHost: example.com\r\n\r\n", 38) = 38
@@ -560,7 +560,7 @@ close(3) = 0
 
 ### Memory Management
 
-```
+```text
 brk(NULL) = 0x555555560000
 brk(0x555555581000) = 0x555555581000
 mmap(NULL, 4194304, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7ffff7a00000
@@ -572,7 +572,7 @@ munmap(0x7ffff7a00000, 4194304) = 0
 
 ### Multi-Process (Fork/Exec)
 
-```
+```text
 clone(child_stack=NULL, flags=CLONE_CHILD_CLEARTID|CLONE_CHILD_SETTID|SIGCHLD) = 12345
 execve("/usr/bin/ls", ["ls", "-la"], ...) = 0
 wait4(12345, [{WIFEXITED(s) && WEXITSTATUS(s) == 0}], 0, NULL) = 12345
@@ -584,7 +584,7 @@ wait4(12345, [{WIFEXITED(s) && WEXITSTATUS(s) == 0}], 0, NULL) = 12345
 
 ### With Source Correlation
 
-```
+```text
 src/config.rs:127 load_config openat(AT_FDCWD, "/etc/myapp.conf", O_RDONLY) = 3
 src/config.rs:128 load_config fstat(3, {st_mode=S_IFREG|0644, st_size=256, ...}) = 0
 src/config.rs:129 load_config read(3, "debug=true\nport=8080\n", 256) = 21
@@ -596,7 +596,7 @@ src/main.rs:45 main write(1, "Config loaded\n", 14) = 14
 
 ### With Timing
 
-```
+```text
 openat(AT_FDCWD, "/etc/passwd", O_RDONLY) = 3 <0.000145>
 fstat(3, {...}) = 0 <0.000023>
 read(3, "root:x:0:0:root:/root:/bin/bash\n"..., 4096) = 1024 <0.000067>
@@ -613,7 +613,7 @@ renacer --source --timing -- cat /etc/hostname
 ```
 
 **Output:**
-```
+```text
 /usr/lib/x86_64-linux-gnu/ld-2.31.so:? _dl_start execve("/usr/bin/cat", ["cat", "/etc/hostname"], ...) = 0 <0.000234>
 /usr/lib/x86_64-linux-gnu/ld-2.31.so:? _dl_init brk(NULL) = 0x555555560000 <0.000012>
 /usr/lib/x86_64-linux-gnu/ld-2.31.so:? _dl_map_object access("/etc/ld.so.cache", R_OK) = 0 <0.000034>
@@ -636,7 +636,7 @@ src/cat.c:315 main exit_group(0) = ?
 
 For syscalls not in Renacer's syscall table:
 
-```
+```text
 syscall_999(0x1, 0x2, 0x3) = -1 ENOSYS (Function not implemented)
 ```
 
@@ -646,7 +646,7 @@ syscall_999(0x1, 0x2, 0x3) = -1 ENOSYS (Function not implemented)
 
 ### Incomplete Syscalls (Process Death)
 
-```
+```text
 read(3, ...
 ```
 
@@ -656,7 +656,7 @@ read(3, ...
 
 ### Very Long Arguments
 
-```
+```text
 openat(AT_FDCWD, "/very/long/path/that/gets/truncated/because/it/exceeds/the/maximum/length"..., O_RDONLY) = 3
 ```
 
@@ -666,7 +666,7 @@ openat(AT_FDCWD, "/very/long/path/that/gets/truncated/because/it/exceeds/the/max
 
 ### Non-Printable Characters
 
-```
+```text
 write(1, "Hello\nWorld\t!\x00\x01\x02", 14) = 14
 ```
 
@@ -719,7 +719,7 @@ renacer --function-time -- ./myapp
 ```
 
 **Output:**
-```
+```text
 Function Profiling Report:
 ==========================================
 Function                    | Time (μs) | Calls | Avg (μs)

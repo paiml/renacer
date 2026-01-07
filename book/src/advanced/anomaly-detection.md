@@ -301,7 +301,7 @@ For each syscall type (e.g., `write`, `read`):
 
 Each syscall type has **independent baselines**:
 
-```
+```text
 write:  μ = 102μs, σ = 45μs  (baseline from last 100 writes)
 read:   μ = 523μs, σ = 234μs (baseline from last 100 reads)
 fsync:  μ = 1234μs, σ = 567μs (baseline from last 100 fsyncs)
@@ -316,7 +316,7 @@ fsync:  μ = 1234μs, σ = 567μs (baseline from last 100 fsyncs)
 
 Uses Trueno library for fast statistics:
 
-```rust
+```rust,ignore
 use trueno::Vector;
 
 let v = Vector::from_slice(&samples);
@@ -335,7 +335,7 @@ $ renacer --anomaly-realtime -e trace=file -T -- pg_bench
 ```
 
 **Output:**
-```
+```text
 read(3, buf, 8192) = 8192
 read(3, buf, 8192) = 8192
 ⚠️  ANOMALY: fsync took 15234 μs (8.2σ from baseline 1023.4 μs) - 🔴 High
@@ -357,7 +357,7 @@ $ renacer --anomaly-realtime -e trace=network -T -- ./http_server
 ```
 
 **Output:**
-```
+```text
 sendto(4, buf, 1024) = 1024
 recvfrom(4, buf, 2048) = 512
 ⚠️  ANOMALY: recvfrom took 50234 μs (12.3σ from baseline 2023.4 μs) - 🔴 High

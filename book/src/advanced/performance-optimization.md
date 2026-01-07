@@ -29,7 +29,7 @@ Sprint 36 delivered four major performance enhancements:
 **Benefit:** 20-30% reduction in allocations
 
 **How it works:**
-```rust
+```rust,ignore
 // Instead of allocating each span individually
 let span = Box::new(Span::new(...));  // ❌ Expensive
 
@@ -67,7 +67,7 @@ renacer --otlp-endpoint http://localhost:4317 -- ./app
 **Benefit:** 10-15% memory reduction
 
 **How it works:**
-```rust
+```rust,ignore
 // Old: Always allocate
 let syscall_name = format!("openat");  // ❌ Heap allocation
 
@@ -87,7 +87,7 @@ let syscall_name: Cow<'static, str> = "openat".into();  // ✅ Zero-copy
 **Benefit:** 5-10% overhead reduction
 
 **How it works:**
-```rust
+```rust,ignore
 // Old: Build span immediately
 let span = Span::new();
 span.set_name("openat");              // ❌ Work done even if not exported
@@ -111,7 +111,7 @@ let span = LazySpan::builder()
 **Benefit:** 40-60% network overhead reduction
 
 **How it works:**
-```rust
+```rust,ignore
 // Old: Export each span individually
 for span in spans {
     otlp_client.export(span).await;   // ❌ Many network calls
@@ -216,7 +216,7 @@ cargo bench --bench syscall_overhead
 ```
 
 **Output:**
-```
+```text
 syscall_overhead/baseline          time: 1.2 µs
 syscall_overhead/renacer_basic     time: 1.25 µs (+4.2%)
 syscall_overhead/renacer_source    time: 1.32 µs (+10%)
@@ -238,7 +238,7 @@ cargo bench --bench otlp_export
 ```
 
 **Output:**
-```
+```text
 otlp_export/individual            time: 125 µs/span
 otlp_export/batched_512           time: 2.1 µs/span (60x faster!)
 otlp_export/batched_2048          time: 0.8 µs/span (156x faster!)
@@ -253,7 +253,7 @@ cargo bench --bench memory_pool
 ```
 
 **Output:**
-```
+```text
 memory_pool/direct_alloc          time: 85 ns/span
 memory_pool/pooled_alloc          time: 12 ns/span (7x faster!)
 memory_pool/pool_acquire_hit      time: 8 ns
@@ -512,7 +512,7 @@ renacer -- ./app
 ### Poor Pool Hit Rate (<80%)
 
 **Symptoms:**
-```
+```text
 Span Pool Statistics:
   Hits: 12000 (75%)
   Misses: 4000 (25%)

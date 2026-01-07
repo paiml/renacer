@@ -64,7 +64,7 @@ $ renacer -c --hpu-analysis -- ./file-io-app
 **Tested by:** `test_hpu_correlation_matrix`
 
 **Output:**
-```
+```text
 % time     seconds  usecs/call     calls    errors syscall
 ------ ----------- ----------- --------- --------- ----------------
  40.00    0.012000        1200        10         0 open
@@ -103,12 +103,12 @@ close        1.000     1.000     1.000
 
 Renacer computes correlation using **count ratio**:
 
-```
+```text
 correlation(A, B) = min(count_A, count_B) / max(count_A, count_B)
 ```
 
 **Example:**
-```
+```text
 Syscall counts: open=30, write=30, close=10
 
 Correlations:
@@ -124,7 +124,7 @@ Correlations:
 
 ### Reading the Matrix
 
-```
+```text
 --- Correlation Matrix ---
               open     write     close     read
 open         1.000     0.987     0.923     0.456
@@ -155,7 +155,7 @@ $ renacer -c --hpu-analysis -- ./database-app
 **Tested by:** `test_hpu_correlation_matrix`
 
 **Output:**
-```
+```text
 --- Correlation Matrix ---
               openat    pwrite64   fsync     pread64
 openat        1.000      0.956      0.912     0.345
@@ -179,7 +179,7 @@ $ renacer -c --hpu-analysis -e trace=network -- ./http-server
 **Tested by:** `test_hpu_with_filtering`
 
 **Output:**
-```
+```text
 --- Correlation Matrix ---
               sendto    recvfrom   epoll_wait
 sendto        1.000      0.978      0.845
@@ -202,7 +202,7 @@ $ renacer -c --hpu-analysis -- ./memory-intensive-app
 **Tested by:** `test_hpu_analysis_basic`
 
 **Output:**
-```
+```text
 --- Correlation Matrix ---
               mmap      munmap     brk       sbrk
 mmap          1.000     0.995      0.234     0.189
@@ -227,7 +227,7 @@ $ renacer -c --hpu-analysis -f -- make -j4
 **Tested by:** (multi-process + HPU integration)
 
 **Output:**
-```
+```text
 --- Correlation Matrix ---
               execve    wait4      clone     pipe2
 execve        1.000     0.912      0.856     0.734
@@ -344,7 +344,7 @@ $ renacer -c --hpu-analysis -T -- ./slow-app
 3. **Optimize correlated group** → Fix related operations together
 
 **Example:**
-```
+```text
 Statistics: fsync (40% time), write (30% time), open (20% time)
 Correlation: fsync-write (0.95), fsync-open (0.91)
 Action: Batch writes before fsync (reduce fsync frequency)
@@ -364,7 +364,7 @@ $ renacer -c --hpu-analysis -- ./app < input.txt
 - **Low correlation syscalls** → Independent subsystems (logging, monitoring)
 
 **Example:**
-```
+```text
 Cluster 1 (0.9+ correlation): sendto-recvfrom-epoll_wait → Main event loop
 Cluster 2 (0.3 correlation): openat-write-close → Independent logging
 ```
@@ -394,7 +394,7 @@ diff -u v1.0-correlation.txt v1.1-correlation.txt
 - **Broken correlations** → Changed patterns (may indicate bug)
 
 **Example:**
-```
+```text
 v1.0: open-write correlation = 0.95 (good pattern)
 v1.1: open-write correlation = 0.45 (broken pattern - regression!)
 ```
@@ -414,7 +414,7 @@ $ renacer -c --hpu-analysis -f -- ./parallel-app
 - **Pipe/socket correlations** → IPC patterns
 
 **Example:**
-```
+```text
 futex-futex: 0.98 → Heavy lock contention (optimization opportunity)
 mmap-munmap: 0.45 → Memory churn (allocator tuning needed)
 ```
@@ -424,7 +424,7 @@ mmap-munmap: 0.45 → Memory churn (allocator tuning needed)
 ### Uniform Correlation Matrix (All 1.0)
 
 **Problem:**
-```
+```text
 --- Correlation Matrix ---
               open     write     close
 open         1.000     1.000     1.000
@@ -517,7 +517,7 @@ close        1.000     1.000     1.000
 
 High correlations (>0.7) form **clusters** in the matrix:
 
-```
+```text
 --- Correlation Matrix ---
               A        B        C        D        E
 A           1.00     0.95     0.92     0.12     0.08

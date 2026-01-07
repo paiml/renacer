@@ -42,7 +42,7 @@ pub use labels::{LabelPair, LabelValidator, Labels};
 pub use registry::{Registry, RegistryError};
 
 /// Metric descriptor with name and labels
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MetricDesc {
     pub name: String,
     pub labels: Labels,

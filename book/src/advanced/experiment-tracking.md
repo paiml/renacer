@@ -14,7 +14,7 @@ The experiment span module (`renacer::experiment_span`) provides:
 
 Renacer classifies spans into three types:
 
-```rust
+```rust,ignore
 use renacer::experiment_span::SpanType;
 
 let syscall_span = SpanType::Syscall;    // System call (read, write, etc.)
@@ -26,7 +26,7 @@ let experiment_span = SpanType::Experiment; // ML experiment span
 
 Capture rich metadata about ML training operations:
 
-```rust
+```rust,ignore
 use renacer::experiment_span::ExperimentMetadata;
 use std::collections::HashMap;
 
@@ -63,7 +63,7 @@ let parsed = ExperimentMetadata::from_json(&json).unwrap();
 
 Use `ExperimentSpan::new_experiment()` to create spans:
 
-```rust
+```rust,ignore
 use renacer::experiment_span::{ExperimentMetadata, ExperimentSpan};
 
 let metadata = ExperimentMetadata {
@@ -94,7 +94,7 @@ let record = span.to_span_record();
 
 Compare two traces for behavioral equivalence using `compare_traces()`:
 
-```rust
+```rust,ignore
 use renacer::experiment_span::{compare_traces, EquivalenceScore};
 use renacer::unified_trace::UnifiedTrace;
 
@@ -137,7 +137,7 @@ The `is_equivalent()` method returns `true` if `overall() >= 0.85`.
 
 When using entrenar's experiment tracking, Renacer spans enable syscall correlation:
 
-```rust
+```rust,ignore
 use renacer::experiment_span::{ExperimentMetadata, ExperimentSpan};
 
 // Called by entrenar's Run at each training step
@@ -173,7 +173,7 @@ The experiment spans are automatically converted to `SpanRecord` for storage in 
 
 Compare Python vs Rust training traces:
 
-```rust
+```rust,ignore
 let python_trace = trace_python_training();
 let rust_trace = trace_rust_training();
 
@@ -185,7 +185,7 @@ assert!(score.is_equivalent(), "Transpilation changed behavior!");
 
 Compare traces across code changes:
 
-```rust
+```rust,ignore
 let baseline = load_golden_trace("baseline.trace");
 let current = run_current_training();
 
@@ -199,7 +199,7 @@ if !score.is_equivalent() {
 
 Track syscall patterns per training step:
 
-```rust
+```rust,ignore
 for step in 0..num_steps {
     let span = ExperimentSpan::new_experiment("step", metadata.clone());
 
@@ -218,7 +218,7 @@ let patterns = storage.query_by_attribute("experiment.step");
 
 ### SpanType
 
-```rust
+```rust,ignore
 pub enum SpanType {
     Syscall,    // Default - system calls
     Gpu,        // GPU operations
@@ -228,7 +228,7 @@ pub enum SpanType {
 
 ### ExperimentMetadata
 
-```rust
+```rust,ignore
 pub struct ExperimentMetadata {
     pub model_name: String,
     pub epoch: Option<u32>,
@@ -247,7 +247,7 @@ impl ExperimentMetadata {
 
 ### ExperimentSpan
 
-```rust
+```rust,ignore
 pub struct ExperimentSpan {
     pub trace_id: [u8; 16],
     pub span_id: [u8; 8],
@@ -270,7 +270,7 @@ impl ExperimentSpan {
 
 ### EquivalenceScore
 
-```rust
+```rust,ignore
 pub struct EquivalenceScore {
     pub syscall_match: f64,
     pub timing_variance: f64,
@@ -285,7 +285,7 @@ impl EquivalenceScore {
 
 ### compare_traces
 
-```rust
+```rust,ignore
 pub fn compare_traces(
     baseline: &UnifiedTrace,
     candidate: &UnifiedTrace,

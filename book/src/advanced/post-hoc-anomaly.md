@@ -50,7 +50,7 @@ for sc, z in sorted(outliers, key=lambda x: abs(x[1]), reverse=True)[:10]:
 ```
 
 **Output:**
-```
+```text
 Found 45 outliers:
   read: 125000ns (z=12.34)
   write: 98000ns (z=9.87)

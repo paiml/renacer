@@ -48,7 +48,7 @@ cargo test --release --test benchmark_vs_strace -- --ignored --nocapture
 ```
 
 **Output Example:**
-```
+```text
 === Benchmark: ls -la /usr/bin (average of 5 runs) ===
 Baseline (no tracing): 50.2ms
 strace:                58.7ms (17.0% overhead)

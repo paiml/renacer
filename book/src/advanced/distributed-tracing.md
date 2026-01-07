@@ -14,13 +14,13 @@ Distributed tracing allows you to:
 
 Renacer implements the [W3C Trace Context](https://www.w3.org/TR/trace-context/) standard:
 
-```
+```text
 traceparent: 00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01
 ```
 
 ### Format
 
-```
+```text
 version-trace_id-parent_id-trace_flags
 ```
 
@@ -73,13 +73,13 @@ renacer --otlp-endpoint http://localhost:4317 -- ./service
 
 ### Scenario: Web Request → API → Database
 
-```
+```text
 Browser → Nginx → API Server → Renacer → Database
 ```
 
 ### 1. Browser Initiates Request
 
-```
+```text
 traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
 ```
 
@@ -116,7 +116,7 @@ def handle_request(request):
 
 In Jaeger/Tempo, you see:
 
-```
+```text
 Trace: 4bf92f3577b34da6a3ce929d0e0e4736
 ├─ Span: Browser Request (00f067aa0ba902b7)
 │  └─ Span: Nginx Proxy (9db3e2b1c5a4f8e3)
@@ -202,7 +202,7 @@ When not sampled, Renacer:
 
 ### OpenTelemetry SDK Integration
 
-```rust
+```rust,ignore
 // Rust application using opentelemetry crate
 use opentelemetry::trace::{TraceContextExt, Tracer};
 

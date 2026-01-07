@@ -6,7 +6,7 @@ Complete command-line interface documentation for Renacer.
 
 ## Synopsis
 
-```
+```text
 renacer [OPTIONS] [-- <COMMAND>...]
 renacer validate [VALIDATE_OPTIONS] [-- <COMMAND>...]
 ```
@@ -98,7 +98,7 @@ renacer --source -- ./myapp
 ```
 
 **Output:**
-```
+```text
 openat(...) = 3  [main.c:42 in read_config()]
 read(3, ...) = 256  [main.c:43 in read_config()]
 ```
@@ -117,7 +117,7 @@ renacer --timing -- ls
 ```
 
 **Output:**
-```
+```text
 openat(...) = 3  <0.000234>
 ```
 
@@ -134,7 +134,7 @@ renacer -c -- ls
 ```
 
 **Output:**
-```
+```text
 % time     calls    errors syscall
 ------ --------- --------- ----------------
  45.23       123         0 read
@@ -236,7 +236,7 @@ renacer -f -- make
 ```
 
 **Output:**
-```
+```text
 [12345] openat(...) = 3
 [12346] execve("/bin/gcc", ...) = 0  ← child process
 [12345] waitpid(12346, ...) = 12346
@@ -260,7 +260,7 @@ renacer --function-time -- ./myapp
 ```
 
 **Output:**
-```
+```text
 Function: read_config (config.c:42)
   openat: 2.3ms
   read: 45.8ms
@@ -284,7 +284,7 @@ renacer -c --stats-extended -- ./myapp
 ```
 
 **Output:**
-```
+```text
 read: p50=1.2ms, p95=3.4ms, p99=8.7ms
   Anomalies: 12 calls >3σ (Z-score method)
 ```
@@ -467,7 +467,7 @@ renacer --profile-self -- ls
 ```
 
 **Output:**
-```
+```text
 Renacer overhead: 2.3ms (14.5% of total time)
 ```
 

@@ -25,7 +25,7 @@ Anomalous grammar (telemetry leak):
 Renacer extracts N-grams (sliding windows) from syscall sequences:
 
 ### 2-grams (bigrams)
-```rust
+```rust,ignore
 Sequence: ["open", "read", "mmap", "write", "close"]
 
 2-grams:
@@ -36,7 +36,7 @@ Sequence: ["open", "read", "mmap", "write", "close"]
 ```
 
 ### 3-grams (trigrams)
-```rust
+```rust,ignore
 Sequence: ["open", "read", "mmap", "write", "close"]
 
 3-grams:
@@ -49,7 +49,7 @@ Sequence: ["open", "read", "mmap", "write", "close"]
 
 Compare baseline N-grams with current N-grams to find new patterns:
 
-```rust
+```rust,ignore
 use renacer::sequence::{extract_ngrams, detect_sequence_anomalies};
 
 // Baseline (known-good)
@@ -92,7 +92,7 @@ open → read → socket → connect → send → mmap → write → close
 
 Not all new patterns are bugs! Use frequency thresholds to filter noise:
 
-```rust
+```rust,ignore
 // Only report patterns that occur in >30% of executions
 let anomalies = detect_sequence_anomalies(&baseline, &current, 0.30);
 ```
@@ -112,7 +112,7 @@ let anomalies = detect_sequence_anomalies(&baseline, &current, 0.30);
 ## Implementation
 
 ### Extract N-grams
-```rust
+```rust,ignore
 use renacer::sequence::extract_ngrams;
 
 let syscalls = vec!["open", "read", "write", "close"];
@@ -122,7 +122,7 @@ let ngrams = extract_ngrams(&syscalls, 3);
 ```
 
 ### Detect Anomalies
-```rust
+```rust,ignore
 use renacer::sequence::{detect_sequence_anomalies, SequenceAnomaly};
 
 let anomalies = detect_sequence_anomalies(&baseline_ngrams, &current_ngrams, 0.30);
@@ -138,7 +138,7 @@ for anomaly in anomalies {
 
 Sequence anomalies trigger **build-time assertions** that fail CI:
 
-```rust
+```rust,ignore
 #[test]
 fn test_no_networking_in_transpiler() {
     let ngrams = extract_ngrams_from_trace("test.trace");

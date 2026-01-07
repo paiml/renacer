@@ -118,6 +118,10 @@ pub mod borders {
     pub const STATS_SUMMARY: Color = Color::Rgb(100, 255, 150); // Bright green
     pub const HELP: Color = Color::Rgb(180, 180, 180); // Gray
 
+    // Sprint 56: Metrics and Alerting panels
+    pub const METRICS: Color = Color::Rgb(100, 180, 255); // Light blue
+    pub const ALERTS: Color = Color::Rgb(255, 80, 80); // Bright red
+
     /// Rounded border style for btop-like appearance
     pub const STYLE: BorderType = BorderType::Rounded;
 }

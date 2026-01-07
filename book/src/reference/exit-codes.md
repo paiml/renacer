@@ -92,7 +92,7 @@ echo $?  # 139 (128 + 11)
 
 ## Exit Code Constants (Rust API)
 
-```rust
+```rust,ignore
 use renacer::validate::ValidateExitCode;
 
 fn handle_validation_result(code: ValidateExitCode) {

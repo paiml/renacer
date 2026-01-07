@@ -289,7 +289,7 @@ wait4(12347, [{WIFEXITED(s) && WEXITSTATUS(s) == 0}], 0, NULL) = 12347
 
 Renacer maintains a mapping from class names to syscall lists:
 
-```rust
+```rust,ignore
 match class_name {
     "file" => vec![
         "open", "openat", "creat", "read", "write", "close",
@@ -360,7 +360,7 @@ renacer -e 'trace=memory' -- python memory_intensive.py
 
 ### File Class Members (Complete List)
 
-```
+```text
 open, openat, creat, close, read, readv, pread64, preadv, preadv2,
 write, writev, pwrite64, pwritev, pwritev2, stat, fstat, lstat, fstatat,
 newfstatat, access, faccessat, faccessat2, chmod, fchmod, fchmodat,
@@ -373,7 +373,7 @@ tee, vmsplice, copy_file_range, sync, fsync, fdatasync, syncfs
 
 ### Network Class Members (Complete List)
 
-```
+```text
 socket, socketpair, bind, listen, accept, accept4, connect, getsockname,
 getpeername, send, sendto, sendmsg, sendmmsg, recv, recvfrom, recvmsg,
 recvmmsg, shutdown, setsockopt, getsockopt
@@ -381,7 +381,7 @@ recvmmsg, shutdown, setsockopt, getsockopt
 
 ### Process Class Members (Complete List)
 
-```
+```text
 fork, vfork, clone, clone3, execve, execveat, wait, wait4, waitpid, waitid,
 exit, exit_group, kill, tkill, tgkill, getpid, gettid, getppid, setpgid,
 getpgid, setpgrp, getpgrp, setsid, getsid, getuid, geteuid, getgid, getegid,
@@ -391,7 +391,7 @@ getresuid, getresgid, getgroups, setgroups, capget, capset, prctl, arch_prctl
 
 ### Memory Class Members (Complete List)
 
-```
+```text
 brk, mmap, mmap2, munmap, mprotect, madvise, mlock, munlock, mlockall,
 munlockall, mincore, mremap, remap_file_pages, mbind, get_mempolicy,
 set_mempolicy, migrate_pages, move_pages, membarrier
@@ -399,7 +399,7 @@ set_mempolicy, migrate_pages, move_pages, membarrier
 
 ### Signal Class Members (Complete List)
 
-```
+```text
 signal, sigaction, rt_sigaction, sigreturn, rt_sigreturn, kill, tkill,
 tgkill, sigprocmask, rt_sigprocmask, sigpending, rt_sigpending, sigsuspend,
 rt_sigsuspend, sigaltstack, signalfd, signalfd4
@@ -407,7 +407,7 @@ rt_sigsuspend, sigaltstack, signalfd, signalfd4
 
 ### IPC Class Members (Complete List)
 
-```
+```text
 pipe, pipe2, msgget, msgsnd, msgrcv, msgctl, semget, semop, semctl,
 semtimedop, shmget, shmat, shmdt, shmctl, mq_open, mq_unlink, mq_timedsend,
 mq_timedreceive, mq_notify, mq_getsetattr, eventfd, eventfd2
@@ -415,7 +415,7 @@ mq_timedreceive, mq_notify, mq_getsetattr, eventfd, eventfd2
 
 ### Desc Class Members (Complete List)
 
-```
+```text
 dup, dup2, dup3, fcntl, ioctl, select, pselect6, poll, ppoll, epoll_create,
 epoll_create1, epoll_ctl, epoll_wait, epoll_pwait, epoll_pwait2
 ```

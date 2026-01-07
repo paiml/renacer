@@ -16,7 +16,7 @@ The ML Pipeline embodies three Toyota Way principles:
 
 ## Architecture Overview
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │                    renacer ML Pipeline                          │
 ├─────────────────────────────────────────────────────────────────┤
@@ -49,7 +49,7 @@ The ML Pipeline embodies three Toyota Way principles:
 
 Before writing any implementation, we define the expected behavior:
 
-```rust
+```rust,ignore
 // RED: This test will fail - no implementation exists yet
 #[test]
 fn test_extract_features_basic() {
@@ -73,7 +73,7 @@ fn test_extract_features_basic() {
 
 ### Phase 2: GREEN - Minimal Implementation
 
-```rust
+```rust,ignore
 pub fn extract_features(
     syscall_data: &HashMap<String, (u64, u64)>,
 ) -> Result<(Vec<String>, Matrix<f32>)> {
@@ -111,7 +111,7 @@ pub fn extract_features(
 
 ### Phase 3: REFACTOR - Add Edge Case Tests
 
-```rust
+```rust,ignore
 #[test]
 fn test_extract_features_insufficient_data() {
     let mut data = HashMap::new();
@@ -139,7 +139,7 @@ fn test_extract_features_skips_zero_count() {
 
 ### RED: Define Expected Behavior
 
-```rust
+```rust,ignore
 #[test]
 fn test_normalize_features_zero_mean() {
     let mut data = HashMap::new();
@@ -162,7 +162,7 @@ fn test_normalize_features_zero_mean() {
 
 ### GREEN: Implementation
 
-```rust
+```rust,ignore
 use aprender::preprocessing::StandardScaler;
 use aprender::traits::{Transformer, UnsupervisedEstimator};
 
@@ -200,7 +200,7 @@ DBSCAN (Density-Based Spatial Clustering of Applications with Noise) identifies 
 
 ### RED: Test Cluster Detection
 
-```rust
+```rust,ignore
 #[test]
 fn test_dbscan_finds_clusters() {
     let mut data = HashMap::new();
@@ -223,7 +223,7 @@ fn test_dbscan_finds_clusters() {
 
 ### RED: Test Noise Detection (Anomalies)
 
-```rust
+```rust,ignore
 #[test]
 fn test_dbscan_identifies_noise() {
     let mut data = HashMap::new();
@@ -246,7 +246,7 @@ fn test_dbscan_identifies_noise() {
 
 ### GREEN: Implementation
 
-```rust
+```rust,ignore
 use aprender::cluster::DBSCAN;
 
 pub fn run_dbscan(
@@ -287,7 +287,7 @@ LOF detects anomalies based on local density deviation. Syscalls with significan
 
 ### RED: Test Outlier Detection
 
-```rust
+```rust,ignore
 #[test]
 fn test_lof_detects_outliers() {
     let mut data = HashMap::new();
@@ -311,7 +311,7 @@ fn test_lof_detects_outliers() {
 
 ### GREEN: Implementation
 
-```rust
+```rust,ignore
 use aprender::cluster::LocalOutlierFactor;
 
 pub fn run_lof(
@@ -362,7 +362,7 @@ Silhouette score measures clustering quality: -1 (worst) to 1 (best).
 
 ### RED: Test Well-Separated Clusters
 
-```rust
+```rust,ignore
 #[test]
 fn test_silhouette_score_well_separated() {
     // Two perfectly separated clusters
@@ -385,7 +385,7 @@ fn test_silhouette_score_well_separated() {
 
 ### RED: Edge Case - Single Cluster
 
-```rust
+```rust,ignore
 #[test]
 fn test_silhouette_score_single_cluster() {
     let data = vec![1.0, 1.0, 1.1, 1.1, 1.2, 1.2];
@@ -403,7 +403,7 @@ PCA reduces feature dimensions while preserving variance - useful for visualizat
 
 ### RED: Test Dimension Reduction
 
-```rust
+```rust,ignore
 #[test]
 fn test_pca_reduces_dimensions() {
     let mut data = HashMap::new();
@@ -425,7 +425,7 @@ fn test_pca_reduces_dimensions() {
 
 ### RED: Test Variance Explained
 
-```rust
+```rust,ignore
 #[test]
 fn test_pca_variance_explained() {
     // ... setup ...
@@ -443,7 +443,7 @@ The `.apr` format persists trained models, eliminating the waste of retraining.
 
 ### RED: Test Save/Load Roundtrip
 
-```rust
+```rust,ignore
 #[test]
 fn test_save_and_load_kmeans_model() {
     let temp_dir = TempDir::new().unwrap();
@@ -483,7 +483,7 @@ fn test_save_and_load_kmeans_model() {
 
 ### GREEN: Implementation
 
-```rust
+```rust,ignore
 use aprender::format::{save, load, Compression, ModelType, SaveOptions};
 
 pub fn save_kmeans_model(
@@ -511,7 +511,7 @@ pub fn save_kmeans_model(
 
 Property tests verify invariants across random inputs:
 
-```rust
+```rust,ignore
 #[test]
 fn test_normalization_preserves_sample_count() {
     proptest::proptest!(|(n_syscalls in 3usize..10)| {

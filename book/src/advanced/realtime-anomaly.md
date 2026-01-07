@@ -39,7 +39,7 @@ $ renacer -- ./myapp 2>&1 | awk '
 ```
 
 **Example Output:**
-```
+```text
 ⚠️ SLOW SYSCALL: fsync(3) = 0   [15234 μs]
 ⚠️ SLOW SYSCALL: read(4, ...) = 1024   [12456 μs]
 ```

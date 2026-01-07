@@ -15,7 +15,7 @@ Chaos engineering intentionally introduces controlled failures to verify system 
 
 ### Basic Usage
 
-```rust
+```rust,ignore
 use renacer::chaos::ChaosConfig;
 use std::time::Duration;
 
@@ -127,7 +127,7 @@ renacer = { version = "0.4", features = ["chaos-full"] }
 
 ### Chainable API
 
-```rust
+```rust,ignore
 let config = ChaosConfig::new()
     .with_memory_limit(64 * 1024 * 1024)
     .with_cpu_limit(0.3)
@@ -140,7 +140,7 @@ let config = ChaosConfig::new()
 
 ### Preset Methods
 
-```rust
+```rust,ignore
 // Gentle: Suitable for CI/CD
 let gentle = ChaosConfig::gentle();
 assert_eq!(gentle.memory_limit(), Some(500 * 1024 * 1024));
@@ -158,7 +158,7 @@ assert_eq!(aggressive.signal_injection(), true);
 
 Renacer includes 7 property-based tests for chaos configuration:
 
-```rust
+```rust,ignore
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -191,7 +191,7 @@ mod tests {
 
 ### Integration Testing with Chaos
 
-```rust
+```rust,ignore
 #[test]
 fn test_tracer_under_memory_pressure() {
     let config = ChaosConfig::new()
@@ -242,7 +242,7 @@ For detailed usage examples, see the [Chaos Testing Guide](../advanced/chaos-tes
 
 ### 1. Testing Error Handling
 
-```rust
+```rust,ignore
 // Verify tracer handles memory exhaustion
 let config = ChaosConfig::new()
     .with_memory_limit(5 * 1024 * 1024)  // Very low limit
@@ -253,7 +253,7 @@ let config = ChaosConfig::new()
 
 ### 2. Stress Testing
 
-```rust
+```rust,ignore
 // Aggressive limits to find breaking points
 let config = ChaosConfig::aggressive();
 
@@ -273,7 +273,7 @@ CHAOS_MODE=gentle cargo test
 
 ### 4. Flaky Test Investigation
 
-```rust
+```rust,ignore
 // Reproduce timing-sensitive bugs
 let config = ChaosConfig::new()
     .with_cpu_limit(0.1)  // Slow down execution
@@ -320,7 +320,7 @@ make chaos     # System chaos testing
 
 ## Example: Complete Chaos Test
 
-```rust
+```rust,ignore
 use renacer::chaos::ChaosConfig;
 use std::time::Duration;
 

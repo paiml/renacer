@@ -428,6 +428,31 @@ pub struct VisualizeArgs {
     #[arg(long = "otlp-endpoint", value_name = "URL")]
     pub otlp_endpoint: Option<String>,
 
+    // Sprint 56: Metrics and Alerting Panel Options
+    /// Enable metrics collection panel (counters, gauges, histograms)
+    #[arg(long = "metrics")]
+    pub enable_metrics: bool,
+
+    /// Enable alerting panel (threshold/rate/absence alerts)
+    #[arg(long = "alerts")]
+    pub enable_alerts: bool,
+
+    /// Alert threshold for syscall latency anomaly (microseconds, default: 10000)
+    #[arg(
+        long = "alert-latency-threshold",
+        value_name = "US",
+        default_value = "10000"
+    )]
+    pub alert_latency_threshold: u64,
+
+    /// Alert threshold for error rate percentage (default: 5.0)
+    #[arg(
+        long = "alert-error-rate",
+        value_name = "PERCENT",
+        default_value = "5.0"
+    )]
+    pub alert_error_rate: f32,
+
     /// Command to trace (everything after --)
     #[arg(last = true)]
     pub command: Option<Vec<String>>,
@@ -608,6 +633,11 @@ fn run_visualize_subcommand(args: &VisualizeArgs) -> Result<i32> {
         enable_source: args.source,
         filter: args.filter.clone(),
         otlp_endpoint: args.otlp_endpoint.clone(),
+        // Sprint 56: Metrics and alerting
+        enable_metrics: args.enable_metrics,
+        enable_alerts: args.enable_alerts,
+        alert_latency_threshold_us: args.alert_latency_threshold,
+        alert_error_rate_percent: args.alert_error_rate,
     };
 
     // Run visualization
@@ -1909,5 +1939,127 @@ mod tests {
         assert_eq!(ValidationOutputFormat::Text, ValidationOutputFormat::Text);
         assert_ne!(ValidationOutputFormat::Text, ValidationOutputFormat::Json);
         assert_ne!(ValidationOutputFormat::Json, ValidationOutputFormat::Junit);
+    }
+
+    // Sprint 56: Metrics and Alerting CLI Tests
+    #[test]
+    fn test_visualize_metrics_flag() {
+        let cli = Cli::parse_from(["renacer", "visualize", "--metrics", "--", "echo", "test"]);
+        if let Some(Commands::Visualize(args)) = cli.subcommand {
+            assert!(args.enable_metrics);
+        } else {
+            panic!("Expected Visualize subcommand");
+        }
+    }
+
+    #[test]
+    fn test_visualize_metrics_default_false() {
+        let cli = Cli::parse_from(["renacer", "visualize", "--", "echo", "test"]);
+        if let Some(Commands::Visualize(args)) = cli.subcommand {
+            assert!(!args.enable_metrics);
+        } else {
+            panic!("Expected Visualize subcommand");
+        }
+    }
+
+    #[test]
+    fn test_visualize_alerts_flag() {
+        let cli = Cli::parse_from(["renacer", "visualize", "--alerts", "--", "echo", "test"]);
+        if let Some(Commands::Visualize(args)) = cli.subcommand {
+            assert!(args.enable_alerts);
+        } else {
+            panic!("Expected Visualize subcommand");
+        }
+    }
+
+    #[test]
+    fn test_visualize_alerts_default_false() {
+        let cli = Cli::parse_from(["renacer", "visualize", "--", "echo", "test"]);
+        if let Some(Commands::Visualize(args)) = cli.subcommand {
+            assert!(!args.enable_alerts);
+        } else {
+            panic!("Expected Visualize subcommand");
+        }
+    }
+
+    #[test]
+    fn test_visualize_alert_latency_threshold_default() {
+        let cli = Cli::parse_from(["renacer", "visualize", "--", "echo", "test"]);
+        if let Some(Commands::Visualize(args)) = cli.subcommand {
+            assert_eq!(args.alert_latency_threshold, 10000);
+        } else {
+            panic!("Expected Visualize subcommand");
+        }
+    }
+
+    #[test]
+    fn test_visualize_alert_latency_threshold_custom() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "visualize",
+            "--alert-latency-threshold",
+            "5000",
+            "--",
+            "echo",
+            "test",
+        ]);
+        if let Some(Commands::Visualize(args)) = cli.subcommand {
+            assert_eq!(args.alert_latency_threshold, 5000);
+        } else {
+            panic!("Expected Visualize subcommand");
+        }
+    }
+
+    #[test]
+    fn test_visualize_alert_error_rate_default() {
+        let cli = Cli::parse_from(["renacer", "visualize", "--", "echo", "test"]);
+        if let Some(Commands::Visualize(args)) = cli.subcommand {
+            assert!((args.alert_error_rate - 5.0).abs() < f32::EPSILON);
+        } else {
+            panic!("Expected Visualize subcommand");
+        }
+    }
+
+    #[test]
+    fn test_visualize_alert_error_rate_custom() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "visualize",
+            "--alert-error-rate",
+            "2.5",
+            "--",
+            "echo",
+            "test",
+        ]);
+        if let Some(Commands::Visualize(args)) = cli.subcommand {
+            assert!((args.alert_error_rate - 2.5).abs() < f32::EPSILON);
+        } else {
+            panic!("Expected Visualize subcommand");
+        }
+    }
+
+    #[test]
+    fn test_visualize_metrics_and_alerts_combined() {
+        let cli = Cli::parse_from([
+            "renacer",
+            "visualize",
+            "--metrics",
+            "--alerts",
+            "--alert-latency-threshold",
+            "8000",
+            "--alert-error-rate",
+            "3.0",
+            "--",
+            "echo",
+            "test",
+        ]);
+        if let Some(Commands::Visualize(args)) = cli.subcommand {
+            assert!(args.enable_metrics);
+            assert!(args.enable_alerts);
+            assert_eq!(args.alert_latency_threshold, 8000);
+            assert!((args.alert_error_rate - 3.0).abs() < f32::EPSILON);
+        } else {
+            panic!("Expected Visualize subcommand");
+        }
     }
 }
