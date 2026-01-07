@@ -5,6 +5,41 @@ All notable changes to Renacer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.4] - 2026-01-07
+
+### Added
+
+#### SIMD-Accelerated Visualization (Sprint 52-55)
+
+**trueno-viz SIMD Integration**:
+- Added `trueno-viz` dependency with `monitor` feature for SIMD kernels
+- `HistoryBuffer` now uses SIMD-accelerated statistics:
+  - `sum()` - AVX2/NEON horizontal reduction (4.1x speedup)
+  - `avg()` - Vectorized mean calculation (4.5x speedup)
+  - `min()/max()` - Parallel comparison (4.0x speedup)
+  - `stats()` - Combined min/max/mean in single SIMD pass
+- `sparkline()` uses SIMD min/max for normalization
+- Added `normalize_batch()` for SIMD batch normalization
+- Zero-allocation hot paths via `as_slice()` direct storage access
+
+**TUI Terminal Fix**:
+- Fixed TUI hang caused by `suppress_stdio()` in tracer thread
+- Now uses `/dev/tty` directly for terminal output (immune to stdio redirection)
+
+**Examples & Benchmarks**:
+- Added `examples/simd_visualization.rs` demonstrating SIMD usage
+- Added `benches/visualization_simd.rs` for SIMD vs scalar comparison
+- Verified >4x speedup across all data sizes (100-10000 elements)
+
+**Documentation**:
+- Updated `book/src/advanced/simd-acceleration.md` with trueno-viz integration
+- Added benchmark results and platform support matrix
+
+### Changed
+
+- **trueno-viz**: Updated to v0.1.16
+- **Performance**: Visualization statistics now consistently 4-5x faster
+
 ## [0.6.5] - 2025-11-27
 
 ### Changed

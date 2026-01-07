@@ -12,6 +12,19 @@ use tracing::{info, trace, warn};
 
 use crate::syscalls;
 
+/// Real-time syscall event for visualization (Sprint 52-55)
+#[derive(Debug, Clone)]
+pub struct VisualizerEvent {
+    /// Syscall name
+    pub name: String,
+    /// Duration in microseconds
+    pub duration_us: u64,
+    /// Return value (negative for errors)
+    pub result: i64,
+    /// Process ID
+    pub pid: i32,
+}
+
 /// Configuration for tracer behavior
 pub struct TracerConfig {
     pub enable_source: bool,
@@ -45,6 +58,8 @@ pub struct TracerConfig {
     pub otlp_service_name: String,     // Sprint 30: Service name for OTLP traces
     pub trace_parent: Option<String>,  // Sprint 33: W3C Trace Context for distributed tracing
     pub chaos_config: Option<crate::chaos::ChaosConfig>, // Sprint 47: Chaos engineering (Issue #17)
+    /// Sprint 52-55: Event sink for real-time visualization
+    pub visualizer_sink: Option<std::sync::mpsc::Sender<VisualizerEvent>>,
 }
 
 impl Default for TracerConfig {
@@ -81,6 +96,7 @@ impl Default for TracerConfig {
             otlp_service_name: "renacer".to_string(),
             trace_parent: None,
             chaos_config: None,
+            visualizer_sink: None,
         }
     }
 }
@@ -159,6 +175,8 @@ struct Tracers {
     decision_tracer: Option<crate::decision_trace::DecisionTracer>, // Sprint 26
     #[cfg(feature = "otlp")]
     otlp_exporter: Option<crate::otlp_exporter::OtlpExporter>, // Sprint 30
+    /// Sprint 52-55: Event sink for real-time visualization
+    visualizer_sink: Option<std::sync::mpsc::Sender<VisualizerEvent>>,
 }
 
 /// Initialize profiling-related tracers
@@ -311,6 +329,7 @@ fn initialize_tracers(config: &TracerConfig) -> Tracers {
         decision_tracer,
         #[cfg(feature = "otlp")]
         otlp_exporter,
+        visualizer_sink: config.visualizer_sink.clone(),
     }
 }
 
@@ -1058,6 +1077,7 @@ fn print_summaries(tracers: Tracers, timing_mode: bool, exit_code: i32, analysis
         decision_tracer,
         #[cfg(feature = "otlp")]
         mut otlp_exporter,
+        visualizer_sink: _,
     } = tracers;
 
     // Sprint 31: Export decision traces to OTLP (before ending root span)
@@ -1936,6 +1956,18 @@ fn handle_syscall_exit(
         duration_us,
     );
 
+    // Sprint 52-55: Send event to visualizer
+    if let (Some(entry), Some(ref sink)) = (syscall_entry, &tracers.visualizer_sink) {
+        let event = VisualizerEvent {
+            name: entry.name.clone(),
+            duration_us,
+            result,
+            pid: child.as_raw(),
+        };
+        // Non-blocking send - if channel is full, drop the event
+        let _ = sink.send(event);
+    }
+
     // Sprint 30: Record syscall to OTLP exporter
     #[cfg(feature = "otlp")]
     if let (Some(entry), Some(exporter)) = (syscall_entry, tracers.otlp_exporter.as_ref()) {
@@ -2008,6 +2040,7 @@ mod tests {
             otlp_service_name: "renacer".to_string(), // Sprint 30
             trace_parent: None,                       // Sprint 33
             chaos_config: None,                       // Sprint 47
+            visualizer_sink: None,                    // Sprint 52-55
         };
         let result = trace_command(&empty, config);
         assert!(result.is_err());
@@ -2051,6 +2084,7 @@ mod tests {
             otlp_service_name: "renacer".to_string(), // Sprint 30
             trace_parent: None,                       // Sprint 33
             chaos_config: None,                       // Sprint 47
+            visualizer_sink: None,                    // Sprint 52-55
         };
         let result = trace_command(&cmd, config);
         assert!(result.is_ok(), "trace_command failed: {:?}", result);
@@ -2416,6 +2450,7 @@ mod tests {
             otlp_service_name: "test-service".to_string(),
             trace_parent: Some("00-trace-parent-01".to_string()),
             chaos_config: None,
+            visualizer_sink: None, // Sprint 52-55
         };
 
         assert!(config.enable_source);
@@ -3280,6 +3315,7 @@ mod tests {
             decision_tracer: None,
             #[cfg(feature = "otlp")]
             otlp_exporter: None,
+            visualizer_sink: None,
         };
         let analysis = AnalysisConfig {
             stats_extended: false,
@@ -3315,6 +3351,7 @@ mod tests {
             decision_tracer: None,
             #[cfg(feature = "otlp")]
             otlp_exporter: None,
+            visualizer_sink: None,
         };
         let analysis = AnalysisConfig {
             stats_extended: true,
@@ -3350,6 +3387,7 @@ mod tests {
             decision_tracer: None,
             #[cfg(feature = "otlp")]
             otlp_exporter: None,
+            visualizer_sink: None,
         };
         let analysis = AnalysisConfig {
             stats_extended: false,
@@ -3385,6 +3423,7 @@ mod tests {
             decision_tracer: None,
             #[cfg(feature = "otlp")]
             otlp_exporter: None,
+            visualizer_sink: None,
         };
         let analysis = AnalysisConfig {
             stats_extended: false,
@@ -3420,6 +3459,7 @@ mod tests {
             decision_tracer: None,
             #[cfg(feature = "otlp")]
             otlp_exporter: None,
+            visualizer_sink: None,
         };
         let analysis = AnalysisConfig {
             stats_extended: false,
@@ -3455,6 +3495,7 @@ mod tests {
             decision_tracer: None,
             #[cfg(feature = "otlp")]
             otlp_exporter: None,
+            visualizer_sink: None,
         };
         let analysis = AnalysisConfig {
             stats_extended: false,
@@ -3490,6 +3531,7 @@ mod tests {
             decision_tracer: Some(crate::decision_trace::DecisionTracer::new()),
             #[cfg(feature = "otlp")]
             otlp_exporter: None,
+            visualizer_sink: None,
         };
         let analysis = AnalysisConfig {
             stats_extended: false,
@@ -3525,6 +3567,7 @@ mod tests {
             decision_tracer: Some(crate::decision_trace::DecisionTracer::new()),
             #[cfg(feature = "otlp")]
             otlp_exporter: None,
+            visualizer_sink: None,
         };
         let analysis = AnalysisConfig {
             stats_extended: true,
@@ -3856,6 +3899,7 @@ mod tests {
             decision_tracer: None,
             #[cfg(feature = "otlp")]
             otlp_exporter: None,
+            visualizer_sink: None,
         };
         let analysis = AnalysisConfig {
             stats_extended: true,
@@ -3891,6 +3935,7 @@ mod tests {
             decision_tracer: None,
             #[cfg(feature = "otlp")]
             otlp_exporter: None,
+            visualizer_sink: None,
         };
         let analysis = AnalysisConfig {
             stats_extended: true,
@@ -3926,6 +3971,7 @@ mod tests {
             decision_tracer: None,
             #[cfg(feature = "otlp")]
             otlp_exporter: None,
+            visualizer_sink: None,
         };
         let analysis = AnalysisConfig {
             stats_extended: true,

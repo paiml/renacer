@@ -606,3 +606,101 @@ ruchy_tracing_citations:
     relevance: "Happen-before relationships (v2.0)"
   - citation: "Wang et al. (USENIX ATC 2018): Serverless Platforms"
     relevance: "Lambda freeze behavior (v2.0)"
+
+# ============================================================================
+# PMAT Work Tickets (pmat work start <ID>)
+# ============================================================================
+
+tickets:
+  - id: "METRICS-001"
+    title: "Core Metrics, Alerting, and Visualization"
+    type: "EPIC"
+    status: "todo"
+    priority: "high"
+    specification: "docs/specifications/core-metrics-alerts-viz.md"
+    sprints: [56, 57]
+    duration: "2 weeks"
+    description: |
+      Extend Renacer from tracing-only to full observability platform with:
+      - Metrics collection (Counter, Gauge, Histogram - OTLP compatible)
+      - Alerting engine (threshold, rate, absence, anomaly-based)
+      - Enhanced TUI visualization (metrics panels, alert status)
+
+    objectives:
+      - "Counter/Gauge/Histogram with SIMD-accelerated histograms (trueno)"
+      - "OTLP metrics export (extend existing trace exporter)"
+      - "Alert rule DSL in renacer.toml"
+      - "Real-time TUI metrics dashboard"
+      - "100-point Popper falsification QA checklist"
+
+    deliverables:
+      sprint_56:
+        - "src/metrics/counter.rs - Atomic counter"
+        - "src/metrics/gauge.rs - Atomic gauge"
+        - "src/metrics/histogram.rs - SIMD bucket search"
+        - "src/metrics/registry.rs - Thread-safe registration"
+        - "src/otlp_exporter.rs - Extended for metrics"
+        - "CLI: renacer --metrics, renacer metrics list"
+
+      sprint_57:
+        - "src/alerting/engine.rs - Alert evaluation loop"
+        - "src/alerting/rule.rs - Alert rule parsing"
+        - "src/alerting/state.rs - Pending/Firing/Resolved"
+        - "src/visualize/panels/metrics.rs - TUI sparklines"
+        - "src/visualize/panels/alerts.rs - Alert status"
+        - "renacer.toml alerting configuration"
+
+    acceptance_criteria:
+      - "Counter.inc() <50ns (p99)"
+      - "Histogram.observe() <200ns with SIMD"
+      - "Alert fires within 100ms of threshold breach"
+      - "TUI renders 50 metrics at 30fps"
+      - "100/100 Popper QA checklist items pass"
+
+    quality_gates:
+      - "95%+ test coverage"
+      - "85%+ mutation score"
+      - "Zero clippy warnings"
+      - "pmat rust-project-score ≥85/106"
+      - "All 100 Popper falsification tests pass"
+
+    peer_reviewed_citations:
+      - "Dapper (Google 2010): Ring buffer pattern"
+      - "Prometheus (SoundCloud 2012): Counter/Gauge/Histogram types"
+      - "Linux perf_event (2008): Per-CPU ring buffers"
+      - "Borgmon (Google 2003): Alert rule evaluation"
+      - "Isolation Forest (Liu 2008): Anomaly detection"
+
+    linux_kernel_patterns:
+      - "kernel/events/ring_buffer.c: Lock-free per-CPU buffers"
+      - "kernel/watchdog_perf.c: Threshold-based alerting"
+
+    prometheus_patterns:
+      - "model/histogram: Exponential bucket boundaries"
+      - "Label cardinality control: Allowlist enforcement"
+      - "Recording rules: Pre-computed aggregations"
+
+    toyota_way:
+      heijunka: "Lock-free ring buffer prevents I/O blocking"
+      jidoka: "Automated alert evaluation, quality gates"
+      genchi_genbutsu: "Real production workload validation"
+      muda: "SIMD acceleration eliminates CPU waste"
+
+  - id: "METRICS-001-SPRINT56"
+    title: "Core Metrics + OTLP Export"
+    type: "sprint"
+    status: "todo"
+    priority: "high"
+    parent: "METRICS-001"
+    sprint: 56
+    specification: "docs/specifications/core-metrics-alerts-viz.md#sprint-56"
+
+  - id: "METRICS-001-SPRINT57"
+    title: "Alerting + Visualization"
+    type: "sprint"
+    status: "blocked"
+    blocked_by: "METRICS-001-SPRINT56"
+    priority: "high"
+    parent: "METRICS-001"
+    sprint: 57
+    specification: "docs/specifications/core-metrics-alerts-viz.md#sprint-57"

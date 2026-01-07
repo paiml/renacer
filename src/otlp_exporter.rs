@@ -643,7 +643,7 @@ pub struct OtlpExporter;
 
 #[cfg(not(feature = "otlp"))]
 impl OtlpExporter {
-    pub fn new(_config: OtlpConfig) -> Result<Self> {
+    pub fn new(_config: OtlpConfig) -> anyhow::Result<Self> {
         anyhow::bail!("OTLP support not compiled in. Enable the 'otlp' feature.");
     }
 

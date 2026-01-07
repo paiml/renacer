@@ -4,8 +4,10 @@
 
 use super::ring_buffer::HistoryBuffer;
 use super::VisualizeConfig;
+use crate::tracer::VisualizerEvent;
 use crossterm::event::{KeyCode, KeyModifiers};
 use std::collections::HashMap;
+use std::sync::mpsc::Receiver;
 use std::time::Instant;
 
 /// Syscall category for grouping
@@ -24,40 +26,38 @@ impl SyscallCategory {
         match name {
             // File operations
             "read" | "write" | "open" | "close" | "stat" | "fstat" | "lstat" | "lseek"
-            | "pread64" | "pwrite64" | "readv" | "writev" | "access" | "pipe" | "dup"
-            | "dup2" | "dup3" | "fcntl" | "flock" | "fsync" | "fdatasync" | "truncate"
-            | "ftruncate" | "getdents" | "getdents64" | "getcwd" | "chdir" | "fchdir"
-            | "rename" | "mkdir" | "rmdir" | "creat" | "link" | "unlink" | "symlink"
-            | "readlink" | "chmod" | "fchmod" | "chown" | "fchown" | "lchown" | "umask"
-            | "openat" | "mkdirat" | "mknodat" | "fchownat" | "futimesat" | "newfstatat"
-            | "unlinkat" | "renameat" | "linkat" | "symlinkat" | "readlinkat"
-            | "fchmodat" | "faccessat" | "pselect6" | "ppoll" | "splice" | "tee"
-            | "vmsplice" | "sync_file_range" | "utimensat" | "fallocate" | "eventfd"
-            | "eventfd2" | "epoll_create" | "epoll_create1" | "epoll_ctl" | "epoll_wait"
-            | "epoll_pwait" | "inotify_init" | "inotify_init1" | "inotify_add_watch"
-            | "inotify_rm_watch" | "fstatat64" | "statx" => Self::File,
+            | "pread64" | "pwrite64" | "readv" | "writev" | "access" | "pipe" | "dup" | "dup2"
+            | "dup3" | "fcntl" | "flock" | "fsync" | "fdatasync" | "truncate" | "ftruncate"
+            | "getdents" | "getdents64" | "getcwd" | "chdir" | "fchdir" | "rename" | "mkdir"
+            | "rmdir" | "creat" | "link" | "unlink" | "symlink" | "readlink" | "chmod"
+            | "fchmod" | "chown" | "fchown" | "lchown" | "umask" | "openat" | "mkdirat"
+            | "mknodat" | "fchownat" | "futimesat" | "newfstatat" | "unlinkat" | "renameat"
+            | "linkat" | "symlinkat" | "readlinkat" | "fchmodat" | "faccessat" | "pselect6"
+            | "ppoll" | "splice" | "tee" | "vmsplice" | "sync_file_range" | "utimensat"
+            | "fallocate" | "eventfd" | "eventfd2" | "epoll_create" | "epoll_create1"
+            | "epoll_ctl" | "epoll_wait" | "epoll_pwait" | "inotify_init" | "inotify_init1"
+            | "inotify_add_watch" | "inotify_rm_watch" | "fstatat64" | "statx" => Self::File,
 
             // Network operations
-            "socket" | "connect" | "accept" | "accept4" | "sendto" | "recvfrom"
-            | "sendmsg" | "recvmsg" | "shutdown" | "bind" | "listen" | "getsockname"
-            | "getpeername" | "socketpair" | "setsockopt" | "getsockopt" | "sendmmsg"
-            | "recvmmsg" | "select" | "poll" => Self::Network,
+            "socket" | "connect" | "accept" | "accept4" | "sendto" | "recvfrom" | "sendmsg"
+            | "recvmsg" | "shutdown" | "bind" | "listen" | "getsockname" | "getpeername"
+            | "socketpair" | "setsockopt" | "getsockopt" | "sendmmsg" | "recvmmsg" | "select"
+            | "poll" => Self::Network,
 
             // Memory operations
-            "brk" | "mmap" | "munmap" | "mprotect" | "mremap" | "msync" | "mincore"
-            | "madvise" | "mlock" | "munlock" | "mlockall" | "munlockall" | "shmget"
-            | "shmat" | "shmctl" | "shmdt" => Self::Memory,
+            "brk" | "mmap" | "munmap" | "mprotect" | "mremap" | "msync" | "mincore" | "madvise"
+            | "mlock" | "munlock" | "mlockall" | "munlockall" | "shmget" | "shmat" | "shmctl"
+            | "shmdt" => Self::Memory,
 
             // Process operations
             "fork" | "vfork" | "clone" | "clone3" | "execve" | "execveat" | "exit"
-            | "exit_group" | "wait4" | "waitid" | "kill" | "tkill" | "tgkill"
-            | "getpid" | "getppid" | "getuid" | "geteuid" | "getgid" | "getegid"
-            | "setuid" | "setgid" | "setpgid" | "getpgid" | "getpgrp" | "setsid"
-            | "getsid" | "setreuid" | "setregid" | "getgroups" | "setgroups"
-            | "setresuid" | "getresuid" | "setresgid" | "getresgid" | "setfsuid"
-            | "setfsgid" | "gettid" | "futex" | "sched_yield" | "sched_setaffinity"
-            | "sched_getaffinity" | "set_tid_address" | "prctl" | "arch_prctl"
-            | "ptrace" | "seccomp" | "getrandom" => Self::Process,
+            | "exit_group" | "wait4" | "waitid" | "kill" | "tkill" | "tgkill" | "getpid"
+            | "getppid" | "getuid" | "geteuid" | "getgid" | "getegid" | "setuid" | "setgid"
+            | "setpgid" | "getpgid" | "getpgrp" | "setsid" | "getsid" | "setreuid" | "setregid"
+            | "getgroups" | "setgroups" | "setresuid" | "getresuid" | "setresgid" | "getresgid"
+            | "setfsuid" | "setfsgid" | "gettid" | "futex" | "sched_yield"
+            | "sched_setaffinity" | "sched_getaffinity" | "set_tid_address" | "prctl"
+            | "arch_prctl" | "ptrace" | "seccomp" | "getrandom" => Self::Process,
 
             _ => Self::Other,
         }
@@ -91,7 +91,7 @@ impl Default for PanelVisibility {
         Self {
             syscall_heatmap: true,
             anomaly_timeline: true,
-            ml_scatter: false, // Disabled by default (requires --ml)
+            ml_scatter: false,      // Disabled by default (requires --ml)
             trace_waterfall: false, // Disabled by default (requires --otlp)
             process_syscalls: true,
             stats_summary: true,
@@ -151,6 +151,9 @@ pub struct VisualizeApp {
     // Configuration
     pub config: VisualizeConfig,
 
+    // Event channel from tracer (Sprint 52-55 bridge)
+    pub event_receiver: Option<Receiver<VisualizerEvent>>,
+
     // Syscall metrics
     pub syscall_counts: HashMap<String, u64>,
     pub syscall_rates: HashMap<String, f64>,
@@ -197,11 +200,22 @@ pub struct VisualizeApp {
     // Exit control
     pub should_exit: bool,
     pub exit_code: i32,
+
+    // Trace state
+    pub trace_complete: bool,
 }
 
 impl VisualizeApp {
     /// Create a new application instance
     pub fn new(config: VisualizeConfig) -> Self {
+        Self::with_receiver(config, None)
+    }
+
+    /// Create a new application instance with an event receiver
+    pub fn with_receiver(
+        config: VisualizeConfig,
+        event_receiver: Option<Receiver<VisualizerEvent>>,
+    ) -> Self {
         let history_size = config.history_size;
 
         // Initialize category history buffers
@@ -224,6 +238,7 @@ impl VisualizeApp {
 
         Self {
             config,
+            event_receiver,
             syscall_counts: HashMap::new(),
             syscall_rates: HashMap::new(),
             category_rates: HashMap::new(),
@@ -255,6 +270,7 @@ impl VisualizeApp {
             max_frame_time_us: 0,
             should_exit: false,
             exit_code: 0,
+            trace_complete: false,
         }
     }
 
@@ -270,11 +286,16 @@ impl VisualizeApp {
 
     /// Collect metrics from all collectors
     pub fn collect_metrics(&mut self) {
-        // In actual implementation, this would:
-        // 1. Read from syscall event channel
-        // 2. Update statistics
-        // 3. Run anomaly detection
-        // 4. Update ML clustering if enabled
+        // Sprint 52-55: Drain events from tracer channel
+        // Take receiver out temporarily to avoid borrow conflict
+        if let Some(receiver) = self.event_receiver.take() {
+            // Non-blocking drain of all pending events
+            while let Ok(event) = receiver.try_recv() {
+                self.record_syscall(&event.name, event.duration_us, event.result);
+            }
+            // Put it back
+            self.event_receiver = Some(receiver);
+        }
 
         // Update history buffers
         self.rate_history.push(self.syscall_rate);
@@ -398,7 +419,7 @@ impl VisualizeApp {
             }
 
             // Filter
-            KeyCode::Char('f') | KeyCode::Char('/') => {
+            KeyCode::Char('f' | '/') => {
                 self.show_filter_input = true;
             }
             KeyCode::Delete => {
@@ -415,11 +436,8 @@ impl VisualizeApp {
 
         // Handle Ctrl combinations
         if modifiers.contains(KeyModifiers::CONTROL) {
-            match code {
-                KeyCode::Char('l') => {
-                    // Clear screen / refresh (would be handled by terminal)
-                }
-                _ => {}
+            if let KeyCode::Char('l') = code {
+                // Clear screen / refresh (would be handled by terminal)
             }
         }
     }
@@ -537,10 +555,16 @@ mod tests {
     #[test]
     fn test_syscall_category() {
         assert_eq!(SyscallCategory::from_name("read"), SyscallCategory::File);
-        assert_eq!(SyscallCategory::from_name("socket"), SyscallCategory::Network);
+        assert_eq!(
+            SyscallCategory::from_name("socket"),
+            SyscallCategory::Network
+        );
         assert_eq!(SyscallCategory::from_name("mmap"), SyscallCategory::Memory);
         assert_eq!(SyscallCategory::from_name("fork"), SyscallCategory::Process);
-        assert_eq!(SyscallCategory::from_name("unknown"), SyscallCategory::Other);
+        assert_eq!(
+            SyscallCategory::from_name("unknown"),
+            SyscallCategory::Other
+        );
     }
 
     #[test]
@@ -566,7 +590,13 @@ mod tests {
     #[test]
     fn test_record_anomaly() {
         let mut app = VisualizeApp::new(VisualizeConfig::default());
-        app.record_anomaly("read".to_string(), 50000, 4.5, Some("test.rs".to_string()), Some(42));
+        app.record_anomaly(
+            "read".to_string(),
+            50000,
+            4.5,
+            Some("test.rs".to_string()),
+            Some(42),
+        );
 
         assert_eq!(app.anomaly_count, 1);
         assert_eq!(app.anomalies[0].syscall, "read");
@@ -653,5 +683,42 @@ mod tests {
         // Exit filter mode
         app.handle_key(KeyCode::Enter, KeyModifiers::empty());
         assert!(!app.show_filter_input);
+    }
+
+    #[test]
+    fn test_event_receiver_drains_channel() {
+        use std::sync::mpsc;
+
+        // Create channel
+        let (tx, rx) = mpsc::channel::<VisualizerEvent>();
+
+        // Create app with receiver
+        let mut app = VisualizeApp::with_receiver(VisualizeConfig::default(), Some(rx));
+        assert_eq!(app.total_syscalls, 0);
+
+        // Send some events
+        tx.send(VisualizerEvent {
+            name: "read".to_string(),
+            duration_us: 100,
+            result: 0,
+            pid: 1234,
+        })
+        .unwrap();
+        tx.send(VisualizerEvent {
+            name: "write".to_string(),
+            duration_us: 200,
+            result: -1,
+            pid: 1234,
+        })
+        .unwrap();
+
+        // Collect metrics should drain the channel
+        app.collect_metrics();
+
+        // Verify events were processed
+        assert_eq!(app.total_syscalls, 2);
+        assert_eq!(app.total_errors, 1);
+        assert_eq!(*app.syscall_counts.get("read").unwrap(), 1);
+        assert_eq!(*app.syscall_counts.get("write").unwrap(), 1);
     }
 }
