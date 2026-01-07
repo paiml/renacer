@@ -72,6 +72,7 @@ Per the Iron Lotus Framework [5, 12]:
 2. **Jidoka**: Automatic anomaly detection with visual alerts (Andon)
 3. **Muda**: Zero-copy ring buffers, no allocation in hot path
 4. **Poka-Yoke**: Type-safe panel IDs prevent configuration errors
+5. **SIMD Everywhere**: All numeric data processing (aggregations, scaling, color mapping) MUST use SIMD primitives (AVX2/NEON) following `trueno-viz` patterns.
 
 ---
 
@@ -641,6 +642,15 @@ pub struct VisualizeApp {
 | OTLP spans | 10,000/sec | Oldest evicted |
 | ML data points | 10,000 | PCA dimensionality reduction |
 
+### 7.6 SIMD Acceleration
+
+| Operation | Target | Implementation |
+|-----------|--------|----------------|
+| Buffer Aggregation | 8x speedup | `std::simd` or `trueno` vectorization |
+| Color Mapping | 4x speedup | Vectorized gradient interpolation |
+| Anomaly Detection | 8x speedup | AVX2/NEON intrinsics for Z-score calc |
+| Ring Buffer Writes | Zero-copy | `ptr::copy_nonoverlapping` (vectorized memcpy) |
+
 ---
 
 ## 8. Testing Strategy (Probador)
@@ -1063,16 +1073,82 @@ Per Popper's philosophy of science [12], a specification is only meaningful if i
 | 99 | Documentation examples compile | `cargo test --doc` | 1 |
 | 100 | Error types include context | Inspect error messages | 1 |
 
+### 11.17 Bridge Integration - QA Falsification Findings (5 bonus points)
+
+**QA Protocol Executed:** 2026-01-07 "The Bridge Stress Test"
+
+| # | Issue Discovered | Root Cause | Solution | Points |
+|---|------------------|------------|----------|--------|
+| 101 | TUI hangs on `curl` trace | Tracer stdout output corrupts TUI | Redirect stdout → /dev/null in tracer thread | 2 |
+| 102 | 'q' key doesn't exit after trace | Child process may reset terminal raw mode | Re-enable raw_mode() after tracer thread joins | 1 |
+| 103 | UI "stops" after trace completes | Channel polling dead receiver | Drop receiver when trace completes, set `trace_complete` flag | 1 |
+| 104 | No indication trace finished | Auto-exit too fast for user | Display "TRACE COMPLETE - Press q to exit" banner | 1 |
+
+**Architectural Decision Record (ADR):**
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        Bridge Architecture (Post-QA)                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  Main Thread (TUI)                    Tracer Thread                          │
+│  ─────────────────                    ─────────────                          │
+│                                                                              │
+│  1. Create mpsc channel ──────────────┐                                      │
+│  2. Spawn tracer thread ──────────────┼──▶ suppress_stdout()                 │
+│  3. enable_raw_mode()                 │    └─▶ dup2(/dev/null, STDOUT)       │
+│  4. EnterAlternateScreen              │                                      │
+│  5. Main loop:                        ├──▶ trace_command() / attach_to_pid() │
+│     ├─ draw()                         │    ├─ ptrace syscalls                │
+│     ├─ event::poll(50ms)              │    └─ tx.send(VisualizerEvent)       │
+│     ├─ collect_metrics()              │                                      │
+│     │  └─ rx.try_recv() ◀─────────────┘                                      │
+│     ├─ check is_finished() ◀──────────────── thread exits                    │
+│     │  ├─ drain remaining events                                             │
+│     │  ├─ app.trace_complete = true                                          │
+│     │  ├─ app.event_receiver = None                                          │
+│     │  ├─ handle.join()                                                      │
+│     │  └─ enable_raw_mode() // re-enable if child reset it                   │
+│     └─ continue until 'q' pressed                                            │
+│  6. disable_raw_mode()                                                       │
+│  7. LeaveAlternateScreen                                                     │
+│                                                                              │
+│  Panic Safety: TerminalGuard Drop impl ensures cleanup on any exit path      │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Key Invariants:**
+1. Tracer thread MUST NOT write to stdout (corrupts TUI)
+2. Channel is unbounded (backpressure handled by 50ms tick drain)
+3. UI MUST remain responsive after trace completes (user presses 'q')
+4. Terminal raw mode MUST be restored if child process affected it
+
+### 11.17 Integration Hardening (The Missing Link) (15 points)
+
+| # | Falsifiable Claim | Test Method | Points |
+|---|-------------------|-------------|--------|
+| 101 | **Data Pipeline**: Tracer-to-UI bridge is active | Run `renacer visualize -- touch /tmp/qa_marker`, verify marker exists | 5 |
+| 102 | **Memory Stability**: Unbounded channel backpressure handled | Run `yes | head -n 1M`, verify RSS < 50MB | 5 |
+| 103 | **Lifecycle Management**: Clean exit on tracer completion | Run `ls`, verify TUI exits or prompts (no zombie threads) | 5 |
+
+### 11.18 SIMD Acceleration (10 points)
+
+| # | Falsifiable Claim | Test Method | Points |
+|---|-------------------|-------------|--------|
+| 104 | **SIMD Usage**: Binary contains AVX2/NEON instructions | `objdump -d` or `readelf` checks for `vaddps`, etc. | 3 |
+| 105 | **Vectorization**: Aggregation uses `std::simd` | Benchmark vs scalar implementation (>4x speedup) | 4 |
+| 106 | **Fallback**: Works on non-SIMD hardware | Run with `RUSTFLAGS="-C target-feature=-avx2"` | 3 |
+
 ---
 
-**Total: 100 points**
+**Total: 125 points**
 
-Minimum passing score: **90 points** (per Iron Lotus quality standards)
+Minimum passing score: **115 points** (per Iron Lotus quality standards)
 
 ---
 
 ## 12. Approval
-
 **Specification Author:** Claude Code
 **Review Required Before Implementation:** Yes
 

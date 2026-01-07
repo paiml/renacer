@@ -420,7 +420,7 @@ roadmap:
 - id: REN-001
   github_issue: 20
   item_type: task
-  title: 'Add experiment span type to Renacer'
+  title: Add experiment span type to Renacer
   status: completed
   priority: high
   assigned_to: claude
@@ -451,3 +451,72 @@ roadmap:
     - 28 tests (10 unit + 18 integration) all passing
     - cargo clippy -- -D warnings passes
     - TDD workflow followed: RED → GREEN → REFACTOR
+- id: METRICS-001
+  github_issue: null
+  item_type: epic
+  title: Core Metrics, Alerting, and Visualization
+  status: inprogress
+  priority: high
+  assigned_to: null
+  created: 2025-01-07T00:00:00.000000000+00:00
+  updated: 2026-01-07T14:55:02.790127187+00:00
+  spec: docs/specifications/core-metrics-alerts-viz.md
+  acceptance_criteria:
+  - Counter.inc() <50ns (p99)
+  - Histogram.observe() <200ns with SIMD (trueno)
+  - Alert fires within 100ms of threshold breach
+  - TUI renders 50 metrics at 30fps
+  - 100/100 Popper falsification QA checklist items pass
+  - 95%+ test coverage
+  - 85%+ mutation score
+  phases:
+  - name: 'Sprint 56: Core Metrics + OTLP Export'
+    status: planned
+    estimated_effort: 1 week
+    completion: 0
+  - name: 'Sprint 57: Alerting + Visualization'
+    status: blocked
+    estimated_effort: 1 week
+    completion: 0
+  subtasks: []
+  estimated_effort: 2 weeks (2 sprints)
+  labels:
+  - observability
+  - metrics
+  - alerting
+  - toyota-way
+  - peer-reviewed
+  - prometheus-patterns
+  - linux-kernel-patterns
+  notes: |
+    Extends Renacer from tracing-only to full observability platform.
+
+    Core Features:
+    - Counter/Gauge/Histogram with SIMD-accelerated histograms (trueno)
+    - OTLP metrics export (extend existing trace exporter)
+    - Alert rule DSL in renacer.toml
+    - Real-time TUI metrics dashboard
+
+    Peer-Reviewed Citations:
+    - Dapper (Google 2010): Ring buffer pattern
+    - Prometheus (SoundCloud 2012): Counter/Gauge/Histogram types
+    - Linux perf_event (2008): Per-CPU ring buffers
+    - Borgmon (Google 2003): Alert rule evaluation
+    - Isolation Forest (Liu 2008): Anomaly detection
+
+    Linux Kernel Patterns:
+    - kernel/events/ring_buffer.c: Lock-free per-CPU buffers
+    - kernel/watchdog_perf.c: Threshold-based alerting
+
+    Prometheus Patterns:
+    - model/histogram: Exponential bucket boundaries
+    - Label cardinality control: Allowlist enforcement
+    - Recording rules: Pre-computed aggregations
+
+    Toyota Way Principles:
+    - Heijunka: Lock-free ring buffer prevents I/O blocking
+    - Jidoka: Automated alert evaluation, quality gates
+    - Genchi Genbutsu: Real production workload validation
+    - Muda: SIMD acceleration eliminates CPU waste
+
+    100-Point Popper Falsification QA Checklist included in spec.

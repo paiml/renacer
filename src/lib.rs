@@ -57,3 +57,4 @@ pub mod trueno_db_storage; // Sprint 40: Trueno-DB Parquet storage for golden th
 pub mod unified_trace; // Sprint 40: Unified Trace Model (Specification Section 3.1)
 pub mod validate; // Sprint 50: Golden trace validation (APR Runtime Support)
 pub mod validation_engine; // Sprint 40: ValidationEngine for Batuta Integration (Specification Section 5.1)
+pub mod visualize; // Sprint 52-55: Real-time tracing visualization (ttop-identical TUI)

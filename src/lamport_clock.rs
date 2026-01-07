@@ -311,6 +311,7 @@ pub fn propagate_to_env() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
 
     #[test]
     fn test_tick_increments() {
@@ -446,6 +447,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_propagate_to_env() {
         // Reset global clock for test isolation
         GLOBAL_CLOCK.reset();
@@ -464,6 +466,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_init_from_env_with_valid_clock() {
         // Reset global clock for test isolation
         GLOBAL_CLOCK.reset();
@@ -483,6 +486,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_init_from_env_with_missing_env() {
         // Reset global clock for test isolation
         GLOBAL_CLOCK.reset();
@@ -498,6 +502,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_init_from_env_with_invalid_value() {
         // Reset global clock for test isolation
         GLOBAL_CLOCK.reset();
@@ -516,6 +521,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_global_clock_tick() {
         // Reset for isolation
         GLOBAL_CLOCK.reset();

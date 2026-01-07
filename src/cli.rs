@@ -4,6 +4,7 @@ use crate::{
     chaos::ChaosConfig,
     filter, tracer, transpiler_map,
     validate::{self, ValidateConfig},
+    visualize::{self, VisualizeConfig},
 };
 use anyhow::Result;
 use clap::{Args, Parser, Subcommand, ValueEnum};
@@ -301,6 +302,13 @@ pub enum Commands {
     /// Exit codes: 0=passed, 1=failed, 2=baseline not found, 3=invalid baseline,
     /// 4=command error, 5=config error
     Validate(ValidateArgs),
+
+    /// Real-time TUI visualization of syscall traces (Sprint 52-55)
+    ///
+    /// Launches an interactive terminal UI showing syscall heatmaps, anomaly
+    /// timelines, ML clustering, and OTLP span waterfalls in real-time.
+    /// Uses ttop-identical architecture for 8ms frame times.
+    Visualize(VisualizeArgs),
 }
 
 /// Arguments for the validate subcommand
@@ -359,6 +367,70 @@ pub enum ValidationOutputFormat {
     Json,
     /// `JUnit` XML format for CI systems
     Junit,
+}
+
+/// Arguments for the visualize subcommand (Sprint 52-55)
+#[derive(Args, Debug)]
+pub struct VisualizeArgs {
+    /// Tick rate in milliseconds (default: 50, matches ttop)
+    #[arg(long = "tick-rate", value_name = "MS", default_value = "50")]
+    pub tick_rate: u64,
+
+    /// Disable anomaly detection panel
+    #[arg(long = "no-anomaly")]
+    pub no_anomaly: bool,
+
+    /// Disable ML clustering panel
+    #[arg(long = "no-ml")]
+    pub no_ml: bool,
+
+    /// Enable ML clustering (disabled by default)
+    #[arg(long = "ml")]
+    pub enable_ml: bool,
+
+    /// Number of ML clusters (default: 3)
+    #[arg(long = "ml-clusters", value_name = "N", default_value = "3")]
+    pub ml_clusters: usize,
+
+    /// Anomaly Z-score threshold (default: 3.0)
+    #[arg(
+        long = "anomaly-threshold",
+        value_name = "SIGMA",
+        default_value = "3.0"
+    )]
+    pub anomaly_threshold: f32,
+
+    /// History buffer size (default: 300, matches ttop)
+    #[arg(long = "history-size", value_name = "N", default_value = "300")]
+    pub history_size: usize,
+
+    /// Enable deterministic mode for testing
+    #[arg(long = "deterministic")]
+    pub deterministic: bool,
+
+    /// Show FPS overlay for performance monitoring
+    #[arg(long = "show-fps")]
+    pub show_fps: bool,
+
+    /// Attach to running process by PID (mutually exclusive with command)
+    #[arg(short = 'p', long = "pid", value_name = "PID")]
+    pub pid: Option<i32>,
+
+    /// Enable source code correlation using DWARF debug info
+    #[arg(short = 's', long = "source")]
+    pub source: bool,
+
+    /// Filter syscalls to trace (e.g., -e trace=open,read,write)
+    #[arg(short = 'e', long = "expr", value_name = "EXPR")]
+    pub filter: Option<String>,
+
+    /// OTLP endpoint for span export (enables trace waterfall panel)
+    #[arg(long = "otlp-endpoint", value_name = "URL")]
+    pub otlp_endpoint: Option<String>,
+
+    /// Command to trace (everything after --)
+    #[arg(last = true)]
+    pub command: Option<Vec<String>>,
 }
 
 /// Initialize tracing subscriber for debug output
@@ -520,16 +592,41 @@ fn run_validate_subcommand(args: &ValidateArgs) -> i32 {
     exit_code.code()
 }
 
+/// Run the visualize subcommand (Sprint 52-55)
+fn run_visualize_subcommand(args: &VisualizeArgs) -> Result<i32> {
+    // Build VisualizeConfig from CLI args
+    let config = VisualizeConfig {
+        tick_rate_ms: args.tick_rate,
+        enable_anomaly: !args.no_anomaly,
+        enable_ml: args.enable_ml && !args.no_ml,
+        ml_clusters: args.ml_clusters,
+        anomaly_threshold: args.anomaly_threshold,
+        history_size: args.history_size,
+        deterministic: args.deterministic,
+        show_fps: args.show_fps,
+        pid: args.pid,
+        enable_source: args.source,
+        filter: args.filter.clone(),
+        otlp_endpoint: args.otlp_endpoint.clone(),
+    };
+
+    // Run visualization
+    visualize::run_visualize(args.command.as_deref(), config)
+}
+
 /// Main entry point - parses CLI and runs the appropriate command.
 /// Returns the exit code.
 pub fn run() -> Result<i32> {
     let args = Cli::parse();
 
-    // Sprint 50: Handle subcommands first
+    // Sprint 50+52: Handle subcommands first
     if let Some(subcommand) = &args.subcommand {
         match subcommand {
             Commands::Validate(validate_args) => {
                 return Ok(run_validate_subcommand(validate_args));
+            }
+            Commands::Visualize(visualize_args) => {
+                return run_visualize_subcommand(visualize_args);
             }
         }
     }
@@ -622,6 +719,7 @@ pub fn run() -> Result<i32> {
         otlp_service_name: args.otlp_service_name,
         trace_parent: args.trace_parent,
         chaos_config,
+        visualizer_sink: None,
     };
 
     // Either attach to PID or trace command (mutually exclusive)

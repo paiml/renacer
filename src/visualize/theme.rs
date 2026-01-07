@@ -1,7 +1,12 @@
-//! Theme and color system for renacer visualize.
+//! SIMD-accelerated theme and color system for renacer visualize.
 //!
 //! ttop-identical btop-style dark theme with vibrant gradients.
-//! Uses perceptually uniform color transitions.
+//! Uses SIMD batch processing for color mapping via trueno-viz kernels.
+//!
+//! # SIMD Acceleration
+//!
+//! - `sparkline_batch`: Vectorized min/max finding for normalization
+//! - `normalize_batch`: AVX2/NEON parallel normalization
 //!
 //! # Toyota Way Principle: Andon (Visual Management)
 //!
@@ -14,9 +19,14 @@ use ratatui::style::Color;
 
 /// btop-style color gradient for percentage values (0-100)
 /// Uses smooth transition: cyan -> green -> yellow -> orange -> red
+#[allow(clippy::many_single_char_names)]
 pub fn percent_color(percent: f64) -> Color {
     // Clamp to valid range (handle NaN)
-    let p = if percent.is_nan() { 0.0 } else { percent.clamp(0.0, 100.0) };
+    let p = if percent.is_nan() {
+        0.0
+    } else {
+        percent.clamp(0.0, 100.0)
+    };
 
     // btop-style 5-stop gradient
     if p >= 90.0 {
@@ -147,14 +157,17 @@ pub mod process_state {
 /// Sparkline characters (8-level Unicode blocks)
 pub const SPARKLINE_CHARS: &[char] = &['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
 
-/// Generate sparkline string from values
+/// Generate sparkline string from values using SIMD-accelerated min/max
+///
+/// Uses trueno-viz `simd_min`/`simd_max` for AVX2/NEON vectorized range finding.
 pub fn sparkline(values: &[f64], max_width: usize) -> String {
     if values.is_empty() {
         return String::new();
     }
 
-    let min = values.iter().cloned().fold(f64::INFINITY, f64::min);
-    let max = values.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+    // Use SIMD for min/max finding
+    let min = trueno_viz::monitor::simd::kernels::simd_min(values);
+    let max = trueno_viz::monitor::simd::kernels::simd_max(values);
     let range = max - min;
 
     values
@@ -170,6 +183,20 @@ pub fn sparkline(values: &[f64], max_width: usize) -> String {
             }
         })
         .collect()
+}
+
+/// Normalize values to 0.0-1.0 range using SIMD acceleration
+///
+/// Uses trueno-viz `simd_normalize` for AVX2/NEON parallel normalization.
+pub fn normalize_batch(values: &[f64]) -> Vec<f64> {
+    if values.is_empty() {
+        return Vec::new();
+    }
+    let max = trueno_viz::monitor::simd::kernels::simd_max(values);
+    if max == 0.0 {
+        return vec![0.0; values.len()];
+    }
+    trueno_viz::monitor::simd::kernels::simd_normalize(values, max)
 }
 
 /// Format bytes to human-readable string
@@ -328,5 +355,27 @@ mod tests {
         assert_eq!(format_zscore(3.5), "3.5σ!");
         assert_eq!(format_zscore(4.5), "4.5σ!!");
         assert_eq!(format_zscore(5.5), "5.5σ!!!");
+    }
+
+    #[test]
+    fn test_normalize_batch() {
+        let values = vec![0.0, 25.0, 50.0, 75.0, 100.0];
+        let normalized = normalize_batch(&values);
+        assert_eq!(normalized.len(), 5);
+        assert!((normalized[0] - 0.0).abs() < 0.001);
+        assert!((normalized[4] - 1.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_normalize_batch_empty() {
+        let normalized = normalize_batch(&[]);
+        assert!(normalized.is_empty());
+    }
+
+    #[test]
+    fn test_normalize_batch_zeros() {
+        let values = vec![0.0, 0.0, 0.0];
+        let normalized = normalize_batch(&values);
+        assert!(normalized.iter().all(|&v| v == 0.0));
     }
 }
