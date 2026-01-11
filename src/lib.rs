@@ -13,6 +13,7 @@ pub mod assertion_dsl; // Sprint 44: renacer.toml parser for build-time assertio
 pub mod assertion_engine; // Sprint 44: Assertion evaluation engine (Toyota Way: Andon)
 pub mod assertion_types; // Sprint 44: Build-time trace assertion types (Toyota Way: Andon)
 pub mod autoencoder;
+pub mod brick_tracer; // Sprint 58: ComputeBrick-aware tracing for trueno/cbtop integration
 pub mod causal_graph; // Sprint 41: Causal graph construction for critical path analysis
 pub mod chaos;
 pub mod cli;
