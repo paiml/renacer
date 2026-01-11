@@ -419,4 +419,134 @@ mod tests {
         assert!(header.contains("Duration"));
         assert!(header.contains("Source"));
     }
+
+    #[test]
+    fn test_html_output_with_stats() {
+        let mut output = HtmlOutput::new(false, false);
+        output.add_syscall(HtmlSyscall {
+            name: "write".to_string(),
+            arguments: "1, \"test\", 4".to_string(),
+            result: 4,
+            duration_us: None,
+            source_location: None,
+        });
+
+        let mut tracker = StatsTracker::new();
+        tracker.record("write", 0, 1000);
+        tracker.record("write", 0, 2000);
+        tracker.record("read", 0, 500);
+        tracker.record("read", -1, 100); // Error
+
+        let html = output.to_html(Some(&tracker));
+        assert!(html.contains("Statistics Summary"));
+        assert!(html.contains("stats-table"));
+    }
+
+    #[test]
+    fn test_html_output_with_timing_no_duration() {
+        let mut output = HtmlOutput::new(true, false);
+        output.add_syscall(HtmlSyscall {
+            name: "write".to_string(),
+            arguments: "1, \"test\", 4".to_string(),
+            result: 4,
+            duration_us: None, // No timing
+            source_location: None,
+        });
+
+        let html = output.to_html(None);
+        assert!(html.contains("Duration"));
+        // Empty duration cell
+    }
+
+    #[test]
+    fn test_html_output_with_source_none() {
+        let mut output = HtmlOutput::new(false, true);
+        output.add_syscall(HtmlSyscall {
+            name: "write".to_string(),
+            arguments: "1, \"test\", 4".to_string(),
+            result: 4,
+            duration_us: None,
+            source_location: None, // No source location
+        });
+
+        let html = output.to_html(None);
+        assert!(html.contains("Source"));
+    }
+
+    #[test]
+    fn test_html_syscall_clone() {
+        let syscall = HtmlSyscall {
+            name: "write".to_string(),
+            arguments: "fd=1".to_string(),
+            result: 10,
+            duration_us: Some(100),
+            source_location: Some("test.rs:42".to_string()),
+        };
+
+        let cloned = syscall.clone();
+        assert_eq!(cloned.name, "write");
+        assert_eq!(cloned.result, 10);
+        assert_eq!(cloned.duration_us, Some(100));
+    }
+
+    #[test]
+    fn test_html_syscall_debug() {
+        let syscall = HtmlSyscall {
+            name: "read".to_string(),
+            arguments: "fd=0".to_string(),
+            result: 5,
+            duration_us: None,
+            source_location: None,
+        };
+
+        let debug_str = format!("{:?}", syscall);
+        assert!(debug_str.contains("read"));
+    }
+
+    #[test]
+    fn test_html_output_debug() {
+        let output = HtmlOutput::new(true, true);
+        let debug_str = format!("{:?}", output);
+        assert!(debug_str.contains("HtmlOutput"));
+    }
+
+    #[test]
+    fn test_html_output_multiple_syscalls() {
+        let mut output = HtmlOutput::new(true, true);
+
+        for i in 0..5 {
+            output.add_syscall(HtmlSyscall {
+                name: format!("syscall_{}", i),
+                arguments: format!("arg_{}", i),
+                result: i as i64,
+                duration_us: Some(i as u64 * 100),
+                source_location: Some(format!("file.rs:{}", i)),
+            });
+        }
+
+        let html = output.to_html(None);
+        assert!(html.contains("syscall_0"));
+        assert!(html.contains("syscall_4"));
+    }
+
+    #[test]
+    fn test_render_statistics_zero_count() {
+        let output = HtmlOutput::new(false, false);
+        let mut tracker = StatsTracker::new();
+
+        // Record with zero total time
+        tracker.record("empty", 0, 0);
+
+        let html = output.to_html(Some(&tracker));
+        assert!(html.contains("Statistics Summary"));
+    }
+
+    #[test]
+    fn test_generate_styles() {
+        let styles = HtmlOutput::generate_styles();
+        assert!(styles.contains("body"));
+        assert!(styles.contains("table"));
+        assert!(styles.contains(".syscall"));
+        assert!(styles.contains(".result-error"));
+    }
 }

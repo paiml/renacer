@@ -367,6 +367,260 @@ mod tests {
         assert_eq!(AlertState::Resolved.label(), "RESOLVED");
     }
 
+    #[test]
+    fn test_alert_severity_indicators() {
+        assert_eq!(AlertSeverity::Info.indicator(), "ℹ");
+        assert_eq!(AlertSeverity::Warning.indicator(), "⚠");
+        assert_eq!(AlertSeverity::Critical.indicator(), "🔴");
+    }
+
+    #[test]
+    fn test_alert_state_colors() {
+        assert_eq!(AlertState::Inactive.color(), Color::DarkGray);
+        assert_eq!(AlertState::Pending.color(), Color::Yellow);
+        assert!(matches!(
+            AlertState::Firing.color(),
+            Color::Rgb(255, 80, 80)
+        ));
+        assert_eq!(AlertState::Resolved.color(), Color::Green);
+    }
+
+    #[test]
+    fn test_draw_alerts_with_high_latency() {
+        let backend = TestBackend::new(50, 25);
+        let mut terminal = Terminal::new(backend).unwrap();
+        let mut app = VisualizeApp::new(VisualizeConfig::default());
+
+        // Simulate high latency
+        for _ in 0..50 {
+            app.latency_history.push(15000.0);
+        }
+
+        terminal
+            .draw(|f| {
+                draw(f, &app, f.area());
+            })
+            .unwrap();
+
+        let buffer = terminal.backend().buffer();
+        let content = buffer_to_string(buffer);
+        assert!(content.contains("Alerts"));
+    }
+
+    #[test]
+    fn test_draw_alerts_with_pending_latency() {
+        let backend = TestBackend::new(50, 25);
+        let mut terminal = Terminal::new(backend).unwrap();
+        let mut app = VisualizeApp::new(VisualizeConfig::default());
+
+        // Simulate pending latency (5000-10000)
+        for _ in 0..50 {
+            app.latency_history.push(7000.0);
+        }
+
+        terminal
+            .draw(|f| {
+                draw(f, &app, f.area());
+            })
+            .unwrap();
+
+        let buffer = terminal.backend().buffer();
+        let content = buffer_to_string(buffer);
+        assert!(content.contains("Alerts"));
+    }
+
+    #[test]
+    fn test_draw_alerts_with_high_error_rate() {
+        let backend = TestBackend::new(50, 25);
+        let mut terminal = Terminal::new(backend).unwrap();
+        let mut app = VisualizeApp::new(VisualizeConfig::default());
+
+        // Simulate high error rate
+        app.total_syscalls = 100;
+        app.total_errors = 15;
+
+        terminal
+            .draw(|f| {
+                draw(f, &app, f.area());
+            })
+            .unwrap();
+
+        let buffer = terminal.backend().buffer();
+        let content = buffer_to_string(buffer);
+        assert!(content.contains("Alerts"));
+    }
+
+    #[test]
+    fn test_draw_alerts_with_pending_error_rate() {
+        let backend = TestBackend::new(50, 25);
+        let mut terminal = Terminal::new(backend).unwrap();
+        let mut app = VisualizeApp::new(VisualizeConfig::default());
+
+        // Simulate pending error rate (5-10%)
+        app.total_syscalls = 100;
+        app.total_errors = 7;
+
+        terminal
+            .draw(|f| {
+                draw(f, &app, f.area());
+            })
+            .unwrap();
+
+        let buffer = terminal.backend().buffer();
+        let content = buffer_to_string(buffer);
+        assert!(content.contains("Alerts"));
+    }
+
+    #[test]
+    fn test_draw_alerts_with_high_anomaly_count() {
+        let backend = TestBackend::new(50, 25);
+        let mut terminal = Terminal::new(backend).unwrap();
+        let mut app = VisualizeApp::new(VisualizeConfig::default());
+
+        // Simulate high anomaly count
+        app.anomaly_count = 15;
+
+        terminal
+            .draw(|f| {
+                draw(f, &app, f.area());
+            })
+            .unwrap();
+
+        let buffer = terminal.backend().buffer();
+        let content = buffer_to_string(buffer);
+        assert!(content.contains("Alerts"));
+    }
+
+    #[test]
+    fn test_draw_alerts_with_pending_anomaly_count() {
+        let backend = TestBackend::new(50, 25);
+        let mut terminal = Terminal::new(backend).unwrap();
+        let mut app = VisualizeApp::new(VisualizeConfig::default());
+
+        // Simulate pending anomaly count (5-10)
+        app.anomaly_count = 7;
+
+        terminal
+            .draw(|f| {
+                draw(f, &app, f.area());
+            })
+            .unwrap();
+
+        let buffer = terminal.backend().buffer();
+        let content = buffer_to_string(buffer);
+        assert!(content.contains("Alerts"));
+    }
+
+    #[test]
+    fn test_draw_alerts_with_high_zscore() {
+        let backend = TestBackend::new(50, 25);
+        let mut terminal = Terminal::new(backend).unwrap();
+        let mut app = VisualizeApp::new(VisualizeConfig::default());
+
+        // Simulate high Z-score
+        for _ in 0..50 {
+            app.anomaly_history.push(6.0);
+        }
+
+        terminal
+            .draw(|f| {
+                draw(f, &app, f.area());
+            })
+            .unwrap();
+
+        let buffer = terminal.backend().buffer();
+        let content = buffer_to_string(buffer);
+        assert!(content.contains("Alerts"));
+    }
+
+    #[test]
+    fn test_draw_alerts_with_pending_zscore() {
+        let backend = TestBackend::new(50, 25);
+        let mut terminal = Terminal::new(backend).unwrap();
+        let mut app = VisualizeApp::new(VisualizeConfig::default());
+
+        // Simulate pending Z-score (4-5)
+        for _ in 0..50 {
+            app.anomaly_history.push(4.5);
+        }
+
+        terminal
+            .draw(|f| {
+                draw(f, &app, f.area());
+            })
+            .unwrap();
+
+        let buffer = terminal.backend().buffer();
+        let content = buffer_to_string(buffer);
+        assert!(content.contains("Alerts"));
+    }
+
+    #[test]
+    fn test_draw_alerts_multiple_firing() {
+        let backend = TestBackend::new(50, 30);
+        let mut terminal = Terminal::new(backend).unwrap();
+        let mut app = VisualizeApp::new(VisualizeConfig::default());
+
+        // Simulate multiple firing alerts
+        for _ in 0..50 {
+            app.latency_history.push(15000.0);
+            app.anomaly_history.push(6.0);
+        }
+        app.total_syscalls = 100;
+        app.total_errors = 15;
+        app.anomaly_count = 15;
+
+        terminal
+            .draw(|f| {
+                draw(f, &app, f.area());
+            })
+            .unwrap();
+
+        let buffer = terminal.backend().buffer();
+        let content = buffer_to_string(buffer);
+        assert!(content.contains("Alerts"));
+    }
+
+    #[test]
+    fn test_alert_severity_debug() {
+        let severity = AlertSeverity::Warning;
+        let debug = format!("{:?}", severity);
+        assert!(debug.contains("Warning"));
+    }
+
+    #[test]
+    fn test_alert_state_debug() {
+        let state = AlertState::Firing;
+        let debug = format!("{:?}", state);
+        assert!(debug.contains("Firing"));
+    }
+
+    #[test]
+    fn test_alert_severity_clone() {
+        let severity = AlertSeverity::Critical;
+        let cloned = severity;
+        assert_eq!(cloned.color(), AlertSeverity::Critical.color());
+    }
+
+    #[test]
+    fn test_alert_state_clone() {
+        let state = AlertState::Resolved;
+        let cloned = state;
+        assert_eq!(cloned.label(), AlertState::Resolved.label());
+    }
+
+    #[test]
+    fn test_alert_severity_eq() {
+        assert_eq!(AlertSeverity::Info, AlertSeverity::Info);
+        assert_ne!(AlertSeverity::Info, AlertSeverity::Warning);
+    }
+
+    #[test]
+    fn test_alert_state_eq() {
+        assert_eq!(AlertState::Inactive, AlertState::Inactive);
+        assert_ne!(AlertState::Inactive, AlertState::Firing);
+    }
+
     fn buffer_to_string(buffer: &ratatui::buffer::Buffer) -> String {
         let mut s = String::new();
         for y in 0..buffer.area.height {

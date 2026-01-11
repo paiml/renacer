@@ -52,6 +52,7 @@
 - [OpenTelemetry Integration](./advanced/opentelemetry.md)
 - [Distributed Tracing](./advanced/distributed-tracing.md)
 - [ComputeBrick Tracing](./advanced/brick-tracing.md)
+- [Process-Level Tracing](./advanced/process-tracing.md)
 - [Transpiler Integration](./advanced/transpiler-integration.md)
   - [Decision Trace Export](./advanced/decision-trace-export.md)
   - [CITL Integration](./advanced/citl-integration.md)

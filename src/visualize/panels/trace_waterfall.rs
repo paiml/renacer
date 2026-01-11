@@ -95,6 +95,73 @@ mod tests {
         assert!(content.contains("Trace Waterfall"));
     }
 
+    #[test]
+    fn test_draw_trace_waterfall_small_area() {
+        let backend = TestBackend::new(20, 3);
+        let mut terminal = Terminal::new(backend).unwrap();
+        let app = VisualizeApp::new(VisualizeConfig::default());
+
+        // Should not panic with small area (height < 2 after border)
+        terminal
+            .draw(|f| {
+                draw(f, &app, f.area());
+            })
+            .unwrap();
+    }
+
+    #[test]
+    fn test_draw_trace_waterfall_very_small() {
+        let backend = TestBackend::new(10, 2);
+        let mut terminal = Terminal::new(backend).unwrap();
+        let app = VisualizeApp::new(VisualizeConfig::default());
+
+        // Should handle very small area gracefully
+        terminal
+            .draw(|f| {
+                draw(f, &app, f.area());
+            })
+            .unwrap();
+    }
+
+    #[test]
+    fn test_draw_trace_waterfall_with_otlp() {
+        let backend = TestBackend::new(60, 10);
+        let mut terminal = Terminal::new(backend).unwrap();
+        let config = VisualizeConfig {
+            otlp_endpoint: Some("http://localhost:4317".to_string()),
+            ..Default::default()
+        };
+        let app = VisualizeApp::new(config);
+
+        terminal
+            .draw(|f| {
+                draw(f, &app, f.area());
+            })
+            .unwrap();
+
+        let buffer = terminal.backend().buffer();
+        let content = buffer_to_string(buffer);
+        assert!(content.contains("Trace Waterfall"));
+        assert!(content.contains("Waiting"));
+    }
+
+    #[test]
+    fn test_draw_trace_waterfall_no_otlp() {
+        let backend = TestBackend::new(60, 10);
+        let mut terminal = Terminal::new(backend).unwrap();
+        let app = VisualizeApp::new(VisualizeConfig::default());
+
+        terminal
+            .draw(|f| {
+                draw(f, &app, f.area());
+            })
+            .unwrap();
+
+        let buffer = terminal.backend().buffer();
+        let content = buffer_to_string(buffer);
+        assert!(content.contains("OTLP not configured"));
+    }
+
     fn buffer_to_string(buffer: &ratatui::buffer::Buffer) -> String {
         let mut s = String::new();
         for y in 0..buffer.area.height {

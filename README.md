@@ -44,9 +44,9 @@ Renacer (Spanish: "to be reborn") is a next-generation binary inspection and tra
 
 | Metric | Value |
 |--------|-------|
-| **Current Version** | 0.8.0 |
+| **Current Version** | 0.9.5 |
 | **Status** | Production-Ready |
-| **Test Coverage** | 849+ tests (all passing) |
+| **Test Coverage** | 1693+ tests (all passing), 92.84% line coverage |
 | **TDG Score** | 95.1/100 (A+ grade) |
 | **Performance** | <5% overhead (basic), <10% overhead (full stack) |
 | **Specification** | [deep-strace-rust-wasm-binary-spec.md](docs/specifications/deep-strace-rust-wasm-binary-spec.md) |
@@ -187,6 +187,18 @@ Renacer (Spanish: "to be reborn") is a next-generation binary inspection and tra
 - ✅ **EquivalenceScore** - Syscall match, timing variance, semantic equivalence metrics
 - ✅ **LCS-Based Matching** - Longest common subsequence algorithm for syscall alignment
 - ✅ **entrenar Integration** - Cross-project support for ML experiment tracking (ENT-EPIC-001)
+
+### Process-Level Tracing (Sprint 59 - SPEC-057)
+- ✅ **Deep Process Tracing** - ptrace-based syscall collection for ptop integration
+- ✅ **Syscall Categories** - Breakdown into mmap, futex, ioctl, read, write, other, compute
+- ✅ **Z-Score Anomaly Detection** - Shewhart statistical process control
+- ✅ **SyscallBaseline** - Per-category mean/std for anomaly detection
+- ✅ **ProcessTraceConfig** - Builder pattern configuration (timeout, threshold, rate limit)
+- ✅ **Streaming API** - Iterator-based syscall streaming for real-time visualization
+- ✅ **OTLP Span Export** - Export trace results to Jaeger/Tempo
+- ✅ **Rate Limiting** - Configurable traces/second limit (Dapper-style)
+- ✅ **Source Correlation** - Optional DWARF source location lookup
+- ✅ **Efficiency Metrics** - Compute vs syscall time ratio
 
 ### Integration Testing Infrastructure (Sprint 34)
 - ✅ **Jaeger Backend Tests** - 14 integration tests against actual Jaeger All-in-One
@@ -600,6 +612,8 @@ cargo deny check
 - `decision_trace` - Decision trace capture (Sprint 26-27)
 - `experiment_span` - ML experiment tracking spans (REN-001)
 - `otlp_exporter` - OpenTelemetry OTLP export (Sprint 30)
+- `process_tracer` - Process-level syscall tracing for ptop integration (Sprint 59)
+- `brick_tracer` - ComputeBrick-aware tracing for trueno/cbtop (Sprint 58)
 
 ### Dependencies
 - `nix` - Ptrace system calls

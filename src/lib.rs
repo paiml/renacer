@@ -39,6 +39,7 @@ pub mod ml_anomaly;
 pub mod ml_pipeline; // Sprint 48: Enhanced ML pipeline (StandardScaler, DBSCAN, LOF, PCA)
 pub mod model_persistence; // Sprint 48: .apr model persistence (Toyota Way: Muda elimination)
 pub mod otlp_exporter;
+pub mod process_tracer; // Sprint 59: Process-level syscall tracing for ptop integration (SPEC-057)
 pub mod profiling;
 pub mod regression; // Single-Shot Compile Tooling: Statistical regression detection (Section 6.4)
 pub mod ring_buffer; // Sprint 40: Lock-free ring buffer for span export (Toyota Way: Heijunka)

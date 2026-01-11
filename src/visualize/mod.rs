@@ -558,4 +558,87 @@ mod tests {
         assert_eq!(config.alert_latency_threshold_us, 20_000);
         assert!((config.alert_error_rate_percent - 10.0).abs() < f32::EPSILON);
     }
+
+    #[test]
+    fn test_inject_demo_data_syscall_categories() {
+        let config = VisualizeConfig::default();
+        let mut app = app::VisualizeApp::new(config);
+
+        // Test with various seed values to hit different syscall categories
+        for tick in 0..200 {
+            inject_demo_data(&mut app, tick);
+        }
+
+        // Should have recorded syscalls from various categories
+        assert!(app.total_syscalls > 1000);
+    }
+
+    #[test]
+    fn test_inject_demo_data_anomaly_detection() {
+        let config = VisualizeConfig::default();
+        let mut app = app::VisualizeApp::new(config);
+
+        // Run enough ticks to trigger anomaly detection
+        for tick in 0..500 {
+            inject_demo_data(&mut app, tick);
+        }
+
+        // Should have detected some anomalies (3% chance per syscall)
+        assert!(app.anomaly_count > 0);
+    }
+
+    #[test]
+    fn test_inject_demo_data_error_rate() {
+        let config = VisualizeConfig::default();
+        let mut app = app::VisualizeApp::new(config);
+
+        // Run enough ticks to get reliable error rate
+        for tick in 0..1000 {
+            inject_demo_data(&mut app, tick);
+        }
+
+        // Error rate should be approximately 2%
+        let error_rate = app.total_errors as f64 / app.total_syscalls as f64;
+        assert!(error_rate > 0.01 && error_rate < 0.05);
+    }
+
+    #[test]
+    fn test_config_with_pid() {
+        let config = VisualizeConfig {
+            pid: Some(12345),
+            ..Default::default()
+        };
+
+        assert_eq!(config.pid, Some(12345));
+    }
+
+    #[test]
+    fn test_config_with_filter() {
+        let config = VisualizeConfig {
+            filter: Some("mmap|munmap".to_string()),
+            ..Default::default()
+        };
+
+        assert_eq!(config.filter, Some("mmap|munmap".to_string()));
+    }
+
+    #[test]
+    fn test_config_with_otlp() {
+        let config = VisualizeConfig {
+            otlp_endpoint: Some("http://jaeger:4317".to_string()),
+            ..Default::default()
+        };
+
+        assert_eq!(config.otlp_endpoint, Some("http://jaeger:4317".to_string()));
+    }
+
+    #[test]
+    fn test_visualize_config_deterministic_mode() {
+        let config = VisualizeConfig {
+            deterministic: true,
+            ..Default::default()
+        };
+
+        assert!(config.deterministic);
+    }
 }
