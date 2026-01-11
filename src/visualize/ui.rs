@@ -326,6 +326,21 @@ fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::visualize::app::VisualizeApp;
+    use crate::visualize::VisualizeConfig;
+    use ratatui::backend::TestBackend;
+    use ratatui::Terminal;
+
+    fn buffer_to_string(buffer: &ratatui::buffer::Buffer) -> String {
+        let mut s = String::new();
+        for y in 0..buffer.area.height {
+            for x in 0..buffer.area.width {
+                s.push(buffer[(x, y)].symbol().chars().next().unwrap_or(' '));
+            }
+            s.push('\n');
+        }
+        s
+    }
 
     #[test]
     fn test_centered_rect() {
@@ -337,5 +352,339 @@ mod tests {
         assert!(centered.y > 0);
         assert!(centered.width < 100);
         assert!(centered.height < 50);
+    }
+
+    #[test]
+    fn test_draw_empty_state() {
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = Terminal::new(backend).unwrap();
+
+        terminal
+            .draw(|f| {
+                draw_empty_state(f, f.area());
+            })
+            .unwrap();
+
+        let buffer = terminal.backend().buffer();
+        let content = buffer_to_string(buffer);
+        assert!(content.contains("No panels visible"));
+    }
+
+    #[test]
+    fn test_draw_help_overlay() {
+        let backend = TestBackend::new(100, 40);
+        let mut terminal = Terminal::new(backend).unwrap();
+
+        terminal
+            .draw(|f| {
+                draw_help_overlay(f, f.area());
+            })
+            .unwrap();
+
+        let buffer = terminal.backend().buffer();
+        let content = buffer_to_string(buffer);
+        assert!(content.contains("Keyboard Shortcuts"));
+        assert!(content.contains("Navigation"));
+    }
+
+    #[test]
+    fn test_draw_filter_input() {
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = Terminal::new(backend).unwrap();
+        let app = VisualizeApp::new(VisualizeConfig::default());
+
+        terminal
+            .draw(|f| {
+                draw_filter_input(f, &app, f.area());
+            })
+            .unwrap();
+
+        let buffer = terminal.backend().buffer();
+        let content = buffer_to_string(buffer);
+        assert!(content.contains("Filter"));
+    }
+
+    #[test]
+    fn test_draw_fps_overlay() {
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = Terminal::new(backend).unwrap();
+        let app = VisualizeApp::new(VisualizeConfig::default());
+
+        terminal
+            .draw(|f| {
+                draw_fps_overlay(f, &app, f.area());
+            })
+            .unwrap();
+
+        let buffer = terminal.backend().buffer();
+        let content = buffer_to_string(buffer);
+        assert!(content.contains("Frame"));
+    }
+
+    #[test]
+    fn test_draw_trace_complete_overlay() {
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = Terminal::new(backend).unwrap();
+
+        terminal
+            .draw(|f| {
+                draw_trace_complete_overlay(f, f.area());
+            })
+            .unwrap();
+
+        let buffer = terminal.backend().buffer();
+        let content = buffer_to_string(buffer);
+        assert!(content.contains("TRACE COMPLETE"));
+    }
+
+    #[test]
+    fn test_draw_with_zero_size() {
+        let backend = TestBackend::new(0, 0);
+        let mut terminal = Terminal::new(backend).unwrap();
+        let mut app = VisualizeApp::new(VisualizeConfig::default());
+
+        // Should not panic with zero-sized terminal
+        let _ = terminal.draw(|f| {
+            draw(f, &mut app);
+        });
+    }
+
+    #[test]
+    fn test_draw_with_all_panels_disabled() {
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = Terminal::new(backend).unwrap();
+        let mut app = VisualizeApp::new(VisualizeConfig::default());
+        app.panels.syscall_heatmap = false;
+        app.panels.anomaly_timeline = false;
+        app.panels.ml_scatter = false;
+        app.panels.trace_waterfall = false;
+        app.panels.stats_summary = false;
+        app.panels.process_syscalls = false;
+
+        terminal
+            .draw(|f| {
+                draw(f, &mut app);
+            })
+            .unwrap();
+
+        let buffer = terminal.backend().buffer();
+        let content = buffer_to_string(buffer);
+        assert!(content.contains("No panels visible"));
+    }
+
+    #[test]
+    fn test_draw_with_help_visible() {
+        let backend = TestBackend::new(100, 40);
+        let mut terminal = Terminal::new(backend).unwrap();
+        let mut app = VisualizeApp::new(VisualizeConfig::default());
+        app.show_help = true;
+
+        terminal
+            .draw(|f| {
+                draw(f, &mut app);
+            })
+            .unwrap();
+
+        let buffer = terminal.backend().buffer();
+        let content = buffer_to_string(buffer);
+        assert!(content.contains("Keyboard Shortcuts"));
+    }
+
+    #[test]
+    fn test_draw_with_filter_visible() {
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = Terminal::new(backend).unwrap();
+        let mut app = VisualizeApp::new(VisualizeConfig::default());
+        app.show_filter_input = true;
+        app.filter = "read".to_string();
+
+        terminal
+            .draw(|f| {
+                draw(f, &mut app);
+            })
+            .unwrap();
+
+        let buffer = terminal.backend().buffer();
+        let content = buffer_to_string(buffer);
+        assert!(content.contains("Filter"));
+    }
+
+    #[test]
+    fn test_draw_with_fps_visible() {
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = Terminal::new(backend).unwrap();
+        let mut app = VisualizeApp::new(VisualizeConfig {
+            show_fps: true,
+            ..Default::default()
+        });
+
+        terminal
+            .draw(|f| {
+                draw(f, &mut app);
+            })
+            .unwrap();
+
+        let buffer = terminal.backend().buffer();
+        let content = buffer_to_string(buffer);
+        assert!(content.contains("Frame"));
+    }
+
+    #[test]
+    fn test_draw_with_trace_complete() {
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = Terminal::new(backend).unwrap();
+        let mut app = VisualizeApp::new(VisualizeConfig::default());
+        app.trace_complete = true;
+
+        terminal
+            .draw(|f| {
+                draw(f, &mut app);
+            })
+            .unwrap();
+
+        let buffer = terminal.backend().buffer();
+        let content = buffer_to_string(buffer);
+        assert!(content.contains("TRACE COMPLETE"));
+    }
+
+    #[test]
+    fn test_draw_top_panels_one() {
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = Terminal::new(backend).unwrap();
+        let mut app = VisualizeApp::new(VisualizeConfig::default());
+        app.panels.syscall_heatmap = true;
+        app.panels.anomaly_timeline = false;
+        app.panels.ml_scatter = false;
+        app.panels.trace_waterfall = false;
+        app.panels.stats_summary = false;
+
+        terminal
+            .draw(|f| {
+                draw_top_panels(f, &mut app, f.area());
+            })
+            .unwrap();
+    }
+
+    #[test]
+    fn test_draw_top_panels_two() {
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = Terminal::new(backend).unwrap();
+        let mut app = VisualizeApp::new(VisualizeConfig::default());
+        app.panels.syscall_heatmap = true;
+        app.panels.anomaly_timeline = true;
+        app.panels.ml_scatter = false;
+        app.panels.trace_waterfall = false;
+        app.panels.stats_summary = false;
+
+        terminal
+            .draw(|f| {
+                draw_top_panels(f, &mut app, f.area());
+            })
+            .unwrap();
+    }
+
+    #[test]
+    fn test_draw_top_panels_three() {
+        let backend = TestBackend::new(120, 24);
+        let mut terminal = Terminal::new(backend).unwrap();
+        let mut app = VisualizeApp::new(VisualizeConfig::default());
+        app.panels.syscall_heatmap = true;
+        app.panels.anomaly_timeline = true;
+        app.panels.ml_scatter = true;
+        app.panels.trace_waterfall = false;
+        app.panels.stats_summary = false;
+
+        terminal
+            .draw(|f| {
+                draw_top_panels(f, &mut app, f.area());
+            })
+            .unwrap();
+    }
+
+    #[test]
+    fn test_draw_top_panels_four() {
+        let backend = TestBackend::new(120, 24);
+        let mut terminal = Terminal::new(backend).unwrap();
+        let mut app = VisualizeApp::new(VisualizeConfig::default());
+        app.panels.syscall_heatmap = true;
+        app.panels.anomaly_timeline = true;
+        app.panels.ml_scatter = true;
+        app.panels.trace_waterfall = true;
+        app.panels.stats_summary = false;
+
+        terminal
+            .draw(|f| {
+                draw_top_panels(f, &mut app, f.area());
+            })
+            .unwrap();
+    }
+
+    #[test]
+    fn test_draw_top_panels_five() {
+        let backend = TestBackend::new(150, 24);
+        let mut terminal = Terminal::new(backend).unwrap();
+        let mut app = VisualizeApp::new(VisualizeConfig::default());
+        app.panels.syscall_heatmap = true;
+        app.panels.anomaly_timeline = true;
+        app.panels.ml_scatter = true;
+        app.panels.trace_waterfall = true;
+        app.panels.stats_summary = true;
+
+        terminal
+            .draw(|f| {
+                draw_top_panels(f, &mut app, f.area());
+            })
+            .unwrap();
+    }
+
+    #[test]
+    fn test_draw_top_panels_zero() {
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = Terminal::new(backend).unwrap();
+        let mut app = VisualizeApp::new(VisualizeConfig::default());
+        app.panels.syscall_heatmap = false;
+        app.panels.anomaly_timeline = false;
+        app.panels.ml_scatter = false;
+        app.panels.trace_waterfall = false;
+        app.panels.stats_summary = false;
+
+        terminal
+            .draw(|f| {
+                draw_top_panels(f, &mut app, f.area());
+            })
+            .unwrap();
+    }
+
+    #[test]
+    fn test_draw_with_process_syscalls() {
+        let backend = TestBackend::new(80, 40);
+        let mut terminal = Terminal::new(backend).unwrap();
+        let mut app = VisualizeApp::new(VisualizeConfig::default());
+        app.panels.process_syscalls = true;
+
+        terminal
+            .draw(|f| {
+                draw(f, &mut app);
+            })
+            .unwrap();
+    }
+
+    #[test]
+    fn test_centered_rect_edge_cases() {
+        // Very small area
+        let area = Rect::new(0, 0, 10, 10);
+        let centered = centered_rect(80, 80, area);
+        assert!(centered.width > 0);
+        assert!(centered.height > 0);
+
+        // Zero percent
+        let centered = centered_rect(0, 0, area);
+        assert_eq!(centered.width, 0);
+        assert_eq!(centered.height, 0);
+
+        // 100 percent
+        let centered = centered_rect(100, 100, area);
+        assert_eq!(centered.x, 0);
+        assert_eq!(centered.y, 0);
     }
 }

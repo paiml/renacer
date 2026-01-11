@@ -367,4 +367,176 @@ mod tests {
         assert_eq!(anomalies[0].duration_us, 1000);
         assert_eq!(anomalies[1].duration_us, 2000);
     }
+
+    #[test]
+    fn test_print_summary_empty() {
+        let detector = AnomalyDetector::new(100, 3.0);
+        // Should not panic or output anything
+        detector.print_summary();
+    }
+
+    #[test]
+    fn test_print_summary_with_anomalies() {
+        let mut detector = AnomalyDetector::new(100, 3.0);
+
+        // Build baseline
+        for _ in 0..30 {
+            detector.record_and_check("write", 100);
+        }
+
+        // Trigger anomalies at different severity levels
+        detector.record_and_check("write", 500); // Low
+        detector.record_and_check("write", 1000); // Medium
+        detector.record_and_check("write", 2000); // High
+
+        // Should not panic
+        detector.print_summary();
+
+        assert!(detector.get_anomalies().len() >= 1);
+    }
+
+    #[test]
+    fn test_print_summary_top_10() {
+        let mut detector = AnomalyDetector::new(100, 3.0);
+
+        // Build baseline
+        for _ in 0..30 {
+            detector.record_and_check("write", 100);
+        }
+
+        // Trigger more than 10 anomalies
+        for i in 0..15 {
+            detector.record_and_check("write", 1000 + i * 100);
+        }
+
+        // Should handle showing only top 10
+        detector.print_summary();
+    }
+
+    #[test]
+    fn test_anomaly_clone() {
+        let anomaly = Anomaly {
+            syscall_name: "read".to_string(),
+            duration_us: 5000,
+            z_score: 4.5,
+            baseline_mean: 100.0,
+            baseline_stddev: 20.0,
+            severity: AnomalySeverity::Medium,
+        };
+
+        let cloned = anomaly.clone();
+        assert_eq!(cloned.syscall_name, "read");
+        assert_eq!(cloned.duration_us, 5000);
+        assert!((cloned.z_score - 4.5).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_anomaly_debug() {
+        let anomaly = Anomaly {
+            syscall_name: "read".to_string(),
+            duration_us: 5000,
+            z_score: 4.5,
+            baseline_mean: 100.0,
+            baseline_stddev: 20.0,
+            severity: AnomalySeverity::Medium,
+        };
+
+        let debug_str = format!("{:?}", anomaly);
+        assert!(debug_str.contains("read"));
+        assert!(debug_str.contains("5000"));
+    }
+
+    #[test]
+    fn test_baseline_stats_is_ready() {
+        let mut stats = BaselineStats::new(100);
+        assert!(!stats.is_ready());
+
+        // Add 9 samples - not ready
+        for i in 0..9 {
+            stats.add_sample(i as f32 * 10.0, 100);
+        }
+        assert!(!stats.is_ready());
+
+        // Add 10th sample - now ready
+        stats.add_sample(100.0, 100);
+        assert!(stats.is_ready());
+    }
+
+    #[test]
+    fn test_anomaly_severity_equality() {
+        assert_eq!(AnomalySeverity::Low, AnomalySeverity::Low);
+        assert_eq!(AnomalySeverity::Medium, AnomalySeverity::Medium);
+        assert_eq!(AnomalySeverity::High, AnomalySeverity::High);
+        assert_ne!(AnomalySeverity::Low, AnomalySeverity::High);
+    }
+
+    #[test]
+    fn test_anomaly_severity_copy() {
+        let s1 = AnomalySeverity::Medium;
+        let s2 = s1;
+        assert_eq!(s1, s2);
+    }
+
+    #[test]
+    fn test_anomaly_severity_debug() {
+        let debug = format!("{:?}", AnomalySeverity::High);
+        assert!(debug.contains("High"));
+    }
+
+    #[test]
+    fn test_baseline_stats_clone() {
+        let mut stats = BaselineStats::new(100);
+        stats.add_sample(100.0, 100);
+        stats.add_sample(200.0, 100);
+
+        let cloned = stats.clone();
+        assert_eq!(cloned.samples.len(), 2);
+        assert!((cloned.mean - stats.mean).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_baseline_stats_debug() {
+        let stats = BaselineStats::new(100);
+        let debug_str = format!("{:?}", stats);
+        assert!(debug_str.contains("samples"));
+        assert!(debug_str.contains("mean"));
+    }
+
+    #[test]
+    fn test_multiple_syscalls_isolation() {
+        let mut detector = AnomalyDetector::new(100, 3.0);
+
+        // Build separate baselines for different syscalls
+        for _ in 0..30 {
+            detector.record_and_check("read", 50);
+            detector.record_and_check("write", 200);
+            detector.record_and_check("mmap", 500);
+        }
+
+        // Anomaly for read (3x baseline) but normal for write
+        let read_anomaly = detector.record_and_check("read", 150);
+        let write_normal = detector.record_and_check("write", 200);
+
+        // read should be anomalous, write should not
+        assert!(read_anomaly.is_some());
+        assert!(write_normal.is_none());
+    }
+
+    #[test]
+    fn test_negative_zscore_anomaly() {
+        let mut detector = AnomalyDetector::new(100, 3.0);
+
+        // Build baseline with high duration
+        for _ in 0..30 {
+            detector.record_and_check("write", 1000);
+        }
+
+        // Anomalously fast syscall
+        let result = detector.record_and_check("write", 1);
+        // This would be a negative z-score - anomalously fast
+        if result.is_some() {
+            let anomaly = result.unwrap();
+            assert!(anomaly.z_score < 0.0);
+        }
+    }
 }

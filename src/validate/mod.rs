@@ -271,4 +271,72 @@ mod tests {
         let result = run_validate(&[], &config);
         assert_eq!(result, ValidateExitCode::BaselineNotFound);
     }
+
+    #[test]
+    fn test_run_validate_generate_success() {
+        let temp_dir = TempDir::new().expect("failed to create temp dir");
+        let generate_path = temp_dir.path().join("baseline");
+
+        let config = ValidateConfig::default().with_generate(generate_path.clone());
+
+        // Use a simple command that should succeed
+        let result = run_validate(&["true".to_string()], &config);
+
+        // Should succeed in generating
+        assert_eq!(result, ValidateExitCode::Passed);
+    }
+
+    #[test]
+    fn test_run_validate_generate_failure() {
+        // Use a path that should fail - skip if running as root
+        if nix::unistd::geteuid().is_root() {
+            // Root can write anywhere, so skip this test
+            return;
+        }
+
+        let config = ValidateConfig::default()
+            .with_generate(std::path::PathBuf::from("/nonexistent/deep/path/baseline"));
+
+        // Should fail to generate when not root
+        let result = run_validate(&["true".to_string()], &config);
+        assert_eq!(result, ValidateExitCode::CommandError);
+    }
+
+    #[test]
+    fn test_validate_config_with_tolerance() {
+        let config = ValidateConfig::default()
+            .with_baseline(std::path::PathBuf::from("/test"))
+            .set_tolerance(50.0);
+
+        assert!((config.tolerance_percent - 50.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn test_validate_config_strict_mode() {
+        let config = ValidateConfig::default()
+            .with_baseline(std::path::PathBuf::from("/test"))
+            .with_strict_mode(true);
+
+        assert!(config.strict_mode);
+    }
+
+    #[test]
+    fn test_validate_config_ignore_timing() {
+        let config = ValidateConfig::default()
+            .with_baseline(std::path::PathBuf::from("/test"))
+            .with_ignore_timing(true);
+
+        assert!(config.ignore_timing);
+    }
+
+    #[test]
+    fn test_validate_config_output_format() {
+        use crate::validate::config::ValidationOutputFormat;
+
+        let config = ValidateConfig::default()
+            .with_baseline(std::path::PathBuf::from("/test"))
+            .with_output_format(ValidationOutputFormat::Json);
+
+        assert_eq!(config.output_format, ValidationOutputFormat::Json);
+    }
 }

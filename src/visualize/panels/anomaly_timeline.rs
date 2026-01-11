@@ -128,6 +128,151 @@ mod tests {
         assert!(content.contains("Anomalies"));
     }
 
+    #[test]
+    fn test_draw_anomaly_timeline_small_area() {
+        let backend = TestBackend::new(20, 2);
+        let mut terminal = Terminal::new(backend).unwrap();
+        let app = VisualizeApp::new(VisualizeConfig::default());
+
+        // Should not panic with small area
+        terminal
+            .draw(|f| {
+                draw(f, &app, f.area());
+            })
+            .unwrap();
+    }
+
+    #[test]
+    fn test_draw_anomaly_timeline_very_small_chunks() {
+        let backend = TestBackend::new(40, 4);
+        let mut terminal = Terminal::new(backend).unwrap();
+        let app = VisualizeApp::new(VisualizeConfig::default());
+
+        // Should not panic with small chunks
+        terminal
+            .draw(|f| {
+                draw(f, &app, f.area());
+            })
+            .unwrap();
+    }
+
+    #[test]
+    fn test_draw_anomaly_timeline_with_anomalies() {
+        let backend = TestBackend::new(80, 15);
+        let mut terminal = Terminal::new(backend).unwrap();
+        let mut app = VisualizeApp::new(VisualizeConfig::default());
+
+        // Add some anomalies using the record_anomaly method
+        app.record_anomaly(
+            "read".to_string(),
+            15000,
+            4.5,
+            Some("/test/file.rs".to_string()),
+            Some(42),
+        );
+        app.record_anomaly("write".to_string(), 20000, 5.0, None, None);
+
+        terminal
+            .draw(|f| {
+                draw(f, &app, f.area());
+            })
+            .unwrap();
+
+        let buffer = terminal.backend().buffer();
+        let content = buffer_to_string(buffer);
+        assert!(content.contains("Anomalies"));
+    }
+
+    #[test]
+    fn test_draw_anomaly_timeline_with_history() {
+        let backend = TestBackend::new(80, 15);
+        let mut terminal = Terminal::new(backend).unwrap();
+        let mut app = VisualizeApp::new(VisualizeConfig::default());
+
+        // Add z-score history
+        for i in 0..50 {
+            app.anomaly_history.push((i as f64 % 5.0) + 1.0);
+        }
+
+        terminal
+            .draw(|f| {
+                draw(f, &app, f.area());
+            })
+            .unwrap();
+
+        let buffer = terminal.backend().buffer();
+        let content = buffer_to_string(buffer);
+        assert!(content.contains("Anomalies"));
+    }
+
+    #[test]
+    fn test_draw_anomaly_timeline_many_anomalies() {
+        let backend = TestBackend::new(80, 20);
+        let mut terminal = Terminal::new(backend).unwrap();
+        let mut app = VisualizeApp::new(VisualizeConfig::default());
+
+        // Add many anomalies to test scrolling
+        for i in 0..20 {
+            app.record_anomaly(
+                format!("syscall_{}", i),
+                15000 + i as u64 * 1000,
+                3.0 + (i as f32 * 0.5),
+                Some(format!("/path/to/file{}.rs", i)),
+                Some(i as u32 * 10),
+            );
+        }
+
+        terminal
+            .draw(|f| {
+                draw(f, &app, f.area());
+            })
+            .unwrap();
+    }
+
+    #[test]
+    fn test_draw_anomaly_timeline_source_without_line() {
+        let backend = TestBackend::new(80, 15);
+        let mut terminal = Terminal::new(backend).unwrap();
+        let mut app = VisualizeApp::new(VisualizeConfig::default());
+
+        // Add anomaly with source file but no line
+        app.record_anomaly(
+            "mmap".to_string(),
+            50000,
+            6.0,
+            Some("main.rs".to_string()),
+            None,
+        );
+
+        terminal
+            .draw(|f| {
+                draw(f, &app, f.area());
+            })
+            .unwrap();
+    }
+
+    #[test]
+    fn test_draw_anomaly_timeline_deep_path() {
+        let backend = TestBackend::new(80, 15);
+        let mut terminal = Terminal::new(backend).unwrap();
+        let mut app = VisualizeApp::new(VisualizeConfig::default());
+
+        // Add anomaly with deep path
+        app.record_anomaly(
+            "open".to_string(),
+            25000,
+            5.5,
+            Some("/very/deep/nested/path/to/file.rs".to_string()),
+            Some(100),
+        );
+
+        terminal
+            .draw(|f| {
+                draw(f, &app, f.area());
+            })
+            .unwrap();
+    }
+
     fn buffer_to_string(buffer: &ratatui::buffer::Buffer) -> String {
         let mut s = String::new();
         for y in 0..buffer.area.height {
