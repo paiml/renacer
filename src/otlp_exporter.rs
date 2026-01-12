@@ -839,7 +839,10 @@ pub struct OtlpExporter;
 
 #[cfg(not(feature = "otlp"))]
 impl OtlpExporter {
-    pub fn new(_config: OtlpConfig) -> anyhow::Result<Self> {
+    pub fn new(
+        _config: OtlpConfig,
+        _trace_context: Option<crate::trace_context::TraceContext>,
+    ) -> anyhow::Result<Self> {
         anyhow::bail!("OTLP support not compiled in. Enable the 'otlp' feature.");
     }
 
@@ -867,6 +870,8 @@ impl OtlpExporter {
     pub fn record_metrics(&mut self, _snapshot: &MetricsSnapshot) {}
 
     pub fn export_metrics(&mut self, _registry: &std::sync::Arc<Registry>) {}
+
+    pub fn record_compute_block(&self, _block: ComputeBlock) {}
 
     pub fn end_root_span(&mut self, _exit_code: i32) {}
 
