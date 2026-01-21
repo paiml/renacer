@@ -216,6 +216,126 @@ fn suppress_stdio() {
     }
 }
 
+/// Result from tracer handle creation
+struct TracerSetup {
+    handle: Option<thread::JoinHandle<Result<i32>>>,
+    demo_mode: bool,
+}
+
+/// Create tracer handle based on command/pid configuration
+fn create_tracer_handle(
+    command: Option<&[String]>,
+    pid: Option<i32>,
+    tx: mpsc::Sender<VisualizerEvent>,
+) -> TracerSetup {
+    if let Some(cmd) = command {
+        let cmd_owned: Vec<String> = cmd.to_vec();
+        let tracer_config = TracerConfig {
+            visualizer_sink: Some(tx),
+            ..Default::default()
+        };
+        let handle = thread::spawn(move || {
+            suppress_stdio();
+            tracer::trace_command(&cmd_owned, tracer_config)
+        });
+        return TracerSetup {
+            handle: Some(handle),
+            demo_mode: false,
+        };
+    }
+
+    if let Some(pid) = pid {
+        let tracer_config = TracerConfig {
+            visualizer_sink: Some(tx),
+            ..Default::default()
+        };
+        let handle = thread::spawn(move || {
+            suppress_stdio();
+            tracer::attach_to_pid(pid, tracer_config)
+        });
+        return TracerSetup {
+            handle: Some(handle),
+            demo_mode: false,
+        };
+    }
+
+    // Demo mode - no tracer, drop tx so rx doesn't block
+    drop(tx);
+    TracerSetup {
+        handle: None,
+        demo_mode: true,
+    }
+}
+
+/// Open terminal for TUI rendering
+fn open_tty() -> File {
+    OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open("/dev/tty")
+        .unwrap_or_else(|_| {
+            // Fallback to stdout if /dev/tty not available (e.g., in CI)
+            OpenOptions::new()
+                .write(true)
+                .open("/proc/self/fd/1")
+                .expect("Failed to open terminal")
+        })
+}
+
+/// Terminal cleanup guard - ensures terminal is restored on panic
+struct TerminalGuard;
+
+impl Drop for TerminalGuard {
+    fn drop(&mut self) {
+        let _ = disable_raw_mode();
+        if let Ok(mut tty) = OpenOptions::new().write(true).open("/dev/tty") {
+            let _ = execute!(tty, LeaveAlternateScreen, DisableMouseCapture);
+        }
+    }
+}
+
+/// Update frame timing statistics
+fn update_frame_stats(app: &mut app::VisualizeApp, frame_times: &mut Vec<u64>, frame_time: u64) {
+    frame_times.push(frame_time);
+    if frame_times.len() > 60 {
+        frame_times.remove(0);
+    }
+    app.avg_frame_time_us = frame_times.iter().sum::<u64>() / frame_times.len().max(1) as u64;
+    app.max_frame_time_us = frame_times.iter().copied().max().unwrap_or(0);
+    app.frame_id += 1;
+}
+
+/// Handle keyboard input, returns true if should quit
+fn handle_key_input(app: &mut app::VisualizeApp, key: event::KeyEvent) -> bool {
+    if key.code == KeyCode::Char('q')
+        || (key.code == KeyCode::Char('c') && key.modifiers.contains(KeyModifiers::CONTROL))
+    {
+        return true;
+    }
+    app.handle_key(key.code, key.modifiers);
+    false
+}
+
+/// Handle tracer thread completion
+fn handle_tracer_finish(
+    app: &mut app::VisualizeApp,
+    tracer_handle: &mut Option<thread::JoinHandle<Result<i32>>>,
+) {
+    if tracer_handle
+        .as_ref()
+        .is_some_and(std::thread::JoinHandle::is_finished)
+    {
+        app.collect_metrics();
+        app.trace_complete = true;
+        app.event_receiver = None;
+
+        if let Some(handle) = tracer_handle.take() {
+            let _ = handle.join();
+        }
+        let _ = enable_raw_mode();
+    }
+}
+
 /// Run the visualization TUI
 ///
 /// # Arguments
@@ -227,77 +347,19 @@ fn suppress_stdio() {
 ///
 /// Exit code from the traced process (0 if successful)
 pub fn run_visualize(command: Option<&[String]>, config: VisualizeConfig) -> Result<i32> {
-    // Determine if we should run in demo mode (no command or pid specified)
-    let demo_mode = command.is_none() && config.pid.is_none();
-
-    // Sprint 52-55: Create channel for tracer-to-visualizer bridge
     let (tx, rx) = mpsc::channel::<VisualizerEvent>();
+    let setup = create_tracer_handle(command, config.pid, tx);
+    let mut tracer_handle = setup.handle;
+    let demo_mode = setup.demo_mode;
 
-    // Spawn tracer in background thread if we have a command or PID
-    let mut tracer_handle = if let Some(cmd) = command {
-        let cmd_owned: Vec<String> = cmd.to_vec();
-        let tracer_config = TracerConfig {
-            visualizer_sink: Some(tx),
-            ..Default::default()
-        };
-        Some(thread::spawn(move || {
-            // Redirect stdout/stderr to /dev/null to prevent tracer/child output corrupting TUI
-            suppress_stdio();
-            tracer::trace_command(&cmd_owned, tracer_config)
-        }))
-    } else if let Some(pid) = config.pid {
-        let tracer_config = TracerConfig {
-            visualizer_sink: Some(tx),
-            ..Default::default()
-        };
-        Some(thread::spawn(move || {
-            // Redirect stdout/stderr to /dev/null to prevent tracer/child output corrupting TUI
-            suppress_stdio();
-            tracer::attach_to_pid(pid, tracer_config)
-        }))
-    } else {
-        // Demo mode - no tracer, drop tx so rx doesn't block
-        drop(tx);
-        None
-    };
-
-    // Setup terminal with panic guard for cleanup
-    // CRITICAL: Use /dev/tty directly instead of stdout because suppress_stdio()
-    // in the tracer thread redirects stdout to /dev/null. /dev/tty bypasses this.
     enable_raw_mode()?;
-
-    // Open /dev/tty for direct terminal access (immune to stdout redirection)
-    let mut tty = OpenOptions::new()
-        .read(true)
-        .write(true)
-        .open("/dev/tty")
-        .unwrap_or_else(|_| {
-            // Fallback to stdout if /dev/tty not available (e.g., in CI)
-            // This uses a trick: we get a File from /proc/self/fd/1
-            OpenOptions::new()
-                .write(true)
-                .open("/proc/self/fd/1")
-                .expect("Failed to open terminal")
-        });
-
-    // Create a cleanup guard to ensure terminal is restored on panic
-    struct TerminalGuard;
-    impl Drop for TerminalGuard {
-        fn drop(&mut self) {
-            let _ = disable_raw_mode();
-            // Use /dev/tty for cleanup too
-            if let Ok(mut tty) = OpenOptions::new().write(true).open("/dev/tty") {
-                let _ = execute!(tty, LeaveAlternateScreen, DisableMouseCapture);
-            }
-        }
-    }
+    let mut tty = open_tty();
     let _guard = TerminalGuard;
 
     execute!(tty, EnterAlternateScreen, EnableMouseCapture)?;
     let backend = CrosstermBackend::new(tty);
     let mut terminal = Terminal::new(backend)?;
 
-    // Create app state with receiver (None in demo mode since tx was dropped)
     let receiver = if tracer_handle.is_some() {
         Some(rx)
     } else {
@@ -305,95 +367,49 @@ pub fn run_visualize(command: Option<&[String]>, config: VisualizeConfig) -> Res
     };
     let mut app = app::VisualizeApp::with_receiver(config.clone(), receiver);
 
-    // Demo mode RNG state
     let mut demo_tick: u64 = 0;
-
-    // Main event loop
     let tick_rate = Duration::from_millis(config.tick_rate_ms);
     let mut last_tick = Instant::now();
     let mut frame_times: Vec<u64> = Vec::with_capacity(60);
 
     let result = loop {
-        // Draw UI
         let frame_start = Instant::now();
         terminal.draw(|f| ui::draw(f, &mut app))?;
-        let frame_time = frame_start.elapsed().as_micros() as u64;
+        update_frame_stats(
+            &mut app,
+            &mut frame_times,
+            frame_start.elapsed().as_micros() as u64,
+        );
 
-        // Track frame timing
-        frame_times.push(frame_time);
-        if frame_times.len() > 60 {
-            frame_times.remove(0);
-        }
-        app.avg_frame_time_us = frame_times.iter().sum::<u64>() / frame_times.len() as u64;
-        app.max_frame_time_us = *frame_times.iter().max().unwrap_or(&0);
-        app.frame_id += 1;
-
-        // Handle events
         let timeout = tick_rate.saturating_sub(last_tick.elapsed());
         if event::poll(timeout)? {
             if let Event::Key(key) = event::read()? {
-                // Check for quit
-                if key.code == KeyCode::Char('q')
-                    || (key.code == KeyCode::Char('c')
-                        && key.modifiers.contains(KeyModifiers::CONTROL))
-                {
+                if handle_key_input(&mut app, key) {
                     break Ok(0);
                 }
-
-                // Handle other keys
-                app.handle_key(key.code, key.modifiers);
             }
         }
 
-        // Periodic collection
         if last_tick.elapsed() >= tick_rate {
-            // Demo mode: inject synthetic syscall data
             if demo_mode {
                 inject_demo_data(&mut app, demo_tick);
                 demo_tick = demo_tick.wrapping_add(1);
             }
-
             app.collect_metrics();
             last_tick = Instant::now();
         }
 
-        // Check if we should exit
         if app.should_exit {
             break Ok(app.exit_code);
         }
 
-        // Check if tracer thread finished (traced process exited)
-        // Keep UI open to show final results - user must press 'q' to exit
-        if tracer_handle
-            .as_ref()
-            .is_some_and(std::thread::JoinHandle::is_finished)
-        {
-            // Drain remaining events
-            app.collect_metrics();
-
-            // Mark trace as complete
-            app.trace_complete = true;
-
-            // Drop the receiver to stop polling dead channel
-            app.event_receiver = None;
-
-            // Join the tracer thread
-            if let Some(handle) = tracer_handle.take() {
-                let _ = handle.join();
-            }
-
-            // Re-enable raw mode in case child process affected terminal
-            let _ = enable_raw_mode();
-        }
+        handle_tracer_finish(&mut app, &mut tracer_handle);
     };
 
-    // Clean up tracer thread if still running
     if let Some(handle) = tracer_handle {
-        // Don't block indefinitely - the traced process may have exited
         let _ = handle.join();
     }
 
-    // Restore terminal
     disable_raw_mode()?;
     execute!(
         terminal.backend_mut(),
@@ -643,5 +659,107 @@ mod tests {
         };
 
         assert!(config.deterministic);
+    }
+
+    #[test]
+    fn test_update_frame_stats() {
+        let config = VisualizeConfig::default();
+        let mut app = app::VisualizeApp::new(config);
+        let mut frame_times: Vec<u64> = Vec::with_capacity(60);
+
+        // Test initial update
+        update_frame_stats(&mut app, &mut frame_times, 1000);
+        assert_eq!(app.frame_id, 1);
+        assert_eq!(app.avg_frame_time_us, 1000);
+        assert_eq!(app.max_frame_time_us, 1000);
+        assert_eq!(frame_times.len(), 1);
+
+        // Test multiple updates
+        update_frame_stats(&mut app, &mut frame_times, 2000);
+        assert_eq!(app.frame_id, 2);
+        assert_eq!(app.avg_frame_time_us, 1500); // (1000 + 2000) / 2
+        assert_eq!(app.max_frame_time_us, 2000);
+        assert_eq!(frame_times.len(), 2);
+
+        // Test rolling window (fill beyond 60)
+        for i in 0..65 {
+            update_frame_stats(&mut app, &mut frame_times, 100 + i as u64);
+        }
+        assert_eq!(frame_times.len(), 60); // Should cap at 60
+    }
+
+    #[test]
+    fn test_handle_key_input_quit() {
+        let config = VisualizeConfig::default();
+        let mut app = app::VisualizeApp::new(config);
+
+        // Test 'q' quits
+        let key_q = event::KeyEvent::new(KeyCode::Char('q'), KeyModifiers::NONE);
+        assert!(handle_key_input(&mut app, key_q));
+
+        // Test Ctrl+C quits
+        let key_ctrl_c = event::KeyEvent::new(KeyCode::Char('c'), KeyModifiers::CONTROL);
+        assert!(handle_key_input(&mut app, key_ctrl_c));
+    }
+
+    #[test]
+    fn test_handle_key_input_other_keys() {
+        let config = VisualizeConfig::default();
+        let mut app = app::VisualizeApp::new(config);
+
+        // Test other keys don't quit
+        let key_a = event::KeyEvent::new(KeyCode::Char('a'), KeyModifiers::NONE);
+        assert!(!handle_key_input(&mut app, key_a));
+
+        let key_enter = event::KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE);
+        assert!(!handle_key_input(&mut app, key_enter));
+
+        let key_tab = event::KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE);
+        assert!(!handle_key_input(&mut app, key_tab));
+    }
+
+    #[test]
+    fn test_create_tracer_handle_demo_mode() {
+        let (tx, _rx) = mpsc::channel::<VisualizerEvent>();
+
+        // Test demo mode (no command, no pid)
+        let setup = create_tracer_handle(None, None, tx);
+        assert!(setup.demo_mode);
+        assert!(setup.handle.is_none());
+    }
+
+    #[test]
+    fn test_terminal_guard_drop() {
+        // Test that TerminalGuard can be created and dropped without panic
+        {
+            let _guard = TerminalGuard;
+        }
+        // If we get here, drop succeeded
+    }
+
+    #[test]
+    fn test_suppress_stdio_safe() {
+        // Test that suppress_stdio doesn't panic when /dev/null isn't available
+        // This is a no-op test since we can't easily verify the redirect,
+        // but we verify it doesn't crash
+        suppress_stdio();
+    }
+
+    #[test]
+    fn test_handle_tracer_finish_none() {
+        let config = VisualizeConfig::default();
+        let mut app = app::VisualizeApp::new(config);
+        let mut handle: Option<thread::JoinHandle<Result<i32>>> = None;
+
+        // Should not panic when handle is None
+        handle_tracer_finish(&mut app, &mut handle);
+        assert!(!app.trace_complete); // Should not mark complete when handle is None
+    }
+
+    #[test]
+    fn test_open_tty_fallback() {
+        // Test that open_tty returns a file (doesn't panic)
+        // In CI environments it will use the fallback /proc/self/fd/1
+        let _file = open_tty();
     }
 }

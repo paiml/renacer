@@ -512,8 +512,8 @@ impl VisualizeApp {
             let cmp = match self.sort_column {
                 SortColumn::Pid => a.pid.cmp(&b.pid),
                 SortColumn::Name => a.name.cmp(&b.name),
-                SortColumn::Cpu => a.cpu_percent.partial_cmp(&b.cpu_percent).unwrap(),
-                SortColumn::Calls => a.calls_per_sec.partial_cmp(&b.calls_per_sec).unwrap(),
+                SortColumn::Cpu => a.cpu_percent.total_cmp(&b.cpu_percent),
+                SortColumn::Calls => a.calls_per_sec.total_cmp(&b.calls_per_sec),
                 SortColumn::Errors => a.error_count.cmp(&b.error_count),
             };
             if self.sort_descending {

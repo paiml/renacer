@@ -382,4 +382,43 @@ mod tests {
         let normalized = normalize_batch(&values);
         assert!(normalized.iter().all(|&v| v == 0.0));
     }
+
+    #[test]
+    fn test_latency_color_ranges() {
+        // <100us: cyan (fast)
+        if let Color::Rgb(_, _, b) = latency_color(50) {
+            assert!(b > 200, "Fast latency should be cyan-ish");
+        }
+
+        // >100us: green
+        if let Color::Rgb(_, g, _) = latency_color(500) {
+            assert!(g > 200, ">100us should be green");
+        }
+
+        // >1ms: yellow
+        if let Color::Rgb(r, g, _) = latency_color(5_000) {
+            assert!(r > 200 && g > 200, ">1ms should be yellow");
+        }
+
+        // >10ms: orange
+        if let Color::Rgb(r, _, _) = latency_color(50_000) {
+            assert_eq!(r, 255, ">10ms should be orange");
+        }
+
+        // >100ms: critical red
+        if let Color::Rgb(r, _, _) = latency_color(150_000) {
+            assert_eq!(r, 255, ">100ms should be red");
+        }
+    }
+
+    #[test]
+    fn test_latency_color_boundaries() {
+        // Test exact boundaries
+        let _ = latency_color(100); // Exactly 100us
+        let _ = latency_color(1_000); // Exactly 1ms
+        let _ = latency_color(10_000); // Exactly 10ms
+        let _ = latency_color(100_000); // Exactly 100ms
+        let _ = latency_color(0); // Zero
+        let _ = latency_color(u64::MAX); // Max value
+    }
 }

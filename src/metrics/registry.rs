@@ -310,7 +310,7 @@ impl Registry {
     fn labels_from_pairs(&self, pairs: &[(&str, &str)]) -> Result<Labels, RegistryError> {
         let labels: Labels = pairs
             .iter()
-            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .map(|(k, v)| ((*k).to_string(), (*v).to_string()))
             .collect();
 
         self.validator.validate(&labels)?;

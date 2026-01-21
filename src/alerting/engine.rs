@@ -255,8 +255,13 @@ impl AlertEngine {
             return 0.0;
         }
 
-        let (oldest_time, oldest_value) = history.first().unwrap();
-        let (newest_time, newest_value) = history.last().unwrap();
+        // Safety: history.len() >= 2 checked above, so first() and last() always succeed
+        let Some((oldest_time, oldest_value)) = history.first() else {
+            return 0.0;
+        };
+        let Some((newest_time, newest_value)) = history.last() else {
+            return 0.0;
+        };
 
         let time_delta = newest_time.duration_since(*oldest_time).as_secs_f64();
         if time_delta == 0.0 {
