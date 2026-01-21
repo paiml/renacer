@@ -210,6 +210,7 @@ impl StatsTracker {
 
         // Convert durations to f32 for Trueno
         let durations: Vec<f32> = stats.durations.iter().map(|&d| d as f32).collect();
+        #[allow(unused_variables)]
         let elements = durations.len();
 
         // Trace entire compute block (Sprint 32: Block-level tracing)

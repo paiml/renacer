@@ -32,6 +32,7 @@ use opentelemetry_sdk::{
     Resource,
 };
 
+#[allow(unused_imports)]
 use crate::trace_context::TraceContext; // Sprint 33
 
 // Sprint 56: Metrics registry for OTLP export
