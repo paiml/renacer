@@ -188,7 +188,7 @@ impl GaugeVec {
                     .label_keys
                     .iter()
                     .zip(values.iter())
-                    .map(|(k, v)| (k.clone(), v.to_string()))
+                    .map(|(k, v)| (k.clone(), (*v).to_string()))
                     .collect();
                 Gauge::new_arc(&self.name, labels)
             })

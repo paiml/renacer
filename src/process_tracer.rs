@@ -660,7 +660,7 @@ static GLOBAL_RATE_WINDOW: AtomicU64 = AtomicU64::new(0);
 fn check_rate_limit(config: &ProcessTraceConfig) -> Result<(), TracerError> {
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
+        .expect("System clock before UNIX epoch")
         .as_secs();
 
     let window = GLOBAL_RATE_WINDOW.load(Ordering::Relaxed);

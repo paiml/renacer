@@ -362,7 +362,7 @@ fn calculate_feature_importance(features: &[f64]) -> Vec<(String, f64)> {
             } else {
                 0.0
             };
-            (name.to_string(), importance)
+            ((*name).to_string(), importance)
         })
         .collect()
 }

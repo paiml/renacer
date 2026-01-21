@@ -233,7 +233,8 @@ impl AdaptiveBackend {
     }
 
     /// Record backend selection decision
-    fn record_selection(&self, operation: &str, _input_size: usize, _backend: Backend) {
+    #[allow(unused_variables)]
+    fn record_selection(&self, operation: &str, input_size: usize, backend: Backend) {
         // Update call count
         if let Ok(mut counts) = self.call_counts.lock() {
             *counts.entry(operation.to_string()).or_insert(0) += 1;

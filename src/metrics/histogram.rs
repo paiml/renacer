@@ -67,12 +67,13 @@ pub struct Histogram {
 impl Histogram {
     /// Create a new histogram with given buckets
     pub fn new(name: impl Into<String>, labels: Labels, buckets: &[f64]) -> Self {
-        // Validate and sort buckets
-        let mut sorted_buckets: Vec<f64> = buckets.to_vec();
-        sorted_buckets.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        // Validate and sort buckets (filter out NaN, then sort with total_cmp for safety)
+        let mut sorted_buckets: Vec<f64> =
+            buckets.iter().copied().filter(|x| !x.is_nan()).collect();
+        sorted_buckets.sort_by(f64::total_cmp);
 
         // Add +Inf bucket if not present
-        if sorted_buckets.last().is_none_or(|&b| b < f64::INFINITY) {
+        if sorted_buckets.last().map_or(true, |&b| b < f64::INFINITY) {
             sorted_buckets.push(f64::INFINITY);
         }
 
@@ -271,8 +272,8 @@ impl Histogram {
                     return prev_bound;
                 }
 
-                // Simple midpoint approximation
-                return f64::midpoint(prev_bound, curr_bound);
+                // Simple midpoint approximation (compatible with MSRV 1.75)
+                return (prev_bound + curr_bound) / 2.0;
             }
         }
 
@@ -370,7 +371,7 @@ impl HistogramVec {
                     .label_keys
                     .iter()
                     .zip(values.iter())
-                    .map(|(k, v)| (k.clone(), v.to_string()))
+                    .map(|(k, v)| (k.clone(), (*v).to_string()))
                     .collect();
                 Histogram::new_arc(&self.name, labels, &self.buckets)
             })

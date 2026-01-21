@@ -163,7 +163,7 @@ impl CounterVec {
                     .label_keys
                     .iter()
                     .zip(values.iter())
-                    .map(|(k, v)| (k.clone(), v.to_string()))
+                    .map(|(k, v)| (k.clone(), (*v).to_string()))
                     .collect();
                 Counter::new_arc(&self.name, labels)
             })

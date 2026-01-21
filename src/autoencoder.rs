@@ -288,7 +288,7 @@ fn calculate_feature_contributions(original: &[f64], reconstructed: &[f64]) -> V
             } else {
                 0.0
             };
-            (name.to_string(), contribution)
+            ((*name).to_string(), contribution)
         })
         .collect()
 }

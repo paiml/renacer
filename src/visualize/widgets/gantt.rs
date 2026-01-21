@@ -419,4 +419,80 @@ mod tests {
         chart.render(Rect::new(0, 0, 5, 1), &mut buf);
         // Should handle small area gracefully
     }
+
+    #[test]
+    fn test_span_color_producer_consumer() {
+        assert_eq!(
+            GanttChart::span_color(SpanKind::Producer, false, false),
+            graph::SYSCALL_MEM
+        );
+        assert_eq!(
+            GanttChart::span_color(SpanKind::Consumer, false, false),
+            graph::CLUSTER_1
+        );
+    }
+
+    #[test]
+    fn test_render_bar_various_widths() {
+        let mut buf = Buffer::empty(Rect::new(0, 0, 20, 1));
+
+        // Width 0 - should do nothing
+        GanttChart::render_bar(&mut buf, 0, 0, 0, Color::Red, false);
+
+        // Width 1 - thin bar
+        GanttChart::render_bar(&mut buf, 1, 0, 1, Color::Green, false);
+
+        // Width 2 - start and end
+        GanttChart::render_bar(&mut buf, 3, 0, 2, Color::Blue, false);
+
+        // Width 3+ - start, middle, end
+        GanttChart::render_bar(&mut buf, 6, 0, 5, Color::Yellow, false);
+
+        // Selected bar
+        GanttChart::render_bar(&mut buf, 12, 0, 3, Color::Cyan, true);
+    }
+
+    #[test]
+    fn test_gantt_with_block() {
+        let spans = vec![make_span("test", 0, 1000)];
+        let mut buf = Buffer::empty(Rect::new(0, 0, 80, 10));
+        let chart = GanttChart::new(&spans).block(Block::default().borders(Borders::ALL));
+        chart.render(Rect::new(0, 0, 80, 10), &mut buf);
+    }
+
+    #[test]
+    fn test_gantt_with_custom_config() {
+        let spans = vec![make_span("test", 0, 1000)];
+        let mut buf = Buffer::empty(Rect::new(0, 0, 80, 10));
+        let config = GanttConfig {
+            min_bar_width: 2,
+            max_depth: 5,
+            indent: 4,
+            show_names: false,
+            show_durations: false,
+        };
+        let chart = GanttChart::new(&spans).config(config);
+        chart.render(Rect::new(0, 0, 80, 10), &mut buf);
+    }
+
+    #[test]
+    fn test_gantt_config_debug() {
+        let config = GanttConfig::default();
+        let debug_str = format!("{:?}", config);
+        assert!(debug_str.contains("min_bar_width"));
+    }
+
+    #[test]
+    fn test_gantt_config_clone() {
+        let config = GanttConfig {
+            min_bar_width: 5,
+            max_depth: 8,
+            indent: 3,
+            show_names: false,
+            show_durations: true,
+        };
+        let cloned = config.clone();
+        assert_eq!(cloned.min_bar_width, 5);
+        assert_eq!(cloned.max_depth, 8);
+    }
 }
