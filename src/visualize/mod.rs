@@ -204,8 +204,11 @@ fn inject_demo_data(app: &mut app::VisualizeApp, tick: u64) {
 fn suppress_stdio() {
     if let Ok(devnull) = File::open("/dev/null") {
         let devnull_fd = devnull.as_raw_fd();
+        // SAFETY: dup2 is safe here because:
+        // 1. devnull_fd is a valid file descriptor from File::open
+        // 2. STDOUT_FILENO/STDERR_FILENO are valid standard fd constants
+        // 3. dup2 atomically closes the target fd if open, preventing fd leaks
         unsafe {
-            // Duplicate /dev/null to stdout (fd 1) and stderr (fd 2)
             libc::dup2(devnull_fd, libc::STDOUT_FILENO);
             libc::dup2(devnull_fd, libc::STDERR_FILENO);
         }

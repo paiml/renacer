@@ -2,6 +2,7 @@
 name = "renacer"
 version = "0.9.7"
 edition = "2021"
+rust-version = "1.75"
 authors = ["Pragmatic AI Labs <info@paiml.com>"]
 description = "Pure Rust system call tracer with source-aware correlation for Rust binaries"
 license = "MIT"
