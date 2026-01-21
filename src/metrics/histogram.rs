@@ -162,6 +162,10 @@ impl Histogram {
     fn find_bucket_simd_avx2(&self, value: f64) -> usize {
         use std::arch::x86_64::*;
 
+        // SAFETY: AVX2 intrinsics are safe when:
+        // 1. Target CPU supports AVX2 (checked by #[target_feature(enable = "avx2")])
+        // 2. Pointer arithmetic stays within bounds (checked by while condition)
+        // 3. Memory alignment handled by _mm256_loadu_pd (unaligned load)
         unsafe {
             let value_vec = _mm256_set1_pd(value);
             let mut idx = 0;
