@@ -66,7 +66,11 @@ assert!(original_trace.semantically_equivalent(&transpiled_trace));
 
 ## Stack Documentation Search
 
-Query this component's documentation and the entire Sovereign AI Stack using batuta's RAG Oracle:
+**IMPORTANT: Proactively use the batuta RAG oracle when:**
+- Looking up patterns from other stack components (trueno SIMD, aprender ML, realizar inference)
+- Finding how transpilers use renacer for semantic validation (depyler, bashrs, decy)
+- Understanding ptrace/syscall patterns across the stack
+- Researching anomaly detection and ML-based analysis approaches
 
 ```bash
 # Index all stack documentation (run once, persists to ~/.cache/batuta/rag/)
@@ -75,13 +79,12 @@ batuta oracle --rag-index
 # Search across the entire stack
 batuta oracle --rag "your question here"
 
-# Examples
-batuta oracle --rag "syscall tracing"
-batuta oracle --rag "semantic validation transpilation"
-batuta oracle --rag "DWARF debug info"
-
-# Check index status
-batuta oracle --rag-stats
+# Renacer-specific examples
+batuta oracle --rag "syscall tracing semantic validation"
+batuta oracle --rag "DWARF debug info source correlation"
+batuta oracle --rag "ptrace process tracing patterns"
+batuta oracle --rag "anomaly detection KMeans clustering"
+batuta oracle --rag "OpenTelemetry OTLP export integration"
 ```
 
-The RAG index includes CLAUDE.md, README.md, and source files from all stack components plus Python ground truth corpora for cross-language pattern matching.
+The RAG index (341+ docs) includes CLAUDE.md, README.md, and source files from all stack components plus Python ground truth corpora for cross-language pattern matching.
