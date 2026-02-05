@@ -6,6 +6,37 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **renacer** is a pure Rust system call tracer with source-aware correlation for Rust binaries. It provides `strace`-like functionality with enhanced debugging capabilities including source code mapping and semantic analysis.
 
+## Code Search (pmat query)
+
+**NEVER use grep or rg for code discovery.** Use `pmat query` instead -- it returns quality-annotated, ranked results with TDG scores and fault annotations.
+
+```bash
+# Find functions by intent
+pmat query "syscall tracing" --limit 10
+
+# Find high-quality code
+pmat query "source correlation" --min-grade A --exclude-tests
+
+# Find with fault annotations (unwrap, panic, unsafe, etc.)
+pmat query "trace collection" --faults
+
+# Filter by complexity
+pmat query "syscall handler" --max-complexity 10
+
+# Cross-project search
+pmat query "binary analysis" --include-project ../trueno
+
+# Git history search (find code by commit intent via RRF fusion)
+pmat query "fix ptrace attach" -G
+pmat query "trace parser" --git-history
+
+# Enrichment flags (combine freely)
+pmat query "trace parser" --churn              # git volatility (commit count, churn score)
+pmat query "syscall table" --duplicates           # code clone detection (MinHash+LSH)
+pmat query "event handler" --entropy           # pattern diversity (repetitive vs unique)
+pmat query "syscall tracing" --churn --duplicates --entropy --faults -G  # full audit
+```
+
 ## Build and Test Commands
 
 ```bash

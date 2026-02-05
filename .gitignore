@@ -23,3 +23,10 @@ target
 .DS_Store
 *.proptest-regressions
 book/book/
+
+# PMAT
+.pmat/backup/
+.pmat-qa/
+.pmat/context.idx/
+.pmat/workspace.idx/
+.pmat/deps-cache.json
