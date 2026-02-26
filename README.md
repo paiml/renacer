@@ -679,6 +679,11 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 - Plugin architecture
 - Web UI for trace analysis
 
+
+## MSRV
+
+Minimum Supported Rust Version: **1.75**
+
 ## License
 
 MIT - See [LICENSE](LICENSE) file.
