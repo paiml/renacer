@@ -284,3 +284,10 @@ default_trait_access = "allow"
 unnecessary_get_then_check = "allow"
 field_reassign_with_default = "allow"
 no_effect_underscore_binding = "allow"
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--generate-link-to-definition"]
+
+[package.metadata.release]
+shared-version = true
