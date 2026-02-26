@@ -55,9 +55,7 @@ int main() {
 
     // Should trace syscalls from both parent and child
     // Note: On Linux, fork() is implemented via clone() syscall
-    cmd.assert()
-        .success()
-        .stdout(predicate::str::contains("clone"));
+    cmd.assert().success().stdout(predicate::str::contains("clone"));
 }
 
 #[test]
@@ -102,9 +100,7 @@ int main() {
     // Should trace fork and potentially execve in child
     // Note: The child may exit very quickly, so we may not capture execve
     // The important thing is that fork following works (we see clone)
-    cmd.assert()
-        .success()
-        .stdout(predicate::str::contains("clone"));
+    cmd.assert().success().stdout(predicate::str::contains("clone"));
 }
 
 #[test]
@@ -243,16 +239,10 @@ int main() {
         .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("-f")
-        .arg("-e")
-        .arg("trace=write")
-        .arg("--")
-        .arg(&test_program);
+    cmd.arg("-f").arg("-e").arg("trace=write").arg("--").arg(&test_program);
 
     // Should show write syscalls from both parent and child, but filter out others
-    cmd.assert()
-        .success()
-        .stdout(predicate::str::contains("write"));
+    cmd.assert().success().stdout(predicate::str::contains("write"));
 }
 
 #[test]
@@ -317,11 +307,7 @@ int main() {
         .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("-f")
-        .arg("--format")
-        .arg("json")
-        .arg("--")
-        .arg(&test_program);
+    cmd.arg("-f").arg("--format").arg("json").arg("--").arg(&test_program);
 
     // JSON output should include syscalls from all processes
     cmd.assert()
@@ -357,16 +343,10 @@ int main() {
         .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("-f")
-        .arg("--format")
-        .arg("csv")
-        .arg("--")
-        .arg(&test_program);
+    cmd.arg("-f").arg("--format").arg("csv").arg("--").arg(&test_program);
 
     // CSV output should include header and syscalls from all processes
-    cmd.assert()
-        .success()
-        .stdout(predicate::str::contains("syscall,arguments,result"));
+    cmd.assert().success().stdout(predicate::str::contains("syscall,arguments,result"));
 }
 
 // ============================================================================

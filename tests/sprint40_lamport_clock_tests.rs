@@ -109,10 +109,7 @@ fn test_lamport_clock_happens_before_distributed() {
     assert!(t2 < t3, "B → C violated");
     assert!(t1 < t3, "A → C violated (transitivity)");
 
-    println!(
-        "Causal ordering verified: t1={} < t2={} < t3={}",
-        t1, t2, t3
-    );
+    println!("Causal ordering verified: t1={} < t2={} < t3={}", t1, t2, t3);
 }
 
 #[test]
@@ -128,10 +125,7 @@ fn test_lamport_clock_concurrent_events() {
     // Their clocks don't establish happens-before (both could be 0)
     // This is expected - Lamport clocks capture causality, not concurrency
 
-    println!(
-        "Concurrent events: Process 1 clock={}, Process 2 clock={}",
-        t1, t2
-    );
+    println!("Concurrent events: Process 1 clock={}, Process 2 clock={}", t1, t2);
 }
 
 #[test]
@@ -148,10 +142,8 @@ fn test_lamport_clock_fork_simulation() {
     std::env::set_var("TEST_LAMPORT_FORK_CLOCK", parent_time.to_string());
 
     // Child process: inherits parent clock
-    let child_clock_value = std::env::var("TEST_LAMPORT_FORK_CLOCK")
-        .expect("test")
-        .parse::<u64>()
-        .expect("test");
+    let child_clock_value =
+        std::env::var("TEST_LAMPORT_FORK_CLOCK").expect("test").parse::<u64>().expect("test");
 
     let child_clock = LamportClock::new();
     child_clock.sync(child_clock_value);
@@ -167,10 +159,7 @@ fn test_lamport_clock_fork_simulation() {
         child_time
     );
 
-    println!(
-        "Fork simulation: parent={} → child={}",
-        parent_time, child_time
-    );
+    println!("Fork simulation: parent={} → child={}", parent_time, child_time);
 }
 
 #[test]
@@ -190,10 +179,8 @@ fn test_lamport_clock_environment_propagation() {
     std::env::set_var("RENACER_LOGICAL_CLOCK", current.to_string());
 
     // Simulate child process reading from env
-    let env_clock = std::env::var("RENACER_LOGICAL_CLOCK")
-        .expect("test")
-        .parse::<u64>()
-        .expect("test");
+    let env_clock =
+        std::env::var("RENACER_LOGICAL_CLOCK").expect("test").parse::<u64>().expect("test");
 
     assert_eq!(env_clock, 42);
 
@@ -319,14 +306,8 @@ fn test_lamport_clock_eliminates_clock_skew() {
     assert!(logical_time_p1 < logical_time_p2_after);
 
     println!("Clock skew eliminated:");
-    println!(
-        "  Physical: P2({}) < P1({}) (misleading!)",
-        physical_time_p2, physical_time_p1
-    );
-    println!(
-        "  Logical: P1({}) → P2({})",
-        logical_time_p1, logical_time_p2_after
-    );
+    println!("  Physical: P2({}) < P1({}) (misleading!)", physical_time_p2, physical_time_p1);
+    println!("  Logical: P1({}) → P2({})", logical_time_p1, logical_time_p2_after);
 }
 
 #[test]
@@ -354,15 +335,8 @@ fn test_lamport_clock_performance() {
 
     let avg_latency_ns = elapsed.as_nanos() as f64 / 100_000.0;
 
-    println!(
-        "Lamport clock tick() performance: {:.1}ns avg (100K iterations)",
-        avg_latency_ns
-    );
+    println!("Lamport clock tick() performance: {:.1}ns avg (100K iterations)", avg_latency_ns);
 
     // Should be <100ns (very conservative bound)
-    assert!(
-        avg_latency_ns < 100.0,
-        "Tick too slow: {:.1}ns",
-        avg_latency_ns
-    );
+    assert!(avg_latency_ns < 100.0, "Tick too slow: {:.1}ns", avg_latency_ns);
 }

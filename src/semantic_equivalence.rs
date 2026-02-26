@@ -180,9 +180,7 @@ impl SemanticValidator {
     ///
     /// * `tolerance` - Tolerance for fuzzy matching (0.0-1.0)
     pub fn with_tolerance(tolerance: f64) -> Self {
-        SemanticValidator {
-            tolerance: tolerance.clamp(0.0, 1.0),
-        }
+        SemanticValidator { tolerance: tolerance.clamp(0.0, 1.0) }
     }
 
     /// Get current tolerance
@@ -319,11 +317,7 @@ impl SemanticValidator {
 
         let max_len = orig_len.max(trans_len) as f64;
         let length_diff = (orig_len as f64 - trans_len as f64).abs();
-        let length_similarity = if max_len > 0.0 {
-            1.0 - (length_diff / max_len)
-        } else {
-            1.0
-        };
+        let length_similarity = if max_len > 0.0 { 1.0 - (length_diff / max_len) } else { 1.0 };
 
         // If length difference exceeds tolerance, fail immediately
         if length_similarity < (1.0 - self.tolerance) {
@@ -359,11 +353,7 @@ impl SemanticValidator {
         }
 
         let min_len = orig_len.min(trans_len);
-        let match_rate = if min_len > 0 {
-            matched as f64 / min_len as f64
-        } else {
-            1.0
-        };
+        let match_rate = if min_len > 0 { matched as f64 / min_len as f64 } else { 1.0 };
 
         let is_equivalent = match_rate >= (1.0 - self.tolerance);
 
@@ -400,16 +390,8 @@ impl SemanticValidator {
     ) -> PerformanceComparison {
         // Sum up syscall durations to get total runtime
         // This is more accurate than process span duration (Lamport clock ticks)
-        let orig_runtime: u64 = original
-            .syscall_spans
-            .iter()
-            .map(|s| s.duration_nanos)
-            .sum();
-        let trans_runtime: u64 = transpiled
-            .syscall_spans
-            .iter()
-            .map(|s| s.duration_nanos)
-            .sum();
+        let orig_runtime: u64 = original.syscall_spans.iter().map(|s| s.duration_nanos).sum();
+        let trans_runtime: u64 = transpiled.syscall_spans.iter().map(|s| s.duration_nanos).sum();
 
         PerformanceComparison::new(orig_runtime, trans_runtime)
     }
@@ -429,6 +411,13 @@ struct TraceDiff {
     divergence_point: Option<DivergencePoint>,
     explanation: String,
 }
+
+// Compile-time thread-safety verification (Sprint 59)
+static_assertions::assert_impl_all!(ValidationResult: Send, Sync);
+static_assertions::assert_impl_all!(PerformanceComparison: Send, Sync);
+static_assertions::assert_impl_all!(MemoryDelta: Send, Sync);
+static_assertions::assert_impl_all!(DivergencePoint: Send, Sync);
+static_assertions::assert_impl_all!(ObservableSyscall: Send, Sync);
 
 // ============================================================================
 // UNIT TESTS (EXTREME TDD)
@@ -509,16 +498,10 @@ mod tests {
     // Test 6: ObservableSyscall inequality (different name)
     #[test]
     fn test_observable_syscall_different_name() {
-        let syscall1 = ObservableSyscall {
-            name: "read".to_string(),
-            args: vec![],
-            return_value: 100,
-        };
-        let syscall2 = ObservableSyscall {
-            name: "write".to_string(),
-            args: vec![],
-            return_value: 100,
-        };
+        let syscall1 =
+            ObservableSyscall { name: "read".to_string(), args: vec![], return_value: 100 };
+        let syscall2 =
+            ObservableSyscall { name: "write".to_string(), args: vec![], return_value: 100 };
 
         assert!(!syscall1.is_equivalent(&syscall2));
     }
@@ -561,11 +544,7 @@ mod tests {
         let result = validator.validate(&trace1, &trace2);
 
         match result {
-            ValidationResult::Pass {
-                confidence,
-                matched_syscalls,
-                ..
-            } => {
+            ValidationResult::Pass { confidence, matched_syscalls, .. } => {
                 assert!(confidence >= 0.95);
                 assert_eq!(matched_syscalls, 3);
             }
@@ -590,9 +569,7 @@ mod tests {
 
         match result {
             ValidationResult::Pass { .. } => panic!("Expected Fail"),
-            ValidationResult::Fail {
-                divergence_point, ..
-            } => {
+            ValidationResult::Fail { divergence_point, .. } => {
                 assert_eq!(divergence_point.syscall_index, 1);
             }
         }
@@ -772,9 +749,7 @@ mod tests {
 
         match result {
             ValidationResult::Pass { .. } => panic!("Expected Fail"),
-            ValidationResult::Fail {
-                divergence_point, ..
-            } => {
+            ValidationResult::Fail { divergence_point, .. } => {
                 assert_eq!(divergence_point.syscall_index, 2);
                 assert!(divergence_point.original_syscall.contains("write"));
                 assert!(divergence_point.transpiled_syscall.contains("close"));
@@ -814,11 +789,8 @@ mod tests {
     // Test 20: Memory delta calculation
     #[test]
     fn test_memory_delta() {
-        let mem = MemoryDelta {
-            original_bytes: 1000,
-            transpiled_bytes: 800,
-            reduction_percentage: 20.0,
-        };
+        let mem =
+            MemoryDelta { original_bytes: 1000, transpiled_bytes: 800, reduction_percentage: 20.0 };
 
         assert_eq!(mem.original_bytes, 1000);
         assert_eq!(mem.transpiled_bytes, 800);

@@ -112,84 +112,68 @@ impl Clone for Counter {
     }
 }
 
-/// Counter family - collection of counters with same name but different labels
-#[derive(Debug)]
-#[allow(dead_code)]
-pub struct CounterVec {
-    /// Base metric name
-    name: String,
-    /// Label keys (order matters for lookup)
-    label_keys: Vec<String>,
-    /// Child counters by label values
-    children: dashmap::DashMap<Vec<String>, Arc<Counter>>,
-}
-
-#[allow(dead_code)]
-impl CounterVec {
-    /// Create a new counter family
-    pub fn new(
-        name: impl Into<String>,
-        label_keys: impl IntoIterator<Item = impl Into<String>>,
-    ) -> Self {
-        Self {
-            name: name.into(),
-            label_keys: label_keys.into_iter().map(Into::into).collect(),
-            children: dashmap::DashMap::new(),
-        }
-    }
-
-    /// Get or create counter with given label values
-    ///
-    /// # Panics
-    /// Panics if number of values doesn't match number of keys
-    pub fn with_label_values(&self, values: &[&str]) -> Arc<Counter> {
-        assert_eq!(
-            values.len(),
-            self.label_keys.len(),
-            "label count mismatch: expected {}, got {}",
-            self.label_keys.len(),
-            values.len()
-        );
-
-        let key: Vec<String> = values
-            .iter()
-            .map(std::string::ToString::to_string)
-            .collect();
-
-        self.children
-            .entry(key.clone())
-            .or_insert_with(|| {
-                let labels: Labels = self
-                    .label_keys
-                    .iter()
-                    .zip(values.iter())
-                    .map(|(k, v)| (k.clone(), (*v).to_string()))
-                    .collect();
-                Counter::new_arc(&self.name, labels)
-            })
-            .clone()
-    }
-
-    /// Get metric name
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-
-    /// Get label keys
-    pub fn label_keys(&self) -> &[String] {
-        &self.label_keys
-    }
-
-    /// Iterate over all counters
-    pub fn iter(&self) -> impl Iterator<Item = Arc<Counter>> + '_ {
-        self.children.iter().map(|entry| entry.value().clone())
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::thread;
+
+    /// Counter family - collection of counters with same name but different labels
+    #[derive(Debug)]
+    struct CounterVec {
+        name: String,
+        label_keys: Vec<String>,
+        children: dashmap::DashMap<Vec<String>, Arc<Counter>>,
+    }
+
+    impl CounterVec {
+        fn new(
+            name: impl Into<String>,
+            label_keys: impl IntoIterator<Item = impl Into<String>>,
+        ) -> Self {
+            Self {
+                name: name.into(),
+                label_keys: label_keys.into_iter().map(Into::into).collect(),
+                children: dashmap::DashMap::new(),
+            }
+        }
+
+        fn with_label_values(&self, values: &[&str]) -> Arc<Counter> {
+            assert_eq!(
+                values.len(),
+                self.label_keys.len(),
+                "label count mismatch: expected {}, got {}",
+                self.label_keys.len(),
+                values.len()
+            );
+
+            let key: Vec<String> = values.iter().map(std::string::ToString::to_string).collect();
+
+            self.children
+                .entry(key.clone())
+                .or_insert_with(|| {
+                    let labels: Labels = self
+                        .label_keys
+                        .iter()
+                        .zip(values.iter())
+                        .map(|(k, v)| (k.clone(), (*v).to_string()))
+                        .collect();
+                    Counter::new_arc(&self.name, labels)
+                })
+                .clone()
+        }
+
+        fn name(&self) -> &str {
+            &self.name
+        }
+
+        fn label_keys(&self) -> &[String] {
+            &self.label_keys
+        }
+
+        fn iter(&self) -> impl Iterator<Item = Arc<Counter>> + '_ {
+            self.children.iter().map(|entry| entry.value().clone())
+        }
+    }
 
     #[test]
     fn test_counter_inc() {
@@ -386,10 +370,8 @@ mod tests {
 
     #[test]
     fn test_counter_desc_accessor() {
-        let labels: Labels = [("env", "prod")]
-            .into_iter()
-            .map(|(k, v)| (k.to_string(), v.to_string()))
-            .collect();
+        let labels: Labels =
+            [("env", "prod")].into_iter().map(|(k, v)| (k.to_string(), v.to_string())).collect();
 
         let counter = Counter::new("api_calls", labels);
         let desc = counter.desc();

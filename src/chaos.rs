@@ -187,14 +187,12 @@ impl ChaosConfig {
     /// Get a preset for "extreme" chaos testing (requires chaos-byzantine)
     #[cfg(feature = "chaos-byzantine")]
     pub fn extreme() -> Self {
-        Self::aggressive()
-            .with_byzantine_faults(0.1)
-            .with_fault_syscalls(vec![
-                "read".to_string(),
-                "write".to_string(),
-                "open".to_string(),
-                "close".to_string(),
-            ])
+        Self::aggressive().with_byzantine_faults(0.1).with_fault_syscalls(vec![
+            "read".to_string(),
+            "write".to_string(),
+            "open".to_string(),
+            "close".to_string(),
+        ])
     }
 }
 
@@ -344,14 +342,10 @@ pub fn parse_memory_size(s: &str) -> Result<usize, ChaosError> {
         (s, 1)
     };
 
-    num_str
-        .trim()
-        .parse::<usize>()
-        .map(|n| n * multiplier)
-        .map_err(|_| ChaosError::ParseError {
-            input: s.to_string(),
-            reason: "invalid number".to_string(),
-        })
+    num_str.trim().parse::<usize>().map(|n| n * multiplier).map_err(|_| ChaosError::ParseError {
+        input: s.to_string(),
+        reason: "invalid number".to_string(),
+    })
 }
 
 /// Parse a duration string (e.g., "10s", "2m", "1h", or raw seconds)
@@ -387,14 +381,9 @@ pub fn parse_duration(s: &str) -> Result<Duration, ChaosError> {
         (s, 1)
     };
 
-    num_str
-        .trim()
-        .parse::<u64>()
-        .map(|n| Duration::from_secs(n * multiplier))
-        .map_err(|_| ChaosError::ParseError {
-            input: s.to_string(),
-            reason: "invalid number".to_string(),
-        })
+    num_str.trim().parse::<u64>().map(|n| Duration::from_secs(n * multiplier)).map_err(|_| {
+        ChaosError::ParseError { input: s.to_string(), reason: "invalid number".to_string() }
+    })
 }
 
 impl ChaosConfig {
@@ -569,26 +558,19 @@ mod tests {
 
     #[test]
     fn test_error_display() {
-        let err = ChaosError::MemoryLimitExceeded {
-            limit: 100,
-            used: 200,
-        };
+        let err = ChaosError::MemoryLimitExceeded { limit: 100, used: 200 };
         assert!(err.to_string().contains("200"));
         assert!(err.to_string().contains("100"));
 
-        let err = ChaosError::Timeout {
-            elapsed: Duration::from_secs(10),
-            limit: Duration::from_secs(5),
-        };
+        let err =
+            ChaosError::Timeout { elapsed: Duration::from_secs(10), limit: Duration::from_secs(5) };
         assert!(err.to_string().contains("Timeout"));
     }
 
     #[cfg(feature = "chaos-network")]
     #[test]
     fn test_network_chaos() {
-        let config = ChaosConfig::new()
-            .with_network_latency(100)
-            .with_packet_loss(0.1);
+        let config = ChaosConfig::new().with_network_latency(100).with_packet_loss(0.1);
 
         assert_eq!(config.network_latency_ms, 100);
         assert!((config.packet_loss_prob - 0.1).abs() < f64::EPSILON);
@@ -638,10 +620,7 @@ mod tests {
     #[test]
     fn test_parse_memory_size_gigabytes() {
         assert_eq!(parse_memory_size("1G").expect("test"), 1024 * 1024 * 1024);
-        assert_eq!(
-            parse_memory_size("2g").expect("test"),
-            2 * 1024 * 1024 * 1024
-        );
+        assert_eq!(parse_memory_size("2g").expect("test"), 2 * 1024 * 1024 * 1024);
     }
 
     #[test]
@@ -660,62 +639,35 @@ mod tests {
 
     #[test]
     fn test_parse_duration_seconds() {
-        assert_eq!(
-            parse_duration("10s").expect("test"),
-            Duration::from_secs(10)
-        );
-        assert_eq!(
-            parse_duration("30S").expect("test"),
-            Duration::from_secs(30)
-        );
+        assert_eq!(parse_duration("10s").expect("test"), Duration::from_secs(10));
+        assert_eq!(parse_duration("30S").expect("test"), Duration::from_secs(30));
         assert_eq!(parse_duration("1s").expect("test"), Duration::from_secs(1));
     }
 
     #[test]
     fn test_parse_duration_minutes() {
         assert_eq!(parse_duration("1m").expect("test"), Duration::from_secs(60));
-        assert_eq!(
-            parse_duration("2M").expect("test"),
-            Duration::from_secs(120)
-        );
-        assert_eq!(
-            parse_duration("5m").expect("test"),
-            Duration::from_secs(300)
-        );
+        assert_eq!(parse_duration("2M").expect("test"), Duration::from_secs(120));
+        assert_eq!(parse_duration("5m").expect("test"), Duration::from_secs(300));
     }
 
     #[test]
     fn test_parse_duration_hours() {
-        assert_eq!(
-            parse_duration("1h").expect("test"),
-            Duration::from_secs(3600)
-        );
-        assert_eq!(
-            parse_duration("2H").expect("test"),
-            Duration::from_secs(7200)
-        );
+        assert_eq!(parse_duration("1h").expect("test"), Duration::from_secs(3600));
+        assert_eq!(parse_duration("2H").expect("test"), Duration::from_secs(7200));
     }
 
     #[test]
     fn test_parse_duration_raw_seconds() {
         assert_eq!(parse_duration("30").expect("test"), Duration::from_secs(30));
         assert_eq!(parse_duration("0").expect("test"), Duration::from_secs(0));
-        assert_eq!(
-            parse_duration("3600").expect("test"),
-            Duration::from_secs(3600)
-        );
+        assert_eq!(parse_duration("3600").expect("test"), Duration::from_secs(3600));
     }
 
     #[test]
     fn test_parse_duration_with_whitespace() {
-        assert_eq!(
-            parse_duration(" 10s ").expect("test"),
-            Duration::from_secs(10)
-        );
-        assert_eq!(
-            parse_duration("  5m").expect("test"),
-            Duration::from_secs(300)
-        );
+        assert_eq!(parse_duration(" 10s ").expect("test"), Duration::from_secs(10));
+        assert_eq!(parse_duration("  5m").expect("test"), Duration::from_secs(300));
     }
 
     #[test]
@@ -762,9 +714,8 @@ mod tests {
 
     #[test]
     fn test_from_cli_custom_cpu() {
-        let config = ChaosConfig::from_cli(None, None, Some(0.5), None, false)
-            .expect("test")
-            .expect("test");
+        let config =
+            ChaosConfig::from_cli(None, None, Some(0.5), None, false).expect("test").expect("test");
         assert!((config.cpu_limit - 0.5).abs() < f64::EPSILON);
     }
 
@@ -778,9 +729,8 @@ mod tests {
 
     #[test]
     fn test_from_cli_signals_only() {
-        let config = ChaosConfig::from_cli(None, None, None, None, true)
-            .expect("test")
-            .expect("test");
+        let config =
+            ChaosConfig::from_cli(None, None, None, None, true).expect("test").expect("test");
         assert!(config.signal_injection);
     }
 

@@ -17,10 +17,7 @@ fn test_depyler_ingest_config_default() {
     // AC: Default config with sensible defaults
     let config = DepylerIngestConfig::default();
 
-    assert_eq!(
-        config.watch_paths,
-        vec![PathBuf::from("/tmp/depyler_decisions.msgpack")]
-    );
+    assert_eq!(config.watch_paths, vec![PathBuf::from("/tmp/depyler_decisions.msgpack")]);
     assert_eq!(config.poll_interval_ms, 100);
     assert_eq!(config.remote_sample_rate, 0.1);
     assert_eq!(config.max_remote_rate, 1000);
@@ -107,12 +104,7 @@ fn test_depyler_watcher_poll_with_decisions() {
         input: serde_json::json!({"lhs": "i32", "rhs": "i64"}),
         result: Some(serde_json::json!({"promoted": "i64"})),
         source_location: Some("expr_gen.rs:100".to_string()),
-        decision_id: Some(generate_decision_id(
-            "TypeMapping",
-            "promote_lhs",
-            "expr_gen.rs",
-            100,
-        )),
+        decision_id: Some(generate_decision_id("TypeMapping", "promote_lhs", "expr_gen.rs", 100)),
     }];
 
     let packed = rmp_serde::to_vec(&traces).expect("test");
@@ -266,11 +258,7 @@ fn test_depyler_watcher_circuit_breaker() {
     let exported = watcher.poll_with_circuit_breaker().expect("test");
 
     // Should be capped at max_remote_rate
-    assert!(
-        exported.len() <= 1000,
-        "Circuit breaker should cap at 1000, got {}",
-        exported.len()
-    );
+    assert!(exported.len() <= 1000, "Circuit breaker should cap at 1000, got {}", exported.len());
 }
 
 // =============================================================================
@@ -302,11 +290,7 @@ fn test_depyler_monitor_toml_example_exists() {
         .join("examples")
         .join("depyler-monitor.toml");
 
-    assert!(
-        example_path.exists(),
-        "Example config should exist at: {:?}",
-        example_path
-    );
+    assert!(example_path.exists(), "Example config should exist at: {:?}", example_path);
 
     // Should be valid TOML
     let contents = std::fs::read_to_string(&example_path).expect("test");

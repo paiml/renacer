@@ -108,10 +108,7 @@ pub fn filter_noisy_syscalls(
     let mut filtered_out = Vec::new();
 
     for (name, measurements) in distributions {
-        let dist = SyscallDistribution {
-            name: name.clone(),
-            measurements: measurements.clone(),
-        };
+        let dist = SyscallDistribution { name: name.clone(), measurements: measurements.clone() };
 
         if dist.is_noisy(noise_threshold) {
             filtered_out.push(name.clone());
@@ -162,10 +159,7 @@ mod tests {
 
     #[test]
     fn test_coefficient_of_variation_empty() {
-        let dist = SyscallDistribution {
-            name: "empty".to_string(),
-            measurements: vec![],
-        };
+        let dist = SyscallDistribution { name: "empty".to_string(), measurements: vec![] };
 
         assert_eq!(dist.coefficient_of_variation(), 0.0);
     }
@@ -178,10 +172,8 @@ mod tests {
         };
         assert!(!stable.is_noisy(0.5));
 
-        let noisy = SyscallDistribution {
-            name: "socket".to_string(),
-            measurements: vec![5.0, 50.0, 3.0],
-        };
+        let noisy =
+            SyscallDistribution { name: "socket".to_string(), measurements: vec![5.0, 50.0, 3.0] };
         assert!(noisy.is_noisy(0.5));
     }
 

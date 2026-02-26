@@ -55,6 +55,71 @@ pub fn render(f: &mut Frame, points: &[(f64, f64, u8)], cluster_colors: &[Color]
     render_to_buffer(buf, points, cluster_colors, area);
 }
 
+/// Build the dot matrix from scatter points
+fn build_dot_matrix(
+    points: &[(f64, f64, u8)],
+    dot_width: usize,
+    dot_height: usize,
+) -> Vec<Vec<Option<u8>>> {
+    let mut dots: Vec<Vec<Option<u8>>> = vec![vec![None; dot_height]; dot_width];
+
+    for (x, y, cluster_id) in points {
+        let x = x.clamp(0.0, 1.0);
+        let y = y.clamp(0.0, 1.0);
+
+        let dot_x = ((x * (dot_width - 1) as f64).round() as usize).min(dot_width - 1);
+        // Flip Y axis (0 = top in terminal, but we want 0 = bottom for scatter)
+        let dot_y = (((1.0 - y) * (dot_height - 1) as f64).round() as usize).min(dot_height - 1);
+
+        dots[dot_x][dot_y] = Some(*cluster_id);
+    }
+
+    dots
+}
+
+/// Resolve a cluster_id to its display color
+fn resolve_cluster_color(cluster_id: u8, cluster_colors: &[Color]) -> Color {
+    if cluster_id == 255 {
+        graph::OUTLIER
+    } else {
+        cluster_colors.get(cluster_id as usize).copied().unwrap_or(Color::White)
+    }
+}
+
+/// Build braille character bits and color for a single cell
+fn build_cell_braille(
+    dots: &[Vec<Option<u8>>],
+    dot_x_start: usize,
+    dot_y_start: usize,
+    dot_width: usize,
+    dot_height: usize,
+    cluster_colors: &[Color],
+) -> (u8, Option<Color>) {
+    let mut braille_bits: u8 = 0;
+    let mut cell_color: Option<Color> = None;
+
+    #[allow(clippy::needless_range_loop)]
+    for dx in 0..2 {
+        #[allow(clippy::needless_range_loop)]
+        for dy in 0..4 {
+            let dot_x = dot_x_start + dx;
+            let dot_y = dot_y_start + dy;
+
+            if dot_x >= dot_width || dot_y >= dot_height {
+                continue;
+            }
+            let Some(cluster_id) = dots[dot_x][dot_y] else {
+                continue;
+            };
+
+            braille_bits |= 1 << BRAILLE_OFFSETS[dx][dy];
+            cell_color = Some(resolve_cluster_color(cluster_id, cluster_colors));
+        }
+    }
+
+    (braille_bits, cell_color)
+}
+
 /// Render scatter plot to buffer (for testing)
 pub fn render_to_buffer(
     buf: &mut Buffer,
@@ -66,71 +131,30 @@ pub fn render_to_buffer(
         return;
     }
 
-    // Calculate dot resolution
     let dot_width = (area.width as usize) * 2;
     let dot_height = (area.height as usize) * 4;
+    let dots = build_dot_matrix(points, dot_width, dot_height);
 
-    // Create dot matrix (cluster_id for each dot, None if empty)
-    let mut dots: Vec<Vec<Option<u8>>> = vec![vec![None; dot_height]; dot_width];
-
-    // Plot points
-    for (x, y, cluster_id) in points {
-        // Clamp and scale to dot coordinates
-        let x = x.clamp(0.0, 1.0);
-        let y = y.clamp(0.0, 1.0);
-
-        let dot_x = ((x * (dot_width - 1) as f64).round() as usize).min(dot_width - 1);
-        // Flip Y axis (0 = top in terminal, but we want 0 = bottom for scatter)
-        let dot_y = (((1.0 - y) * (dot_height - 1) as f64).round() as usize).min(dot_height - 1);
-
-        dots[dot_x][dot_y] = Some(*cluster_id);
-    }
-
-    // Render to buffer
     for cell_y in 0..area.height {
         for cell_x in 0..area.width {
-            let buf_x = area.x + cell_x;
-            let buf_y = area.y + cell_y;
-
-            // Calculate which dots fall in this cell
             let dot_x_start = (cell_x as usize) * 2;
             let dot_y_start = (cell_y as usize) * 4;
 
-            // Build braille character
-            let mut braille_bits: u8 = 0;
-            let mut cell_color: Option<Color> = None;
+            let (braille_bits, cell_color) = build_cell_braille(
+                &dots,
+                dot_x_start,
+                dot_y_start,
+                dot_width,
+                dot_height,
+                cluster_colors,
+            );
 
-            #[allow(clippy::needless_range_loop)]
-            for dx in 0..2 {
-                #[allow(clippy::needless_range_loop)]
-                for dy in 0..4 {
-                    let dot_x = dot_x_start + dx;
-                    let dot_y = dot_y_start + dy;
-
-                    if dot_x < dot_width && dot_y < dot_height {
-                        if let Some(cluster_id) = dots[dot_x][dot_y] {
-                            // Set the bit for this dot
-                            braille_bits |= 1 << BRAILLE_OFFSETS[dx][dy];
-
-                            // Set color (last point wins if overlapping)
-                            cell_color = Some(if cluster_id == 255 {
-                                graph::OUTLIER
-                            } else {
-                                cluster_colors
-                                    .get(cluster_id as usize)
-                                    .copied()
-                                    .unwrap_or(Color::White)
-                            });
-                        }
-                    }
-                }
-            }
-
-            // Render character
             if braille_bits != 0 {
                 let ch = char::from_u32(BRAILLE_BASE as u32 + braille_bits as u32)
                     .unwrap_or(BRAILLE_BASE);
                 let style = Style::default().fg(cell_color.unwrap_or(Color::White));
+                let buf_x = area.x + cell_x;
+                let buf_y = area.y + cell_y;
                 buf[(buf_x, buf_y)].set_char(ch).set_style(style);
             }
         }
@@ -155,9 +179,7 @@ pub fn render_outlier_markers(f: &mut Frame, points: &[(f64, f64, u8)], area: Re
         let buf_x = area.x + cell_x;
         let buf_y = area.y + cell_y;
 
-        buf[(buf_x, buf_y)]
-            .set_char('×')
-            .set_style(Style::default().fg(graph::OUTLIER));
+        buf[(buf_x, buf_y)].set_char('×').set_style(Style::default().fg(graph::OUTLIER));
     }
 }
 
@@ -354,9 +376,7 @@ mod tests {
             let buf_x = area.x + cell_x;
             let buf_y = area.y + cell_y;
 
-            buf[(buf_x, buf_y)]
-                .set_char('×')
-                .set_style(Style::default().fg(graph::OUTLIER));
+            buf[(buf_x, buf_y)].set_char('×').set_style(Style::default().fg(graph::OUTLIER));
         }
     }
 }

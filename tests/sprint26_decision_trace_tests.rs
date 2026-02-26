@@ -64,11 +64,7 @@ fn main() {
         "Output should contain decision name: {}",
         stdout
     );
-    assert!(
-        stdout.contains("test_key"),
-        "Output should contain input key: {}",
-        stdout
-    );
+    assert!(stdout.contains("test_key"), "Output should contain input key: {}", stdout);
 }
 
 #[test]
@@ -96,12 +92,7 @@ fn main() {
 
     // Run without --trace-transpiler-decisions flag
     let mut cmd = Command::cargo_bin("renacer").expect("test");
-    let output = cmd
-        .arg("-c")
-        .arg("--")
-        .arg(&test_bin)
-        .output()
-        .expect("Failed to execute");
+    let output = cmd.arg("-c").arg("--").arg(&test_bin).output().expect("Failed to execute");
 
     assert!(output.status.success());
 
@@ -148,21 +139,9 @@ fn main() {
 
     // Sprint 26: Verify all decision traces are captured
     let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(
-        stdout.contains("flow::branch1"),
-        "Output should contain first decision: {}",
-        stdout
-    );
-    assert!(
-        stdout.contains("flow::branch2"),
-        "Output should contain second decision: {}",
-        stdout
-    );
-    assert!(
-        stdout.contains("condition"),
-        "Output should contain input parameters: {}",
-        stdout
-    );
+    assert!(stdout.contains("flow::branch1"), "Output should contain first decision: {}", stdout);
+    assert!(stdout.contains("flow::branch2"), "Output should contain second decision: {}", stdout);
+    assert!(stdout.contains("condition"), "Output should contain input parameters: {}", stdout);
 }
 
 #[test]

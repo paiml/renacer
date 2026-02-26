@@ -83,9 +83,7 @@ impl ModelMetadata {
 /// Lightweight timestamp without chrono dependency
 fn chrono_lite_timestamp() -> String {
     use std::time::{SystemTime, UNIX_EPOCH};
-    let duration = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default();
+    let duration = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default();
     format!("{}", duration.as_secs())
 }
 
@@ -128,11 +126,7 @@ pub struct PersistenceOptions {
 
 impl Default for PersistenceOptions {
     fn default() -> Self {
-        Self {
-            compress: true,
-            name: None,
-            description: None,
-        }
+        Self { compress: true, name: None, description: None }
     }
 }
 
@@ -169,11 +163,7 @@ pub fn save_kmeans_model(
 ) -> Result<()> {
     use aprender::format::{save, Compression, ModelType, SaveOptions};
 
-    let compression = if options.compress {
-        Compression::ZstdDefault
-    } else {
-        Compression::None
-    };
+    let compression = if options.compress { Compression::ZstdDefault } else { Compression::None };
 
     let mut save_options = SaveOptions::new().with_compression(compression);
 
@@ -193,9 +183,7 @@ pub fn load_kmeans_model(path: impl AsRef<Path>) -> Result<SerializableKMeansMod
     use aprender::format::{load, ModelType};
 
     if !path.as_ref().exists() {
-        return Err(ModelPersistenceError::FileNotFound(
-            path.as_ref().display().to_string(),
-        ));
+        return Err(ModelPersistenceError::FileNotFound(path.as_ref().display().to_string()));
     }
 
     load::<SerializableKMeansModel>(path.as_ref(), ModelType::KMeans)
@@ -217,11 +205,7 @@ pub fn save_isolation_forest_model(
 ) -> Result<()> {
     use aprender::format::{save, Compression, ModelType, SaveOptions};
 
-    let compression = if options.compress {
-        Compression::ZstdDefault
-    } else {
-        Compression::None
-    };
+    let compression = if options.compress { Compression::ZstdDefault } else { Compression::None };
 
     let mut save_options = SaveOptions::new().with_compression(compression);
 
@@ -244,9 +228,7 @@ pub fn load_isolation_forest_model(
     use aprender::format::{load, ModelType};
 
     if !path.as_ref().exists() {
-        return Err(ModelPersistenceError::FileNotFound(
-            path.as_ref().display().to_string(),
-        ));
+        return Err(ModelPersistenceError::FileNotFound(path.as_ref().display().to_string()));
     }
 
     load::<SerializableIsolationForestModel>(path.as_ref(), ModelType::Custom)
@@ -265,9 +247,7 @@ pub fn validate_model_file(path: impl AsRef<Path>) -> Result<ModelMetadata> {
         return Ok(model.metadata);
     }
 
-    Err(ModelPersistenceError::InvalidFormat(
-        "Could not determine model type".to_string(),
-    ))
+    Err(ModelPersistenceError::InvalidFormat("Could not determine model type".to_string()))
 }
 
 /// Generate a status line for model information
@@ -277,6 +257,11 @@ pub fn model_status_line(metadata: &ModelMetadata) -> String {
         metadata.renacer_version, metadata.training_samples
     )
 }
+
+// Compile-time thread-safety verification (Sprint 59)
+static_assertions::assert_impl_all!(ModelPersistenceError: Send, Sync);
+static_assertions::assert_impl_all!(ModelMetadata: Send, Sync);
+static_assertions::assert_impl_all!(PersistenceOptions: Send, Sync);
 
 #[cfg(test)]
 mod tests {
@@ -303,14 +288,8 @@ mod tests {
             .with_hyperparameter("max_iter", "100")
             .with_description("Test model");
 
-        assert_eq!(
-            metadata.hyperparameters.get("n_clusters"),
-            Some(&"3".to_string())
-        );
-        assert_eq!(
-            metadata.hyperparameters.get("max_iter"),
-            Some(&"100".to_string())
-        );
+        assert_eq!(metadata.hyperparameters.get("n_clusters"), Some(&"3".to_string()));
+        assert_eq!(metadata.hyperparameters.get("max_iter"), Some(&"100".to_string()));
         assert_eq!(metadata.description, Some("Test model".to_string()));
     }
 
@@ -354,11 +333,7 @@ mod tests {
         let model_path = temp_dir.path().join("test_kmeans.apr");
 
         let model = SerializableKMeansModel {
-            centroids: vec![
-                vec![1.0, 2.0, 3.0],
-                vec![4.0, 5.0, 6.0],
-                vec![7.0, 8.0, 9.0],
-            ],
+            centroids: vec![vec![1.0, 2.0, 3.0], vec![4.0, 5.0, 6.0], vec![7.0, 8.0, 9.0]],
             n_clusters: 3,
             n_features: 3,
             metadata: ModelMetadata::new(1000)
@@ -367,9 +342,8 @@ mod tests {
         };
 
         // Save
-        let options = PersistenceOptions::new()
-            .with_name("test-kmeans")
-            .with_description("Test model");
+        let options =
+            PersistenceOptions::new().with_name("test-kmeans").with_description("Test model");
         save_kmeans_model(&model, &model_path, options).expect("Failed to save model");
 
         // Load
@@ -525,18 +499,9 @@ mod tests {
         let loaded = load_kmeans_model(&model_path).expect("test");
 
         assert_eq!(loaded.metadata.training_samples, 999);
-        assert_eq!(
-            loaded.metadata.hyperparameters.get("key1"),
-            Some(&"value1".to_string())
-        );
-        assert_eq!(
-            loaded.metadata.hyperparameters.get("key2"),
-            Some(&"value2".to_string())
-        );
-        assert_eq!(
-            loaded.metadata.description,
-            Some("Detailed description here".to_string())
-        );
+        assert_eq!(loaded.metadata.hyperparameters.get("key1"), Some(&"value1".to_string()));
+        assert_eq!(loaded.metadata.hyperparameters.get("key2"), Some(&"value2".to_string()));
+        assert_eq!(loaded.metadata.description, Some("Detailed description here".to_string()));
     }
 
     #[test]

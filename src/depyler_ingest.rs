@@ -212,15 +212,11 @@ impl DepylerWatcher {
         }
 
         // Calculate how many we can export
-        let remaining_quota = self
-            .config
-            .max_remote_rate
-            .saturating_sub(self.decisions_this_second);
+        let remaining_quota =
+            self.config.max_remote_rate.saturating_sub(self.decisions_this_second);
 
-        let exported: Vec<DecisionTrace> = all_decisions
-            .into_iter()
-            .take(remaining_quota as usize)
-            .collect();
+        let exported: Vec<DecisionTrace> =
+            all_decisions.into_iter().take(remaining_quota as usize).collect();
 
         // Check if circuit breaker tripped
         if exported.len() < remaining_quota as usize {
@@ -300,10 +296,7 @@ mod tests {
 
     #[test]
     fn test_watcher_poll_interval() {
-        let config = DepylerIngestConfig {
-            poll_interval_ms: 500,
-            ..Default::default()
-        };
+        let config = DepylerIngestConfig { poll_interval_ms: 500, ..Default::default() };
         let watcher = DepylerWatcher::new(config).expect("test");
         assert_eq!(watcher.poll_interval(), Duration::from_millis(500));
     }
@@ -386,10 +379,7 @@ mod tests {
 
     #[test]
     fn test_watcher_empty_watch_paths() {
-        let config = DepylerIngestConfig {
-            watch_paths: vec![],
-            ..Default::default()
-        };
+        let config = DepylerIngestConfig { watch_paths: vec![], ..Default::default() };
         let mut watcher = DepylerWatcher::new(config).expect("test");
         let result = watcher.poll();
         assert!(result.is_ok());

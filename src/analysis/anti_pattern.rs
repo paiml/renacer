@@ -148,11 +148,7 @@ impl AntiPatternDetector {
         // Calculate quality score based on anti-patterns
         let score = self.calculate_score(&anti_patterns);
 
-        ArchitecturalQuality {
-            score,
-            anti_patterns,
-            recommendations,
-        }
+        ArchitecturalQuality { score, anti_patterns, recommendations }
     }
 
     /// Detect God Process anti-pattern
@@ -175,10 +171,7 @@ impl AntiPatternDetector {
         // Check against threshold
         if syscall_percent > self.thresholds.god_process_syscall_percent {
             let process_id = trace.process_span.pid as u32;
-            Some(AntiPattern::GodProcess {
-                process_id,
-                syscall_percent,
-            })
+            Some(AntiPattern::GodProcess { process_id, syscall_percent })
         } else {
             None
         }
@@ -232,10 +225,7 @@ impl AntiPatternDetector {
         // Check against threshold
         if avg_interval_ms < self.thresholds.tight_loop_threshold_ms {
             let location = format!("syscall: {dominant_syscall}");
-            Some(AntiPattern::TightLoop {
-                location,
-                interval_ms: avg_interval_ms,
-            })
+            Some(AntiPattern::TightLoop { location, interval_ms: avg_interval_ms })
         } else {
             None
         }
@@ -283,10 +273,7 @@ impl AntiPatternDetector {
             })
             .count();
 
-        #[expect(
-            clippy::cast_precision_loss,
-            reason = "io_count is always small enough for f64"
-        )]
+        #[expect(clippy::cast_precision_loss, reason = "io_count is always small enough for f64")]
         let ops_per_sec = ((io_count as f64) / duration_secs) as u64;
 
         // Check against threshold
@@ -317,9 +304,7 @@ impl AntiPatternDetector {
         const BLOCKING_THRESHOLD_MS: u64 = 100;
 
         if max_duration_ms >= BLOCKING_THRESHOLD_MS {
-            Some(AntiPattern::BlockingMainThread {
-                duration_ms: max_duration_ms,
-            })
+            Some(AntiPattern::BlockingMainThread { duration_ms: max_duration_ms })
         } else {
             None
         }
@@ -394,21 +379,12 @@ mod tests {
         let quality = detector.analyze(&trace);
 
         // Should detect God Process (90/90 = 100% from single process)
-        let god_process = quality
-            .anti_patterns
-            .iter()
-            .find(|p| matches!(p, AntiPattern::GodProcess { .. }));
+        let god_process =
+            quality.anti_patterns.iter().find(|p| matches!(p, AntiPattern::GodProcess { .. }));
 
-        assert!(
-            god_process.is_some(),
-            "Expected GodProcess detection for single-process trace"
-        );
+        assert!(god_process.is_some(), "Expected GodProcess detection for single-process trace");
 
-        if let Some(AntiPattern::GodProcess {
-            process_id,
-            syscall_percent,
-        }) = god_process
-        {
+        if let Some(AntiPattern::GodProcess { process_id, syscall_percent }) = god_process {
             assert_eq!(*process_id, 1234);
             assert!(*syscall_percent >= 80.0);
         }
@@ -453,15 +429,10 @@ mod tests {
         let quality = detector.analyze(&trace);
 
         // With threshold > 100, should not detect God Process
-        let god_process = quality
-            .anti_patterns
-            .iter()
-            .find(|p| matches!(p, AntiPattern::GodProcess { .. }));
+        let god_process =
+            quality.anti_patterns.iter().find(|p| matches!(p, AntiPattern::GodProcess { .. }));
 
-        assert!(
-            god_process.is_none(),
-            "Should not detect GodProcess when threshold not exceeded"
-        );
+        assert!(god_process.is_none(), "Should not detect GodProcess when threshold not exceeded");
     }
 
     /// Test: God Process detection with custom threshold
@@ -498,10 +469,7 @@ mod tests {
 
         // Should detect because 100% > 50% threshold
         assert!(
-            quality
-                .anti_patterns
-                .iter()
-                .any(|p| matches!(p, AntiPattern::GodProcess { .. })),
+            quality.anti_patterns.iter().any(|p| matches!(p, AntiPattern::GodProcess { .. })),
             "Expected GodProcess detection with 50% threshold"
         );
     }
@@ -569,15 +537,8 @@ mod tests {
         let detector = AntiPatternDetector::default();
         let quality = detector.analyze(&trace);
 
-        if quality
-            .anti_patterns
-            .iter()
-            .any(|p| matches!(p, AntiPattern::GodProcess { .. }))
-        {
-            assert!(
-                !quality.recommendations.is_empty(),
-                "Expected recommendations for GodProcess"
-            );
+        if quality.anti_patterns.iter().any(|p| matches!(p, AntiPattern::GodProcess { .. })) {
+            assert!(!quality.recommendations.is_empty(), "Expected recommendations for GodProcess");
         }
     }
 
@@ -592,10 +553,7 @@ mod tests {
         let quality = detector.analyze(&trace);
 
         assert_eq!(quality.score, 1.0, "Empty trace should have perfect score");
-        assert!(
-            quality.anti_patterns.is_empty(),
-            "Empty trace should have no anti-patterns"
-        );
+        assert!(quality.anti_patterns.is_empty(), "Empty trace should have no anti-patterns");
     }
 
     // =========================================================================
@@ -632,22 +590,13 @@ mod tests {
         let quality = detector.analyze(&trace);
 
         // Should detect TightLoop (5ms < 10ms threshold)
-        let tight_loop = quality
-            .anti_patterns
-            .iter()
-            .find(|p| matches!(p, AntiPattern::TightLoop { .. }));
+        let tight_loop =
+            quality.anti_patterns.iter().find(|p| matches!(p, AntiPattern::TightLoop { .. }));
 
-        assert!(
-            tight_loop.is_some(),
-            "Expected TightLoop detection for 5ms intervals"
-        );
+        assert!(tight_loop.is_some(), "Expected TightLoop detection for 5ms intervals");
 
         if let Some(AntiPattern::TightLoop { interval_ms, .. }) = tight_loop {
-            assert!(
-                *interval_ms < 10,
-                "Interval should be < 10ms, got {}",
-                interval_ms
-            );
+            assert!(*interval_ms < 10, "Interval should be < 10ms, got {}", interval_ms);
         }
     }
 
@@ -681,10 +630,8 @@ mod tests {
         let quality = detector.analyze(&trace);
 
         // Should NOT detect TightLoop (20ms > 10ms threshold)
-        let tight_loop = quality
-            .anti_patterns
-            .iter()
-            .find(|p| matches!(p, AntiPattern::TightLoop { .. }));
+        let tight_loop =
+            quality.anti_patterns.iter().find(|p| matches!(p, AntiPattern::TightLoop { .. }));
 
         assert!(
             tight_loop.is_none(),
@@ -727,10 +674,7 @@ mod tests {
 
         // Should detect TightLoop (15ms < 20ms threshold)
         assert!(
-            quality
-                .anti_patterns
-                .iter()
-                .any(|p| matches!(p, AntiPattern::TightLoop { .. })),
+            quality.anti_patterns.iter().any(|p| matches!(p, AntiPattern::TightLoop { .. })),
             "Expected TightLoop detection with 20ms threshold"
         );
     }
@@ -764,10 +708,8 @@ mod tests {
         let detector = AntiPatternDetector::default();
         let quality = detector.analyze(&trace);
 
-        let tight_loop = quality
-            .anti_patterns
-            .iter()
-            .find(|p| matches!(p, AntiPattern::TightLoop { .. }));
+        let tight_loop =
+            quality.anti_patterns.iter().find(|p| matches!(p, AntiPattern::TightLoop { .. }));
 
         if let Some(AntiPattern::TightLoop { location, .. }) = tight_loop {
             assert!(
@@ -819,22 +761,13 @@ mod tests {
         let quality = detector.analyze(&trace);
 
         // Should detect ExcessiveIO (15000 > 10000 threshold)
-        let excessive_io = quality
-            .anti_patterns
-            .iter()
-            .find(|p| matches!(p, AntiPattern::ExcessiveIO { .. }));
+        let excessive_io =
+            quality.anti_patterns.iter().find(|p| matches!(p, AntiPattern::ExcessiveIO { .. }));
 
-        assert!(
-            excessive_io.is_some(),
-            "Expected ExcessiveIO detection for 15000 ops/sec"
-        );
+        assert!(excessive_io.is_some(), "Expected ExcessiveIO detection for 15000 ops/sec");
 
         if let Some(AntiPattern::ExcessiveIO { ops_per_sec }) = excessive_io {
-            assert!(
-                *ops_per_sec > 10000,
-                "ops/sec should be > 10000, got {}",
-                ops_per_sec
-            );
+            assert!(*ops_per_sec > 10000, "ops/sec should be > 10000, got {}", ops_per_sec);
         }
     }
 
@@ -872,15 +805,10 @@ mod tests {
         let quality = detector.analyze(&trace);
 
         // Should NOT detect ExcessiveIO (5000 < 10000 threshold)
-        let excessive_io = quality
-            .anti_patterns
-            .iter()
-            .find(|p| matches!(p, AntiPattern::ExcessiveIO { .. }));
+        let excessive_io =
+            quality.anti_patterns.iter().find(|p| matches!(p, AntiPattern::ExcessiveIO { .. }));
 
-        assert!(
-            excessive_io.is_none(),
-            "Should not detect ExcessiveIO when below threshold"
-        );
+        assert!(excessive_io.is_none(), "Should not detect ExcessiveIO when below threshold");
     }
 
     /// Test: Excessive I/O detection with custom threshold
@@ -922,10 +850,7 @@ mod tests {
 
         // Should detect ExcessiveIO (3000 > 2000 threshold)
         assert!(
-            quality
-                .anti_patterns
-                .iter()
-                .any(|p| matches!(p, AntiPattern::ExcessiveIO { .. })),
+            quality.anti_patterns.iter().any(|p| matches!(p, AntiPattern::ExcessiveIO { .. })),
             "Expected ExcessiveIO detection with 2000 threshold"
         );
     }
@@ -965,17 +890,10 @@ mod tests {
             .iter()
             .find(|p| matches!(p, AntiPattern::BlockingMainThread { .. }));
 
-        assert!(
-            blocking.is_some(),
-            "Expected BlockingMainThread detection for 500ms syscall"
-        );
+        assert!(blocking.is_some(), "Expected BlockingMainThread detection for 500ms syscall");
 
         if let Some(AntiPattern::BlockingMainThread { duration_ms }) = blocking {
-            assert!(
-                *duration_ms >= 100,
-                "Duration should be >= 100ms, got {}",
-                duration_ms
-            );
+            assert!(*duration_ms >= 100, "Duration should be >= 100ms, got {}", duration_ms);
         }
     }
 
@@ -1012,10 +930,7 @@ mod tests {
             .iter()
             .find(|p| matches!(p, AntiPattern::BlockingMainThread { .. }));
 
-        assert!(
-            blocking.is_none(),
-            "Should not detect BlockingMainThread for short syscalls"
-        );
+        assert!(blocking.is_none(), "Should not detect BlockingMainThread for short syscalls");
     }
 
     /// Test: Blocking Main Thread detection with maximum duration

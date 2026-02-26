@@ -248,24 +248,12 @@ pub struct AssertionResult {
 impl AssertionResult {
     /// Create a passing result
     pub fn pass(name: String, message: String) -> Self {
-        Self {
-            name,
-            passed: true,
-            message,
-            actual_value: None,
-            expected_value: None,
-        }
+        Self { name, passed: true, message, actual_value: None, expected_value: None }
     }
 
     /// Create a failing result
     pub fn fail(name: String, message: String) -> Self {
-        Self {
-            name,
-            passed: false,
-            message,
-            actual_value: None,
-            expected_value: None,
-        }
+        Self { name, passed: false, message, actual_value: None, expected_value: None }
     }
 
     /// Add actual/expected values for debugging

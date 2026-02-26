@@ -126,10 +126,7 @@ fn test_decision_exporter_queue_decisions() {
 #[test]
 fn test_decision_exporter_queue_overflow() {
     // AC: Queue respects max size, drops oldest
-    let config = DecisionExportConfig {
-        queue_size: 5,
-        ..Default::default()
-    };
+    let config = DecisionExportConfig { queue_size: 5, ..Default::default() };
     let mut exporter = DecisionExporter::new(config).expect("test");
 
     // Queue 10 decisions
@@ -161,10 +158,7 @@ fn test_decision_exporter_queue_overflow() {
 #[test]
 fn test_decision_exporter_batch_size() {
     // AC: Export respects batch size
-    let config = DecisionExportConfig {
-        batch_size: 3,
-        ..Default::default()
-    };
+    let config = DecisionExportConfig { batch_size: 3, ..Default::default() };
     let mut exporter = DecisionExporter::new(config).expect("test");
 
     // Queue 10 decisions
@@ -207,12 +201,7 @@ fn test_cli_stats_command() {
     let traces: Vec<DecisionTrace> = (0..100)
         .map(|i| DecisionTrace {
             timestamp_us: i * 1000,
-            category: if i % 2 == 0 {
-                "TypeMapping"
-            } else {
-                "BorrowStrategy"
-            }
-            .to_string(),
+            category: if i % 2 == 0 { "TypeMapping" } else { "BorrowStrategy" }.to_string(),
             name: format!("decision_{}", i),
             input: serde_json::json!({}),
             result: None,
@@ -224,30 +213,14 @@ fn test_cli_stats_command() {
     std::fs::write(&msgpack_path, rmp_serde::to_vec(&traces).expect("test")).expect("test");
 
     let mut cmd = Command::cargo_bin("renacer").expect("test");
-    let output = cmd
-        .arg("stats")
-        .arg(&msgpack_path)
-        .output()
-        .expect("Failed to execute");
+    let output = cmd.arg("stats").arg(&msgpack_path).output().expect("Failed to execute");
 
     assert!(output.status.success(), "stats command should succeed");
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(
-        stdout.contains("100"),
-        "Should show total count: {}",
-        stdout
-    );
-    assert!(
-        stdout.contains("TypeMapping"),
-        "Should show category: {}",
-        stdout
-    );
-    assert!(
-        stdout.contains("BorrowStrategy"),
-        "Should show category: {}",
-        stdout
-    );
+    assert!(stdout.contains("100"), "Should show total count: {}", stdout);
+    assert!(stdout.contains("TypeMapping"), "Should show category: {}", stdout);
+    assert!(stdout.contains("BorrowStrategy"), "Should show category: {}", stdout);
 }
 
 #[test]
@@ -257,11 +230,7 @@ fn test_cli_export_command_help() {
     use assert_cmd::Command;
 
     let mut cmd = Command::cargo_bin("renacer").expect("test");
-    let output = cmd
-        .arg("export")
-        .arg("--help")
-        .output()
-        .expect("Failed to execute");
+    let output = cmd.arg("export").arg("--help").output().expect("Failed to execute");
 
     assert!(output.status.success());
 

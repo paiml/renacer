@@ -126,7 +126,7 @@ impl ValidationEngine {
         _binary_path: &Path,
         _args: &[String],
     ) -> Result<UnifiedTrace, ValidationError> {
-        // TODO: Integration with actual Tracer
+        // Future: Integration with actual Tracer
         // This would call: Tracer::new().trace(binary_path, args, self.tracer_timeout)
         Err(ValidationError::TracingNotImplemented)
     }
@@ -209,14 +209,8 @@ impl std::fmt::Display for ValidationError {
             ValidationError::TracingFailed { binary, error } => {
                 write!(f, "Tracing failed for {binary}: {error}")
             }
-            ValidationError::TracerTimeout {
-                binary,
-                timeout_secs,
-            } => {
-                write!(
-                    f,
-                    "Tracer timeout exceeded for {binary} after {timeout_secs} seconds"
-                )
+            ValidationError::TracerTimeout { binary, timeout_secs } => {
+                write!(f, "Tracer timeout exceeded for {binary} after {timeout_secs} seconds")
             }
             ValidationError::TracingNotImplemented => {
                 write!(f, "Tracer integration not yet implemented")
@@ -226,6 +220,12 @@ impl std::fmt::Display for ValidationError {
 }
 
 impl std::error::Error for ValidationError {}
+
+// Compile-time thread-safety verification (Sprint 59)
+static_assertions::assert_impl_all!(ValidationReport: Send, Sync);
+static_assertions::assert_impl_all!(TraceSummary: Send, Sync);
+static_assertions::assert_impl_all!(TraceComparison: Send, Sync);
+static_assertions::assert_impl_all!(ValidationError: Send, Sync);
 
 #[cfg(test)]
 mod tests {
@@ -310,16 +310,10 @@ mod tests {
 
     #[test]
     fn test_compare_traces_identical() {
-        let trace1 = create_test_trace(
-            100,
-            "original",
-            vec![("open", 3, 1000), ("read", 1024, 2000)],
-        );
-        let trace2 = create_test_trace(
-            200,
-            "transpiled",
-            vec![("open", 3, 1000), ("read", 1024, 2000)],
-        );
+        let trace1 =
+            create_test_trace(100, "original", vec![("open", 3, 1000), ("read", 1024, 2000)]);
+        let trace2 =
+            create_test_trace(200, "transpiled", vec![("open", 3, 1000), ("read", 1024, 2000)]);
 
         let comparison = ValidationEngine::compare_traces(&trace1, &trace2);
 
@@ -380,14 +374,10 @@ mod tests {
 
     #[test]
     fn test_validation_error_display() {
-        let err = ValidationError::BinaryNotFound {
-            path: "/tmp/test".to_string(),
-        };
+        let err = ValidationError::BinaryNotFound { path: "/tmp/test".to_string() };
         assert_eq!(err.to_string(), "Binary not found: /tmp/test");
 
-        let err = ValidationError::NotExecutable {
-            path: "/tmp/test".to_string(),
-        };
+        let err = ValidationError::NotExecutable { path: "/tmp/test".to_string() };
         assert_eq!(err.to_string(), "Binary is not executable: /tmp/test");
 
         let err = ValidationError::TracingFailed {
@@ -396,14 +386,8 @@ mod tests {
         };
         assert_eq!(err.to_string(), "Tracing failed for test: segfault");
 
-        let err = ValidationError::TracerTimeout {
-            binary: "test".to_string(),
-            timeout_secs: 300,
-        };
-        assert_eq!(
-            err.to_string(),
-            "Tracer timeout exceeded for test after 300 seconds"
-        );
+        let err = ValidationError::TracerTimeout { binary: "test".to_string(), timeout_secs: 300 };
+        assert_eq!(err.to_string(), "Tracer timeout exceeded for test after 300 seconds");
 
         let err = ValidationError::TracingNotImplemented;
         assert_eq!(err.to_string(), "Tracer integration not yet implemented");
@@ -485,7 +469,7 @@ mod tests {
 
     #[test]
     fn test_trace_summary_counts_all_layers() {
-        // TODO: Once we have GPU/SIMD spans, verify they're counted correctly
+        // Future: Once we have GPU/SIMD spans, verify they're counted correctly
         let trace = create_test_trace(100, "test", vec![("open", 3, 1000)]);
         let summary = ValidationEngine::summarize_trace(&trace);
 

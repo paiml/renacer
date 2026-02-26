@@ -36,10 +36,7 @@ int main() {
         .expect("Failed to compile test program");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("-c")
-        .arg("--stats-extended")
-        .arg("--")
-        .arg(&test_program);
+    cmd.arg("-c").arg("--stats-extended").arg("--").arg(&test_program);
 
     // Should show enhanced statistics with percentiles
     cmd.assert()
@@ -81,11 +78,7 @@ int main() {
         .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("-c")
-        .arg("--stats-extended")
-        .arg("-T")
-        .arg("--")
-        .arg(&test_program);
+    cmd.arg("-c").arg("--stats-extended").arg("-T").arg("--").arg(&test_program);
 
     cmd.assert()
         .success()
@@ -120,11 +113,7 @@ int main() {
         .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("-c")
-        .arg("-T")
-        .arg("--stats-extended")
-        .arg("--")
-        .arg(&test_program);
+    cmd.arg("-c").arg("-T").arg("--stats-extended").arg("--").arg(&test_program);
 
     // Should show timing statistics with percentiles
     cmd.assert()
@@ -170,11 +159,7 @@ int main() {
         .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("-c")
-        .arg("--stats-extended")
-        .arg("-T")
-        .arg("--")
-        .arg(&test_program);
+    cmd.arg("-c").arg("--stats-extended").arg("-T").arg("--").arg(&test_program);
 
     // Should detect and flag anomalies
     cmd.assert().success();
@@ -308,11 +293,7 @@ int main() {
         .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("-f")
-        .arg("-c")
-        .arg("--stats-extended")
-        .arg("--")
-        .arg(&test_program);
+    cmd.arg("-f").arg("-c").arg("--stats-extended").arg("--").arg(&test_program);
 
     // Should show aggregated statistics across all processes
     cmd.assert()
@@ -437,16 +418,10 @@ int main() {
         .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("-c")
-        .arg("--stats-extended")
-        .arg("-T")
-        .arg("--")
-        .arg(&test_program);
+    cmd.arg("-c").arg("--stats-extended").arg("-T").arg("--").arg(&test_program);
 
     // Should handle single data point gracefully (stddev = 0)
-    cmd.assert()
-        .success()
-        .stderr(predicate::str::contains("Mean:"));
+    cmd.assert().success().stderr(predicate::str::contains("Mean:"));
 }
 
 #[test]
@@ -475,15 +450,10 @@ int main() {
         .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("-c")
-        .arg("--stats-extended")
-        .arg("--")
-        .arg(&test_program);
+    cmd.arg("-c").arg("--stats-extended").arg("--").arg(&test_program);
 
     // Should show count statistics but skip duration percentiles
-    cmd.assert()
-        .success()
-        .stderr(predicate::str::contains("% time"));
+    cmd.assert().success().stderr(predicate::str::contains("% time"));
 }
 
 #[test]
@@ -512,11 +482,7 @@ int main() {
         .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("-c")
-        .arg("--stats-extended")
-        .arg("-T")
-        .arg("--")
-        .arg(&test_program);
+    cmd.arg("-c").arg("--stats-extended").arg("-T").arg("--").arg(&test_program);
 
     // Should handle large datasets efficiently with Trueno SIMD
     cmd.assert()

@@ -68,6 +68,45 @@ impl ValidateExitCode {
     }
 }
 
+/// Run baseline generation mode, returning the appropriate exit code.
+fn run_generate_mode(
+    command: &[String],
+    generate_dir: &std::path::Path,
+    config: &ValidateConfig,
+) -> ValidateExitCode {
+    let command_refs: Vec<&str> = command.iter().map(String::as_str).collect();
+    match generate_baseline(&command_refs, generate_dir, config) {
+        Ok(()) => {
+            eprintln!("Generated baseline at: {}", generate_dir.display());
+            ValidateExitCode::Passed
+        }
+        Err(e) => {
+            eprintln!("Failed to generate baseline: {e}");
+            ValidateExitCode::CommandError
+        }
+    }
+}
+
+/// Load baseline from disk, mapping errors to exit codes.
+fn load_baseline_with_exit_code(
+    baseline_dir: &std::path::Path,
+) -> std::result::Result<GoldenBaseline, ValidateExitCode> {
+    load_baseline(baseline_dir).map_err(|e| match e {
+        ValidateError::BaselineNotFound { path } => {
+            eprintln!("Baseline not found: {}", path.display());
+            ValidateExitCode::BaselineNotFound
+        }
+        ValidateError::InvalidManifest { reason } => {
+            eprintln!("Invalid baseline: {reason}");
+            ValidateExitCode::InvalidBaseline
+        }
+        other => {
+            eprintln!("Error loading baseline: {other}");
+            ValidateExitCode::InvalidBaseline
+        }
+    })
+}
+
 /// Run validation with the given configuration
 ///
 /// # Arguments
@@ -81,17 +120,7 @@ impl ValidateExitCode {
 pub fn run_validate(command: &[String], config: &ValidateConfig) -> ValidateExitCode {
     // Generate mode
     if let Some(ref generate_dir) = config.generate_dir {
-        let command_refs: Vec<&str> = command.iter().map(String::as_str).collect();
-        match generate_baseline(&command_refs, generate_dir, config) {
-            Ok(()) => {
-                eprintln!("Generated baseline at: {}", generate_dir.display());
-                return ValidateExitCode::Passed;
-            }
-            Err(e) => {
-                eprintln!("Failed to generate baseline: {e}");
-                return ValidateExitCode::CommandError;
-            }
-        }
+        return run_generate_mode(command, generate_dir, config);
     }
 
     // Validate mode
@@ -104,20 +133,9 @@ pub fn run_validate(command: &[String], config: &ValidateConfig) -> ValidateExit
     };
 
     // Load baseline
-    let baseline = match load_baseline(baseline_dir) {
+    let baseline = match load_baseline_with_exit_code(baseline_dir) {
         Ok(b) => b,
-        Err(ValidateError::BaselineNotFound { path }) => {
-            eprintln!("Baseline not found: {}", path.display());
-            return ValidateExitCode::BaselineNotFound;
-        }
-        Err(ValidateError::InvalidManifest { reason }) => {
-            eprintln!("Invalid baseline: {reason}");
-            return ValidateExitCode::InvalidBaseline;
-        }
-        Err(e) => {
-            eprintln!("Error loading baseline: {e}");
-            return ValidateExitCode::InvalidBaseline;
-        }
+        Err(exit_code) => return exit_code,
     };
 
     // Trace the command

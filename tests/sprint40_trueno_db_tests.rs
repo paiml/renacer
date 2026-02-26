@@ -86,14 +86,8 @@ fn test_trueno_db_insert_batch() {
     let mut batch = vec![];
 
     for i in 0..100 {
-        let span = create_span(
-            trace_id,
-            [(i as u8); 8],
-            None,
-            &format!("span_{}", i),
-            i,
-            StatusCode::Ok,
-        );
+        let span =
+            create_span(trace_id, [(i as u8); 8], None, &format!("span_{}", i), i, StatusCode::Ok);
         batch.push(span);
     }
 
@@ -115,14 +109,8 @@ fn test_trueno_db_query_by_trace_id() {
     // Insert spans
     let mut batch = vec![];
     for i in 0..10 {
-        let span = create_span(
-            trace_id,
-            [(i as u8); 8],
-            None,
-            &format!("span_{}", i),
-            i,
-            StatusCode::Ok,
-        );
+        let span =
+            create_span(trace_id, [(i as u8); 8], None, &format!("span_{}", i), i, StatusCode::Ok);
         batch.push(span);
     }
     storage.insert_batch(&batch).expect("test");
@@ -152,14 +140,8 @@ fn test_trueno_db_query_by_time_range() {
     // Insert spans with different timestamps
     let mut batch = vec![];
     for i in 0..100 {
-        let span = create_span(
-            trace_id,
-            [(i as u8); 8],
-            None,
-            &format!("span_{}", i),
-            i,
-            StatusCode::Ok,
-        );
+        let span =
+            create_span(trace_id, [(i as u8); 8], None, &format!("span_{}", i), i, StatusCode::Ok);
         batch.push(span);
     }
     storage.insert_batch(&batch).expect("test");
@@ -168,9 +150,7 @@ fn test_trueno_db_query_by_time_range() {
     let start = 20 * 1000;
     let end = 30 * 1000;
 
-    let results = storage
-        .query_by_trace_id_and_time(&trace_id, start, end)
-        .expect("test");
+    let results = storage.query_by_trace_id_and_time(&trace_id, start, end).expect("test");
 
     // TODO Sprint 40: Verify results
     // assert_eq!(results.len(), 10);
@@ -189,14 +169,8 @@ fn test_trueno_db_query_by_process_id() {
     // Insert spans from different processes
     let mut batch = vec![];
     for i in 0..100 {
-        let mut span = create_span(
-            [1; 16],
-            [(i as u8); 8],
-            None,
-            &format!("span_{}", i),
-            i,
-            StatusCode::Ok,
-        );
+        let mut span =
+            create_span([1; 16], [(i as u8); 8], None, &format!("span_{}", i), i, StatusCode::Ok);
         span.process_id = (i % 3) as u32; // 3 different processes
         batch.push(span);
     }
@@ -222,19 +196,8 @@ fn test_trueno_db_query_errors() {
     // Insert mix of OK and ERROR spans
     let mut batch = vec![];
     for i in 0..100 {
-        let status = if i % 10 == 0 {
-            StatusCode::Error
-        } else {
-            StatusCode::Ok
-        };
-        let span = create_span(
-            [1; 16],
-            [(i as u8); 8],
-            None,
-            &format!("span_{}", i),
-            i,
-            status,
-        );
+        let status = if i % 10 == 0 { StatusCode::Error } else { StatusCode::Ok };
+        let span = create_span([1; 16], [(i as u8); 8], None, &format!("span_{}", i), i, status);
         batch.push(span);
     }
     storage.insert_batch(&batch).expect("test");
@@ -259,14 +222,8 @@ fn test_trueno_db_stats() {
     // Insert spans
     let mut batch = vec![];
     for i in 0..1000 {
-        let span = create_span(
-            [1; 16],
-            [(i as u8); 8],
-            None,
-            &format!("span_{}", i),
-            i,
-            StatusCode::Ok,
-        );
+        let span =
+            create_span([1; 16], [(i as u8); 8], None, &format!("span_{}", i), i, StatusCode::Ok);
         batch.push(span);
     }
     storage.insert_batch(&batch).expect("test");

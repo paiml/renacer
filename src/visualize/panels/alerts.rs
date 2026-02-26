@@ -76,6 +76,23 @@ impl AlertState {
     }
 }
 
+/// Evaluate a metric against two thresholds, returning an alert if breached
+fn evaluate_threshold(
+    value: f64,
+    warn_threshold: f64,
+    crit_threshold: f64,
+    name: &'static str,
+    detail_fn: impl Fn(f64) -> String,
+) -> Option<(AlertState, AlertSeverity, &'static str, String)> {
+    if value > crit_threshold {
+        Some((AlertState::Firing, AlertSeverity::Critical, name, detail_fn(value)))
+    } else if value > warn_threshold {
+        Some((AlertState::Pending, AlertSeverity::Warning, name, detail_fn(value)))
+    } else {
+        None
+    }
+}
+
 /// Draw the alerts panel
 pub fn draw(f: &mut Frame, app: &VisualizeApp, area: Rect) {
     let header = " Alerts ";
@@ -86,9 +103,7 @@ pub fn draw(f: &mut Frame, app: &VisualizeApp, area: Rect) {
         .border_style(Style::default().fg(borders::ALERTS))
         .title(Span::styled(
             header,
-            Style::default()
-                .fg(borders::ALERTS)
-                .add_modifier(Modifier::BOLD),
+            Style::default().fg(borders::ALERTS).add_modifier(Modifier::BOLD),
         ));
 
     let inner = block.inner(area);
@@ -107,89 +122,28 @@ pub fn draw(f: &mut Frame, app: &VisualizeApp, area: Rect) {
         Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
     )));
 
-    // Check for high latency alert
     let avg_latency = app.latency_history.avg();
-    let latency_alert = if avg_latency > 10000.0 {
-        Some((
-            AlertState::Firing,
-            AlertSeverity::Critical,
-            "HighLatency",
-            format!("avg {:.0}μs > 10ms", avg_latency),
-        ))
-    } else if avg_latency > 5000.0 {
-        Some((
-            AlertState::Pending,
-            AlertSeverity::Warning,
-            "HighLatency",
-            format!("avg {:.0}μs > 5ms", avg_latency),
-        ))
-    } else {
-        None
-    };
+    let latency_alert = evaluate_threshold(avg_latency, 5000.0, 10000.0, "HighLatency", |v| {
+        format!("avg {v:.0}\u{03bc}s > threshold")
+    });
 
-    // Check for error rate alert
     let error_rate = if app.total_syscalls > 0 {
         (app.total_errors as f64 / app.total_syscalls as f64) * 100.0
     } else {
         0.0
     };
+    let error_alert = evaluate_threshold(error_rate, 5.0, 10.0, "HighErrorRate", |v| {
+        format!("{v:.1}% > threshold")
+    });
 
-    let error_alert = if error_rate > 10.0 {
-        Some((
-            AlertState::Firing,
-            AlertSeverity::Critical,
-            "HighErrorRate",
-            format!("{:.1}% > 10%", error_rate),
-        ))
-    } else if error_rate > 5.0 {
-        Some((
-            AlertState::Pending,
-            AlertSeverity::Warning,
-            "HighErrorRate",
-            format!("{:.1}% > 5%", error_rate),
-        ))
-    } else {
-        None
-    };
+    let anomaly_alert =
+        evaluate_threshold(app.anomaly_count as f64, 5.0, 10.0, "AnomalyBurst", |v| {
+            format!("{} anomalies", v as u64)
+        });
 
-    // Check for anomaly alert
-    let anomaly_alert = if app.anomaly_count > 10 {
-        Some((
-            AlertState::Firing,
-            AlertSeverity::Critical,
-            "AnomalyBurst",
-            format!("{} anomalies", app.anomaly_count),
-        ))
-    } else if app.anomaly_count > 5 {
-        Some((
-            AlertState::Pending,
-            AlertSeverity::Warning,
-            "AnomalyBurst",
-            format!("{} anomalies", app.anomaly_count),
-        ))
-    } else {
-        None
-    };
-
-    // Check for high Z-score alert
     let max_zscore = app.anomaly_history.max();
-    let zscore_alert = if max_zscore > 5.0 {
-        Some((
-            AlertState::Firing,
-            AlertSeverity::Critical,
-            "HighZScore",
-            format!("{:.1}σ", max_zscore),
-        ))
-    } else if max_zscore > 4.0 {
-        Some((
-            AlertState::Pending,
-            AlertSeverity::Warning,
-            "HighZScore",
-            format!("{:.1}σ", max_zscore),
-        ))
-    } else {
-        None
-    };
+    let zscore_alert =
+        evaluate_threshold(max_zscore, 4.0, 5.0, "HighZScore", |v| format!("{v:.1}\u{03c3}"));
 
     let alerts = [latency_alert, error_alert, anomaly_alert, zscore_alert];
     let active_alerts: Vec<_> = alerts.iter().filter_map(|a| a.as_ref()).collect();
@@ -208,9 +162,7 @@ pub fn draw(f: &mut Frame, app: &VisualizeApp, area: Rect) {
                 ),
                 Span::styled(
                     format!("[{}] ", state.label()),
-                    Style::default()
-                        .fg(state.color())
-                        .add_modifier(Modifier::BOLD),
+                    Style::default().fg(state.color()).add_modifier(Modifier::BOLD),
                 ),
                 Span::styled(*name, Style::default().fg(Color::White)),
             ]));
@@ -226,29 +178,18 @@ pub fn draw(f: &mut Frame, app: &VisualizeApp, area: Rect) {
     // Section: Alert Summary
     lines.push(Line::from(Span::styled(
         "─── Summary ───",
-        Style::default()
-            .fg(Color::Yellow)
-            .add_modifier(Modifier::BOLD),
+        Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
     )));
 
-    let firing_count = active_alerts
-        .iter()
-        .filter(|(s, _, _, _)| *s == AlertState::Firing)
-        .count();
-    let pending_count = active_alerts
-        .iter()
-        .filter(|(s, _, _, _)| *s == AlertState::Pending)
-        .count();
+    let firing_count = active_alerts.iter().filter(|(s, _, _, _)| *s == AlertState::Firing).count();
+    let pending_count =
+        active_alerts.iter().filter(|(s, _, _, _)| *s == AlertState::Pending).count();
 
     lines.push(Line::from(vec![
         Span::styled("Firing:   ", Style::default().fg(Color::DarkGray)),
         Span::styled(
             format!("{}", firing_count),
-            Style::default().fg(if firing_count > 0 {
-                Color::Red
-            } else {
-                Color::Green
-            }),
+            Style::default().fg(if firing_count > 0 { Color::Red } else { Color::Green }),
         ),
     ]));
 
@@ -256,11 +197,7 @@ pub fn draw(f: &mut Frame, app: &VisualizeApp, area: Rect) {
         Span::styled("Pending:  ", Style::default().fg(Color::DarkGray)),
         Span::styled(
             format!("{}", pending_count),
-            Style::default().fg(if pending_count > 0 {
-                Color::Yellow
-            } else {
-                Color::Green
-            }),
+            Style::default().fg(if pending_count > 0 { Color::Yellow } else { Color::Green }),
         ),
     ]));
 
@@ -269,9 +206,7 @@ pub fn draw(f: &mut Frame, app: &VisualizeApp, area: Rect) {
     // Section: Alert Thresholds (info)
     lines.push(Line::from(Span::styled(
         "─── Thresholds ───",
-        Style::default()
-            .fg(Color::Cyan)
-            .add_modifier(Modifier::BOLD),
+        Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
     )));
 
     lines.push(Line::from(vec![
@@ -353,10 +288,7 @@ mod tests {
     fn test_alert_severity_colors() {
         assert_eq!(AlertSeverity::Info.color(), Color::Cyan);
         assert_eq!(AlertSeverity::Warning.color(), Color::Yellow);
-        assert!(matches!(
-            AlertSeverity::Critical.color(),
-            Color::Rgb(255, 80, 80)
-        ));
+        assert!(matches!(AlertSeverity::Critical.color(), Color::Rgb(255, 80, 80)));
     }
 
     #[test]
@@ -378,10 +310,7 @@ mod tests {
     fn test_alert_state_colors() {
         assert_eq!(AlertState::Inactive.color(), Color::DarkGray);
         assert_eq!(AlertState::Pending.color(), Color::Yellow);
-        assert!(matches!(
-            AlertState::Firing.color(),
-            Color::Rgb(255, 80, 80)
-        ));
+        assert!(matches!(AlertState::Firing.color(), Color::Rgb(255, 80, 80)));
         assert_eq!(AlertState::Resolved.color(), Color::Green);
     }
 

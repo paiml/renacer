@@ -120,19 +120,15 @@ fn bench_simd_minmax(c: &mut Criterion) {
         });
 
         // Benchmark scalar min/max
-        group.bench_with_input(
-            BenchmarkId::new("scalar_minmax", size),
-            &size,
-            |b, &size| {
-                let data = generate_data(size);
+        group.bench_with_input(BenchmarkId::new("scalar_minmax", size), &size, |b, &size| {
+            let data = generate_data(size);
 
-                b.iter(|| {
-                    let min = data.iter().copied().fold(f64::INFINITY, f64::min);
-                    let max = data.iter().copied().fold(f64::NEG_INFINITY, f64::max);
-                    black_box((min, max))
-                });
-            },
-        );
+            b.iter(|| {
+                let min = data.iter().copied().fold(f64::INFINITY, f64::min);
+                let max = data.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+                black_box((min, max))
+            });
+        });
     }
 
     group.finish();
@@ -146,36 +142,28 @@ fn bench_simd_normalize(c: &mut Criterion) {
 
     for size in [100, 300, 1000, 10_000] {
         // Benchmark SIMD normalize
-        group.bench_with_input(
-            BenchmarkId::new("simd_normalize", size),
-            &size,
-            |b, &size| {
-                let data = generate_data(size);
+        group.bench_with_input(BenchmarkId::new("simd_normalize", size), &size, |b, &size| {
+            let data = generate_data(size);
 
-                b.iter(|| {
-                    black_box(normalize_batch(&data)) // Uses SIMD via trueno-viz
-                });
-            },
-        );
+            b.iter(|| {
+                black_box(normalize_batch(&data)) // Uses SIMD via trueno-viz
+            });
+        });
 
         // Benchmark scalar normalize
-        group.bench_with_input(
-            BenchmarkId::new("scalar_normalize", size),
-            &size,
-            |b, &size| {
-                let data = generate_data(size);
+        group.bench_with_input(BenchmarkId::new("scalar_normalize", size), &size, |b, &size| {
+            let data = generate_data(size);
 
-                b.iter(|| {
-                    let max = data.iter().copied().fold(f64::NEG_INFINITY, f64::max);
-                    let normalized: Vec<f64> = if max == 0.0 {
-                        vec![0.0; data.len()]
-                    } else {
-                        data.iter().map(|v| v / max).collect()
-                    };
-                    black_box(normalized)
-                });
-            },
-        );
+            b.iter(|| {
+                let max = data.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+                let normalized: Vec<f64> = if max == 0.0 {
+                    vec![0.0; data.len()]
+                } else {
+                    data.iter().map(|v| v / max).collect()
+                };
+                black_box(normalized)
+            });
+        });
     }
 
     group.finish();
@@ -189,48 +177,40 @@ fn bench_simd_sparkline(c: &mut Criterion) {
 
     for size in [50, 100, 300] {
         // Benchmark SIMD sparkline
-        group.bench_with_input(
-            BenchmarkId::new("simd_sparkline", size),
-            &size,
-            |b, &size| {
-                let data = generate_data(size);
+        group.bench_with_input(BenchmarkId::new("simd_sparkline", size), &size, |b, &size| {
+            let data = generate_data(size);
 
-                b.iter(|| {
-                    black_box(sparkline(&data, size)) // Uses SIMD for min/max
-                });
-            },
-        );
+            b.iter(|| {
+                black_box(sparkline(&data, size)) // Uses SIMD for min/max
+            });
+        });
 
         // Benchmark scalar sparkline
-        group.bench_with_input(
-            BenchmarkId::new("scalar_sparkline", size),
-            &size,
-            |b, &size| {
-                let data = generate_data(size);
+        group.bench_with_input(BenchmarkId::new("scalar_sparkline", size), &size, |b, &size| {
+            let data = generate_data(size);
 
-                b.iter(|| {
-                    // Scalar min/max
-                    let min = data.iter().copied().fold(f64::INFINITY, f64::min);
-                    let max = data.iter().copied().fold(f64::NEG_INFINITY, f64::max);
-                    let range = max - min;
+            b.iter(|| {
+                // Scalar min/max
+                let min = data.iter().copied().fold(f64::INFINITY, f64::min);
+                let max = data.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+                let range = max - min;
 
-                    let spark: String = data
-                        .iter()
-                        .take(size)
-                        .map(|v| {
-                            if range == 0.0 || v.is_nan() {
-                                '▁'
-                            } else {
-                                let normalized = ((v - min) / range).clamp(0.0, 1.0);
-                                let idx = (normalized * 7.0).round() as usize;
-                                ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'][idx.min(7)]
-                            }
-                        })
-                        .collect();
-                    black_box(spark)
-                });
-            },
-        );
+                let spark: String = data
+                    .iter()
+                    .take(size)
+                    .map(|v| {
+                        if range == 0.0 || v.is_nan() {
+                            '▁'
+                        } else {
+                            let normalized = ((v - min) / range).clamp(0.0, 1.0);
+                            let idx = (normalized * 7.0).round() as usize;
+                            ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'][idx.min(7)]
+                        }
+                    })
+                    .collect();
+                black_box(spark)
+            });
+        });
     }
 
     group.finish();

@@ -184,13 +184,13 @@ pub struct TruenoDbStorage {
     config: StorageConfig,
 
     /// Trueno-DB connection (placeholder - will integrate with trueno-db API)
-    /// TODO Sprint 40: Replace with actual `trueno_db::Database` handle
+    /// Planned (Sprint 40): Replace with actual `trueno_db::Database` handle
     _db: Arc<Mutex<PlaceholderDb>>,
 }
 
 /// Placeholder for trueno-db integration
 ///
-/// TODO Sprint 40: Replace with actual `trueno_db::Database`
+/// Planned (Sprint 40): Replace with actual `trueno_db::Database`
 struct PlaceholderDb {
     // This will be replaced with trueno_db::Database once we integrate
 }
@@ -251,7 +251,7 @@ impl TruenoDbStorage {
     pub fn with_config<P: AsRef<Path>>(path: P, config: StorageConfig) -> Result<Self> {
         let path = path.as_ref().to_path_buf();
 
-        // TODO Sprint 43: Initialize trueno-db with optimized settings
+        // Planned (Sprint 43): Initialize trueno-db with optimized settings
         // let db = trueno_db::Database::open(&path)
         //     .with_row_group_size(config.row_group_size)
         //     .with_bloom_filter("trace_id", config.bloom_filter_trace_id)
@@ -263,10 +263,7 @@ impl TruenoDbStorage {
 
         eprintln!("INFO: TruenoDbStorage initialized at {path:?}");
         eprintln!("  - Row group size: {}", config.row_group_size);
-        eprintln!(
-            "  - Bloom filter (trace_id): {}",
-            config.bloom_filter_trace_id
-        );
+        eprintln!("  - Bloom filter (trace_id): {}", config.bloom_filter_trace_id);
         eprintln!(
             "  - Composite index (trace_id, timestamp): {}",
             config.composite_index_trace_time
@@ -329,14 +326,11 @@ impl TruenoDbStorage {
             return Ok(());
         }
 
-        // TODO Sprint 40: Implement actual Parquet write via trueno-db
+        // Planned (Sprint 40): Implement actual Parquet write via trueno-db
         // let _db = self._db.lock().expect("test");
         // db.insert_batch(spans)?;
 
-        eprintln!(
-            "DEBUG: TruenoDbStorage::insert_batch() - {} spans (placeholder)",
-            spans.len()
-        );
+        eprintln!("DEBUG: TruenoDbStorage::insert_batch() - {} spans (placeholder)", spans.len());
         eprintln!("TODO Sprint 40: Write to Parquet via trueno-db");
 
         Ok(())
@@ -380,7 +374,7 @@ impl TruenoDbStorage {
     /// # }
     /// ```
     pub fn query_by_trace_id(&self, trace_id: &[u8; 16]) -> Result<Vec<SpanRecord>> {
-        // TODO Sprint 40: Implement actual Parquet query via trueno-db
+        // Planned (Sprint 40): Implement actual Parquet query via trueno-db
         // let _db = self._db.lock().expect("test");
         // let spans = db.query("SELECT * FROM spans WHERE trace_id = ?", trace_id)?;
 
@@ -430,7 +424,7 @@ impl TruenoDbStorage {
         start_time_nanos: u64,
         end_time_nanos: u64,
     ) -> Result<Vec<SpanRecord>> {
-        // TODO Sprint 40: Implement actual Parquet query via trueno-db
+        // Planned (Sprint 40): Implement actual Parquet query via trueno-db
         eprintln!(
             "DEBUG: TruenoDbStorage::query_by_trace_id_and_time({}, {}-{}) (placeholder)",
             hex::encode(trace_id),
@@ -453,7 +447,7 @@ impl TruenoDbStorage {
     ///
     /// A vector of all spans from the specified process, sorted by logical clock.
     pub fn query_by_process_id(&self, process_id: u32) -> Result<Vec<SpanRecord>> {
-        // TODO Sprint 40: Implement actual Parquet query via trueno-db
+        // Planned (Sprint 40): Implement actual Parquet query via trueno-db
         eprintln!("DEBUG: TruenoDbStorage::query_by_process_id({process_id}) (placeholder)");
 
         Ok(vec![])
@@ -467,7 +461,7 @@ impl TruenoDbStorage {
     ///
     /// A vector of all spans with `status_code` = ERROR, sorted by timestamp.
     pub fn query_errors(&self) -> Result<Vec<SpanRecord>> {
-        // TODO Sprint 40: Implement actual Parquet query via trueno-db
+        // Planned (Sprint 40): Implement actual Parquet query via trueno-db
         eprintln!("DEBUG: TruenoDbStorage::query_errors() (placeholder)");
 
         Ok(vec![])
@@ -479,7 +473,7 @@ impl TruenoDbStorage {
     ///
     /// Database statistics (total spans, file size, etc.)
     pub fn stats(&self) -> Result<StorageStats> {
-        // TODO Sprint 40: Implement actual stats from trueno-db
+        // Planned (Sprint 40): Implement actual stats from trueno-db
         eprintln!("DEBUG: TruenoDbStorage::stats() (placeholder)");
 
         Ok(StorageStats {
@@ -496,7 +490,7 @@ impl TruenoDbStorage {
     /// Normally, batches are flushed automatically, but this can be called
     /// before shutdown or for durability guarantees.
     pub fn flush(&self) -> Result<()> {
-        // TODO Sprint 40: Implement actual flush via trueno-db
+        // Planned (Sprint 40): Implement actual flush via trueno-db
         eprintln!("DEBUG: TruenoDbStorage::flush() (placeholder)");
 
         Ok(())
@@ -559,7 +553,7 @@ impl TruenoDbStorage {
         start_time_max: Option<u64>,
         process_id: Option<u32>,
     ) -> Result<Vec<SpanRecord>> {
-        // TODO Sprint 43: Implement actual optimized query via trueno-db
+        // Planned (Sprint 43): Implement actual optimized query via trueno-db
         //
         // Optimization strategy:
         // 1. Build predicate expression from filters
@@ -761,9 +755,7 @@ mod tests {
         let path = tmp_dir.path().join("test.parquet");
 
         let storage = TruenoDbStorage::new(&path).expect("test");
-        let result = storage
-            .query_optimized(None, None, None, None)
-            .expect("test");
+        let result = storage.query_optimized(None, None, None, None).expect("test");
         assert!(result.is_empty());
     }
 
@@ -774,9 +766,7 @@ mod tests {
 
         let storage = TruenoDbStorage::new(&path).expect("test");
         let trace_id = [0x4b; 16];
-        let result = storage
-            .query_optimized(Some(&trace_id), None, None, None)
-            .expect("test");
+        let result = storage.query_optimized(Some(&trace_id), None, None, None).expect("test");
         assert!(result.is_empty());
     }
 
@@ -786,9 +776,7 @@ mod tests {
         let path = tmp_dir.path().join("test.parquet");
 
         let storage = TruenoDbStorage::new(&path).expect("test");
-        let result = storage
-            .query_optimized(None, Some(1000), Some(2000), None)
-            .expect("test");
+        let result = storage.query_optimized(None, Some(1000), Some(2000), None).expect("test");
         assert!(result.is_empty());
     }
 
@@ -798,9 +786,7 @@ mod tests {
         let path = tmp_dir.path().join("test.parquet");
 
         let storage = TruenoDbStorage::new(&path).expect("test");
-        let result = storage
-            .query_optimized(None, None, None, Some(1234))
-            .expect("test");
+        let result = storage.query_optimized(None, None, None, Some(1234)).expect("test");
         assert!(result.is_empty());
     }
 

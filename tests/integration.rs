@@ -85,9 +85,7 @@ fn test_hex_encoding() {
 #[test]
 fn test_error_patterns() {
     let errno_map: HashMap<i32, &str> =
-        [(1, "EPERM"), (2, "ENOENT"), (13, "EACCES"), (22, "EINVAL")]
-            .into_iter()
-            .collect();
+        [(1, "EPERM"), (2, "ENOENT"), (13, "EACCES"), (22, "EINVAL")].into_iter().collect();
 
     assert_eq!(errno_map.get(&2), Some(&"ENOENT"));
     assert_eq!(errno_map.get(&13), Some(&"EACCES"));

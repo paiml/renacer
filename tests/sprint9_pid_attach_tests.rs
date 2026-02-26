@@ -9,9 +9,7 @@ fn test_pid_flag_exists() {
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("--help");
 
-    cmd.assert()
-        .success()
-        .stdout(predicate::str::contains("-p, --pid <PID>"));
+    cmd.assert().success().stdout(predicate::str::contains("-p, --pid <PID>"));
 }
 
 #[test]
@@ -20,9 +18,7 @@ fn test_pid_and_command_mutual_exclusion() {
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-p").arg("1234").arg("--").arg("echo").arg("test");
 
-    cmd.assert()
-        .failure()
-        .stderr(predicate::str::contains("Cannot specify both"));
+    cmd.assert().failure().stderr(predicate::str::contains("Cannot specify both"));
 }
 
 #[test]
@@ -31,9 +27,7 @@ fn test_invalid_pid() {
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-p").arg("not_a_number");
 
-    cmd.assert()
-        .failure()
-        .stderr(predicate::str::contains("invalid digit found in string"));
+    cmd.assert().failure().stderr(predicate::str::contains("invalid digit found in string"));
 }
 
 #[test]
@@ -43,9 +37,7 @@ fn test_nonexistent_pid() {
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
     cmd.arg("-p").arg("99999999");
 
-    cmd.assert()
-        .failure()
-        .stderr(predicate::str::contains("Failed to attach"));
+    cmd.assert().failure().stderr(predicate::str::contains("Failed to attach"));
 }
 
 #[test]
@@ -53,9 +45,9 @@ fn test_no_command_no_pid() {
     // Test that either command or PID must be specified
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
 
-    cmd.assert().failure().stderr(predicate::str::contains(
-        "Must specify either -p PID or command",
-    ));
+    cmd.assert()
+        .failure()
+        .stderr(predicate::str::contains("Must specify either -p PID or command"));
 }
 
 // Note: Testing actual PID attachment requires special permissions

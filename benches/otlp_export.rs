@@ -43,10 +43,7 @@ struct BatchExporter {
 
 impl BatchExporter {
     fn new(max_batch_size: usize) -> Self {
-        BatchExporter {
-            buffer: Vec::with_capacity(max_batch_size),
-            max_batch_size,
-        }
+        BatchExporter { buffer: Vec::with_capacity(max_batch_size), max_batch_size }
     }
 
     fn add(&mut self, span: ExportSpan) -> bool {

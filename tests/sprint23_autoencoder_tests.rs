@@ -31,11 +31,7 @@ fn test_dl_anomaly_flag_accepted() {
 #[test]
 fn test_dl_anomaly_with_statistics() {
     let mut cmd = Command::cargo_bin("renacer").expect("test");
-    cmd.arg("-c")
-        .arg("--dl-anomaly")
-        .arg("--")
-        .arg("echo")
-        .arg("test");
+    cmd.arg("-c").arg("--dl-anomaly").arg("--").arg("echo").arg("test");
 
     cmd.assert().success();
 }
@@ -78,10 +74,7 @@ int main() {
         .expect("Failed to compile test program");
 
     let mut cmd = Command::cargo_bin("renacer").expect("test");
-    cmd.arg("-c")
-        .arg("--dl-anomaly")
-        .arg("--")
-        .arg(&test_program);
+    cmd.arg("-c").arg("--dl-anomaly").arg("--").arg(&test_program);
 
     // Should detect anomalies in output
     cmd.assert().success().stderr(
@@ -115,12 +108,7 @@ fn test_dl_threshold_configuration() {
 #[test]
 fn test_dl_anomaly_json_export() {
     let mut cmd = Command::cargo_bin("renacer").expect("test");
-    cmd.arg("--format")
-        .arg("json")
-        .arg("--dl-anomaly")
-        .arg("--")
-        .arg("echo")
-        .arg("test");
+    cmd.arg("--format").arg("json").arg("--dl-anomaly").arg("--").arg("echo").arg("test");
 
     cmd.assert().success().stdout(
         predicate::str::contains("autoencoder").or(predicate::str::contains("dl_analysis")),
@@ -134,13 +122,7 @@ fn test_dl_anomaly_json_export() {
 #[test]
 fn test_dl_anomaly_with_filtering() {
     let mut cmd = Command::cargo_bin("renacer").expect("test");
-    cmd.arg("-c")
-        .arg("--dl-anomaly")
-        .arg("-e")
-        .arg("trace=file")
-        .arg("--")
-        .arg("ls")
-        .arg("-la");
+    cmd.arg("-c").arg("--dl-anomaly").arg("-e").arg("trace=file").arg("--").arg("ls").arg("-la");
 
     cmd.assert().success();
 }
@@ -175,10 +157,7 @@ int main() {
         .expect("test");
 
     let mut cmd = Command::cargo_bin("renacer").expect("test");
-    cmd.arg("-c")
-        .arg("--dl-anomaly")
-        .arg("--")
-        .arg(&test_program);
+    cmd.arg("-c").arg("--dl-anomaly").arg("--").arg(&test_program);
 
     // Should handle gracefully (no panic)
     cmd.assert().success();
@@ -204,12 +183,7 @@ fn test_backward_compatibility_without_dl_anomaly() {
 #[test]
 fn test_dl_anomaly_with_timing() {
     let mut cmd = Command::cargo_bin("renacer").expect("test");
-    cmd.arg("-c")
-        .arg("-T")
-        .arg("--dl-anomaly")
-        .arg("--")
-        .arg("echo")
-        .arg("hello");
+    cmd.arg("-c").arg("-T").arg("--dl-anomaly").arg("--").arg("echo").arg("hello");
 
     cmd.assert().success();
 }
@@ -240,12 +214,7 @@ fn test_dl_anomaly_with_other_ml() {
 #[test]
 fn test_dl_anomaly_with_explainability() {
     let mut cmd = Command::cargo_bin("renacer").expect("test");
-    cmd.arg("-c")
-        .arg("--dl-anomaly")
-        .arg("--explain")
-        .arg("--")
-        .arg("echo")
-        .arg("test");
+    cmd.arg("-c").arg("--dl-anomaly").arg("--explain").arg("--").arg("echo").arg("test");
 
     // Should provide explanations
     cmd.assert().success();

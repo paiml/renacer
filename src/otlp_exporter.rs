@@ -83,13 +83,7 @@ impl OtlpConfig {
 
     /// Performance preset: Low-latency (min delay)
     pub fn low_latency(endpoint: String, service_name: String) -> Self {
-        OtlpConfig {
-            endpoint,
-            service_name,
-            batch_size: 128,
-            batch_delay_ms: 100,
-            queue_size: 512,
-        }
+        OtlpConfig { endpoint, service_name, batch_size: 128, batch_delay_ms: 100, queue_size: 512 }
     }
 
     /// Set custom batch size
@@ -237,21 +231,15 @@ impl MetricsSnapshot {
     pub fn from_registry(registry: &Registry) -> Self {
         use std::time::{SystemTime, UNIX_EPOCH};
 
-        let timestamp_nanos = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map(|d| d.as_nanos() as u64)
-            .unwrap_or(0);
+        let timestamp_nanos =
+            SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_nanos() as u64).unwrap_or(0);
 
         let counters = registry
             .counters()
             .iter()
             .map(|c| CounterSnapshot {
                 name: c.name().to_string(),
-                labels: c
-                    .labels()
-                    .iter()
-                    .map(|(k, v)| (k.clone(), v.clone()))
-                    .collect(),
+                labels: c.labels().iter().map(|(k, v)| (k.clone(), v.clone())).collect(),
                 value: c.get(),
             })
             .collect();
@@ -261,11 +249,7 @@ impl MetricsSnapshot {
             .iter()
             .map(|g| GaugeSnapshot {
                 name: g.name().to_string(),
-                labels: g
-                    .labels()
-                    .iter()
-                    .map(|(k, v)| (k.clone(), v.clone()))
-                    .collect(),
+                labels: g.labels().iter().map(|(k, v)| (k.clone(), v.clone())).collect(),
                 value: g.get(),
             })
             .collect();
@@ -284,11 +268,7 @@ impl MetricsSnapshot {
 
                 HistogramSnapshot {
                     name: h.name().to_string(),
-                    labels: h
-                        .labels()
-                        .iter()
-                        .map(|(k, v)| (k.clone(), v.clone()))
-                        .collect(),
+                    labels: h.labels().iter().map(|(k, v)| (k.clone(), v.clone())).collect(),
                     count: h.get_count(),
                     sum: h.get_sum(),
                     buckets,
@@ -296,12 +276,7 @@ impl MetricsSnapshot {
             })
             .collect();
 
-        MetricsSnapshot {
-            timestamp_nanos,
-            counters,
-            gauges,
-            histograms,
-        }
+        MetricsSnapshot { timestamp_nanos, counters, gauges, histograms }
     }
 
     /// Check if snapshot is empty
@@ -632,10 +607,7 @@ impl OtlpExporter {
     pub fn record_gpu_transfer(&self, transfer: GpuMemoryTransfer) {
         let mut span_attrs = vec![
             // Only dynamic attributes on span (Toyota Way: no attribute explosion)
-            KeyValue::new(
-                "gpu_transfer.direction",
-                transfer.direction.as_str().to_string(),
-            ),
+            KeyValue::new("gpu_transfer.direction", transfer.direction.as_str().to_string()),
             KeyValue::new("gpu_transfer.bytes", transfer.bytes as i64),
             KeyValue::new("gpu_transfer.duration_us", transfer.duration_us as i64),
             KeyValue::new("gpu_transfer.bandwidth_mbps", transfer.bandwidth_mbps),
@@ -710,8 +682,8 @@ impl OtlpExporter {
                 &syscall.name,
                 Some(syscall.duration_nanos / 1000), // Convert nanos to micros
                 syscall.return_value,
-                None, // TODO: Add source file tracking to SyscallSpan
-                None, // TODO: Add source line tracking to SyscallSpan
+                None, // Future: Add source file tracking to SyscallSpan
+                None, // Future: Add source line tracking to SyscallSpan
             );
         }
 
@@ -886,10 +858,8 @@ mod tests {
     #[test]
     #[cfg(feature = "otlp")]
     fn test_otlp_config_creation() {
-        let config = OtlpConfig::new(
-            "http://localhost:4317".to_string(),
-            "test-service".to_string(),
-        );
+        let config =
+            OtlpConfig::new("http://localhost:4317".to_string(), "test-service".to_string());
 
         assert_eq!(config.endpoint, "http://localhost:4317");
         assert_eq!(config.service_name, "test-service");
@@ -1065,10 +1035,7 @@ mod tests {
 
         // Export should succeed
         let result = exporter.export_unified_trace(&trace);
-        assert!(
-            result.is_ok(),
-            "Export should succeed with multi-layer trace"
-        );
+        assert!(result.is_ok(), "Export should succeed with multi-layer trace");
     }
 
     #[test]
@@ -1096,10 +1063,7 @@ mod tests {
 
         // Export should succeed
         let result = exporter.export_unified_trace(&trace);
-        assert!(
-            result.is_ok(),
-            "Export should succeed with GPU memory transfers"
-        );
+        assert!(result.is_ok(), "Export should succeed with GPU memory transfers");
     }
 
     #[test]
@@ -1151,9 +1115,6 @@ mod tests {
 
         // Export should succeed and preserve causal ordering
         let result = exporter.export_unified_trace(&trace);
-        assert!(
-            result.is_ok(),
-            "Export should succeed with happens-before relationships"
-        );
+        assert!(result.is_ok(), "Export should succeed with happens-before relationships");
     }
 }

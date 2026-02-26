@@ -101,10 +101,7 @@ fn test_microservice_critical_path() {
     // Critical path: http.request → api.handler → db.query
     assert_eq!(result.path.len(), 3);
     assert_eq!(result.total_duration, 50_000 + 80_000 + 60_000);
-    assert_eq!(
-        result.span_names,
-        vec!["http.request", "api.handler", "db.query"]
-    );
+    assert_eq!(result.span_names, vec!["http.request", "api.handler", "db.query"]);
 
     // auth.verify and cache.get should NOT be on critical path
     let auth_node = graph.get_node_by_span_id(&[2; 8]).expect("test");
@@ -144,10 +141,7 @@ fn test_complex_distributed_trace_critical_path() {
     // Critical path: gateway → api.service → productdb.query → index.scan
     assert_eq!(result.path.len(), 4);
     assert_eq!(result.total_duration, 10_000 + 50_000 + 40_000 + 30_000);
-    assert_eq!(
-        result.span_names,
-        vec!["gateway", "api.service", "productdb.query", "index.scan"]
-    );
+    assert_eq!(result.span_names, vec!["gateway", "api.service", "productdb.query", "index.scan"]);
 
     // Verify auth path is NOT on critical path
     let auth_node = graph.get_node_by_span_id(&[2; 8]).expect("test");
@@ -301,8 +295,5 @@ fn test_bottleneck_identification() {
 
     // Critical path should include all spans
     assert_eq!(result.path.len(), 4);
-    assert_eq!(
-        result.total_duration,
-        100_000_000 + 50_000_000 + 500_000_000 + 10_000_000
-    );
+    assert_eq!(result.total_duration, 100_000_000 + 50_000_000 + 500_000_000 + 10_000_000);
 }

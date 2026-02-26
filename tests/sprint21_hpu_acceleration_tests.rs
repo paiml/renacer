@@ -55,9 +55,7 @@ int main() {
         .arg(&test_program);
 
     // Should succeed and show HPU Analysis Report
-    cmd.assert()
-        .success()
-        .stdout(predicate::str::contains("HPU Analysis Report"));
+    cmd.assert().success().stdout(predicate::str::contains("HPU Analysis Report"));
 }
 
 #[test]
@@ -90,10 +88,7 @@ int main() {
         .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("--hpu-analysis")
-        .arg("-c")
-        .arg("--")
-        .arg(&test_program);
+    cmd.arg("--hpu-analysis").arg("-c").arg("--").arg(&test_program);
 
     // Should show correlation matrix with high correlation between open-write-close
     cmd.assert()
@@ -141,10 +136,7 @@ int main() {
         .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("--hpu-analysis")
-        .arg("-c")
-        .arg("--")
-        .arg(&test_program);
+    cmd.arg("--hpu-analysis").arg("-c").arg("--").arg(&test_program);
 
     // Should show clustering results with 2+ clusters
     cmd.assert()
@@ -181,15 +173,10 @@ int main() {
         .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("--hpu-analysis")
-        .arg("-c")
-        .arg("--")
-        .arg(&test_program);
+    cmd.arg("--hpu-analysis").arg("-c").arg("--").arg(&test_program);
 
     // Should show HPU backend used (GPU or CPU fallback)
-    cmd.assert()
-        .success()
-        .stdout(predicate::str::contains("HPU Backend"));
+    cmd.assert().success().stdout(predicate::str::contains("HPU Backend"));
 }
 
 #[test]
@@ -225,9 +212,7 @@ int main() {
         .arg(&test_program);
 
     // Should succeed with CPU backend
-    cmd.assert()
-        .success()
-        .stdout(predicate::str::contains("HPU Backend: CPU"));
+    cmd.assert().success().stdout(predicate::str::contains("HPU Backend: CPU"));
 }
 
 // ============================================================================
@@ -260,10 +245,7 @@ int main() {
         .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("-c")
-        .arg("--hpu-analysis")
-        .arg("--")
-        .arg(&test_program);
+    cmd.arg("-c").arg("--hpu-analysis").arg("--").arg(&test_program);
 
     // Should show both statistics AND HPU analysis
     // Statistics go to stderr (matching strace), HPU report goes to stdout
@@ -313,9 +295,7 @@ int main() {
         .arg(&test_program);
 
     // HPU analysis should only include filtered syscalls
-    cmd.assert()
-        .success()
-        .stdout(predicate::str::contains("HPU Analysis Report"));
+    cmd.assert().success().stdout(predicate::str::contains("HPU Analysis Report"));
 }
 
 #[test]
@@ -359,9 +339,10 @@ int main() {
     // Function profiling summary goes to stderr, HPU report goes to stdout
     cmd.assert()
         .success()
-        .stderr(predicate::str::contains("Function Profiling Summary").or(
-            predicate::str::contains("No function profiling data collected"),
-        ))
+        .stderr(
+            predicate::str::contains("Function Profiling Summary")
+                .or(predicate::str::contains("No function profiling data collected")),
+        )
         .stdout(predicate::str::contains("HPU Analysis Report"));
 }
 
@@ -396,11 +377,7 @@ int main() {
         .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("--hpu-analysis")
-        .arg("--format")
-        .arg("json")
-        .arg("--")
-        .arg(&test_program);
+    cmd.arg("--hpu-analysis").arg("--format").arg("json").arg("--").arg(&test_program);
 
     let output = cmd.output().expect("test");
     fs::write(&json_output, &output.stdout).expect("test");
@@ -449,15 +426,10 @@ int main() {
         .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("--hpu-analysis")
-        .arg("-c")
-        .arg("--")
-        .arg(&test_program);
+    cmd.arg("--hpu-analysis").arg("-c").arg("--").arg(&test_program);
 
     // Should handle large traces efficiently
-    cmd.assert()
-        .success()
-        .stdout(predicate::str::contains("HPU Analysis Report"));
+    cmd.assert().success().stdout(predicate::str::contains("HPU Analysis Report"));
 }
 
 // ============================================================================
@@ -486,10 +458,7 @@ int main() {
         .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("--hpu-analysis")
-        .arg("-c")
-        .arg("--")
-        .arg(&test_program);
+    cmd.arg("--hpu-analysis").arg("-c").arg("--").arg(&test_program);
 
     // Should handle gracefully (no crash, informative message)
     cmd.assert().success().stdout(

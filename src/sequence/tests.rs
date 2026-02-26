@@ -13,12 +13,8 @@ use crate::sequence::ngram::{ngram_coverage, top_ngrams};
 #[test]
 fn test_decy_futex_anomaly() {
     // Baseline: decy without async runtime (single-threaded)
-    let baseline_syscalls = vec![
-        "mmap".to_string(),
-        "read".to_string(),
-        "write".to_string(),
-        "close".to_string(),
-    ];
+    let baseline_syscalls =
+        vec!["mmap".to_string(), "read".to_string(), "write".to_string(), "close".to_string()];
 
     // Current: decy with accidental async runtime initialization
     let current_syscalls = vec![
@@ -35,10 +31,8 @@ fn test_decy_futex_anomaly() {
     let anomalies = detect_sequence_anomalies(&baseline_ngrams, &current_ngrams, 0.30);
 
     // Should detect new sequences involving futex
-    let futex_anomalies: Vec<_> = anomalies
-        .iter()
-        .filter(|a| a.ngram.iter().any(|s| s == "futex"))
-        .collect();
+    let futex_anomalies: Vec<_> =
+        anomalies.iter().filter(|a| a.ngram.iter().any(|s| s == "futex")).collect();
 
     assert!(!futex_anomalies.is_empty());
     assert!(futex_anomalies.iter().any(|a| a.severity == Severity::High));
@@ -68,17 +62,11 @@ fn test_depyler_telemetry_leak() {
     // Should detect networking sequence as CRITICAL
     let networking_anomalies: Vec<_> = anomalies
         .iter()
-        .filter(|a| {
-            a.ngram
-                .iter()
-                .any(|s| s.contains("socket") || s.contains("connect"))
-        })
+        .filter(|a| a.ngram.iter().any(|s| s.contains("socket") || s.contains("connect")))
         .collect();
 
     assert!(!networking_anomalies.is_empty());
-    assert!(networking_anomalies
-        .iter()
-        .any(|a| a.severity == Severity::Critical));
+    assert!(networking_anomalies.iter().any(|a| a.severity == Severity::Critical));
 }
 
 /// Test benign changes don't trigger false positives
@@ -106,9 +94,7 @@ fn test_no_false_positive_on_order_preserving_change() {
     let anomalies = detect_sequence_anomalies(&baseline_ngrams, &current_ngrams, 0.30);
 
     // Should detect frequency change, but not new/missing sequences
-    assert!(anomalies
-        .iter()
-        .all(|a| a.anomaly_type == AnomalyType::FrequencyChange));
+    assert!(anomalies.iter().all(|a| a.anomaly_type == AnomalyType::FrequencyChange));
 
     // Should NOT be Critical severity (no networking/sync)
     assert!(anomalies.iter().all(|a| a.severity != Severity::Critical));
@@ -211,11 +197,7 @@ fn test_empty_trace() {
 #[test]
 fn test_anomaly_report_format() {
     let anomaly = SequenceAnomaly {
-        ngram: vec![
-            "socket".to_string(),
-            "connect".to_string(),
-            "send".to_string(),
-        ],
+        ngram: vec!["socket".to_string(), "connect".to_string(), "send".to_string()],
         baseline_freq: 0,
         current_freq: 5,
         anomaly_type: AnomalyType::NewSequence,
@@ -244,13 +226,9 @@ fn test_configurable_frequency_threshold() {
 
     // Strict threshold (10%): should NOT trigger
     let strict_anomalies = detect_sequence_anomalies(&baseline_ngrams, &current_ngrams, 0.30);
-    assert!(strict_anomalies
-        .iter()
-        .all(|a| a.anomaly_type != AnomalyType::FrequencyChange));
+    assert!(strict_anomalies.iter().all(|a| a.anomaly_type != AnomalyType::FrequencyChange));
 
     // Loose threshold (5%): should trigger
     let loose_anomalies = detect_sequence_anomalies(&baseline_ngrams, &current_ngrams, 0.05);
-    assert!(loose_anomalies
-        .iter()
-        .any(|a| a.anomaly_type == AnomalyType::FrequencyChange));
+    assert!(loose_anomalies.iter().any(|a| a.anomaly_type == AnomalyType::FrequencyChange));
 }

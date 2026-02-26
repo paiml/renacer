@@ -68,13 +68,7 @@ fn test_no_filter_shows_all() {
 fn test_filter_network_class() {
     // Test network filter class (won't match echo, but should parse correctly)
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("-e")
-        .arg("trace=network")
-        .arg("--")
-        .arg("echo")
-        .arg("test")
-        .assert()
-        .success();
+    cmd.arg("-e").arg("trace=network").arg("--").arg("echo").arg("test").assert().success();
     // echo doesn't make network calls, so output should be minimal/empty for syscalls
 }
 

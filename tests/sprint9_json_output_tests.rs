@@ -7,11 +7,7 @@ use predicates::prelude::*;
 fn test_json_output_valid_format() {
     // Test that --format json produces valid JSON
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("--format")
-        .arg("json")
-        .arg("--")
-        .arg("echo")
-        .arg("test");
+    cmd.arg("--format").arg("json").arg("--").arg("echo").arg("test");
 
     cmd.assert()
         .success()
@@ -25,11 +21,7 @@ fn test_json_output_valid_format() {
 fn test_json_output_parses() {
     // Test that JSON output is actually valid JSON
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("--format")
-        .arg("json")
-        .arg("--")
-        .arg("echo")
-        .arg("test");
+    cmd.arg("--format").arg("json").arg("--").arg("echo").arg("test");
 
     let output = cmd.output().expect("test");
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -49,12 +41,7 @@ fn test_json_output_parses() {
 fn test_json_with_timing() {
     // Test that -T works with JSON output
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("--format")
-        .arg("json")
-        .arg("-T")
-        .arg("--")
-        .arg("echo")
-        .arg("test");
+    cmd.arg("--format").arg("json").arg("-T").arg("--").arg("echo").arg("test");
 
     let output = cmd.output().expect("test");
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -69,23 +56,14 @@ fn test_json_with_timing() {
     // At least some syscalls should have duration_us
     let syscalls = parsed["syscalls"].as_array().expect("test");
     let has_duration = syscalls.iter().any(|s| s["duration_us"].is_number());
-    assert!(
-        has_duration,
-        "Expected at least one syscall with duration_us"
-    );
+    assert!(has_duration, "Expected at least one syscall with duration_us");
 }
 
 #[test]
 fn test_json_with_filtering() {
     // Test that filtering works with JSON output
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("--format")
-        .arg("json")
-        .arg("-e")
-        .arg("trace=write")
-        .arg("--")
-        .arg("echo")
-        .arg("test");
+    cmd.arg("--format").arg("json").arg("-e").arg("trace=write").arg("--").arg("echo").arg("test");
 
     let output = cmd.output().expect("test");
     let stdout = String::from_utf8_lossy(&output.stdout);

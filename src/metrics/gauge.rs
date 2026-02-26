@@ -137,84 +137,68 @@ impl Clone for Gauge {
     }
 }
 
-/// Gauge family - collection of gauges with same name but different labels
-#[derive(Debug)]
-#[allow(dead_code)]
-pub struct GaugeVec {
-    /// Base metric name
-    name: String,
-    /// Label keys (order matters for lookup)
-    label_keys: Vec<String>,
-    /// Child gauges by label values
-    children: dashmap::DashMap<Vec<String>, Arc<Gauge>>,
-}
-
-#[allow(dead_code)]
-impl GaugeVec {
-    /// Create a new gauge family
-    pub fn new(
-        name: impl Into<String>,
-        label_keys: impl IntoIterator<Item = impl Into<String>>,
-    ) -> Self {
-        Self {
-            name: name.into(),
-            label_keys: label_keys.into_iter().map(Into::into).collect(),
-            children: dashmap::DashMap::new(),
-        }
-    }
-
-    /// Get or create gauge with given label values
-    ///
-    /// # Panics
-    /// Panics if number of values doesn't match number of keys
-    pub fn with_label_values(&self, values: &[&str]) -> Arc<Gauge> {
-        assert_eq!(
-            values.len(),
-            self.label_keys.len(),
-            "label count mismatch: expected {}, got {}",
-            self.label_keys.len(),
-            values.len()
-        );
-
-        let key: Vec<String> = values
-            .iter()
-            .map(std::string::ToString::to_string)
-            .collect();
-
-        self.children
-            .entry(key.clone())
-            .or_insert_with(|| {
-                let labels: Labels = self
-                    .label_keys
-                    .iter()
-                    .zip(values.iter())
-                    .map(|(k, v)| (k.clone(), (*v).to_string()))
-                    .collect();
-                Gauge::new_arc(&self.name, labels)
-            })
-            .clone()
-    }
-
-    /// Get metric name
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-
-    /// Get label keys
-    pub fn label_keys(&self) -> &[String] {
-        &self.label_keys
-    }
-
-    /// Iterate over all gauges
-    pub fn iter(&self) -> impl Iterator<Item = Arc<Gauge>> + '_ {
-        self.children.iter().map(|entry| entry.value().clone())
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::thread;
+
+    /// Gauge family - collection of gauges with same name but different labels
+    #[derive(Debug)]
+    struct GaugeVec {
+        name: String,
+        label_keys: Vec<String>,
+        children: dashmap::DashMap<Vec<String>, Arc<Gauge>>,
+    }
+
+    impl GaugeVec {
+        fn new(
+            name: impl Into<String>,
+            label_keys: impl IntoIterator<Item = impl Into<String>>,
+        ) -> Self {
+            Self {
+                name: name.into(),
+                label_keys: label_keys.into_iter().map(Into::into).collect(),
+                children: dashmap::DashMap::new(),
+            }
+        }
+
+        fn with_label_values(&self, values: &[&str]) -> Arc<Gauge> {
+            assert_eq!(
+                values.len(),
+                self.label_keys.len(),
+                "label count mismatch: expected {}, got {}",
+                self.label_keys.len(),
+                values.len()
+            );
+
+            let key: Vec<String> = values.iter().map(std::string::ToString::to_string).collect();
+
+            self.children
+                .entry(key.clone())
+                .or_insert_with(|| {
+                    let labels: Labels = self
+                        .label_keys
+                        .iter()
+                        .zip(values.iter())
+                        .map(|(k, v)| (k.clone(), (*v).to_string()))
+                        .collect();
+                    Gauge::new_arc(&self.name, labels)
+                })
+                .clone()
+        }
+
+        fn name(&self) -> &str {
+            &self.name
+        }
+
+        fn label_keys(&self) -> &[String] {
+            &self.label_keys
+        }
+
+        fn iter(&self) -> impl Iterator<Item = Arc<Gauge>> + '_ {
+            self.children.iter().map(|entry| entry.value().clone())
+        }
+    }
 
     #[test]
     fn test_gauge_set() {
@@ -347,31 +331,19 @@ mod tests {
     fn test_gauge_set_to_current_time() {
         let gauge = Gauge::new("timestamp", Labels::new());
 
-        let before = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_secs() as i64;
+        let before =
+            std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs()
+                as i64;
 
         gauge.set_to_current_time();
 
-        let after = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_secs() as i64;
+        let after =
+            std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs()
+                as i64;
 
         let timestamp = gauge.get();
-        assert!(
-            timestamp >= before,
-            "timestamp {} < before {}",
-            timestamp,
-            before
-        );
-        assert!(
-            timestamp <= after,
-            "timestamp {} > after {}",
-            timestamp,
-            after
-        );
+        assert!(timestamp >= before, "timestamp {} < before {}", timestamp, before);
+        assert!(timestamp <= after, "timestamp {} > after {}", timestamp, after);
     }
 
     #[test]
@@ -391,10 +363,8 @@ mod tests {
 
     #[test]
     fn test_gauge_desc_accessor() {
-        let labels: Labels = [("env", "staging")]
-            .into_iter()
-            .map(|(k, v)| (k.to_string(), v.to_string()))
-            .collect();
+        let labels: Labels =
+            [("env", "staging")].into_iter().map(|(k, v)| (k.to_string(), v.to_string())).collect();
 
         let gauge = Gauge::new("memory_usage", labels);
         let desc = gauge.desc();

@@ -33,12 +33,7 @@ fn test_timing_with_statistics_mode() {
 fn test_timing_with_filter() {
     // Test that -T works with filtering
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("-T")
-        .arg("-e")
-        .arg("trace=write")
-        .arg("--")
-        .arg("echo")
-        .arg("test");
+    cmd.arg("-T").arg("-e").arg("trace=write").arg("--").arg("echo").arg("test");
 
     cmd.assert()
         .success()

@@ -16,11 +16,7 @@ pub fn draw(f: &mut Frame, app: &VisualizeApp, area: Rect) {
     // Build header with stats
     let header = format!(
         " ML Clusters {} │ {} outliers │ silhouette: {:.2} ",
-        app.cluster_points
-            .iter()
-            .map(|(_, _, c)| *c)
-            .max()
-            .unwrap_or(0),
+        app.cluster_points.iter().map(|(_, _, c)| *c).max().unwrap_or(0),
         app.outlier_count,
         app.silhouette_score
     );
@@ -31,9 +27,7 @@ pub fn draw(f: &mut Frame, app: &VisualizeApp, area: Rect) {
         .border_style(Style::default().fg(borders::ML_SCATTER))
         .title(Span::styled(
             header,
-            Style::default()
-                .fg(borders::ML_SCATTER)
-                .add_modifier(Modifier::BOLD),
+            Style::default().fg(borders::ML_SCATTER).add_modifier(Modifier::BOLD),
         ));
 
     let inner = block.inner(area);
@@ -44,12 +38,7 @@ pub fn draw(f: &mut Frame, app: &VisualizeApp, area: Rect) {
     }
 
     // Get cluster colors
-    let cluster_colors = [
-        graph::CLUSTER_0,
-        graph::CLUSTER_1,
-        graph::CLUSTER_2,
-        graph::CLUSTER_3,
-    ];
+    let cluster_colors = [graph::CLUSTER_0, graph::CLUSTER_1, graph::CLUSTER_2, graph::CLUSTER_3];
 
     // Render braille scatter plot
     braille_scatter::render(f, &app.cluster_points, &cluster_colors, inner);

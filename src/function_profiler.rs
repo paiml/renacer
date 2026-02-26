@@ -45,13 +45,10 @@ pub struct FunctionStats {
     /// Total time spent in syscalls from this function (microseconds)
     pub total_time_us: u64,
     /// Functions called by this function (call graph) - Reserved for future use
-    #[allow(dead_code)]
     pub callees: HashMap<String, u64>,
     /// Number of times this is an I/O syscall - Reserved for future use
-    #[allow(dead_code)]
     pub io_syscalls: u64,
     /// Number of slow I/O operations (>1ms) - Reserved for future use
-    #[allow(dead_code)]
     pub slow_io_count: u64,
 }
 
@@ -90,7 +87,7 @@ impl FunctionProfiler {
         if IO_SYSCALLS.contains(&syscall_name) {
             entry.io_syscalls += 1;
 
-            // Track slow I/O operations (>1ms)
+            // Track I/O operations exceeding 1ms threshold
             if duration_us > SLOW_IO_THRESHOLD_US {
                 entry.slow_io_count += 1;
             }
@@ -99,10 +96,7 @@ impl FunctionProfiler {
         // Track call graph (parent -> child relationship)
         if let Some(caller) = caller_name {
             let caller_entry = self.stats.entry(caller.to_string()).or_default();
-            *caller_entry
-                .callees
-                .entry(function_name.to_string())
-                .or_insert(0) += 1;
+            *caller_entry.callees.entry(function_name.to_string()).or_insert(0) += 1;
         }
     }
 
@@ -113,7 +107,6 @@ impl FunctionProfiler {
     ///
     /// # Arguments
     /// * `writer` - Where to write the flamegraph data
-    #[allow(dead_code)] // Public API for flamegraph export (will be used in CLI)
     pub fn export_flamegraph<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
         // Build flamegraph samples from call graph
         // Format: "caller;callee sample_count"
@@ -135,9 +128,7 @@ impl FunctionProfiler {
 
     /// Check if a function has any callers
     fn has_caller(&self, function: &str) -> bool {
-        self.stats
-            .values()
-            .any(|stats| stats.callees.contains_key(function))
+        self.stats.values().any(|stats| stats.callees.contains_key(function))
     }
 
     /// Print function timing summary to stderr
@@ -163,19 +154,12 @@ impl FunctionProfiler {
 
         for (function, stats) in &sorted {
             let total_seconds = stats.total_time_us as f64 / 1_000_000.0;
-            let avg_us = if stats.syscall_count > 0 {
-                stats.total_time_us / stats.syscall_count
-            } else {
-                0
-            };
+            let avg_us =
+                if stats.syscall_count > 0 { stats.total_time_us / stats.syscall_count } else { 0 };
             let avg_seconds = avg_us as f64 / 1_000_000.0;
 
-            // Highlight functions with slow I/O
-            let marker = if stats.slow_io_count > 0 {
-                "⚠️ "
-            } else {
-                "   "
-            };
+            // Highlight functions with high-latency I/O
+            let marker = if stats.slow_io_count > 0 { "⚠️ " } else { "   " };
 
             eprintln!(
                 "{}{:<37} {:>10} {:>11.6}s {:>11.6}s {:>10} {:>10}",
@@ -290,15 +274,9 @@ mod tests {
 
         assert_eq!(profiler.stats.len(), 2);
         assert_eq!(profiler.stats.get("main").expect("test").syscall_count, 2);
-        assert_eq!(
-            profiler.stats.get("main").expect("test").total_time_us,
-            3000
-        );
+        assert_eq!(profiler.stats.get("main").expect("test").total_time_us, 3000);
         assert_eq!(profiler.stats.get("helper").expect("test").syscall_count, 1);
-        assert_eq!(
-            profiler.stats.get("helper").expect("test").total_time_us,
-            500
-        );
+        assert_eq!(profiler.stats.get("helper").expect("test").total_time_us, 500);
     }
 
     #[test]
@@ -343,22 +321,9 @@ mod tests {
         profiler.print_summary();
 
         // Verify data is present
-        assert_eq!(
-            profiler.stats.get("slow_func").expect("test").total_time_us,
-            5000000
-        );
-        assert_eq!(
-            profiler.stats.get("fast_func").expect("test").total_time_us,
-            100000
-        );
-        assert_eq!(
-            profiler
-                .stats
-                .get("medium_func")
-                .expect("test")
-                .total_time_us,
-            1000000
-        );
+        assert_eq!(profiler.stats.get("slow_func").expect("test").total_time_us, 5000000);
+        assert_eq!(profiler.stats.get("fast_func").expect("test").total_time_us, 100000);
+        assert_eq!(profiler.stats.get("medium_func").expect("test").total_time_us, 1000000);
     }
 
     #[test]
@@ -861,19 +826,11 @@ mod tests {
         // Each line should follow "stack count" format
         for line in lines {
             let parts: Vec<&str> = line.split_whitespace().collect();
-            assert!(
-                parts.len() >= 2,
-                "Line should have stack and count: {}",
-                line
-            );
+            assert!(parts.len() >= 2, "Line should have stack and count: {}", line);
 
             // Last part should be a number (count)
             let count_str = parts.last().expect("test");
-            assert!(
-                count_str.parse::<u64>().is_ok(),
-                "Count should be a number: {}",
-                count_str
-            );
+            assert!(count_str.parse::<u64>().is_ok(), "Count should be a number: {}", count_str);
         }
     }
 }

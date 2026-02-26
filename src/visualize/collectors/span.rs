@@ -211,10 +211,7 @@ impl SpanReceiver {
 
         // Add to spans and index
         let idx = self.spans.len();
-        self.traces
-            .entry(span.trace_id.clone())
-            .or_default()
-            .push(idx);
+        self.traces.entry(span.trace_id.clone()).or_default().push(idx);
         self.spans.push_back(span);
 
         // Recalculate critical path for affected trace
@@ -323,26 +320,11 @@ impl Collector for SpanReceiver {
     fn collect(&mut self) -> Result<Metrics> {
         let mut values = HashMap::new();
 
-        values.insert(
-            "span.total.count".to_string(),
-            MetricValue::Counter(self.total_spans),
-        );
-        values.insert(
-            "span.error.count".to_string(),
-            MetricValue::Counter(self.error_spans),
-        );
-        values.insert(
-            "span.avg_duration_ms".to_string(),
-            MetricValue::Gauge(self.avg_duration_ms),
-        );
-        values.insert(
-            "span.active.count".to_string(),
-            MetricValue::Gauge(self.spans.len() as f64),
-        );
-        values.insert(
-            "span.trace.count".to_string(),
-            MetricValue::Gauge(self.traces.len() as f64),
-        );
+        values.insert("span.total.count".to_string(), MetricValue::Counter(self.total_spans));
+        values.insert("span.error.count".to_string(), MetricValue::Counter(self.error_spans));
+        values.insert("span.avg_duration_ms".to_string(), MetricValue::Gauge(self.avg_duration_ms));
+        values.insert("span.active.count".to_string(), MetricValue::Gauge(self.spans.len() as f64));
+        values.insert("span.trace.count".to_string(), MetricValue::Gauge(self.traces.len() as f64));
 
         // Calculate spans by kind
         for kind in [
@@ -463,13 +445,8 @@ mod tests {
         let mut receiver = SpanReceiver::with_capacity(5);
 
         for i in 0..10 {
-            let span = SpanRecord::new(
-                "trace",
-                &format!("span{}", i),
-                "op",
-                i * 1000,
-                (i + 1) * 1000,
-            );
+            let span =
+                SpanRecord::new("trace", &format!("span{}", i), "op", i * 1000, (i + 1) * 1000);
             receiver.receive(span);
         }
 

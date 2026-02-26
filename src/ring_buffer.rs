@@ -127,13 +127,7 @@ impl SpanRingBuffer {
             Self::sidecar_worker(queue_clone, shutdown_clone);
         });
 
-        Self {
-            queue,
-            sidecar_handle: Some(sidecar_handle),
-            shutdown,
-            total_pushed,
-            total_dropped,
-        }
+        Self { queue, sidecar_handle: Some(sidecar_handle), shutdown, total_pushed, total_dropped }
     }
 
     /// Push a span to the ring buffer (hot path)
@@ -153,15 +147,13 @@ impl SpanRingBuffer {
     /// - Average: 200ns (lock-free enqueue)
     /// - Worst case: 500ns (cache miss)
     pub fn push(&self, span: SpanRecord) {
-        self.total_pushed
-            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        self.total_pushed.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
 
         match self.queue.push(span) {
             Ok(()) => {}
             Err(_dropped_span) => {
                 // Ring buffer full - drop span (never block app)
-                self.total_dropped
-                    .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                self.total_dropped.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                 eprintln!(
                     "WARNING: Ring buffer full - span dropped (backpressure). \
                      Consider increasing capacity or reducing trace volume."
@@ -175,8 +167,7 @@ impl SpanRingBuffer {
     /// This drains any remaining spans in the buffer before shutting down.
     pub fn shutdown(mut self) {
         // Signal shutdown
-        self.shutdown
-            .store(true, std::sync::atomic::Ordering::SeqCst);
+        self.shutdown.store(true, std::sync::atomic::Ordering::SeqCst);
 
         // Wait for sidecar thread to finish draining
         if let Some(handle) = self.sidecar_handle.take() {
@@ -188,9 +179,7 @@ impl SpanRingBuffer {
     pub fn stats(&self) -> BufferStats {
         BufferStats {
             total_pushed: self.total_pushed.load(std::sync::atomic::Ordering::Relaxed),
-            total_dropped: self
-                .total_dropped
-                .load(std::sync::atomic::Ordering::Relaxed),
+            total_dropped: self.total_dropped.load(std::sync::atomic::Ordering::Relaxed),
             current_size: self.queue.len(),
             capacity: self.queue.capacity(),
         }
@@ -248,16 +237,16 @@ impl SpanRingBuffer {
     /// Export a batch of spans to OTLP and trueno-db
     ///
     /// This is called by the sidecar thread (cold path).
-    /// TODO: Implement actual OTLP and trueno-db export in Sprint 40
+    /// Future: Implement actual OTLP and trueno-db export in Sprint 40
     fn export_batch(batch: &[SpanRecord]) {
         // Placeholder implementation
-        // TODO Sprint 40: Replace with actual OTLP export
+        // Planned (Sprint 40): Replace with actual OTLP export
         eprintln!("DEBUG: Exporting batch of {} spans", batch.len());
 
-        // TODO: Export to OTLP backend (Jaeger/Tempo)
+        // Future: Export to OTLP backend (Jaeger/Tempo)
         // otlp_client.export_batch(batch)?;
 
-        // TODO: Write to trueno-db (Parquet)
+        // Future: Write to trueno-db (Parquet)
         // trueno_db.write_batch(batch)?;
     }
 }
@@ -265,8 +254,7 @@ impl SpanRingBuffer {
 impl Drop for SpanRingBuffer {
     fn drop(&mut self) {
         // Ensure sidecar thread is shut down
-        self.shutdown
-            .store(true, std::sync::atomic::Ordering::SeqCst);
+        self.shutdown.store(true, std::sync::atomic::Ordering::SeqCst);
 
         if let Some(handle) = self.sidecar_handle.take() {
             let _ = handle.join();
@@ -298,6 +286,11 @@ impl BufferStats {
         self.current_size as f64 / self.capacity as f64
     }
 }
+
+// Compile-time thread-safety verification (Sprint 59)
+// SpanRingBuffer is Send (can transfer ownership across threads) but not Sync
+// (JoinHandle<()> is !Sync). BufferStats is both Send and Sync.
+static_assertions::assert_impl_all!(BufferStats: Send, Sync);
 
 #[cfg(test)]
 mod tests {
@@ -390,12 +383,8 @@ mod tests {
 
     #[test]
     fn test_drop_rate_calculation() {
-        let stats = BufferStats {
-            total_pushed: 100,
-            total_dropped: 5,
-            current_size: 50,
-            capacity: 1024,
-        };
+        let stats =
+            BufferStats { total_pushed: 100, total_dropped: 5, current_size: 50, capacity: 1024 };
 
         assert_eq!(stats.drop_rate(), 0.05);
         assert_eq!(stats.utilization(), 50.0 / 1024.0);

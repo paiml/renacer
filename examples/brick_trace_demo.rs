@@ -45,18 +45,9 @@ fn main() {
 
     println!("1. Testing escalation thresholds\n");
     println!("   Default thresholds: CV > 15%, efficiency < 25%");
-    println!(
-        "   Should trace (CV=20%, eff=80%): {}",
-        tracer.should_trace(20.0, 80.0)
-    );
-    println!(
-        "   Should trace (CV=5%, eff=10%): {}",
-        tracer.should_trace(5.0, 10.0)
-    );
-    println!(
-        "   Should trace (CV=5%, eff=80%): {}",
-        tracer.should_trace(5.0, 80.0)
-    );
+    println!("   Should trace (CV=20%, eff=80%): {}", tracer.should_trace(20.0, 80.0));
+    println!("   Should trace (CV=5%, eff=10%): {}", tracer.should_trace(5.0, 10.0));
+    println!("   Should trace (CV=5%, eff=80%): {}", tracer.should_trace(5.0, 80.0));
     println!();
 
     // Trace a compute-bound brick
@@ -68,10 +59,7 @@ fn main() {
     println!("   Budget: {} us", meta.budget_us);
     println!("   Efficiency: {:.2}%", meta.efficiency * 100.0);
     println!("   Over budget: {}", meta.over_budget);
-    println!(
-        "   Dominant syscall: {}",
-        result.syscall_breakdown.dominant_syscall()
-    );
+    println!("   Dominant syscall: {}", result.syscall_breakdown.dominant_syscall());
     println!();
 
     // Trace an I/O-bound brick
@@ -103,14 +91,8 @@ fn main() {
         .with_rate_limit(10); // Lower rate limit
     let tracer = BrickTracer::new_local().with_thresholds(thresholds);
     println!("   Custom: CV > 10%, efficiency < 50%");
-    println!(
-        "   Should trace (CV=12%, eff=80%): {}",
-        tracer.should_trace(12.0, 80.0)
-    );
-    println!(
-        "   Should trace (CV=5%, eff=40%): {}",
-        tracer.should_trace(5.0, 40.0)
-    );
+    println!("   Should trace (CV=12%, eff=80%): {}", tracer.should_trace(12.0, 80.0));
+    println!("   Should trace (CV=5%, eff=40%): {}", tracer.should_trace(5.0, 40.0));
     println!();
 
     // Trace with explicit reason

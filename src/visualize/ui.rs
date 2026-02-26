@@ -82,11 +82,9 @@ fn draw_top_panels(f: &mut Frame, app: &mut VisualizeApp, area: Rect) {
     let constraints: Vec<Constraint> = match panel_count {
         1 => vec![Constraint::Percentage(100)],
         2 => vec![Constraint::Percentage(50), Constraint::Percentage(50)],
-        3 => vec![
-            Constraint::Percentage(34),
-            Constraint::Percentage(33),
-            Constraint::Percentage(33),
-        ],
+        3 => {
+            vec![Constraint::Percentage(34), Constraint::Percentage(33), Constraint::Percentage(33)]
+        }
         4 => vec![
             Constraint::Percentage(25),
             Constraint::Percentage(25),
@@ -102,10 +100,8 @@ fn draw_top_panels(f: &mut Frame, app: &mut VisualizeApp, area: Rect) {
         ],
     };
 
-    let chunks = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints(constraints)
-        .split(area);
+    let chunks =
+        Layout::default().direction(Direction::Horizontal).constraints(constraints).split(area);
 
     let mut chunk_idx = 0;
 
@@ -142,14 +138,12 @@ fn draw_empty_state(f: &mut Frame, area: Rect) {
         Line::from(""),
         Line::from("Press 1-6 to toggle panels, ? for help"),
     ];
-    let paragraph = Paragraph::new(text)
-        .style(Style::default().fg(Color::DarkGray))
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_type(borders::STYLE)
-                .title(" renacer visualize "),
-        );
+    let paragraph = Paragraph::new(text).style(Style::default().fg(Color::DarkGray)).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_type(borders::STYLE)
+            .title(" renacer visualize "),
+    );
     f.render_widget(paragraph, area);
 }
 
@@ -167,10 +161,7 @@ fn draw_help_overlay(f: &mut Frame, area: Rect) {
             Style::default().add_modifier(Modifier::BOLD),
         )),
         Line::from(""),
-        Line::from(Span::styled(
-            "Navigation",
-            Style::default().add_modifier(Modifier::UNDERLINED),
-        )),
+        Line::from(Span::styled("Navigation", Style::default().add_modifier(Modifier::UNDERLINED))),
         Line::from("  j/↓     Move down"),
         Line::from("  k/↑     Move up"),
         Line::from("  g       Go to top"),
@@ -178,10 +169,7 @@ fn draw_help_overlay(f: &mut Frame, area: Rect) {
         Line::from("  PgUp    Page up"),
         Line::from("  PgDn    Page down"),
         Line::from(""),
-        Line::from(Span::styled(
-            "Panels",
-            Style::default().add_modifier(Modifier::UNDERLINED),
-        )),
+        Line::from(Span::styled("Panels", Style::default().add_modifier(Modifier::UNDERLINED))),
         Line::from("  1       Toggle Syscall Heatmap"),
         Line::from("  2       Toggle Anomaly Timeline"),
         Line::from("  3       Toggle ML Clusters"),
@@ -199,10 +187,7 @@ fn draw_help_overlay(f: &mut Frame, area: Rect) {
         Line::from("  f/      Open filter"),
         Line::from("  Del     Clear filter"),
         Line::from(""),
-        Line::from(Span::styled(
-            "General",
-            Style::default().add_modifier(Modifier::UNDERLINED),
-        )),
+        Line::from(Span::styled("General", Style::default().add_modifier(Modifier::UNDERLINED))),
         Line::from("  ?/F1    Toggle this help"),
         Line::from("  q       Quit"),
         Line::from("  Esc     Close overlay"),
@@ -232,10 +217,7 @@ fn draw_filter_input(f: &mut Frame, app: &VisualizeApp, area: Rect) {
     let filter_text = vec![
         Line::from("Filter processes:"),
         Line::from(""),
-        Line::from(Span::styled(
-            format!(">{}_", app.filter),
-            Style::default().fg(Color::Yellow),
-        )),
+        Line::from(Span::styled(format!(">{}_", app.filter), Style::default().fg(Color::Yellow))),
         Line::from(""),
         Line::from(Span::styled(
             "Enter to confirm, Esc to cancel",
@@ -243,15 +225,13 @@ fn draw_filter_input(f: &mut Frame, app: &VisualizeApp, area: Rect) {
         )),
     ];
 
-    let filter = Paragraph::new(filter_text)
-        .style(Style::default().fg(Color::White))
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_type(borders::STYLE)
-                .border_style(Style::default().fg(Color::Yellow))
-                .title(" Filter "),
-        );
+    let filter = Paragraph::new(filter_text).style(Style::default().fg(Color::White)).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_type(borders::STYLE)
+            .border_style(Style::default().fg(Color::Yellow))
+            .title(" Filter "),
+    );
 
     f.render_widget(filter, popup_area);
 }
@@ -283,21 +263,12 @@ fn draw_trace_complete_overlay(f: &mut Frame, area: Rect) {
     let text = " TRACE COMPLETE - Press 'q' to exit ";
     let text_len = text.len() as u16;
 
-    let banner = Paragraph::new(text).style(
-        Style::default()
-            .fg(Color::Black)
-            .bg(Color::Green)
-            .add_modifier(Modifier::BOLD),
-    );
+    let banner = Paragraph::new(text)
+        .style(Style::default().fg(Color::Black).bg(Color::Green).add_modifier(Modifier::BOLD));
 
     // Center at bottom of screen
     let x = area.width.saturating_sub(text_len) / 2;
-    let banner_area = Rect {
-        x,
-        y: area.height.saturating_sub(1),
-        width: text_len,
-        height: 1,
-    };
+    let banner_area = Rect { x, y: area.height.saturating_sub(1), width: text_len, height: 1 };
 
     f.render_widget(banner, banner_area);
 }
@@ -513,10 +484,7 @@ mod tests {
     fn test_draw_with_fps_visible() {
         let backend = TestBackend::new(80, 24);
         let mut terminal = Terminal::new(backend).unwrap();
-        let mut app = VisualizeApp::new(VisualizeConfig {
-            show_fps: true,
-            ..Default::default()
-        });
+        let mut app = VisualizeApp::new(VisualizeConfig { show_fps: true, ..Default::default() });
 
         terminal
             .draw(|f| {

@@ -15,10 +15,8 @@ use ratatui::{
 /// Draw the anomaly timeline panel
 pub fn draw(f: &mut Frame, app: &VisualizeApp, area: Rect) {
     // Build header with stats
-    let header = format!(
-        " Anomalies {} │ threshold: {}σ ",
-        app.anomaly_count, app.config.anomaly_threshold
-    );
+    let header =
+        format!(" Anomalies {} │ threshold: {}σ ", app.anomaly_count, app.config.anomaly_threshold);
 
     let block = Block::default()
         .borders(Borders::ALL)
@@ -26,9 +24,7 @@ pub fn draw(f: &mut Frame, app: &VisualizeApp, area: Rect) {
         .border_style(Style::default().fg(borders::ANOMALY_TIMELINE))
         .title(Span::styled(
             header,
-            Style::default()
-                .fg(borders::ANOMALY_TIMELINE)
-                .add_modifier(Modifier::BOLD),
+            Style::default().fg(borders::ANOMALY_TIMELINE).add_modifier(Modifier::BOLD),
         ));
 
     let inner = block.inner(area);
@@ -236,13 +232,7 @@ mod tests {
         let mut app = VisualizeApp::new(VisualizeConfig::default());
 
         // Add anomaly with source file but no line
-        app.record_anomaly(
-            "mmap".to_string(),
-            50000,
-            6.0,
-            Some("main.rs".to_string()),
-            None,
-        );
+        app.record_anomaly("mmap".to_string(), 50000, 6.0, Some("main.rs".to_string()), None);
 
         terminal
             .draw(|f| {

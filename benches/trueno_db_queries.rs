@@ -66,9 +66,7 @@ fn bench_query_by_trace_id(c: &mut Criterion) {
                     setup_storage(num_spans, StorageConfig::default());
 
                 b.iter(|| {
-                    let results = storage
-                        .query_by_trace_id(black_box(&trace_id))
-                        .expect("test");
+                    let results = storage.query_by_trace_id(black_box(&trace_id)).expect("test");
                     black_box(results);
                 });
             },
@@ -150,10 +148,7 @@ fn bench_predicate_pushdown_comparison(c: &mut Criterion) {
 
     // Benchmark WITH predicate pushdown (default)
     group.bench_function("with_pushdown", |b| {
-        let config = StorageConfig {
-            predicate_pushdown: true,
-            ..Default::default()
-        };
+        let config = StorageConfig { predicate_pushdown: true, ..Default::default() };
         let (_tmp_dir, storage, trace_id) = setup_storage(num_spans, config);
 
         b.iter(|| {
@@ -166,10 +161,7 @@ fn bench_predicate_pushdown_comparison(c: &mut Criterion) {
 
     // Benchmark WITHOUT predicate pushdown
     group.bench_function("without_pushdown", |b| {
-        let config = StorageConfig {
-            predicate_pushdown: false,
-            ..Default::default()
-        };
+        let config = StorageConfig { predicate_pushdown: false, ..Default::default() };
         let (_tmp_dir, storage, trace_id) = setup_storage(num_spans, config);
 
         b.iter(|| {
@@ -190,32 +182,22 @@ fn bench_bloom_filter_comparison(c: &mut Criterion) {
 
     // Benchmark WITH Bloom filter (default)
     group.bench_function("with_bloom_filter", |b| {
-        let config = StorageConfig {
-            bloom_filter_trace_id: true,
-            ..Default::default()
-        };
+        let config = StorageConfig { bloom_filter_trace_id: true, ..Default::default() };
         let (_tmp_dir, storage, trace_id) = setup_storage(num_spans, config);
 
         b.iter(|| {
-            let results = storage
-                .query_by_trace_id(black_box(&trace_id))
-                .expect("test");
+            let results = storage.query_by_trace_id(black_box(&trace_id)).expect("test");
             black_box(results);
         });
     });
 
     // Benchmark WITHOUT Bloom filter
     group.bench_function("without_bloom_filter", |b| {
-        let config = StorageConfig {
-            bloom_filter_trace_id: false,
-            ..Default::default()
-        };
+        let config = StorageConfig { bloom_filter_trace_id: false, ..Default::default() };
         let (_tmp_dir, storage, trace_id) = setup_storage(num_spans, config);
 
         b.iter(|| {
-            let results = storage
-                .query_by_trace_id(black_box(&trace_id))
-                .expect("test");
+            let results = storage.query_by_trace_id(black_box(&trace_id)).expect("test");
             black_box(results);
         });
     });
@@ -230,48 +212,33 @@ fn bench_row_group_size_comparison(c: &mut Criterion) {
 
     // Small row groups (1K)
     group.bench_function("row_group_1K", |b| {
-        let config = StorageConfig {
-            row_group_size: 1_000,
-            ..Default::default()
-        };
+        let config = StorageConfig { row_group_size: 1_000, ..Default::default() };
         let (_tmp_dir, storage, trace_id) = setup_storage(num_spans, config);
 
         b.iter(|| {
-            let results = storage
-                .query_by_trace_id(black_box(&trace_id))
-                .expect("test");
+            let results = storage.query_by_trace_id(black_box(&trace_id)).expect("test");
             black_box(results);
         });
     });
 
     // Medium row groups (10K - default)
     group.bench_function("row_group_10K", |b| {
-        let config = StorageConfig {
-            row_group_size: 10_000,
-            ..Default::default()
-        };
+        let config = StorageConfig { row_group_size: 10_000, ..Default::default() };
         let (_tmp_dir, storage, trace_id) = setup_storage(num_spans, config);
 
         b.iter(|| {
-            let results = storage
-                .query_by_trace_id(black_box(&trace_id))
-                .expect("test");
+            let results = storage.query_by_trace_id(black_box(&trace_id)).expect("test");
             black_box(results);
         });
     });
 
     // Large row groups (100K)
     group.bench_function("row_group_100K", |b| {
-        let config = StorageConfig {
-            row_group_size: 100_000,
-            ..Default::default()
-        };
+        let config = StorageConfig { row_group_size: 100_000, ..Default::default() };
         let (_tmp_dir, storage, trace_id) = setup_storage(num_spans, config);
 
         b.iter(|| {
-            let results = storage
-                .query_by_trace_id(black_box(&trace_id))
-                .expect("test");
+            let results = storage.query_by_trace_id(black_box(&trace_id)).expect("test");
             black_box(results);
         });
     });
@@ -286,10 +253,7 @@ fn bench_composite_index_comparison(c: &mut Criterion) {
 
     // Benchmark WITH composite index (default)
     group.bench_function("with_composite_index", |b| {
-        let config = StorageConfig {
-            composite_index_trace_time: true,
-            ..Default::default()
-        };
+        let config = StorageConfig { composite_index_trace_time: true, ..Default::default() };
         let (_tmp_dir, storage, trace_id) = setup_storage(num_spans, config);
 
         let start_time = (num_spans as u64 * 1_000_000 * 40) / 100;
@@ -309,10 +273,7 @@ fn bench_composite_index_comparison(c: &mut Criterion) {
 
     // Benchmark WITHOUT composite index
     group.bench_function("without_composite_index", |b| {
-        let config = StorageConfig {
-            composite_index_trace_time: false,
-            ..Default::default()
-        };
+        let config = StorageConfig { composite_index_trace_time: false, ..Default::default() };
         let (_tmp_dir, storage, trace_id) = setup_storage(num_spans, config);
 
         let start_time = (num_spans as u64 * 1_000_000 * 40) / 100;

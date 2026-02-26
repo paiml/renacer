@@ -227,11 +227,7 @@ mod tests {
         // Property: syscall_name should never panic for any i64
         for num in [-1000, -1, 0, 1, 100, 500, 1000, 9999, i64::MAX] {
             let name = syscall_name(num);
-            assert!(
-                !name.is_empty(),
-                "Syscall name should never be empty for {}",
-                num
-            );
+            assert!(!name.is_empty(), "Syscall name should never be empty for {}", num);
         }
     }
 

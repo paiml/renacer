@@ -164,11 +164,7 @@ impl JsonOutput {
             version: env!("CARGO_PKG_VERSION").to_string(),
             format: "renacer-json-v1".to_string(),
             syscalls: Vec::new(),
-            summary: JsonSummary {
-                total_syscalls: 0,
-                total_time_us: None,
-                exit_code: 0,
-            },
+            summary: JsonSummary { total_syscalls: 0, total_time_us: None, exit_code: 0 },
             ml_analysis: None,
             isolation_forest_analysis: None,
             autoencoder_analysis: None,
@@ -440,9 +436,8 @@ mod tests {
 
         output.set_isolation_forest_analysis(report, false);
 
-        let analysis = output
-            .isolation_forest_analysis
-            .expect("Isolation forest analysis should be set");
+        let analysis =
+            output.isolation_forest_analysis.expect("Isolation forest analysis should be set");
         assert_eq!(analysis.num_trees, 100);
         assert!((analysis.contamination - 0.05).abs() < f32::EPSILON);
         assert_eq!(analysis.total_samples, 500);
@@ -502,9 +497,7 @@ mod tests {
 
         output.set_autoencoder_analysis(report, 2.0, false);
 
-        let analysis = output
-            .autoencoder_analysis
-            .expect("Autoencoder analysis should be set");
+        let analysis = output.autoencoder_analysis.expect("Autoencoder analysis should be set");
         assert_eq!(analysis.hidden_size, 32);
         assert_eq!(analysis.epochs, 100);
         assert!((analysis.threshold - 2.0).abs() < f32::EPSILON);
@@ -538,10 +531,7 @@ mod tests {
 
         let analysis = output.autoencoder_analysis.expect("Analysis set");
         let anomaly = &analysis.anomalies[0];
-        let contributions = anomaly
-            .feature_contributions
-            .as_ref()
-            .expect("Features set");
+        let contributions = anomaly.feature_contributions.as_ref().expect("Features set");
         assert_eq!(contributions.len(), 2);
         assert_eq!(contributions[0].feature, "latency");
     }
@@ -551,11 +541,7 @@ mod tests {
         let mut output = JsonOutput::new();
         output.add_syscall(JsonSyscall {
             name: "openat".to_string(),
-            args: vec![
-                "0xffffff9c".to_string(),
-                "\"/tmp/test\"".to_string(),
-                "0x2".to_string(),
-            ],
+            args: vec!["0xffffff9c".to_string(), "\"/tmp/test\"".to_string(), "0x2".to_string()],
             result: 3,
             duration_us: None,
             source: Some(JsonSourceLocation {
@@ -591,11 +577,7 @@ mod tests {
 
     #[test]
     fn test_source_location_without_function() {
-        let loc = JsonSourceLocation {
-            file: "test.rs".to_string(),
-            line: 10,
-            function: None,
-        };
+        let loc = JsonSourceLocation { file: "test.rs".to_string(), line: 10, function: None };
         let json = serde_json::to_string(&loc).expect("test");
         // Compact format doesn't have spaces after colons
         assert!(json.contains("\"file\":\"test.rs\"") || json.contains("\"file\": \"test.rs\""));

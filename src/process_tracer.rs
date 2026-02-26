@@ -201,8 +201,18 @@ pub enum TracerError {
     NotAttached,
 }
 
-// Ensure TracerError is Send + Sync for async usage
+// Compile-time thread-safety verification (Sprint 59)
+// Ensures all public types can be safely shared across thread boundaries.
+// Required for concurrent trace collection and async OTLP export.
 static_assertions::assert_impl_all!(TracerError: Send, Sync);
+static_assertions::assert_impl_all!(ProcessTraceConfig: Send, Sync);
+static_assertions::assert_impl_all!(SyscallEvent: Send, Sync);
+static_assertions::assert_impl_all!(SyscallBreakdown: Send, Sync);
+static_assertions::assert_impl_all!(SyscallAnomaly: Send, Sync);
+static_assertions::assert_impl_all!(SourceLocation: Send, Sync);
+static_assertions::assert_impl_all!(OtlpAttribute: Send, Sync);
+static_assertions::assert_impl_all!(OtlpSpan: Send, Sync);
+static_assertions::assert_impl_all!(TraceResult: Send, Sync);
 
 /// Syscall event captured during tracing
 ///
@@ -224,13 +234,7 @@ pub struct SyscallEvent {
 impl SyscallEvent {
     /// Create a new syscall event
     pub fn new(syscall: String, syscall_nr: i64, duration: Duration, result: i64) -> Self {
-        Self {
-            syscall,
-            syscall_nr,
-            duration,
-            result,
-            timestamp: Instant::now(),
-        }
+        Self { syscall, syscall_nr, duration, result, timestamp: Instant::now() }
     }
 }
 
@@ -267,10 +271,7 @@ pub struct SyscallBreakdown {
 impl SyscallBreakdown {
     /// Create breakdown from syscall events
     pub fn from_events(events: &[SyscallEvent], total_duration_us: u64) -> Self {
-        let mut breakdown = Self {
-            total_us: total_duration_us,
-            ..Default::default()
-        };
+        let mut breakdown = Self { total_us: total_duration_us, ..Default::default() };
         let mut syscall_time_us: u64 = 0;
 
         for event in events {
@@ -278,10 +279,7 @@ impl SyscallBreakdown {
             syscall_time_us += duration_us;
             breakdown.syscall_count += 1;
 
-            *breakdown
-                .syscall_counts
-                .entry(event.syscall.clone())
-                .or_insert(0) += 1;
+            *breakdown.syscall_counts.entry(event.syscall.clone()).or_insert(0) += 1;
 
             match event.syscall.as_str() {
                 "mmap" | "munmap" | "mprotect" | "brk" | "mremap" => {
@@ -381,11 +379,7 @@ impl SyscallBaseline {
             }
         }
 
-        Self {
-            mean_us,
-            std_us,
-            sample_count: events.len() as u64,
-        }
+        Self { mean_us, std_us, sample_count: events.len() as u64 }
     }
 
     /// Check if baseline has data for a category
@@ -531,10 +525,8 @@ impl TraceResult {
         use std::time::{SystemTime, UNIX_EPOCH};
 
         // Generate trace/span IDs from timestamp + pid
-        let now = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_nanos() as u64;
+        let now =
+            SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_nanos() as u64;
 
         let mut trace_id = [0u8; 16];
         trace_id[0..8].copy_from_slice(&now.to_be_bytes());
@@ -587,12 +579,7 @@ impl TraceResult {
             },
         ];
 
-        OtlpSpan {
-            name: format!("process.trace.{}", self.pid),
-            trace_id,
-            span_id,
-            attributes,
-        }
+        OtlpSpan { name: format!("process.trace.{}", self.pid), trace_id, span_id, attributes }
     }
 }
 
@@ -606,8 +593,7 @@ pub struct ProcessTrace {
     /// Trace configuration
     config: ProcessTraceConfig,
     /// Start time of trace session (reserved for session duration tracking)
-    #[allow(dead_code)]
-    start_time: Instant,
+    _start_time: Instant,
     /// Collected syscall events
     events: Vec<SyscallEvent>,
     /// Baseline for z-score calculation
@@ -615,11 +601,9 @@ pub struct ProcessTrace {
     /// Whether currently attached
     attached: bool,
     /// Rate limiter state (reserved for per-trace rate limiting)
-    #[allow(dead_code)]
-    trace_count: Arc<AtomicU64>,
+    _trace_count: Arc<AtomicU64>,
     /// Last rate limit check time (reserved for per-trace rate limiting)
-    #[allow(dead_code)]
-    rate_limit_window: Instant,
+    _rate_limit_window: Instant,
 }
 
 impl ProcessTrace {
@@ -673,10 +657,7 @@ fn check_rate_limit(config: &ProcessTraceConfig) -> Result<(), TracerError> {
     } else {
         let count = GLOBAL_TRACE_COUNT.fetch_add(1, Ordering::Relaxed) + 1;
         if count > config.rate_limit as u64 {
-            Err(TracerError::RateLimitExceeded {
-                current: count as u32,
-                limit: config.rate_limit,
-            })
+            Err(TracerError::RateLimitExceeded { current: count as u32, limit: config.rate_limit })
         } else {
             Ok(())
         }
@@ -789,34 +770,33 @@ pub fn compute_baseline(events: &[SyscallEvent]) -> SyscallBaseline {
 // ============================================================================
 
 /// Check if process tracing is available on this system
+/// Check if the current process has CAP_SYS_PTRACE capability
+fn has_ptrace_capability() -> bool {
+    let Ok(status) = std::fs::read_to_string("/proc/self/status") else {
+        return false;
+    };
+    let Some(cap_line) = status.lines().find(|l| l.starts_with("CapEff:")) else {
+        return false;
+    };
+    let Some(hex) = cap_line.split_whitespace().nth(1) else {
+        return false;
+    };
+    let Ok(caps) = u64::from_str_radix(hex, 16) else {
+        return false;
+    };
+    // CAP_SYS_PTRACE = bit 19
+    (caps & (1 << 19)) != 0
+}
+
+/// Check if ptrace_scope allows unrestricted tracing
+fn ptrace_scope_allows_tracing() -> bool {
+    std::fs::read_to_string("/proc/sys/kernel/yama/ptrace_scope")
+        .map(|scope| scope.trim() == "0")
+        .unwrap_or(false)
+}
+
 pub fn is_available() -> bool {
-    // Check 1: Running as root
-    if nix::unistd::geteuid().is_root() {
-        return true;
-    }
-
-    // Check 2: Has CAP_SYS_PTRACE
-    if let Ok(status) = std::fs::read_to_string("/proc/self/status") {
-        if let Some(cap_line) = status.lines().find(|l| l.starts_with("CapEff:")) {
-            if let Some(hex) = cap_line.split_whitespace().nth(1) {
-                if let Ok(caps) = u64::from_str_radix(hex, 16) {
-                    // CAP_SYS_PTRACE = bit 19
-                    if (caps & (1 << 19)) != 0 {
-                        return true;
-                    }
-                }
-            }
-        }
-    }
-
-    // Check 3: ptrace_scope allows tracing
-    if let Ok(scope) = std::fs::read_to_string("/proc/sys/kernel/yama/ptrace_scope") {
-        if scope.trim() == "0" {
-            return true;
-        }
-    }
-
-    false
+    nix::unistd::geteuid().is_root() || has_ptrace_capability() || ptrace_scope_allows_tracing()
 }
 
 /// Check if we can trace a specific PID
@@ -911,12 +891,12 @@ pub fn attach(pid: u32, config: ProcessTraceConfig) -> Result<ProcessTrace, Trac
     Ok(ProcessTrace {
         pid,
         config,
-        start_time: Instant::now(),
+        _start_time: Instant::now(),
         events: Vec::new(),
         baseline: None,
         attached: true,
-        trace_count: Arc::new(AtomicU64::new(0)),
-        rate_limit_window: Instant::now(),
+        _trace_count: Arc::new(AtomicU64::new(0)),
+        _rate_limit_window: Instant::now(),
     })
 }
 
@@ -944,6 +924,87 @@ pub fn detach(mut trace: ProcessTrace) -> Result<(), TracerError> {
     Ok(())
 }
 
+/// Tracks syscall entry/exit state during collection
+struct SyscallCollector {
+    events: Vec<SyscallEvent>,
+    in_syscall: bool,
+    syscall_start: Instant,
+    current_syscall_nr: i64,
+}
+
+impl SyscallCollector {
+    fn new() -> Self {
+        Self {
+            events: Vec::new(),
+            in_syscall: false,
+            syscall_start: Instant::now(),
+            current_syscall_nr: 0,
+        }
+    }
+
+    /// Handle a ptrace syscall stop (entry or exit)
+    fn handle_syscall_stop(&mut self, nix_pid: Pid) -> Result<(), TracerError> {
+        if self.in_syscall {
+            let duration = self.syscall_start.elapsed();
+            let regs = ptrace::getregs(nix_pid)?;
+            let result = regs.rax as i64;
+
+            self.events.push(SyscallEvent {
+                syscall: syscall_name(self.current_syscall_nr).to_string(),
+                syscall_nr: self.current_syscall_nr,
+                duration,
+                result,
+                timestamp: self.syscall_start,
+            });
+            self.in_syscall = false;
+        } else {
+            let regs = ptrace::getregs(nix_pid)?;
+            self.current_syscall_nr = regs.orig_rax as i64;
+            self.syscall_start = Instant::now();
+            self.in_syscall = true;
+        }
+        Ok(())
+    }
+}
+
+/// Process a single waitpid result, returning true if the collection loop should break
+fn handle_wait_status(
+    status: Result<WaitStatus, nix::Error>,
+    nix_pid: Pid,
+    collector: &mut SyscallCollector,
+    pid: u32,
+    attached: &mut bool,
+) -> Result<bool, TracerError> {
+    match status {
+        Ok(WaitStatus::PtraceSyscall(_)) => {
+            collector.handle_syscall_stop(nix_pid)?;
+            ptrace::syscall(nix_pid, None)?;
+            Ok(false)
+        }
+        Ok(WaitStatus::Exited(_, _) | WaitStatus::Signaled(_, _, _)) => {
+            *attached = false;
+            Err(TracerError::ProcessExited { pid })
+        }
+        Ok(WaitStatus::Stopped(_, sig)) => {
+            ptrace::syscall(nix_pid, Some(sig))?;
+            Ok(false)
+        }
+        Ok(WaitStatus::StillAlive) => {
+            std::thread::sleep(Duration::from_micros(100));
+            Ok(false)
+        }
+        Ok(_) => {
+            ptrace::syscall(nix_pid, None)?;
+            Ok(false)
+        }
+        Err(nix::Error::ECHILD) => {
+            *attached = false;
+            Err(TracerError::ProcessExited { pid })
+        }
+        Err(e) => Err(TracerError::PtraceError(e)),
+    }
+}
+
 /// Collect syscall events from an attached process
 ///
 /// # PMAT-057-007
@@ -963,82 +1024,24 @@ pub fn collect(trace: &mut ProcessTrace) -> Result<TraceResult, TracerError> {
     let timeout = trace.config.timeout;
     let max_syscalls = trace.config.max_syscalls;
 
-    let mut events = Vec::new();
-    let mut in_syscall = false;
-    let mut syscall_start = Instant::now();
-    let mut current_syscall_nr: i64 = 0;
+    let mut collector = SyscallCollector::new();
 
     // Continue process
     ptrace::syscall(nix_pid, None)?;
 
     loop {
-        // Check timeout
-        if start.elapsed() > timeout {
+        if start.elapsed() > timeout || collector.events.len() >= max_syscalls {
             break;
         }
 
-        // Check max syscalls
-        if events.len() >= max_syscalls {
+        let status = waitpid(nix_pid, Some(WaitPidFlag::WNOHANG));
+        if handle_wait_status(status, nix_pid, &mut collector, trace.pid, &mut trace.attached)? {
             break;
-        }
-
-        // Wait for syscall event
-        match waitpid(nix_pid, Some(WaitPidFlag::WNOHANG)) {
-            Ok(WaitStatus::PtraceSyscall(_)) => {
-                if in_syscall {
-                    // Syscall exit
-                    let duration = syscall_start.elapsed();
-                    let regs = ptrace::getregs(nix_pid)?;
-                    let result = regs.rax as i64;
-
-                    events.push(SyscallEvent {
-                        syscall: syscall_name(current_syscall_nr).to_string(),
-                        syscall_nr: current_syscall_nr,
-                        duration,
-                        result,
-                        timestamp: syscall_start,
-                    });
-
-                    in_syscall = false;
-                } else {
-                    // Syscall entry
-                    let regs = ptrace::getregs(nix_pid)?;
-                    current_syscall_nr = regs.orig_rax as i64;
-                    syscall_start = Instant::now();
-                    in_syscall = true;
-                }
-
-                // Continue to next syscall
-                ptrace::syscall(nix_pid, None)?;
-            }
-            Ok(WaitStatus::Exited(_, _) | WaitStatus::Signaled(_, _, _)) => {
-                trace.attached = false;
-                return Err(TracerError::ProcessExited { pid: trace.pid });
-            }
-            Ok(WaitStatus::Stopped(_, sig)) => {
-                // Process received a signal, forward it
-                ptrace::syscall(nix_pid, Some(sig))?;
-            }
-            Ok(WaitStatus::StillAlive) => {
-                // No event yet, brief sleep
-                std::thread::sleep(Duration::from_micros(100));
-            }
-            Ok(_) => {
-                // Continue
-                ptrace::syscall(nix_pid, None)?;
-            }
-            Err(nix::Error::ECHILD) => {
-                trace.attached = false;
-                return Err(TracerError::ProcessExited { pid: trace.pid });
-            }
-            Err(e) => {
-                return Err(TracerError::PtraceError(e));
-            }
         }
     }
 
     let duration = start.elapsed();
-    let mut result = TraceResult::new(trace.pid, duration, events);
+    let mut result = TraceResult::new(trace.pid, duration, collector.events);
 
     // Compute anomalies if baseline available
     if let Some(baseline) = &trace.baseline {
@@ -1192,10 +1195,7 @@ mod tests {
         let result = attach(child_pid, config);
 
         // Clean up
-        std::process::Command::new("kill")
-            .args(["-9", &child_pid.to_string()])
-            .output()
-            .ok();
+        std::process::Command::new("kill").args(["-9", &child_pid.to_string()]).output().ok();
 
         // If we got permission denied, that's expected in some environments
         match result {
@@ -1264,12 +1264,12 @@ mod tests {
         let trace = ProcessTrace {
             pid: 12345,
             config: ProcessTraceConfig::default(),
-            start_time: Instant::now(),
+            _start_time: Instant::now(),
             events: Vec::new(),
             baseline: None,
             attached: false, // Already detached
-            trace_count: Arc::new(AtomicU64::new(0)),
-            rate_limit_window: Instant::now(),
+            _trace_count: Arc::new(AtomicU64::new(0)),
+            _rate_limit_window: Instant::now(),
         };
 
         let result = detach(trace);
@@ -1389,12 +1389,12 @@ mod tests {
         let mut trace = ProcessTrace {
             pid: 12345,
             config: ProcessTraceConfig::default(),
-            start_time: Instant::now(),
+            _start_time: Instant::now(),
             events: Vec::new(),
             baseline: None,
             attached: true,
-            trace_count: Arc::new(AtomicU64::new(0)),
-            rate_limit_window: Instant::now(),
+            _trace_count: Arc::new(AtomicU64::new(0)),
+            _rate_limit_window: Instant::now(),
         };
 
         trace.attached = false;
@@ -1440,23 +1440,14 @@ mod tests {
             + breakdown.write_us
             + breakdown.other_us;
 
-        assert_eq!(
-            syscall_sum + breakdown.compute_us,
-            total_us,
-            "Breakdown should sum to total"
-        );
+        assert_eq!(syscall_sum + breakdown.compute_us, total_us, "Breakdown should sum to total");
     }
 
     /// F017: TraceResult has valid zscore
     /// Falsification: max_zscore is NaN or infinite
     #[test]
     fn test_f017_result_zscore() {
-        let events = vec![SyscallEvent::new(
-            "read".to_string(),
-            0,
-            Duration::from_micros(100),
-            0,
-        )];
+        let events = vec![SyscallEvent::new("read".to_string(), 0, Duration::from_micros(100), 0)];
         let result = TraceResult::new(1234, Duration::from_millis(10), events);
 
         assert!(!result.max_zscore.is_nan());
@@ -1482,12 +1473,7 @@ mod tests {
     /// Tested via TraceResult creation (span export is separate)
     #[test]
     fn test_f019_otlp_span() {
-        let events = vec![SyscallEvent::new(
-            "read".to_string(),
-            0,
-            Duration::from_micros(100),
-            0,
-        )];
+        let events = vec![SyscallEvent::new("read".to_string(), 0, Duration::from_micros(100), 0)];
         let result = TraceResult::new(1234, Duration::from_millis(10), events);
 
         // TraceResult can be created without panic
@@ -1540,10 +1526,7 @@ mod tests {
         assert_eq!(config.max_syscalls, 500);
         assert_eq!(config.timeout, Duration::from_millis(200));
         assert!(config.enable_source);
-        assert_eq!(
-            config.otlp_endpoint,
-            Some("http://localhost:4317".to_string())
-        );
+        assert_eq!(config.otlp_endpoint, Some("http://localhost:4317".to_string()));
         assert_eq!(config.rate_limit, 50);
     }
 
@@ -1684,12 +1667,8 @@ mod tests {
 
     #[test]
     fn test_trace_result_new() {
-        let events = vec![SyscallEvent::new(
-            "read".to_string(),
-            0,
-            Duration::from_micros(100),
-            1024,
-        )];
+        let events =
+            vec![SyscallEvent::new("read".to_string(), 0, Duration::from_micros(100), 1024)];
         let result = TraceResult::new(12345, Duration::from_millis(10), events);
 
         assert_eq!(result.pid, 12345);
@@ -1739,17 +1718,12 @@ mod tests {
         let trace = ProcessTrace {
             pid: 9999,
             config: ProcessTraceConfig::default(),
-            start_time: Instant::now(),
-            events: vec![SyscallEvent::new(
-                "read".to_string(),
-                0,
-                Duration::from_micros(100),
-                0,
-            )],
+            _start_time: Instant::now(),
+            events: vec![SyscallEvent::new("read".to_string(), 0, Duration::from_micros(100), 0)],
             baseline: None,
             attached: true,
-            trace_count: Arc::new(AtomicU64::new(0)),
-            rate_limit_window: Instant::now(),
+            _trace_count: Arc::new(AtomicU64::new(0)),
+            _rate_limit_window: Instant::now(),
         };
 
         assert_eq!(trace.pid(), 9999);
@@ -1763,12 +1737,12 @@ mod tests {
         let mut trace = ProcessTrace {
             pid: 9999,
             config: ProcessTraceConfig::default(),
-            start_time: Instant::now(),
+            _start_time: Instant::now(),
             events: Vec::new(),
             baseline: None,
             attached: true,
-            trace_count: Arc::new(AtomicU64::new(0)),
-            rate_limit_window: Instant::now(),
+            _trace_count: Arc::new(AtomicU64::new(0)),
+            _rate_limit_window: Instant::now(),
         };
 
         let mut baseline = SyscallBaseline::default();
@@ -1891,12 +1865,7 @@ mod tests {
 
     #[test]
     fn test_trace_result_with_baseline_no_anomalies() {
-        let events = vec![SyscallEvent::new(
-            "read".to_string(),
-            0,
-            Duration::from_micros(100),
-            0,
-        )];
+        let events = vec![SyscallEvent::new("read".to_string(), 0, Duration::from_micros(100), 0)];
 
         let mut baseline = SyscallBaseline::default();
         baseline.mean_us.insert("read".to_string(), 100.0);
@@ -1919,10 +1888,7 @@ mod tests {
             TracerError::AlreadyTraced { pid: 1234 },
             TracerError::ProcessExited { pid: 1234 },
             TracerError::Timeout(Duration::from_secs(1)),
-            TracerError::RateLimitExceeded {
-                current: 200,
-                limit: 100,
-            },
+            TracerError::RateLimitExceeded { current: 200, limit: 100 },
             TracerError::OtlpError("test".to_string()),
             TracerError::DwarfError("test".to_string()),
             TracerError::NotAttached,

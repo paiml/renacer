@@ -48,21 +48,13 @@ fn test_god_process_detection() {
     let anti_patterns = detect_anti_patterns(&graph).expect("test");
 
     // Should detect God Process
-    assert!(
-        !anti_patterns.is_empty(),
-        "Expected God Process anti-pattern"
-    );
+    assert!(!anti_patterns.is_empty(), "Expected God Process anti-pattern");
 
-    let god_process = anti_patterns
-        .iter()
-        .find(|ap| matches!(ap, AntiPattern::GodProcess { .. }));
+    let god_process = anti_patterns.iter().find(|ap| matches!(ap, AntiPattern::GodProcess { .. }));
     assert!(god_process.is_some(), "Expected God Process anti-pattern");
 
     if let Some(AntiPattern::GodProcess {
-        process_id,
-        critical_path_percentage,
-        severity,
-        ..
+        process_id, critical_path_percentage, severity, ..
     }) = god_process
     {
         assert_eq!(*process_id, 100);
@@ -87,9 +79,7 @@ fn test_no_god_process_balanced() {
     let anti_patterns = detect_anti_patterns(&graph).expect("test");
 
     // Should NOT detect God Process
-    let god_process = anti_patterns
-        .iter()
-        .find(|ap| matches!(ap, AntiPattern::GodProcess { .. }));
+    let god_process = anti_patterns.iter().find(|ap| matches!(ap, AntiPattern::GodProcess { .. }));
     assert!(god_process.is_none(), "Should not detect God Process");
 }
 
@@ -113,17 +103,11 @@ fn test_tight_loop_detection() {
     let anti_patterns = detect_anti_patterns(&graph).expect("test");
 
     // Should detect Tight Loop
-    let tight_loop = anti_patterns
-        .iter()
-        .find(|ap| matches!(ap, AntiPattern::TightLoop { .. }));
+    let tight_loop = anti_patterns.iter().find(|ap| matches!(ap, AntiPattern::TightLoop { .. }));
     assert!(tight_loop.is_some(), "Expected Tight Loop anti-pattern");
 
-    if let Some(AntiPattern::TightLoop {
-        syscall_name,
-        repetition_count,
-        severity,
-        ..
-    }) = tight_loop
+    if let Some(AntiPattern::TightLoop { syscall_name, repetition_count, severity, .. }) =
+        tight_loop
     {
         assert_eq!(syscall_name, "read");
         assert!(*repetition_count >= 10_000);
@@ -153,9 +137,7 @@ fn test_no_tight_loop_varied_calls() {
     let anti_patterns = detect_anti_patterns(&graph).expect("test");
 
     // Should NOT detect Tight Loop (max 100 consecutive "read" calls)
-    let tight_loop = anti_patterns
-        .iter()
-        .find(|ap| matches!(ap, AntiPattern::TightLoop { .. }));
+    let tight_loop = anti_patterns.iter().find(|ap| matches!(ap, AntiPattern::TightLoop { .. }));
     assert!(tight_loop.is_none(), "Should not detect Tight Loop");
 }
 
@@ -169,10 +151,7 @@ fn test_pcie_bottleneck_detection() {
     attributes.insert("gpu.kernel_name".to_string(), "matmul_kernel".to_string());
 
     let mut transfer_attrs = HashMap::new();
-    transfer_attrs.insert(
-        "gpu.transfer_type".to_string(),
-        "host_to_device".to_string(),
-    );
+    transfer_attrs.insert("gpu.transfer_type".to_string(), "host_to_device".to_string());
 
     let spans = vec![
         SpanRecord::new(
@@ -213,17 +192,10 @@ fn test_pcie_bottleneck_detection() {
     let anti_patterns = detect_anti_patterns(&graph).expect("test");
 
     // Should detect PCIe Bottleneck
-    let pcie = anti_patterns
-        .iter()
-        .find(|ap| matches!(ap, AntiPattern::PcieBottleneck { .. }));
+    let pcie = anti_patterns.iter().find(|ap| matches!(ap, AntiPattern::PcieBottleneck { .. }));
     assert!(pcie.is_some(), "Expected PCIe Bottleneck anti-pattern");
 
-    if let Some(AntiPattern::PcieBottleneck {
-        transfer_percentage,
-        severity,
-        ..
-    }) = pcie
-    {
+    if let Some(AntiPattern::PcieBottleneck { transfer_percentage, severity, .. }) = pcie {
         assert!(*transfer_percentage > 50.0);
         assert!(matches!(severity, Severity::High | Severity::Critical));
     }
@@ -239,10 +211,7 @@ fn test_no_pcie_bottleneck_compute_bound() {
     attributes.insert("gpu.kernel_name".to_string(), "matmul_kernel".to_string());
 
     let mut transfer_attrs = HashMap::new();
-    transfer_attrs.insert(
-        "gpu.transfer_type".to_string(),
-        "host_to_device".to_string(),
-    );
+    transfer_attrs.insert("gpu.transfer_type".to_string(), "host_to_device".to_string());
 
     let spans = vec![
         SpanRecord::new(
@@ -283,9 +252,7 @@ fn test_no_pcie_bottleneck_compute_bound() {
     let anti_patterns = detect_anti_patterns(&graph).expect("test");
 
     // Should NOT detect PCIe Bottleneck
-    let pcie = anti_patterns
-        .iter()
-        .find(|ap| matches!(ap, AntiPattern::PcieBottleneck { .. }));
+    let pcie = anti_patterns.iter().find(|ap| matches!(ap, AntiPattern::PcieBottleneck { .. }));
     assert!(pcie.is_none(), "Should not detect PCIe Bottleneck");
 }
 
@@ -309,14 +276,7 @@ fn test_multiple_anti_patterns() {
 
     // Small amount of work in another process
     let last_parent = (14999 % 256) as u8;
-    spans.push(create_span(
-        200,
-        Some(last_parent),
-        15000,
-        1000,
-        "final",
-        888,
-    ));
+    spans.push(create_span(200, Some(last_parent), 15000, 1000, "final", 888));
 
     let graph = CausalGraph::from_spans(&spans).expect("test");
     let anti_patterns = detect_anti_patterns(&graph).expect("test");
@@ -327,11 +287,7 @@ fn test_multiple_anti_patterns() {
             AntiPattern::GodProcess { process_id, .. } => {
                 println!("Anti-pattern {}: God Process (pid {})", i, process_id);
             }
-            AntiPattern::TightLoop {
-                syscall_name,
-                repetition_count,
-                ..
-            } => {
+            AntiPattern::TightLoop { syscall_name, repetition_count, .. } => {
                 println!(
                     "Anti-pattern {}: Tight Loop ({} x {})",
                     i, syscall_name, repetition_count
@@ -350,9 +306,7 @@ fn test_multiple_anti_patterns() {
         anti_patterns.len()
     );
 
-    let has_tight_loop = anti_patterns
-        .iter()
-        .any(|ap| matches!(ap, AntiPattern::TightLoop { .. }));
+    let has_tight_loop = anti_patterns.iter().any(|ap| matches!(ap, AntiPattern::TightLoop { .. }));
 
     assert!(has_tight_loop, "Expected Tight Loop anti-pattern");
 }
@@ -370,9 +324,7 @@ fn test_severity_levels() {
     let graph = CausalGraph::from_spans(&spans).expect("test");
     let anti_patterns = detect_anti_patterns(&graph).expect("test");
 
-    let god_process = anti_patterns
-        .iter()
-        .find(|ap| matches!(ap, AntiPattern::GodProcess { .. }));
+    let god_process = anti_patterns.iter().find(|ap| matches!(ap, AntiPattern::GodProcess { .. }));
 
     if let Some(AntiPattern::GodProcess { severity, .. }) = god_process {
         assert!(
@@ -397,14 +349,8 @@ fn test_anti_pattern_recommendations() {
     // Verify each anti-pattern has a recommendation
     for anti_pattern in &anti_patterns {
         let recommendation = anti_pattern.recommendation();
-        assert!(
-            !recommendation.is_empty(),
-            "Anti-pattern should have recommendation"
-        );
-        assert!(
-            recommendation.len() > 20,
-            "Recommendation should be meaningful"
-        );
+        assert!(!recommendation.is_empty(), "Anti-pattern should have recommendation");
+        assert!(recommendation.len() > 20, "Recommendation should be meaningful");
     }
 }
 
@@ -425,8 +371,5 @@ fn test_clean_trace_no_anti_patterns() {
     let anti_patterns = detect_anti_patterns(&graph).expect("test");
 
     // Should detect NO anti-patterns
-    assert!(
-        anti_patterns.is_empty(),
-        "Clean trace should have no anti-patterns"
-    );
+    assert!(anti_patterns.is_empty(), "Clean trace should have no anti-patterns");
 }

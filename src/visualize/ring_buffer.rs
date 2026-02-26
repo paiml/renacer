@@ -58,12 +58,7 @@ impl<T: Default + Clone> HistoryBuffer<T> {
     /// Create a new history buffer with the given capacity
     pub fn new(capacity: usize) -> Self {
         assert!(capacity > 0, "Capacity must be positive");
-        Self {
-            data: vec![T::default(); capacity],
-            capacity,
-            head: 0,
-            len: 0,
-        }
+        Self { data: vec![T::default(); capacity], capacity, head: 0, len: 0 }
     }
 
     /// Push a value, evicting the oldest if at capacity
@@ -111,11 +106,7 @@ impl<T: Default + Clone> HistoryBuffer<T> {
         if self.len == 0 {
             None
         } else {
-            let idx = if self.head == 0 {
-                self.capacity - 1
-            } else {
-                self.head - 1
-            };
+            let idx = if self.head == 0 { self.capacity - 1 } else { self.head - 1 };
             Some(&self.data[idx])
         }
     }
@@ -125,22 +116,14 @@ impl<T: Default + Clone> HistoryBuffer<T> {
         if self.len == 0 {
             None
         } else {
-            let start = if self.len < self.capacity {
-                0
-            } else {
-                self.head
-            };
+            let start = if self.len < self.capacity { 0 } else { self.head };
             Some(&self.data[start])
         }
     }
 
     /// Iterate from oldest to newest
     pub fn iter(&self) -> impl Iterator<Item = &T> {
-        let start = if self.len < self.capacity {
-            0
-        } else {
-            self.head
-        };
+        let start = if self.len < self.capacity { 0 } else { self.head };
         (0..self.len).map(move |i| &self.data[(start + i) % self.capacity])
     }
 
@@ -231,12 +214,8 @@ impl HistoryBuffer<f64> {
             return 0.0;
         }
         let mean = self.avg();
-        let variance = self
-            .as_slice()
-            .iter()
-            .map(|x| (x - mean).powi(2))
-            .sum::<f64>()
-            / (self.len - 1) as f64;
+        let variance =
+            self.as_slice().iter().map(|x| (x - mean).powi(2)).sum::<f64>() / (self.len - 1) as f64;
         variance.sqrt()
     }
 
@@ -265,9 +244,7 @@ impl HistoryBuffer<f64> {
         } else {
             (self.head + self.capacity - n) % self.capacity
         };
-        (0..n)
-            .map(|i| self.data[(start + i) % self.capacity])
-            .collect()
+        (0..n).map(|i| self.data[(start + i) % self.capacity]).collect()
     }
 }
 

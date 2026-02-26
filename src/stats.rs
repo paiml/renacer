@@ -52,7 +52,7 @@ macro_rules! trace_compute_block {
         let result = $block;
         let duration_us = start.elapsed().as_micros() as u64;
 
-        // Adaptive sampling: Only trace if slow (Toyota Way: Jidoka - safe by default)
+        // Adaptive sampling: export trace data when duration exceeds threshold (Jidoka principle)
         if duration_us >= 100 {
             if let Some(exporter) = $exporter {
                 #[cfg(feature = "otlp")]
@@ -139,32 +139,20 @@ impl StatsTracker {
     /// Calculate totals using Trueno for high-performance SIMD operations
     pub fn calculate_totals_with_trueno(&self) -> StatTotals {
         if self.stats.is_empty() {
-            return StatTotals {
-                total_calls: 0,
-                total_errors: 0,
-                total_time_us: 0,
-            };
+            return StatTotals { total_calls: 0, total_errors: 0, total_time_us: 0 };
         }
 
         // Extract data into vectors for SIMD processing
         let counts: Vec<f32> = self.stats.values().map(|s| s.count as f32).collect();
         let errors: Vec<f32> = self.stats.values().map(|s| s.errors as f32).collect();
-        let times: Vec<f32> = self
-            .stats
-            .values()
-            .map(|s| s.total_time_us as f32)
-            .collect();
+        let times: Vec<f32> = self.stats.values().map(|s| s.total_time_us as f32).collect();
 
         // Use Trueno for SIMD-accelerated sums
         let total_calls = trueno::Vector::from_slice(&counts).sum().unwrap_or(0.0) as u64;
         let total_errors = trueno::Vector::from_slice(&errors).sum().unwrap_or(0.0) as u64;
         let total_time_us = trueno::Vector::from_slice(&times).sum().unwrap_or(0.0) as u64;
 
-        StatTotals {
-            total_calls,
-            total_errors,
-            total_time_us,
-        }
+        StatTotals { total_calls, total_errors, total_time_us }
     }
 
     /// Calculate percentile from sorted data
@@ -245,17 +233,7 @@ impl StatsTracker {
         let p95 = Self::calculate_percentile(&sorted, 95.0);
         let p99 = Self::calculate_percentile(&sorted, 99.0);
 
-        ExtendedStats {
-            mean,
-            stddev,
-            min,
-            max,
-            median,
-            p75,
-            p90,
-            p95,
-            p99,
-        }
+        ExtendedStats { mean, stddev, min, max, median, p75, p90, p95, p99 }
     }
 
     /// Check if a duration is an anomaly (>threshold σ from mean)
@@ -354,11 +332,8 @@ impl StatsTracker {
                 0.0
             };
             let seconds = stats.total_time_us as f64 / 1_000_000.0;
-            let usecs_per_call = if stats.count > 0 {
-                stats.total_time_us / stats.count
-            } else {
-                0
-            };
+            let usecs_per_call =
+                if stats.count > 0 { stats.total_time_us / stats.count } else { 0 };
 
             eprintln!(
                 "{:6.2} {:>11.6} {:>11} {:>9} {:>9} {}",
@@ -366,11 +341,7 @@ impl StatsTracker {
                 seconds,
                 usecs_per_call,
                 stats.count,
-                if stats.errors > 0 {
-                    stats.errors.to_string()
-                } else {
-                    String::new()
-                },
+                if stats.errors > 0 { stats.errors.to_string() } else { String::new() },
                 name
             );
         }
@@ -378,24 +349,22 @@ impl StatsTracker {
         // Print summary line
         eprintln!("------ ----------- ----------- --------- --------- ----------------");
         let total_seconds = total_time_us as f64 / 1_000_000.0;
-        let avg_usecs = if total_calls > 0 {
-            total_time_us / total_calls
-        } else {
-            0
-        };
+        let avg_usecs = if total_calls > 0 { total_time_us / total_calls } else { 0 };
         eprintln!(
             "100.00 {:>11.6} {:>11} {:>9} {:>9} total",
             total_seconds,
             avg_usecs,
             total_calls,
-            if total_errors > 0 {
-                total_errors.to_string()
-            } else {
-                String::new()
-            }
+            if total_errors > 0 { total_errors.to_string() } else { String::new() }
         );
     }
 }
+
+// Compile-time thread-safety verification (Sprint 59)
+static_assertions::assert_impl_all!(SyscallStats: Send, Sync);
+static_assertions::assert_impl_all!(StatTotals: Send, Sync);
+static_assertions::assert_impl_all!(ExtendedStats: Send, Sync);
+static_assertions::assert_impl_all!(StatsTracker: Send, Sync);
 
 #[cfg(test)]
 mod tests {
@@ -861,16 +830,8 @@ mod tests {
 
     #[test]
     fn test_stat_totals_equality() {
-        let totals1 = StatTotals {
-            total_calls: 10,
-            total_errors: 2,
-            total_time_us: 1000,
-        };
-        let totals2 = StatTotals {
-            total_calls: 10,
-            total_errors: 2,
-            total_time_us: 1000,
-        };
+        let totals1 = StatTotals { total_calls: 10, total_errors: 2, total_time_us: 1000 };
+        let totals2 = StatTotals { total_calls: 10, total_errors: 2, total_time_us: 1000 };
         assert_eq!(totals1, totals2);
     }
 }

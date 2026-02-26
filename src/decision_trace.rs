@@ -455,6 +455,9 @@ pub struct MmapDecisionWriter {
 impl MmapDecisionWriter {
     /// Create a new memory-mapped decision writer
     ///
+    /// # Allows
+    /// `unsafe_code` — `MmapMut::map_mut` requires unsafe for memory-mapped I/O.
+    ///
     /// # Arguments
     ///
     /// * `path` - Path to output file (e.g., `.ruchy/decisions.msgpack`)
@@ -464,6 +467,7 @@ impl MmapDecisionWriter {
     ///
     /// * `Ok(MmapDecisionWriter)` - Successfully created writer
     /// * `Err(String)` - Error creating file or mmap
+    #[allow(unsafe_code)]
     pub fn new(path: &std::path::Path, size: usize) -> Result<Self, String> {
         // Create parent directory if needed
         if let Some(parent) = path.parent() {
@@ -480,19 +484,14 @@ impl MmapDecisionWriter {
             .open(path)
             .map_err(|e| format!("Failed to create file: {e}"))?;
 
-        file.set_len(size as u64)
-            .map_err(|e| format!("Failed to set file size: {e}"))?;
+        file.set_len(size as u64).map_err(|e| format!("Failed to set file size: {e}"))?;
 
         // SAFETY: File is valid, open with write access, and sized appropriately for mmap
         let mmap = unsafe {
             MmapMut::map_mut(&file).map_err(|e| format!("Failed to create memory map: {e}"))?
         };
 
-        Ok(Self {
-            mmap,
-            offset: 0,
-            decisions: Vec::new(),
-        })
+        Ok(Self { mmap, offset: 0, decisions: Vec::new() })
     }
 
     /// Append a decision to the memory-mapped file
@@ -544,9 +543,7 @@ impl MmapDecisionWriter {
         self.offset += packed.len();
 
         // Flush mmap to disk
-        self.mmap
-            .flush()
-            .map_err(|e| format!("Failed to flush mmap: {e}"))?;
+        self.mmap.flush().map_err(|e| format!("Failed to flush mmap: {e}"))?;
 
         Ok(())
     }
@@ -579,10 +576,7 @@ pub struct DecisionTracer {
 impl DecisionTracer {
     /// Create a new decision tracer
     pub fn new() -> Self {
-        Self {
-            traces: Vec::new(),
-            start_time: std::time::Instant::now(),
-        }
+        Self { traces: Vec::new(), start_time: std::time::Instant::now() }
     }
 
     /// Parse a decision trace line from stderr
@@ -605,10 +599,7 @@ impl DecisionTracer {
     /// Parse decision line: `[DECISION] category::name input={"key":"value"}`
     fn parse_decision_line(&mut self, line: &str, timestamp_us: u64) -> Result<(), String> {
         // Strip [DECISION] prefix
-        let content = line
-            .strip_prefix("[DECISION]")
-            .ok_or("Missing [DECISION] prefix")?
-            .trim();
+        let content = line.strip_prefix("[DECISION]").ok_or("Missing [DECISION] prefix")?.trim();
 
         // Split into "category::name" and "input=..."
         let parts: Vec<&str> = content.splitn(2, " input=").collect();
@@ -646,10 +637,7 @@ impl DecisionTracer {
     /// Parse result line: `[RESULT] name = {"result":"value"}`
     fn parse_result_line(&mut self, line: &str, _timestamp_us: u64) -> Result<(), String> {
         // Strip [RESULT] prefix
-        let content = line
-            .strip_prefix("[RESULT]")
-            .ok_or("Missing [RESULT] prefix")?
-            .trim();
+        let content = line.strip_prefix("[RESULT]").ok_or("Missing [RESULT] prefix")?.trim();
 
         // Split into "name" and "= {...}"
         let parts: Vec<&str> = content.splitn(2, " = ").collect();
@@ -771,27 +759,16 @@ impl DecisionTracer {
                     if parts.len() >= 2 {
                         let file = parts[0].to_string();
                         let line = parts[1].parse::<u32>().unwrap_or(0);
-                        let column = if parts.len() >= 3 {
-                            parts[2].parse::<u32>().ok()
-                        } else {
-                            None
-                        };
+                        let column =
+                            if parts.len() >= 3 { parts[2].parse::<u32>().ok() } else { None };
                         SourceLocation { file, line, column }
                     } else {
                         // Fallback if parsing fails
-                        SourceLocation {
-                            file: loc.clone(),
-                            line: 0,
-                            column: None,
-                        }
+                        SourceLocation { file: loc.clone(), line: 0, column: None }
                     }
                 } else {
                     // No source location available
-                    SourceLocation {
-                        file: "unknown".to_string(),
-                        line: 0,
-                        column: None,
-                    }
+                    SourceLocation { file: "unknown".to_string(), line: 0, column: None }
                 };
 
                 let entry = DecisionManifestEntry {
@@ -843,10 +820,7 @@ pub struct DecisionGraph {
 impl DecisionGraph {
     /// Build dependency graph from traces
     pub fn from_traces(traces: Vec<DecisionTrace>) -> Self {
-        let mut graph = Self {
-            dependencies: HashMap::new(),
-            traces,
-        };
+        let mut graph = Self { dependencies: HashMap::new(), traces };
 
         graph.analyze_dependencies();
         graph
@@ -915,6 +889,12 @@ impl DecisionGraph {
     }
 }
 
+// Compile-time thread-safety verification (Sprint 59)
+static_assertions::assert_impl_all!(DecisionTrace: Send, Sync);
+static_assertions::assert_impl_all!(DecisionManifestEntry: Send, Sync);
+static_assertions::assert_impl_all!(DecisionManifest: Send, Sync);
+static_assertions::assert_impl_all!(DecisionGraph: Send, Sync);
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -945,9 +925,7 @@ mod tests {
         tracer
             .parse_line(r#"[DECISION] type_inference::infer_return input={"func":"foo"}"#)
             .expect("test");
-        tracer
-            .parse_line(r#"[RESULT] infer_return = {"type":"i32"}"#)
-            .expect("test");
+        tracer.parse_line(r#"[RESULT] infer_return = {"type":"i32"}"#).expect("test");
 
         assert_eq!(tracer.count(), 1);
         let trace = &tracer.traces()[0];
@@ -1059,11 +1037,7 @@ mod tests {
                 decision_id: 0xA1B2C3D4E5F67890,
                 category: "optimization".to_string(),
                 name: "inline_candidate".to_string(),
-                source: SourceLocation {
-                    file: "foo.rb".to_string(),
-                    line: 3,
-                    column: Some(1),
-                },
+                source: SourceLocation { file: "foo.rb".to_string(), line: 3, column: Some(1) },
                 input: serde_json::json!({"size": 4, "call_count": 1000}),
                 result: serde_json::json!({"decision": "no_inline", "reason": "recursive"}),
             };
@@ -1110,11 +1084,7 @@ mod tests {
 
         #[test]
         fn test_source_location_serialization() {
-            let loc = SourceLocation {
-                file: "foo.rb".to_string(),
-                line: 42,
-                column: Some(10),
-            };
+            let loc = SourceLocation { file: "foo.rb".to_string(), line: 42, column: Some(10) };
 
             let json = serde_json::to_string(&loc).expect("test");
             assert!(json.contains("foo.rb"));
@@ -1122,11 +1092,7 @@ mod tests {
             assert!(json.contains("10"));
 
             // Without column
-            let loc2 = SourceLocation {
-                file: "bar.rb".to_string(),
-                line: 100,
-                column: None,
-            };
+            let loc2 = SourceLocation { file: "bar.rb".to_string(), line: 100, column: None };
 
             let json2 = serde_json::to_string(&loc2).expect("test");
             assert!(json2.contains("bar.rb"));
@@ -1321,12 +1287,7 @@ mod tests {
                 serde_json::json!({"var": "x"}),
                 Some(serde_json::json!({"type": "i32"})),
                 Some("test.rb:10"),
-                Some(generate_decision_id(
-                    "type_inference",
-                    "infer_var",
-                    "test.rb",
-                    10,
-                )),
+                Some(generate_decision_id("type_inference", "infer_var", "test.rb", 10)),
             );
 
             // Generate manifest
@@ -1543,9 +1504,7 @@ mod tests {
 
             // Write both files
             tracer.write_to_msgpack(&msgpack_path).expect("test");
-            tracer
-                .write_manifest(&manifest_path, "2.0.0", None, None)
-                .expect("test");
+            tracer.write_manifest(&manifest_path, "2.0.0", None, None).expect("test");
 
             // Read back and verify
             let loaded_traces = read_decisions_from_msgpack(&msgpack_path).expect("test");

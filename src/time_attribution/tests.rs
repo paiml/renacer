@@ -69,10 +69,7 @@ fn test_transpiler_file_io_dominant() {
     assert!(hotspots.iter().any(|h| h.cluster == "MemoryAllocation"));
 
     // FileIO hotspot should be marked as expected
-    let file_io_hotspot = hotspots
-        .iter()
-        .find(|h| h.cluster == "FileIO")
-        .expect("test");
+    let file_io_hotspot = hotspots.iter().find(|h| h.cluster == "FileIO").expect("test");
     assert!(file_io_hotspot.is_expected);
 }
 
@@ -147,10 +144,7 @@ fn test_blocking_io_dominates_fast_calls() {
     let attributions = calculate_time_attribution(&spans, &registry);
 
     // FileIO should dominate despite only 1 call
-    let file_io = attributions
-        .iter()
-        .find(|a| a.cluster == "FileIO")
-        .expect("test");
+    let file_io = attributions.iter().find(|a| a.cluster == "FileIO").expect("test");
     assert!(file_io.percentage > 99.0);
     assert_eq!(file_io.call_count, 1);
 }
@@ -233,10 +227,7 @@ fn test_avg_per_call_accuracy() {
     ];
 
     let attributions = calculate_time_attribution(&spans, &registry);
-    let file_io = attributions
-        .iter()
-        .find(|a| a.cluster == "FileIO")
-        .expect("test");
+    let file_io = attributions.iter().find(|a| a.cluster == "FileIO").expect("test");
 
     // Average: (10 + 20 + 30) / 3 = 20ms
     assert_eq!(file_io.avg_per_call, Duration::from_millis(20));
@@ -254,15 +245,9 @@ fn test_percentage_accuracy() {
 
     let attributions = calculate_time_attribution(&spans, &registry);
 
-    let file_io = attributions
-        .iter()
-        .find(|a| a.cluster == "FileIO")
-        .expect("test");
+    let file_io = attributions.iter().find(|a| a.cluster == "FileIO").expect("test");
     assert!((file_io.percentage - 25.0).abs() < 0.01);
 
-    let mem = attributions
-        .iter()
-        .find(|a| a.cluster == "MemoryAllocation")
-        .expect("test");
+    let mem = attributions.iter().find(|a| a.cluster == "MemoryAllocation").expect("test");
     assert!((mem.percentage - 75.0).abs() < 0.01);
 }

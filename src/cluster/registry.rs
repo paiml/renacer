@@ -75,10 +75,7 @@ impl ClusterRegistry {
             }
         }
 
-        Ok(Self {
-            clusters: definitions,
-            syscall_to_cluster,
-        })
+        Ok(Self { clusters: definitions, syscall_to_cluster })
     }
 
     /// Load default cluster pack for single-shot compile workflows
@@ -103,10 +100,7 @@ impl ClusterRegistry {
             }
         }
 
-        Ok(Self {
-            clusters: definitions,
-            syscall_to_cluster,
-        })
+        Ok(Self { clusters: definitions, syscall_to_cluster })
     }
 
     /// Classify a syscall into its semantic cluster
@@ -322,9 +316,6 @@ severity = "medium"
 
         let result = ClusterRegistry::from_toml(file.path());
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("Duplicate syscall"));
+        assert!(result.unwrap_err().to_string().contains("Duplicate syscall"));
     }
 }

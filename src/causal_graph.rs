@@ -234,12 +234,7 @@ impl CausalGraph {
             }
         }
 
-        Ok(Self {
-            graph,
-            span_metadata,
-            span_id_to_node,
-            roots,
-        })
+        Ok(Self { graph, span_metadata, span_id_to_node, roots })
     }
 
     /// Get the number of nodes in the graph
@@ -270,11 +265,7 @@ impl CausalGraph {
     pub fn children(&self, node: NodeId) -> Result<Vec<(NodeId, f32)>> {
         let (neighbors, weights) = self.graph.adjacency(node);
 
-        Ok(neighbors
-            .iter()
-            .zip(weights.iter())
-            .map(|(&n, &w)| (NodeId(n), w))
-            .collect())
+        Ok(neighbors.iter().zip(weights.iter()).map(|(&n, &w)| (NodeId(n), w)).collect())
     }
 
     /// Get the underlying CSR graph
@@ -387,10 +378,12 @@ impl CausalGraph {
     ///
     /// The corresponding `SpanRecord` if found, None otherwise.
     pub fn get_span_by_id(&self, span_id: &[u8; 8]) -> Option<&SpanRecord> {
-        self.get_node_by_span_id(span_id)
-            .and_then(|node| self.get_span(node))
+        self.get_node_by_span_id(span_id).and_then(|node| self.get_span(node))
     }
 }
+
+// Compile-time thread-safety verification (Sprint 59)
+static_assertions::assert_impl_all!(CausalGraph: Send, Sync);
 
 #[cfg(test)]
 mod tests {

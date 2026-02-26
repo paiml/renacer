@@ -121,10 +121,7 @@ mod cuda_tracing_tests {
                 assert_eq!(info.device_id, 0);
             }
             Err(e) => {
-                eprintln!(
-                    "CUDA not available (expected on non-NVIDIA hardware): {}",
-                    e
-                );
+                eprintln!("CUDA not available (expected on non-NVIDIA hardware): {}", e);
             }
         }
     }

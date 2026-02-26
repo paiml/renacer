@@ -217,10 +217,7 @@ fn test_backward_compatibility_otlp_without_decisions() {
     }
 
     let mut cmd = Command::cargo_bin("renacer").expect("Failed to find renacer binary");
-    cmd.arg("--otlp-endpoint")
-        .arg("http://localhost:4317")
-        .arg("--")
-        .arg(&test_program);
+    cmd.arg("--otlp-endpoint").arg("http://localhost:4317").arg("--").arg(&test_program);
 
     // Should work fine - OTLP without decisions
     cmd.assert().success();
@@ -250,9 +247,7 @@ echo "[RESULT] const_eval: evaluated to 42" >&2
     }
 
     let mut cmd = Command::cargo_bin("renacer").expect("Failed to find renacer binary");
-    cmd.arg("--trace-transpiler-decisions")
-        .arg("--")
-        .arg(&test_program);
+    cmd.arg("--trace-transpiler-decisions").arg("--").arg(&test_program);
 
     // Should work fine - decisions without OTLP
     cmd.assert().success();

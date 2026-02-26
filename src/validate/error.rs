@@ -28,20 +28,11 @@ pub enum ValidateError {
     #[error(
         "V005: Syscall sequence mismatch at index {index}: expected {expected}, found {found}"
     )]
-    SequenceMismatch {
-        index: usize,
-        expected: String,
-        found: String,
-    },
+    SequenceMismatch { index: usize, expected: String, found: String },
 
     /// V006: Timing regression detected
     #[error("V006: Timing regression: {syscall} ({baseline_ms:.2}ms -> {actual_ms:.2}ms, {delta_percent:+.1}%)")]
-    TimingRegression {
-        syscall: String,
-        baseline_ms: f64,
-        actual_ms: f64,
-        delta_percent: f64,
-    },
+    TimingRegression { syscall: String, baseline_ms: f64, actual_ms: f64, delta_percent: f64 },
 
     /// V007: Canary output mismatch
     #[error("V007: Canary output mismatch: expected {expected:?}, found {found:?}")]

@@ -36,13 +36,7 @@ pub struct GanttConfig {
 
 impl Default for GanttConfig {
     fn default() -> Self {
-        Self {
-            min_bar_width: 1,
-            max_depth: 10,
-            indent: 2,
-            show_names: true,
-            show_durations: true,
-        }
+        Self { min_bar_width: 1, max_depth: 10, indent: 2, show_names: true, show_durations: true }
     }
 }
 
@@ -64,13 +58,7 @@ impl<'a> GanttChart<'a> {
     /// Create new Gantt chart with spans
     pub fn new(spans: &'a [SpanRecord]) -> Self {
         let time_range = Self::calculate_time_range(spans);
-        Self {
-            spans,
-            time_range,
-            selected: None,
-            config: GanttConfig::default(),
-            block: None,
-        }
+        Self { spans, time_range, selected: None, config: GanttConfig::default(), block: None }
     }
 
     /// Calculate time range from spans
@@ -135,9 +123,7 @@ impl<'a> GanttChart<'a> {
         }
 
         let style = if is_selected {
-            Style::default()
-                .fg(color)
-                .add_modifier(Modifier::BOLD | Modifier::REVERSED)
+            Style::default().fg(color).add_modifier(Modifier::BOLD | Modifier::REVERSED)
         } else {
             Style::default().fg(color)
         };
@@ -192,9 +178,7 @@ impl Widget for GanttChart<'_> {
         let label_width = if self.config.show_names { 15 } else { 0 };
         let duration_width = if self.config.show_durations { 10 } else { 0 };
         let bar_area_start = chart_area.x + label_width;
-        let bar_area_width = chart_area
-            .width
-            .saturating_sub(label_width + duration_width);
+        let bar_area_width = chart_area.width.saturating_sub(label_width + duration_width);
 
         if bar_area_width < 2 {
             return;
@@ -268,9 +252,8 @@ impl Widget for GanttChart<'_> {
 
 /// Render Gantt chart to frame
 pub fn render(f: &mut ratatui::Frame, spans: &[SpanRecord], area: Rect, selected: Option<usize>) {
-    let chart = GanttChart::new(spans)
-        .selected(selected)
-        .block(Block::default().borders(Borders::ALL));
+    let chart =
+        GanttChart::new(spans).selected(selected).block(Block::default().borders(Borders::ALL));
 
     f.render_widget(chart, area);
 }
@@ -280,13 +263,7 @@ mod tests {
     use super::*;
 
     fn make_span(name: &str, start: u64, duration: u64) -> SpanRecord {
-        SpanRecord::new(
-            "trace1",
-            &format!("span_{}", name),
-            name,
-            start,
-            start + duration,
-        )
+        SpanRecord::new("trace1", &format!("span_{}", name), name, start, start + duration)
     }
 
     #[test]
@@ -300,11 +277,7 @@ mod tests {
 
     #[test]
     fn test_gantt_time_range_calculation() {
-        let spans = vec![
-            make_span("a", 100, 50),
-            make_span("b", 50, 100),
-            make_span("c", 200, 25),
-        ];
+        let spans = vec![make_span("a", 100, 50), make_span("b", 50, 100), make_span("c", 200, 25)];
 
         let chart = GanttChart::new(&spans);
         assert_eq!(chart.time_range, (50, 225)); // min start to max end
@@ -363,18 +336,9 @@ mod tests {
 
     #[test]
     fn test_span_color_by_kind() {
-        assert_eq!(
-            GanttChart::span_color(SpanKind::Server, false, false),
-            graph::SYSCALL_NET
-        );
-        assert_eq!(
-            GanttChart::span_color(SpanKind::Client, false, false),
-            graph::SYSCALL_FILE
-        );
-        assert_eq!(
-            GanttChart::span_color(SpanKind::Internal, false, false),
-            graph::SYSCALL_PROC
-        );
+        assert_eq!(GanttChart::span_color(SpanKind::Server, false, false), graph::SYSCALL_NET);
+        assert_eq!(GanttChart::span_color(SpanKind::Client, false, false), graph::SYSCALL_FILE);
+        assert_eq!(GanttChart::span_color(SpanKind::Internal, false, false), graph::SYSCALL_PROC);
     }
 
     #[test]
@@ -394,9 +358,8 @@ mod tests {
         chart.render(Rect::new(0, 0, 80, 5), &mut buf);
 
         // Should have some content
-        let content: String = (0..80)
-            .map(|x| buf[(x, 0)].symbol().chars().next().unwrap_or(' '))
-            .collect();
+        let content: String =
+            (0..80).map(|x| buf[(x, 0)].symbol().chars().next().unwrap_or(' ')).collect();
         assert!(!content.trim().is_empty());
     }
 
@@ -422,14 +385,8 @@ mod tests {
 
     #[test]
     fn test_span_color_producer_consumer() {
-        assert_eq!(
-            GanttChart::span_color(SpanKind::Producer, false, false),
-            graph::SYSCALL_MEM
-        );
-        assert_eq!(
-            GanttChart::span_color(SpanKind::Consumer, false, false),
-            graph::CLUSTER_1
-        );
+        assert_eq!(GanttChart::span_color(SpanKind::Producer, false, false), graph::SYSCALL_MEM);
+        assert_eq!(GanttChart::span_color(SpanKind::Consumer, false, false), graph::CLUSTER_1);
     }
 
     #[test]

@@ -87,15 +87,11 @@ fn bench_histogram_bucket_sizes(c: &mut Criterion) {
         let buckets: Vec<f64> = (1..=*bucket_count).map(|i| i as f64 * 0.1).collect();
         let histogram = Histogram::new("test_histogram", Labels::new(), &buckets);
 
-        group.bench_with_input(
-            BenchmarkId::from_parameter(bucket_count),
-            bucket_count,
-            |b, _| {
-                b.iter(|| {
-                    histogram.observe(black_box(0.5));
-                })
-            },
-        );
+        group.bench_with_input(BenchmarkId::from_parameter(bucket_count), bucket_count, |b, _| {
+            b.iter(|| {
+                histogram.observe(black_box(0.5));
+            })
+        });
     }
 
     group.finish();
@@ -163,11 +159,7 @@ fn test_counter_thread_safety_stress() {
 /// CRITICAL: Histogram thread safety stress test
 #[test]
 fn test_histogram_thread_safety_stress() {
-    let histogram = Arc::new(Histogram::new(
-        "stress_histogram",
-        Labels::new(),
-        DEFAULT_BUCKETS,
-    ));
+    let histogram = Arc::new(Histogram::new("stress_histogram", Labels::new(), DEFAULT_BUCKETS));
     let num_threads = 50;
     let observations_per_thread = 10_000;
 

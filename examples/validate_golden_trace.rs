@@ -182,15 +182,10 @@ fn main() {
 
     let strict_config = ValidateConfig::default().with_strict_mode(true);
     println!("\n   Strict mode configuration:");
-    println!(
-        "      Tolerance: {}% (overridden)",
-        strict_config.tolerance_percent
-    );
+    println!("      Tolerance: {}% (overridden)", strict_config.tolerance_percent);
     println!("      Strict mode: {}", strict_config.strict_mode);
 
-    let lenient_config = ValidateConfig::default()
-        .set_tolerance(25.0)
-        .with_ignore_timing(true);
+    let lenient_config = ValidateConfig::default().set_tolerance(25.0).with_ignore_timing(true);
     println!("\n   Lenient configuration:");
     println!("      Tolerance: {}%", lenient_config.tolerance_percent);
     println!("      Ignore timing: {}", lenient_config.ignore_timing);

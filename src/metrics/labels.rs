@@ -97,15 +97,13 @@ impl LabelValidator {
 
     /// Add allowed labels
     pub fn allow_labels(mut self, labels: impl IntoIterator<Item = impl Into<String>>) -> Self {
-        self.allowed_labels
-            .extend(labels.into_iter().map(Into::into));
+        self.allowed_labels.extend(labels.into_iter().map(Into::into));
         self
     }
 
     /// Add labels that can have numeric values
     pub fn allow_numeric(mut self, labels: impl IntoIterator<Item = impl Into<String>>) -> Self {
-        self.numeric_allowed
-            .extend(labels.into_iter().map(Into::into));
+        self.numeric_allowed.extend(labels.into_iter().map(Into::into));
         self
     }
 
@@ -125,10 +123,7 @@ impl LabelValidator {
     pub fn validate(&self, labels: &Labels) -> Result<(), LabelError> {
         // Check label count
         if labels.len() > self.max_labels {
-            return Err(LabelError::TooManyLabels {
-                count: labels.len(),
-                max: self.max_labels,
-            });
+            return Err(LabelError::TooManyLabels { count: labels.len(), max: self.max_labels });
         }
 
         for (key, value) in labels {
@@ -198,23 +193,19 @@ fn looks_numeric(s: &str) -> bool {
     s.parse::<f64>().is_ok()
 }
 
-/// Helper to create labels from tuples
-#[allow(dead_code)]
-pub fn labels_from_pairs<I, K, V>(pairs: I) -> Labels
-where
-    I: IntoIterator<Item = (K, V)>,
-    K: Into<String>,
-    V: Into<String>,
-{
-    pairs
-        .into_iter()
-        .map(|(k, v)| (k.into(), v.into()))
-        .collect()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Helper to create labels from tuples
+    fn labels_from_pairs<I, K, V>(pairs: I) -> Labels
+    where
+        I: IntoIterator<Item = (K, V)>,
+        K: Into<String>,
+        V: Into<String>,
+    {
+        pairs.into_iter().map(|(k, v)| (k.into(), v.into())).collect()
+    }
 
     #[test]
     fn test_valid_labels() {
@@ -261,10 +252,7 @@ mod tests {
     fn test_numeric_value_rejected() {
         let validator = LabelValidator::new();
         let labels = labels_from_pairs([("user_id", "12345")]);
-        assert!(matches!(
-            validator.validate(&labels),
-            Err(LabelError::NumericValue { .. })
-        ));
+        assert!(matches!(validator.validate(&labels), Err(LabelError::NumericValue { .. })));
     }
 
     #[test]

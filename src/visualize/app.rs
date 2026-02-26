@@ -276,10 +276,7 @@ impl VisualizeApp {
 
     /// Create a new app in deterministic mode for testing
     pub fn new_deterministic(seed: u64) -> Self {
-        let config = VisualizeConfig {
-            deterministic: true,
-            ..Default::default()
-        };
+        let config = VisualizeConfig { deterministic: true, ..Default::default() };
         let _ = seed; // Would be used for seeded RNG if needed
         Self::new(config)
     }
@@ -312,11 +309,8 @@ impl VisualizeApp {
         let avg_z = if self.anomalies.is_empty() {
             0.0
         } else {
-            let recent: Vec<_> = self
-                .anomalies
-                .iter()
-                .filter(|a| a.timestamp.elapsed().as_secs() < 60)
-                .collect();
+            let recent: Vec<_> =
+                self.anomalies.iter().filter(|a| a.timestamp.elapsed().as_secs() < 60).collect();
             if recent.is_empty() {
                 0.0
             } else {
@@ -555,16 +549,10 @@ mod tests {
     #[test]
     fn test_syscall_category() {
         assert_eq!(SyscallCategory::from_name("read"), SyscallCategory::File);
-        assert_eq!(
-            SyscallCategory::from_name("socket"),
-            SyscallCategory::Network
-        );
+        assert_eq!(SyscallCategory::from_name("socket"), SyscallCategory::Network);
         assert_eq!(SyscallCategory::from_name("mmap"), SyscallCategory::Memory);
         assert_eq!(SyscallCategory::from_name("fork"), SyscallCategory::Process);
-        assert_eq!(
-            SyscallCategory::from_name("unknown"),
-            SyscallCategory::Other
-        );
+        assert_eq!(SyscallCategory::from_name("unknown"), SyscallCategory::Other);
     }
 
     #[test]
@@ -590,13 +578,7 @@ mod tests {
     #[test]
     fn test_record_anomaly() {
         let mut app = VisualizeApp::new(VisualizeConfig::default());
-        app.record_anomaly(
-            "read".to_string(),
-            50000,
-            4.5,
-            Some("test.rs".to_string()),
-            Some(42),
-        );
+        app.record_anomaly("read".to_string(), 50000, 4.5, Some("test.rs".to_string()), Some(42));
 
         assert_eq!(app.anomaly_count, 1);
         assert_eq!(app.anomalies[0].syscall, "read");
@@ -619,16 +601,8 @@ mod tests {
     fn test_navigation() {
         let mut app = VisualizeApp::new(VisualizeConfig::default());
         app.processes = vec![
-            ProcessSyscallStats {
-                pid: 1,
-                name: "init".to_string(),
-                ..Default::default()
-            },
-            ProcessSyscallStats {
-                pid: 2,
-                name: "bash".to_string(),
-                ..Default::default()
-            },
+            ProcessSyscallStats { pid: 1, name: "init".to_string(), ..Default::default() },
+            ProcessSyscallStats { pid: 2, name: "bash".to_string(), ..Default::default() },
         ];
 
         assert_eq!(app.process_selected, 0);
@@ -802,16 +776,8 @@ mod tests {
     fn test_sorted_processes_with_filter() {
         let mut app = VisualizeApp::new(VisualizeConfig::default());
         app.processes = vec![
-            ProcessSyscallStats {
-                pid: 123,
-                name: "process_a".to_string(),
-                ..Default::default()
-            },
-            ProcessSyscallStats {
-                pid: 456,
-                name: "process_b".to_string(),
-                ..Default::default()
-            },
+            ProcessSyscallStats { pid: 123, name: "process_a".to_string(), ..Default::default() },
+            ProcessSyscallStats { pid: 456, name: "process_b".to_string(), ..Default::default() },
         ];
 
         // Filter by name
@@ -876,18 +842,9 @@ mod tests {
     fn test_navigation_bounds() {
         let mut app = VisualizeApp::new(VisualizeConfig::default());
         app.processes = vec![
-            ProcessSyscallStats {
-                pid: 1,
-                ..Default::default()
-            },
-            ProcessSyscallStats {
-                pid: 2,
-                ..Default::default()
-            },
-            ProcessSyscallStats {
-                pid: 3,
-                ..Default::default()
-            },
+            ProcessSyscallStats { pid: 1, ..Default::default() },
+            ProcessSyscallStats { pid: 2, ..Default::default() },
+            ProcessSyscallStats { pid: 3, ..Default::default() },
         ];
 
         // Test 'g' - go to top
@@ -922,12 +879,8 @@ mod tests {
     fn test_page_navigation() {
         let mut app = VisualizeApp::new(VisualizeConfig::default());
         // Create 25 processes
-        app.processes = (1..=25)
-            .map(|i| ProcessSyscallStats {
-                pid: i,
-                ..Default::default()
-            })
-            .collect();
+        app.processes =
+            (1..=25).map(|i| ProcessSyscallStats { pid: i, ..Default::default() }).collect();
 
         // Page down from start
         app.process_selected = 0;
@@ -1064,36 +1017,18 @@ mod tests {
         assert_eq!(SyscallCategory::from_name("statx"), SyscallCategory::File);
 
         // Network syscalls
-        assert_eq!(
-            SyscallCategory::from_name("connect"),
-            SyscallCategory::Network
-        );
-        assert_eq!(
-            SyscallCategory::from_name("accept4"),
-            SyscallCategory::Network
-        );
+        assert_eq!(SyscallCategory::from_name("connect"), SyscallCategory::Network);
+        assert_eq!(SyscallCategory::from_name("accept4"), SyscallCategory::Network);
         assert_eq!(SyscallCategory::from_name("poll"), SyscallCategory::Network);
 
         // Memory syscalls
         assert_eq!(SyscallCategory::from_name("brk"), SyscallCategory::Memory);
-        assert_eq!(
-            SyscallCategory::from_name("mprotect"),
-            SyscallCategory::Memory
-        );
+        assert_eq!(SyscallCategory::from_name("mprotect"), SyscallCategory::Memory);
 
         // Process syscalls
-        assert_eq!(
-            SyscallCategory::from_name("clone3"),
-            SyscallCategory::Process
-        );
-        assert_eq!(
-            SyscallCategory::from_name("execve"),
-            SyscallCategory::Process
-        );
-        assert_eq!(
-            SyscallCategory::from_name("futex"),
-            SyscallCategory::Process
-        );
+        assert_eq!(SyscallCategory::from_name("clone3"), SyscallCategory::Process);
+        assert_eq!(SyscallCategory::from_name("execve"), SyscallCategory::Process);
+        assert_eq!(SyscallCategory::from_name("futex"), SyscallCategory::Process);
     }
 
     #[test]

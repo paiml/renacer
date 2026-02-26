@@ -16,12 +16,11 @@ use std::io::IoSliceMut;
 const MAX_STACK_DEPTH: usize = 64;
 
 /// A single stack frame
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct StackFrame {
     /// Instruction pointer (return address)
     pub rip: u64,
     /// Base pointer - Reserved for future use in advanced stack analysis
-    #[allow(dead_code)]
     pub rbp: u64,
 }
 
@@ -62,39 +61,33 @@ pub fn unwind_stack(pid: Pid) -> Result<Vec<StackFrame>> {
         // Stack layout at RBP:
         //   [rbp+0]: saved RBP (previous frame)
         //   [rbp+8]: return address (RIP)
-        match read_u64_from_process(pid, rbp) {
-            Ok(saved_rbp) => {
-                match read_u64_from_process(pid, rbp + 8) {
-                    Ok(return_address) => {
-                        if return_address == 0 {
-                            break; // Invalid return address
-                        }
+        let Some(frame) = read_stack_frame(pid, rbp) else {
+            break;
+        };
 
-                        frames.push(StackFrame {
-                            rip: return_address,
-                            rbp: saved_rbp,
-                        });
-
-                        rbp = saved_rbp;
-                    }
-                    Err(_) => break, // Can't read return address
-                }
-            }
-            Err(_) => break, // Can't read saved RBP
-        }
+        frames.push(frame);
+        rbp = frame.rbp;
     }
 
     Ok(frames)
+}
+
+/// Try to read a single stack frame (saved RBP + return address) from the remote process.
+/// Returns `None` if the memory reads fail or the return address is zero.
+fn read_stack_frame(pid: Pid, rbp: u64) -> Option<StackFrame> {
+    let saved_rbp = read_u64_from_process(pid, rbp).ok()?;
+    let return_address = read_u64_from_process(pid, rbp + 8).ok()?;
+    if return_address == 0 {
+        return None;
+    }
+    Some(StackFrame { rip: return_address, rbp: saved_rbp })
 }
 
 /// Read a u64 value from the remote process's memory
 fn read_u64_from_process(pid: Pid, addr: u64) -> Result<u64> {
     let mut buffer = [0u8; 8];
     let mut local_iov = [IoSliceMut::new(&mut buffer)];
-    let remote_iov = [RemoteIoVec {
-        base: addr as usize,
-        len: 8,
-    }];
+    let remote_iov = [RemoteIoVec { base: addr as usize, len: 8 }];
 
     process_vm_readv(pid, &mut local_iov, &remote_iov)
         .context(format!("Failed to read memory at address 0x{addr:x}"))?;
@@ -108,20 +101,14 @@ mod tests {
 
     #[test]
     fn test_stack_frame_creation() {
-        let frame = StackFrame {
-            rip: 0x12345678,
-            rbp: 0x87654321,
-        };
+        let frame = StackFrame { rip: 0x12345678, rbp: 0x87654321 };
         assert_eq!(frame.rip, 0x12345678);
         assert_eq!(frame.rbp, 0x87654321);
     }
 
     #[test]
     fn test_stack_frame_clone() {
-        let frame = StackFrame {
-            rip: 0xDEADBEEF,
-            rbp: 0xCAFEBABE,
-        };
+        let frame = StackFrame { rip: 0xDEADBEEF, rbp: 0xCAFEBABE };
         let cloned = frame.clone();
         assert_eq!(cloned.rip, 0xDEADBEEF);
         assert_eq!(cloned.rbp, 0xCAFEBABE);
@@ -129,10 +116,7 @@ mod tests {
 
     #[test]
     fn test_stack_frame_debug() {
-        let frame = StackFrame {
-            rip: 0x1000,
-            rbp: 0x2000,
-        };
+        let frame = StackFrame { rip: 0x1000, rbp: 0x2000 };
         let debug_str = format!("{:?}", frame);
         assert!(debug_str.contains("StackFrame"));
         assert!(debug_str.contains("rip"));
@@ -156,10 +140,7 @@ mod tests {
 
     #[test]
     fn test_stack_frame_high_addresses() {
-        let frame = StackFrame {
-            rip: 0xFFFFFFFFFFFFFFFF,
-            rbp: 0xFFFFFFFFFFFFFFFF,
-        };
+        let frame = StackFrame { rip: 0xFFFFFFFFFFFFFFFF, rbp: 0xFFFFFFFFFFFFFFFF };
         assert_eq!(frame.rip, 0xFFFFFFFFFFFFFFFF);
         assert_eq!(frame.rbp, 0xFFFFFFFFFFFFFFFF);
     }

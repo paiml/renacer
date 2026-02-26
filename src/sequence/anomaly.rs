@@ -173,10 +173,7 @@ fn assess_sequence_severity(ngram: &NGram) -> Severity {
     }
 
     // High: sequences involving synchronization (unexpected in single-threaded transpilers)
-    if ngram
-        .iter()
-        .any(|s| s == "futex" || s.contains("pthread_mutex"))
-    {
+    if ngram.iter().any(|s| s == "futex" || s.contains("pthread_mutex")) {
         return Severity::High;
     }
 
@@ -197,6 +194,10 @@ fn severity_emoji(severity: Severity) -> &'static str {
     }
 }
 
+// Compile-time thread-safety verification (Sprint 59)
+static_assertions::assert_impl_all!(AnomalyType: Send, Sync);
+static_assertions::assert_impl_all!(SequenceAnomaly: Send, Sync);
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -205,11 +206,8 @@ mod tests {
     #[test]
     fn test_detect_new_sequence() {
         let baseline_syscalls = vec!["mmap".to_string(), "read".to_string(), "write".to_string()];
-        let current_syscalls = vec![
-            "socket".to_string(),
-            "connect".to_string(),
-            "send".to_string(),
-        ];
+        let current_syscalls =
+            vec!["socket".to_string(), "connect".to_string(), "send".to_string()];
 
         let baseline_ngrams = extract_ngrams(&baseline_syscalls, 3);
         let current_ngrams = extract_ngrams(&current_syscalls, 3);
@@ -232,9 +230,7 @@ mod tests {
         let anomalies = detect_sequence_anomalies(&baseline_ngrams, &current_ngrams, 0.30);
 
         // Should detect missing ["read", "write"] sequence
-        let missing = anomalies
-            .iter()
-            .find(|a| a.anomaly_type == AnomalyType::MissingSequence);
+        let missing = anomalies.iter().find(|a| a.anomaly_type == AnomalyType::MissingSequence);
         assert!(missing.is_some());
     }
 
@@ -256,11 +252,7 @@ mod tests {
 
     #[test]
     fn test_severity_assessment_networking() {
-        let ngram = vec![
-            "socket".to_string(),
-            "connect".to_string(),
-            "send".to_string(),
-        ];
+        let ngram = vec!["socket".to_string(), "connect".to_string(), "send".to_string()];
         assert_eq!(assess_sequence_severity(&ngram), Severity::Critical);
     }
 

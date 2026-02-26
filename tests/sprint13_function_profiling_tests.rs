@@ -20,10 +20,7 @@ fn test_function_time_flag_accepted() {
 fn test_function_time_output_format() {
     // Test that function profiling output appears when --function-time is used
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("--function-time")
-        .arg("--")
-        .arg("echo")
-        .arg("hello");
+    cmd.arg("--function-time").arg("--").arg("echo").arg("hello");
 
     let output = cmd.output().expect("test");
     assert!(output.status.success());
@@ -43,12 +40,7 @@ fn test_function_time_output_format() {
 fn test_function_time_with_filter() {
     // Test that --function-time works with filtering
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("--function-time")
-        .arg("-e")
-        .arg("trace=write")
-        .arg("--")
-        .arg("echo")
-        .arg("hello");
+    cmd.arg("--function-time").arg("-e").arg("trace=write").arg("--").arg("echo").arg("hello");
 
     let output = cmd.output().expect("test");
     assert!(output.status.success());

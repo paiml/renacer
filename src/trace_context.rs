@@ -68,12 +68,7 @@ impl TraceContext {
         let trace_flags =
             u8::from_str_radix(parts[3], 16).map_err(|_| TraceContextError::InvalidTraceFlags)?;
 
-        Ok(TraceContext {
-            version,
-            trace_id,
-            parent_id,
-            trace_flags,
-        })
+        Ok(TraceContext { version, trace_id, parent_id, trace_flags })
     }
 
     /// Extract trace context from environment variables
@@ -99,9 +94,7 @@ impl TraceContext {
     /// Checks `RENACER_LOGICAL_CLOCK` environment variable.
     /// Returns None if not set or invalid format.
     pub fn logical_clock_from_env() -> Option<u64> {
-        std::env::var("RENACER_LOGICAL_CLOCK")
-            .ok()
-            .and_then(|s| s.parse::<u64>().ok())
+        std::env::var("RENACER_LOGICAL_CLOCK").ok().and_then(|s| s.parse::<u64>().ok())
     }
 
     /// Set logical clock as environment variable (Sprint 42: Batuta Integration)
@@ -165,10 +158,9 @@ pub enum TraceContextError {
 impl fmt::Display for TraceContextError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::InvalidFormat => write!(
-                f,
-                "Invalid traceparent format (expected: version-trace_id-parent_id-flags)"
-            ),
+            Self::InvalidFormat => {
+                write!(f, "Invalid traceparent format (expected: version-trace_id-parent_id-flags)")
+            }
             Self::InvalidVersion => write!(f, "Invalid version (must be 00)"),
             Self::InvalidTraceId => write!(f, "Invalid trace_id (must be 32 hex characters)"),
             Self::InvalidParentId => write!(f, "Invalid parent_id (must be 16 hex characters)"),
@@ -214,6 +206,10 @@ fn bytes_to_hex_16(bytes: &[u8; 16]) -> String {
 fn bytes_to_hex_8(bytes: &[u8; 8]) -> String {
     bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
+
+// Compile-time thread-safety verification (Sprint 59)
+static_assertions::assert_impl_all!(TraceContext: Send, Sync);
+static_assertions::assert_impl_all!(TraceContextError: Send, Sync);
 
 // ============================================================================
 // UNIT TESTS (EXTREME TDD - RED Phase)
@@ -401,10 +397,7 @@ mod tests {
     // Test 19: from_env() with TRACEPARENT set
     #[test]
     fn test_from_env_traceparent() {
-        std::env::set_var(
-            "TRACEPARENT",
-            "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
-        );
+        std::env::set_var("TRACEPARENT", "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01");
 
         let ctx = TraceContext::from_env();
         assert!(ctx.is_some());
@@ -514,16 +507,12 @@ pub struct LamportClock {
 impl LamportClock {
     /// Create a new Lamport clock starting at 0
     pub fn new() -> Self {
-        LamportClock {
-            counter: AtomicU64::new(0),
-        }
+        LamportClock { counter: AtomicU64::new(0) }
     }
 
     /// Create a Lamport clock with a specific starting value
     pub fn with_initial_value(initial: u64) -> Self {
-        LamportClock {
-            counter: AtomicU64::new(initial),
-        }
+        LamportClock { counter: AtomicU64::new(initial) }
     }
 
     /// Increment clock on local event
@@ -578,11 +567,12 @@ impl Default for LamportClock {
 
 impl Clone for LamportClock {
     fn clone(&self) -> Self {
-        LamportClock {
-            counter: AtomicU64::new(self.counter.load(Ordering::SeqCst)),
-        }
+        LamportClock { counter: AtomicU64::new(self.counter.load(Ordering::SeqCst)) }
     }
 }
+
+// Compile-time thread-safety verification for LamportClock
+static_assertions::assert_impl_all!(LamportClock: Send, Sync);
 
 // ============================================================================
 // LAMPORT CLOCK TESTS (EXTREME TDD)
@@ -889,5 +879,57 @@ mod lamport_tests {
         for i in 1..timestamps.len() {
             assert!(timestamps[i] > timestamps[i - 1]);
         }
+    }
+}
+
+// Kani formal verification proofs
+#[cfg(kani)]
+mod kani_proofs {
+    use super::*;
+
+    /// Prove tick() always returns a strictly increasing value
+    #[kani::proof]
+    fn proof_tick_monotonicity() {
+        let clock = LamportClock::new();
+        let ts1 = clock.tick();
+        let ts2 = clock.tick();
+        kani::assert(ts2 > ts1, "tick must be strictly monotonic");
+    }
+
+    /// Prove sync() result is always greater than both local and remote timestamps
+    #[kani::proof]
+    fn proof_sync_dominates() {
+        let remote: u64 = kani::any();
+        kani::assume(remote < u64::MAX - 1);
+        let clock = LamportClock::new();
+        let result = clock.sync(remote);
+        kani::assert(result > remote, "sync result must exceed remote timestamp");
+    }
+
+    /// Prove happens_before is irreflexive: not (a -> a)
+    #[kani::proof]
+    fn proof_happens_before_irreflexive() {
+        let a: u64 = kani::any();
+        kani::assert(!LamportClock::happens_before(a, a), "happens-before must be irreflexive");
+    }
+
+    /// Prove happens_before is transitive: (a -> b) && (b -> c) => (a -> c)
+    #[kani::proof]
+    fn proof_happens_before_transitive() {
+        let a: u64 = kani::any();
+        let b: u64 = kani::any();
+        let c: u64 = kani::any();
+        kani::assume(LamportClock::happens_before(a, b));
+        kani::assume(LamportClock::happens_before(b, c));
+        kani::assert(LamportClock::happens_before(a, c), "happens-before must be transitive");
+    }
+
+    /// Prove is_sampled only depends on bit 0 of trace_flags
+    #[kani::proof]
+    fn proof_is_sampled_bit0() {
+        let flags: u8 = kani::any();
+        let ctx =
+            TraceContext { version: 0, trace_id: [1; 16], parent_id: [1; 8], trace_flags: flags };
+        kani::assert(ctx.is_sampled() == (flags & 0x01 != 0), "is_sampled must check bit 0");
     }
 }

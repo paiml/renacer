@@ -130,6 +130,10 @@ macro_rules! lazy_span {
     };
 }
 
+// Compile-time thread-safety verification (Sprint 59)
+static_assertions::assert_impl_all!(LazySpan: Send, Sync);
+static_assertions::assert_impl_all!(CommittedSpan: Send, Sync);
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -158,10 +162,7 @@ mod tests {
 
     #[test]
     fn test_lazy_span_commit() {
-        let span = LazySpan::new()
-            .with_name_static("test")
-            .with_timestamp(100)
-            .with_duration(50);
+        let span = LazySpan::new().with_name_static("test").with_timestamp(100).with_duration(50);
 
         let committed = span.commit();
         assert_eq!(committed.name.as_ref(), "test");

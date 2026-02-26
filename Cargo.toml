@@ -1,3 +1,16 @@
+[workspace]
+resolver = "2"
+
+[workspace.package]
+version = "0.9.10"
+edition = "2021"
+authors = ["Pragmatic AI Labs <info@paiml.com>"]
+license = "MIT"
+repository = "https://github.com/paiml/renacer"
+rust-version = "1.75"
+
+[workspace.dependencies]
+
 [package]
 name = "renacer"
 version = "0.9.10"
@@ -13,10 +26,10 @@ categories = ["development-tools::debugging", "development-tools::profiling"]
 
 [dependencies]
 # CLI and argument parsing
-clap = { version = "4.5", features = ["derive", "cargo"] }
+clap = { version = "4.5", default-features = false, features = ["derive", "cargo", "std", "help", "usage", "error-context", "suggestions"] }
 
 # Ptrace and system calls
-nix = { version = "0.30", features = ["ptrace", "process", "signal", "uio", "resource", "user"] }
+nix = { version = "0.30", default-features = false, features = ["ptrace", "process", "signal", "uio", "resource", "user"] }
 libc = "0.2"
 
 # Error handling
@@ -24,9 +37,9 @@ anyhow = "1.0"
 thiserror = "2.0"
 
 # JSON serialization
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-hex = "0.4"
+serde = { version = "1.0", default-features = false, features = ["derive", "std"] }
+serde_json = { version = "1.0", default-features = false, features = ["std"] }
+hex = { version = "0.4", default-features = false, features = ["std"] }
 
 # MessagePack for Sprint 27 decision trace (v2.0.0 spec)
 rmp-serde = "1.3"
@@ -35,9 +48,9 @@ rmp-serde = "1.3"
 fnv = "1.0"
 
 # DWARF debug info parsing
-addr2line = "0.25"
-gimli = "0.32"
-object = "0.38"
+addr2line = { version = "0.25", default-features = false, features = ["std"] }
+gimli = { version = "0.32", default-features = false, features = ["read", "std", "endian-reader"] }
+object = { version = "0.38", default-features = false, features = ["read", "elf", "std"] }
 memmap2 = "0.9"
 
 # Stack unwinding for function profiling
@@ -50,7 +63,7 @@ trueno = "0.15"
 aprender = "0.26"
 
 # Lock-free data structures for ring buffer (Sprint 40)
-crossbeam = "0.8"
+crossbeam = { version = "0.8", default-features = false, features = ["crossbeam-channel", "crossbeam-queue", "std"] }
 
 # Concurrent hashmap for metrics registry (Sprint 56)
 dashmap = "6.1"
@@ -62,23 +75,23 @@ trueno-db = "0.3.13"
 trueno-graph = "0.1.13"
 
 # SHA-256 hashing for state-based semantic equivalence (Sprint 42)
-sha2 = "0.10"
+sha2 = { version = "0.10", default-features = false, features = ["std"] }
 
 # Compile-time trait assertions for Send+Sync bounds (Sprint 59)
 static_assertions = "1.1"
 
 # TOML parsing for build-time assertions (Sprint 44)
-toml = "0.8"
+toml = { version = "0.8", default-features = false, features = ["parse", "display"] }
 
 # Regex filtering (Sprint 16)
-regex = "1.10"
+regex = { version = "1.10", default-features = false, features = ["std", "perf"] }
 
 # Random number generation for Isolation Forest (Sprint 22)
-rand = "0.8"
+rand = { version = "0.8", default-features = false, features = ["std", "std_rng"] }
 
 # Development tracing/debugging
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+tracing = { version = "0.1", default-features = false, features = ["std"] }
+tracing-subscriber = { version = "0.3", default-features = false, features = ["env-filter", "fmt", "std", "ansi"] }
 
 # TUI visualization (Sprint 52-55)
 ratatui = "0.29"
@@ -180,6 +193,10 @@ panic = "abort"
 opt-level = 0
 debug = true
 
+[profile.test]
+opt-level = 0
+debug = true
+
 # Chaos engineering features (Sprint 29 - Red-Team Profile)
 # Following aprender/trueno patterns for feature organization
 [features]
@@ -219,17 +236,24 @@ optional = true
 features = ["derive"]
 
 # Lint configuration for consistent code quality
-[lints.rust]
+[workspace.lints.rust]
+unsafe_code = "deny"
 unsafe_op_in_unsafe_fn = "warn"
-# unreachable_pub disabled - too noisy with test utilities
-unreachable_pub = "allow"
+unreachable_pub = "warn"
+# Allow kani cfg for formal verification proofs
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(kani)"] }
+# High-value lints for code quality
 # Renamed from clippy::let_underscore_drop
 let_underscore_drop = "allow"
 
-[lints.clippy]
+[workspace.lints.clippy]
 all = { level = "warn", priority = -1 }
 pedantic = { level = "warn", priority = -1 }
+unwrap_used = "warn"
+expect_used = "allow"
 # High-value lints that catch real bugs
+checked_conversions = "warn"
+fallible_impl_from = "warn"
 enum_glob_use = "warn"
 needless_for_each = "warn"
 # Allow common pedantic lints that are too noisy
@@ -285,6 +309,9 @@ default_trait_access = "allow"
 unnecessary_get_then_check = "allow"
 field_reassign_with_default = "allow"
 no_effect_underscore_binding = "allow"
+
+[lints]
+workspace = true
 
 [package.metadata.docs.rs]
 all-features = true

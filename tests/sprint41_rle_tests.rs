@@ -343,9 +343,7 @@ fn test_empty_trace_compression() {
 #[test]
 fn test_no_compression_needed() {
     // Scenario: All unique syscalls - no compression possible
-    let syscalls = [
-        "open", "read", "write", "close", "stat", "fstat", "lseek", "mmap",
-    ];
+    let syscalls = ["open", "read", "write", "close", "stat", "fstat", "lseek", "mmap"];
     let mut spans = vec![];
     for (i, &syscall) in syscalls.iter().enumerate() {
         spans.push(create_span(i as u8, i as u64, syscall, 100));

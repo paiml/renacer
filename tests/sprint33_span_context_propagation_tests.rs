@@ -24,11 +24,7 @@ fn test_trace_parent_cli_flag_accepted() {
         .expect("Failed to execute command");
 
     // Should NOT error on flag parsing
-    assert!(
-        output.status.success(),
-        "Command failed: {}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    assert!(output.status.success(), "Command failed: {}", String::from_utf8_lossy(&output.stderr));
 }
 
 /// Test 2: Valid traceparent format is parsed correctly

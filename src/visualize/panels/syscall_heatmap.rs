@@ -17,10 +17,7 @@ pub fn draw(f: &mut Frame, app: &VisualizeApp, area: Rect) {
         " Syscalls {} │ {} errors │ top: {} ",
         format_rate(app.syscall_rate),
         app.total_errors,
-        app.syscall_counts
-            .iter()
-            .max_by_key(|(_, v)| *v)
-            .map_or("-", |(k, _)| k.as_str())
+        app.syscall_counts.iter().max_by_key(|(_, v)| *v).map_or("-", |(k, _)| k.as_str())
     );
 
     let block = Block::default()
@@ -29,9 +26,7 @@ pub fn draw(f: &mut Frame, app: &VisualizeApp, area: Rect) {
         .border_style(Style::default().fg(borders::SYSCALL_HEATMAP))
         .title(Span::styled(
             header,
-            Style::default()
-                .fg(borders::SYSCALL_HEATMAP)
-                .add_modifier(Modifier::BOLD),
+            Style::default().fg(borders::SYSCALL_HEATMAP).add_modifier(Modifier::BOLD),
         ));
 
     let inner = block.inner(area);
@@ -51,10 +46,8 @@ pub fn draw(f: &mut Frame, app: &VisualizeApp, area: Rect) {
     ];
 
     let constraints: Vec<Constraint> = categories.iter().map(|_| Constraint::Min(1)).collect();
-    let rows = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints(constraints)
-        .split(inner);
+    let rows =
+        Layout::default().direction(Direction::Vertical).constraints(constraints).split(inner);
 
     for (i, (category, color)) in categories.iter().enumerate() {
         if i >= rows.len() {
@@ -68,11 +61,8 @@ pub fn draw(f: &mut Frame, app: &VisualizeApp, area: Rect) {
 
         // Get history for this category
         #[allow(clippy::redundant_closure_for_method_calls)]
-        let history: Vec<f64> = app
-            .category_history
-            .get(category)
-            .map(|buf| buf.to_vec())
-            .unwrap_or_default();
+        let history: Vec<f64> =
+            app.category_history.get(category).map(|buf| buf.to_vec()).unwrap_or_default();
 
         // Get current rate
         let rate = app.category_rates.get(category).copied().unwrap_or(0.0);
@@ -82,15 +72,9 @@ pub fn draw(f: &mut Frame, app: &VisualizeApp, area: Rect) {
 
         // Build line: "cat   ▃▄▅▆▇█▇▆   123/s"
         let line = Line::from(vec![
-            Span::styled(
-                format!("{:5} ", category.name()),
-                Style::default().fg(*color),
-            ),
+            Span::styled(format!("{:5} ", category.name()), Style::default().fg(*color)),
             Span::styled(spark, Style::default().fg(*color)),
-            Span::styled(
-                format!(" {:>6}", format_rate(rate)),
-                Style::default().fg(Color::White),
-            ),
+            Span::styled(format!(" {:>6}", format_rate(rate)), Style::default().fg(Color::White)),
         ]);
 
         let paragraph = Paragraph::new(line);

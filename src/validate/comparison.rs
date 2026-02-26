@@ -145,10 +145,7 @@ pub fn compare_syscalls(
     let summary = ComparisonSummary {
         total_compared: compare_len,
         matches: compare_len
-            - mismatches
-                .iter()
-                .filter(|m| m.mismatch_type == MismatchType::Different)
-                .count(),
+            - mismatches.iter().filter(|m| m.mismatch_type == MismatchType::Different).count(),
         mismatches: mismatches.len(),
         timing_regressions: 0,
     };
@@ -236,11 +233,8 @@ pub fn validate_against_baseline(
 
     // Compare timing unless ignored
     if !ignore_timing {
-        let timing_regressions = compare_timing(
-            &baseline.timing.by_syscall,
-            actual_timing,
-            tolerance_percent,
-        );
+        let timing_regressions =
+            compare_timing(&baseline.timing.by_syscall, actual_timing, tolerance_percent);
 
         if !timing_regressions.is_empty() {
             result.passed = false;
@@ -284,10 +278,7 @@ mod tests {
             compare_syscalls(&baseline, &actual, false).expect("comparison should succeed");
         assert!(!result.passed);
         assert_eq!(result.syscall_mismatches.len(), 1);
-        assert_eq!(
-            result.syscall_mismatches[0].mismatch_type,
-            MismatchType::Different
-        );
+        assert_eq!(result.syscall_mismatches[0].mismatch_type, MismatchType::Different);
     }
 
     #[test]
@@ -322,10 +313,7 @@ mod tests {
             compare_syscalls(&baseline, &actual, false).expect("comparison should succeed");
         assert!(!result.passed);
         assert_eq!(result.syscall_mismatches.len(), 2); // 2 extra
-        assert!(result
-            .syscall_mismatches
-            .iter()
-            .all(|m| m.mismatch_type == MismatchType::Extra));
+        assert!(result.syscall_mismatches.iter().all(|m| m.mismatch_type == MismatchType::Extra));
     }
 
     #[test]
@@ -341,10 +329,7 @@ mod tests {
             compare_syscalls(&baseline, &actual, false).expect("comparison should succeed");
         assert!(!result.passed);
         assert_eq!(result.syscall_mismatches.len(), 2); // 2 missing
-        assert!(result
-            .syscall_mismatches
-            .iter()
-            .all(|m| m.mismatch_type == MismatchType::Missing));
+        assert!(result.syscall_mismatches.iter().all(|m| m.mismatch_type == MismatchType::Missing));
     }
 
     #[test]

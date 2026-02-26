@@ -21,9 +21,7 @@ pub fn draw(f: &mut Frame, app: &VisualizeApp, area: Rect) {
         .border_style(Style::default().fg(borders::TRACE_WATERFALL))
         .title(Span::styled(
             header,
-            Style::default()
-                .fg(borders::TRACE_WATERFALL)
-                .add_modifier(Modifier::BOLD),
+            Style::default().fg(borders::TRACE_WATERFALL).add_modifier(Modifier::BOLD),
         ));
 
     let inner = block.inner(area);
@@ -43,10 +41,7 @@ pub fn draw(f: &mut Frame, app: &VisualizeApp, area: Rect) {
 
     let placeholder = if app.config.otlp_endpoint.is_some() {
         vec![
-            Line::from(Span::styled(
-                "Waiting for spans...",
-                Style::default().fg(Color::DarkGray),
-            )),
+            Line::from(Span::styled("Waiting for spans...", Style::default().fg(Color::DarkGray))),
             Line::from(""),
             Line::from(Span::styled(
                 "Spans will appear as they are exported via OTLP",
@@ -55,10 +50,7 @@ pub fn draw(f: &mut Frame, app: &VisualizeApp, area: Rect) {
         ]
     } else {
         vec![
-            Line::from(Span::styled(
-                "OTLP not configured",
-                Style::default().fg(Color::DarkGray),
-            )),
+            Line::from(Span::styled("OTLP not configured", Style::default().fg(Color::DarkGray))),
             Line::from(""),
             Line::from(Span::styled(
                 "Use --otlp-endpoint to enable span export",

@@ -226,10 +226,7 @@ mod tests {
             map.lookup_function("_cse_temp_0").expect("test"),
             "temporary for: len(data) > 0"
         );
-        assert_eq!(
-            map.lookup_function("calculate_distance").expect("test"),
-            "calculate_distance"
-        );
+        assert_eq!(map.lookup_function("calculate_distance").expect("test"), "calculate_distance");
         assert!(map.lookup_function("nonexistent").is_none());
     }
 
@@ -240,20 +237,14 @@ mod tests {
 
         let result = TranspilerMap::from_file(temp_file.path());
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("Invalid source map JSON"));
+        assert!(result.unwrap_err().to_string().contains("Invalid source map JSON"));
     }
 
     #[test]
     fn test_missing_file() {
         let result = TranspilerMap::from_file("/nonexistent/path.json");
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("Source map file not found"));
+        assert!(result.unwrap_err().to_string().contains("Source map file not found"));
     }
 
     #[test]
@@ -271,10 +262,7 @@ mod tests {
         let result = TranspilerMap::from_file(temp_file.path());
 
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("Unsupported source map version"));
+        assert!(result.unwrap_err().to_string().contains("Unsupported source map version"));
     }
 
     #[test]
