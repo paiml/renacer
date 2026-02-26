@@ -59,12 +59,7 @@ pub struct RetryConfig {
 
 impl Default for RetryConfig {
     fn default() -> Self {
-        Self {
-            max_attempts: 5,
-            initial_backoff_ms: 100,
-            max_backoff_ms: 30000,
-            queue_size: 10000,
-        }
+        Self { max_attempts: 5, initial_backoff_ms: 100, max_backoff_ms: 30000, queue_size: 10000 }
     }
 }
 
@@ -190,11 +185,7 @@ pub struct DecisionExporter {
 impl DecisionExporter {
     /// Create a new exporter from configuration
     pub fn new(config: DecisionExportConfig) -> Result<Self, String> {
-        Ok(Self {
-            config,
-            queue: VecDeque::new(),
-            stats: ExportStats::default(),
-        })
+        Ok(Self { config, queue: VecDeque::new(), stats: ExportStats::default() })
     }
 
     /// Queue a decision for export
@@ -314,16 +305,8 @@ pub fn print_stats(path: &std::path::Path) -> Result<(), String> {
 
     // Time range
     if !decisions.is_empty() {
-        let min_ts = decisions
-            .iter()
-            .map(|d| d.timestamp_us)
-            .min()
-            .expect("checked non-empty");
-        let max_ts = decisions
-            .iter()
-            .map(|d| d.timestamp_us)
-            .max()
-            .expect("checked non-empty");
+        let min_ts = decisions.iter().map(|d| d.timestamp_us).min().expect("checked non-empty");
+        let max_ts = decisions.iter().map(|d| d.timestamp_us).max().expect("checked non-empty");
         let duration_ms = (max_ts - min_ts) / 1000;
         println!("Time range: {duration_ms} ms");
         println!(
@@ -459,10 +442,7 @@ mod tests {
 
     #[test]
     fn test_exporter_queue_overflow() {
-        let config = DecisionExportConfig {
-            queue_size: 3,
-            ..Default::default()
-        };
+        let config = DecisionExportConfig { queue_size: 3, ..Default::default() };
         let mut exporter = DecisionExporter::new(config).expect("test");
 
         // Queue 5 decisions (exceeds queue_size of 3)
@@ -494,10 +474,7 @@ mod tests {
 
     #[test]
     fn test_exporter_next_batch() {
-        let config = DecisionExportConfig {
-            batch_size: 3,
-            ..Default::default()
-        };
+        let config = DecisionExportConfig { batch_size: 3, ..Default::default() };
         let mut exporter = DecisionExporter::new(config).expect("test");
 
         // Queue 5 decisions
@@ -548,10 +525,7 @@ mod tests {
 
         assert_eq!(exporter.endpoint(), "http://custom:8080");
         assert_eq!(exporter.auth_token(), Some("secret123"));
-        assert_eq!(
-            exporter.flush_interval(),
-            std::time::Duration::from_millis(2000)
-        );
+        assert_eq!(exporter.flush_interval(), std::time::Duration::from_millis(2000));
         assert_eq!(exporter.retry_config().max_attempts, 5);
     }
 

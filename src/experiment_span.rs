@@ -173,9 +173,7 @@ impl ExperimentSpan {
     /// assert_eq!(span.name, "training");
     /// ```
     pub fn new_experiment(name: &str, metadata: ExperimentMetadata) -> Self {
-        let now = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default();
+        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default();
 
         ExperimentSpan {
             trace_id: generate_trace_id(),
@@ -197,9 +195,7 @@ impl ExperimentSpan {
         trace_id: [u8; 16],
         parent_span_id: [u8; 8],
     ) -> Self {
-        let now = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default();
+        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default();
 
         ExperimentSpan {
             trace_id,
@@ -216,9 +212,7 @@ impl ExperimentSpan {
 
     /// End the span and set duration
     pub fn end(&mut self) {
-        let now = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default();
+        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default();
         self.end_time_nanos = now.as_nanos() as u64;
     }
 
@@ -321,25 +315,15 @@ pub fn compare_traces(baseline: &UnifiedTrace, candidate: &UnifiedTrace) -> Equi
     let timing_variance = compute_timing_variance(baseline, candidate);
     let semantic_equiv = compute_semantic_equiv(baseline, candidate);
 
-    EquivalenceScore {
-        syscall_match,
-        timing_variance,
-        semantic_equiv,
-    }
+    EquivalenceScore { syscall_match, timing_variance, semantic_equiv }
 }
 
 /// Compute syscall sequence match score using LCS algorithm
 fn compute_syscall_match(baseline: &UnifiedTrace, candidate: &UnifiedTrace) -> f64 {
-    let baseline_syscalls: Vec<&str> = baseline
-        .syscall_spans
-        .iter()
-        .map(|s| s.name.as_ref())
-        .collect();
-    let candidate_syscalls: Vec<&str> = candidate
-        .syscall_spans
-        .iter()
-        .map(|s| s.name.as_ref())
-        .collect();
+    let baseline_syscalls: Vec<&str> =
+        baseline.syscall_spans.iter().map(|s| s.name.as_ref()).collect();
+    let candidate_syscalls: Vec<&str> =
+        candidate.syscall_spans.iter().map(|s| s.name.as_ref()).collect();
 
     if baseline_syscalls.is_empty() && candidate_syscalls.is_empty() {
         return 1.0;
@@ -382,16 +366,8 @@ fn lcs_length(a: &[&str], b: &[&str]) -> usize {
 
 /// Compute timing variance between traces
 fn compute_timing_variance(baseline: &UnifiedTrace, candidate: &UnifiedTrace) -> f64 {
-    let baseline_total: u64 = baseline
-        .syscall_spans
-        .iter()
-        .map(|s| s.duration_nanos)
-        .sum();
-    let candidate_total: u64 = candidate
-        .syscall_spans
-        .iter()
-        .map(|s| s.duration_nanos)
-        .sum();
+    let baseline_total: u64 = baseline.syscall_spans.iter().map(|s| s.duration_nanos).sum();
+    let candidate_total: u64 = candidate.syscall_spans.iter().map(|s| s.duration_nanos).sum();
 
     if baseline_total == 0 && candidate_total == 0 {
         return 0.0;
@@ -473,18 +449,12 @@ fn filter_observable(trace: &UnifiedTrace) -> Vec<&crate::unified_trace::Syscall
         "ftruncate",
     ];
 
-    trace
-        .syscall_spans
-        .iter()
-        .filter(|s| OBSERVABLE_SYSCALLS.contains(&s.name.as_ref()))
-        .collect()
+    trace.syscall_spans.iter().filter(|s| OBSERVABLE_SYSCALLS.contains(&s.name.as_ref())).collect()
 }
 
 /// Generate a random trace ID (128-bit)
 fn generate_trace_id() -> [u8; 16] {
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default();
+    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default();
 
     let nanos = now.as_nanos();
     let pid = std::process::id();
@@ -505,9 +475,7 @@ fn generate_trace_id() -> [u8; 16] {
 
 /// Generate a random span ID (64-bit)
 fn generate_span_id() -> [u8; 8] {
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default();
+    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default();
 
     let nanos = now.as_nanos() as u64;
 
@@ -595,20 +563,14 @@ mod tests {
 
         assert_eq!(record.span_name, "eval");
         let attrs = record.parse_attributes();
-        assert_eq!(
-            attrs.get("experiment.model_name"),
-            Some(&"bert".to_string())
-        );
+        assert_eq!(attrs.get("experiment.model_name"), Some(&"bert".to_string()));
         assert_eq!(attrs.get("experiment.epoch"), Some(&"10".to_string()));
     }
 
     #[test]
     fn test_equivalence_score_overall() {
-        let score = EquivalenceScore {
-            syscall_match: 1.0,
-            timing_variance: 0.0,
-            semantic_equiv: 1.0,
-        };
+        let score =
+            EquivalenceScore { syscall_match: 1.0, timing_variance: 0.0, semantic_equiv: 1.0 };
 
         assert_eq!(score.overall(), 1.0);
         assert!(score.is_equivalent());
@@ -616,11 +578,8 @@ mod tests {
 
     #[test]
     fn test_equivalence_score_not_equivalent() {
-        let score = EquivalenceScore {
-            syscall_match: 0.3,
-            timing_variance: 0.8,
-            semantic_equiv: 0.3,
-        };
+        let score =
+            EquivalenceScore { syscall_match: 0.3, timing_variance: 0.8, semantic_equiv: 0.3 };
 
         assert!(!score.is_equivalent());
     }
@@ -677,17 +636,11 @@ mod tests {
         };
 
         let attrs = meta.to_attributes();
-        assert_eq!(
-            attrs.get("experiment.model_name"),
-            Some(&"bert".to_string())
-        );
+        assert_eq!(attrs.get("experiment.model_name"), Some(&"bert".to_string()));
         assert_eq!(attrs.get("experiment.epoch"), Some(&"10".to_string()));
         assert_eq!(attrs.get("experiment.step"), Some(&"100".to_string()));
         assert_eq!(attrs.get("experiment.loss"), Some(&"0.05".to_string()));
-        assert_eq!(
-            attrs.get("experiment.metrics.accuracy"),
-            Some(&"0.95".to_string())
-        );
+        assert_eq!(attrs.get("experiment.metrics.accuracy"), Some(&"0.95".to_string()));
     }
 
     #[test]
@@ -701,10 +654,7 @@ mod tests {
         };
 
         let attrs = meta.to_attributes();
-        assert_eq!(
-            attrs.get("experiment.model_name"),
-            Some(&"model".to_string())
-        );
+        assert_eq!(attrs.get("experiment.model_name"), Some(&"model".to_string()));
         assert!(attrs.get("experiment.epoch").is_none());
         assert!(attrs.get("experiment.step").is_none());
         assert!(attrs.get("experiment.loss").is_none());
@@ -757,11 +707,8 @@ mod tests {
 
     #[test]
     fn test_equivalence_score_partial() {
-        let score = EquivalenceScore {
-            syscall_match: 0.9,
-            timing_variance: 0.1,
-            semantic_equiv: 0.9,
-        };
+        let score =
+            EquivalenceScore { syscall_match: 0.9, timing_variance: 0.1, semantic_equiv: 0.9 };
 
         // 0.4*0.9 + 0.2*(1-0.1) + 0.4*0.9 = 0.36 + 0.18 + 0.36 = 0.90
         assert!((score.overall() - 0.90).abs() < f64::EPSILON);
@@ -771,11 +718,8 @@ mod tests {
     #[test]
     fn test_equivalence_threshold() {
         // Well above threshold (overall = 0.4*1.0 + 0.2*1.0 + 0.4*1.0 = 1.0)
-        let score = EquivalenceScore {
-            syscall_match: 1.0,
-            timing_variance: 0.0,
-            semantic_equiv: 1.0,
-        };
+        let score =
+            EquivalenceScore { syscall_match: 1.0, timing_variance: 0.0, semantic_equiv: 1.0 };
         assert!(score.is_equivalent());
 
         // Well below threshold (overall = 0.4*0.5 + 0.2*0.5 + 0.4*0.5 = 0.5)
@@ -829,11 +773,8 @@ mod tests {
 
     #[test]
     fn test_equivalence_score_clone() {
-        let score = EquivalenceScore {
-            syscall_match: 0.8,
-            timing_variance: 0.2,
-            semantic_equiv: 0.7,
-        };
+        let score =
+            EquivalenceScore { syscall_match: 0.8, timing_variance: 0.2, semantic_equiv: 0.7 };
         let cloned = score.clone();
         assert_eq!(cloned.syscall_match, score.syscall_match);
     }

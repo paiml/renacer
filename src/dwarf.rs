@@ -32,9 +32,7 @@ pub struct DwarfContext {
 
 impl std::fmt::Debug for DwarfContext {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("DwarfContext")
-            .field("context", &"<addr2line context>")
-            .finish()
+        f.debug_struct("DwarfContext").field("context", &"<addr2line context>").finish()
     }
 }
 
@@ -42,6 +40,10 @@ impl DwarfContext {
     /// Load DWARF debug info from an ELF binary
     ///
     /// Sprint 5-6: Full implementation using addr2line + object crates
+    ///
+    /// # Allows
+    /// `unsafe_code` — `Mmap::map` requires unsafe for memory-mapped I/O.
+    #[allow(unsafe_code)]
     pub fn load(binary_path: &Path) -> Result<Self> {
         // Verify binary exists
         if !binary_path.exists() {
@@ -153,6 +155,9 @@ impl DwarfContext {
     }
 }
 
+// Compile-time thread-safety verification (Sprint 59)
+static_assertions::assert_impl_all!(SourceLocation: Send, Sync);
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -182,11 +187,7 @@ mod tests {
     fn test_dwarf_context_loads() {
         let (_temp_dir, bin_file) = compile_test_binary();
         let result = DwarfContext::load(&bin_file);
-        assert!(
-            result.is_ok(),
-            "Should load DWARF context: {:?}",
-            result.err()
-        );
+        assert!(result.is_ok(), "Should load DWARF context: {:?}", result.err());
     }
 
     #[test]
@@ -194,11 +195,7 @@ mod tests {
         let (_temp_dir, bin_file) = compile_test_binary();
         let ctx = DwarfContext::load(&bin_file).expect("test");
         let result = ctx.lookup(0x1000);
-        assert!(
-            result.is_ok(),
-            "Lookup should not crash: {:?}",
-            result.err()
-        );
+        assert!(result.is_ok(), "Lookup should not crash: {:?}", result.err());
     }
 
     #[test]
@@ -207,11 +204,7 @@ mod tests {
         let result = DwarfContext::load(std::path::Path::new("/nonexistent/binary"));
         assert!(result.is_err(), "Should fail for nonexistent file");
         let err = result.unwrap_err().to_string();
-        assert!(
-            err.contains("does not exist"),
-            "Error should mention file doesn't exist: {}",
-            err
-        );
+        assert!(err.contains("does not exist"), "Error should mention file doesn't exist: {}", err);
     }
 
     #[test]
@@ -301,26 +294,14 @@ mod tests {
             function: Some("main".to_string()),
         };
         let debug_str = format!("{:?}", loc);
-        assert!(
-            debug_str.contains("test.rs"),
-            "Debug should contain file: {}",
-            debug_str
-        );
-        assert!(
-            debug_str.contains("42"),
-            "Debug should contain line: {}",
-            debug_str
-        );
+        assert!(debug_str.contains("test.rs"), "Debug should contain file: {}", debug_str);
+        assert!(debug_str.contains("42"), "Debug should contain line: {}", debug_str);
     }
 
     #[test]
     fn test_source_location_no_column() {
-        let loc = SourceLocation {
-            file: "lib.rs".to_string(),
-            line: 100,
-            column: None,
-            function: None,
-        };
+        let loc =
+            SourceLocation { file: "lib.rs".to_string(), line: 100, column: None, function: None };
         assert_eq!(loc.file, "lib.rs");
         assert_eq!(loc.line, 100);
         assert_eq!(loc.column, None);
@@ -368,11 +349,7 @@ mod tests {
         // Test a range of addresses
         for addr in [0x1000, 0x2000, 0x3000, 0x4000, 0x5000] {
             let result = ctx.lookup(addr);
-            assert!(
-                result.is_ok(),
-                "Lookup should not crash for addr {:#x}",
-                addr
-            );
+            assert!(result.is_ok(), "Lookup should not crash for addr {:#x}", addr);
         }
     }
 
@@ -483,24 +460,16 @@ fn main() {
             column: Some(1),
             function: Some("f".to_string()),
         };
-        let loc2 = SourceLocation {
-            file: "b.rs".to_string(),
-            line: 2,
-            column: Some(2),
-            function: None,
-        };
+        let loc2 =
+            SourceLocation { file: "b.rs".to_string(), line: 2, column: Some(2), function: None };
         let loc3 = SourceLocation {
             file: "c.rs".to_string(),
             line: 3,
             column: None,
             function: Some("g".to_string()),
         };
-        let loc4 = SourceLocation {
-            file: "d.rs".to_string(),
-            line: 4,
-            column: None,
-            function: None,
-        };
+        let loc4 =
+            SourceLocation { file: "d.rs".to_string(), line: 4, column: None, function: None };
 
         assert_eq!(loc1.file, "a.rs");
         assert_eq!(loc2.file, "b.rs");

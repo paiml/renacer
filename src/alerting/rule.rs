@@ -36,11 +36,7 @@ impl AlertRule {
     ) -> Self {
         Self {
             name: name.into(),
-            expr: AlertExpr::Threshold {
-                metric: metric.into(),
-                op,
-                value,
-            },
+            expr: AlertExpr::Threshold { metric: metric.into(), op, value },
             for_duration,
             severity,
             annotations: super::state::AlertAnnotations::default(),
@@ -60,12 +56,7 @@ impl AlertRule {
     ) -> Self {
         Self {
             name: name.into(),
-            expr: AlertExpr::Rate {
-                metric: metric.into(),
-                window,
-                op,
-                threshold,
-            },
+            expr: AlertExpr::Rate { metric: metric.into(), window, op, threshold },
             for_duration,
             severity,
             annotations: super::state::AlertAnnotations::default(),
@@ -82,9 +73,7 @@ impl AlertRule {
     ) -> Self {
         Self {
             name: name.into(),
-            expr: AlertExpr::Absent {
-                metric: metric.into(),
-            },
+            expr: AlertExpr::Absent { metric: metric.into() },
             for_duration,
             severity,
             annotations: super::state::AlertAnnotations::default(),
@@ -115,29 +104,15 @@ impl AlertRule {
 #[derive(Debug, Clone)]
 pub enum AlertExpr {
     /// Simple threshold comparison
-    Threshold {
-        metric: String,
-        op: CompareOp,
-        value: f64,
-    },
+    Threshold { metric: String, op: CompareOp, value: f64 },
     /// Rate of change over window
-    Rate {
-        metric: String,
-        window: Duration,
-        op: CompareOp,
-        threshold: f64,
-    },
+    Rate { metric: String, window: Duration, op: CompareOp, threshold: f64 },
     /// Metric absence detection
     Absent { metric: String },
     /// Anomaly detection score
     Anomaly { metric: String, threshold: f64 },
     /// Histogram quantile
-    Quantile {
-        metric: String,
-        quantile: f64,
-        op: CompareOp,
-        value: f64,
-    },
+    Quantile { metric: String, quantile: f64, op: CompareOp, value: f64 },
 }
 
 impl AlertExpr {
@@ -307,16 +282,11 @@ mod tests {
         assert_eq!(rate.metric_name(), "errors_total");
 
         // Absent
-        let absent = AlertExpr::Absent {
-            metric: "heartbeat".to_string(),
-        };
+        let absent = AlertExpr::Absent { metric: "heartbeat".to_string() };
         assert_eq!(absent.metric_name(), "heartbeat");
 
         // Anomaly
-        let anomaly = AlertExpr::Anomaly {
-            metric: "response_time".to_string(),
-            threshold: 2.5,
-        };
+        let anomaly = AlertExpr::Anomaly { metric: "response_time".to_string(), threshold: 2.5 };
         assert_eq!(anomaly.metric_name(), "response_time");
 
         // Quantile

@@ -17,9 +17,7 @@ fn bench_native_baseline(c: &mut Criterion) {
 
     group.bench_function("syscall_heavy_native", |b| {
         b.iter(|| {
-            let output = Command::new(FIXTURE_PATH)
-                .output()
-                .expect("Failed to run fixture");
+            let output = Command::new(FIXTURE_PATH).output().expect("Failed to run fixture");
             assert!(output.status.success());
             black_box(output);
         });

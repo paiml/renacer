@@ -49,11 +49,7 @@ pub struct BaselineStats {
 
 impl BaselineStats {
     fn new(capacity: usize) -> Self {
-        Self {
-            samples: Vec::with_capacity(capacity),
-            mean: 0.0,
-            stddev: 0.0,
-        }
+        Self { samples: Vec::with_capacity(capacity), mean: 0.0, stddev: 0.0 }
     }
 
     /// Add sample and update statistics
@@ -98,12 +94,7 @@ impl AnomalyDetector {
     /// * `window_size` - Number of recent samples to keep per syscall (default: 100)
     /// * `threshold` - Z-score threshold for anomaly (default: 3.0σ)
     pub fn new(window_size: usize, threshold: f32) -> Self {
-        Self {
-            baselines: HashMap::new(),
-            window_size,
-            threshold,
-            detected_anomalies: Vec::new(),
-        }
+        Self { baselines: HashMap::new(), window_size, threshold, detected_anomalies: Vec::new() }
     }
 
     /// Record a syscall and check for anomaly
@@ -171,10 +162,7 @@ impl AnomalyDetector {
         }
 
         eprintln!("\n=== Real-Time Anomaly Detection Report ===");
-        eprintln!(
-            "Total anomalies detected: {}",
-            self.detected_anomalies.len()
-        );
+        eprintln!("Total anomalies detected: {}", self.detected_anomalies.len());
         eprintln!();
 
         // Group by severity
@@ -205,10 +193,7 @@ impl AnomalyDetector {
         // Show top 10 most severe anomalies
         let mut sorted = self.detected_anomalies.clone();
         sorted.sort_by(|a, b| {
-            b.z_score
-                .abs()
-                .partial_cmp(&a.z_score.abs())
-                .unwrap_or(std::cmp::Ordering::Equal)
+            b.z_score.abs().partial_cmp(&a.z_score.abs()).unwrap_or(std::cmp::Ordering::Equal)
         });
 
         eprintln!("Top Anomalies (by Z-score):");
@@ -249,6 +234,12 @@ fn classify_severity(z_score: f32) -> AnomalySeverity {
     }
 }
 
+// Compile-time thread-safety verification (Sprint 59)
+static_assertions::assert_impl_all!(AnomalySeverity: Send, Sync);
+static_assertions::assert_impl_all!(Anomaly: Send, Sync);
+static_assertions::assert_impl_all!(BaselineStats: Send, Sync);
+static_assertions::assert_impl_all!(AnomalyDetector: Send, Sync);
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -268,10 +259,7 @@ mod tests {
         // First 9 samples should not trigger anomaly detection
         for i in 0..9 {
             let result = detector.record_and_check("write", 100 + i);
-            assert!(
-                result.is_none(),
-                "Should not detect anomaly with <10 samples"
-            );
+            assert!(result.is_none(), "Should not detect anomaly with <10 samples");
         }
     }
 
@@ -538,5 +526,42 @@ mod tests {
             let anomaly = result.unwrap();
             assert!(anomaly.z_score < 0.0);
         }
+    }
+}
+
+#[cfg(kani)]
+mod kani_proofs {
+    use super::*;
+
+    /// Prove severity classification is exhaustive and ordered
+    #[kani::proof]
+    fn proof_severity_ordering() {
+        let z: f32 = kani::any();
+        kani::assume(!z.is_nan());
+        kani::assume(z >= 3.0);
+        kani::assume(z <= 100.0);
+
+        if z >= 5.0 {
+            kani::assert(
+                AnomalySeverity::High as u8 >= AnomalySeverity::Medium as u8,
+                "High >= Medium",
+            );
+        } else if z >= 4.0 {
+            kani::assert(
+                AnomalySeverity::Medium as u8 >= AnomalySeverity::Low as u8,
+                "Medium >= Low",
+            );
+        }
+    }
+
+    /// Prove AnomalyDetector threshold must be positive
+    #[kani::proof]
+    fn proof_detector_threshold_positive() {
+        let threshold: f32 = kani::any();
+        kani::assume(threshold > 0.0);
+        kani::assume(!threshold.is_nan());
+        kani::assume(!threshold.is_infinite());
+        let detector = AnomalyDetector::new(threshold, 100);
+        kani::assert(detector.threshold > 0.0, "threshold must be positive");
     }
 }

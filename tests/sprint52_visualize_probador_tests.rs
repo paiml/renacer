@@ -39,40 +39,28 @@ use std::time::Instant;
 fn test_cli_default_config_matches_ttop() {
     // Falsification Point 3: Default tick rate is 50ms
     let config = VisualizeConfig::default();
-    assert_eq!(
-        config.tick_rate_ms, 50,
-        "Default tick rate must be 50ms (ttop-identical)"
-    );
+    assert_eq!(config.tick_rate_ms, 50, "Default tick rate must be 50ms (ttop-identical)");
 }
 
 #[test]
 fn test_cli_history_size_default() {
     // Falsification Point: History size is 300 (ttop-identical)
     let config = VisualizeConfig::default();
-    assert_eq!(
-        config.history_size, 300,
-        "History size must be 300 (ttop-identical)"
-    );
+    assert_eq!(config.history_size, 300, "History size must be 300 (ttop-identical)");
 }
 
 #[test]
 fn test_cli_anomaly_enabled_by_default() {
     // Falsification Point 4: Anomaly panel enabled by default
     let config = VisualizeConfig::default();
-    assert!(
-        config.enable_anomaly,
-        "Anomaly detection should be enabled by default"
-    );
+    assert!(config.enable_anomaly, "Anomaly detection should be enabled by default");
 }
 
 #[test]
 fn test_cli_ml_disabled_by_default() {
     // Falsification Point 5: ML panel disabled by default
     let config = VisualizeConfig::default();
-    assert!(
-        !config.enable_ml,
-        "ML clustering should be disabled by default"
-    );
+    assert!(!config.enable_ml, "ML clustering should be disabled by default");
 }
 
 #[test]
@@ -118,11 +106,7 @@ fn test_sparkline_characters_valid() {
     // Sparkline uses block characters ▁▂▃▄▅▆▇█
     let chars = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
     for ch in chars {
-        assert!(
-            ch.is_alphabetic() || ch as u32 >= 0x2580,
-            "Invalid sparkline char: {}",
-            ch
-        );
+        assert!(ch.is_alphabetic() || ch as u32 >= 0x2580, "Invalid sparkline char: {}", ch);
     }
 }
 
@@ -135,13 +119,7 @@ fn test_percent_color_0_is_cyan() {
     // Falsification Point 19: 0% utilization renders cyan
     let color = theme::percent_color(0.0);
     if let Color::Rgb(r, g, b) = color {
-        assert!(
-            b > r && b > 150,
-            "0% should be cyan-ish, got RGB({},{},{})",
-            r,
-            g,
-            b
-        );
+        assert!(b > r && b > 150, "0% should be cyan-ish, got RGB({},{},{})", r, g, b);
     }
 }
 
@@ -150,13 +128,7 @@ fn test_percent_color_50_is_yellow() {
     // Falsification Point 20: 50% utilization renders yellow
     let color = theme::percent_color(50.0);
     if let Color::Rgb(r, g, b) = color {
-        assert!(
-            r > 200 && g > 200,
-            "50% should be yellow, got RGB({},{},{})",
-            r,
-            g,
-            b
-        );
+        assert!(r > 200 && g > 200, "50% should be yellow, got RGB({},{},{})", r, g, b);
     }
 }
 
@@ -175,13 +147,7 @@ fn test_severity_color_3_is_yellow() {
     // Falsification Point 22: Z-score 3.0 renders yellow
     let color = theme::severity_color(3.0);
     if let Color::Rgb(r, g, b) = color {
-        assert!(
-            r > 150 && g > 150,
-            "3σ should be yellowish, got RGB({},{},{})",
-            r,
-            g,
-            b
-        );
+        assert!(r > 150 && g > 150, "3σ should be yellowish, got RGB({},{},{})", r, g, b);
     }
 }
 
@@ -207,10 +173,8 @@ fn test_panel_border_colors_defined() {
 #[test]
 fn test_gradient_interpolation_smooth() {
     // Falsification Point 25: Gradient interpolates smoothly
-    let colors: Vec<Color> = (0..=100)
-        .step_by(10)
-        .map(|p| theme::percent_color(p as f64))
-        .collect();
+    let colors: Vec<Color> =
+        (0..=100).step_by(10).map(|p| theme::percent_color(p as f64)).collect();
 
     // Colors should change between adjacent values
     for i in 1..colors.len() {
@@ -255,11 +219,7 @@ fn test_ring_buffer_push_o1() {
     let elapsed = start.elapsed();
 
     // 10K pushes should complete in < 10ms (generous for O(1))
-    assert!(
-        elapsed.as_millis() < 100,
-        "10K pushes took {:?}, expected < 100ms",
-        elapsed
-    );
+    assert!(elapsed.as_millis() < 100, "10K pushes took {:?}, expected < 100ms", elapsed);
 }
 
 #[test]
@@ -374,13 +334,7 @@ fn test_anomaly_source_tracking() {
     // Falsification Point 41: Anomaly table shows source file:line
     let mut app = VisualizeApp::new(VisualizeConfig::default());
 
-    app.record_anomaly(
-        "read".to_string(),
-        10000,
-        4.5,
-        Some("main.c".to_string()),
-        Some(42),
-    );
+    app.record_anomaly("read".to_string(), 10000, 4.5, Some("main.c".to_string()), Some(42));
 
     assert_eq!(app.anomalies.len(), 1);
     let anomaly = &app.anomalies[0];
@@ -497,10 +451,7 @@ fn test_navigation_j_k() {
 
     // k decrements but stays at 0 (can't go negative)
     app.handle_key(KeyCode::Char('k'), KeyModifiers::NONE);
-    assert_eq!(
-        app.process_selected, 0,
-        "k should keep selection at 0 when already at 0"
-    );
+    assert_eq!(app.process_selected, 0, "k should keep selection at 0 when already at 0");
 
     // j increments selection index (even without items, the index changes)
     app.handle_key(KeyCode::Char('j'), KeyModifiers::NONE);
@@ -571,11 +522,7 @@ fn test_all_panel_toggles() {
             _ => true,
         };
 
-        assert_ne!(
-            initial_visible, after_toggle,
-            "Key '{}' should toggle panel",
-            key
-        );
+        assert_ne!(initial_visible, after_toggle, "Key '{}' should toggle panel", key);
     }
 }
 
@@ -615,11 +562,7 @@ fn test_ring_buffer_memory_bounded() {
 
     // Each f64 is 8 bytes, so 300 * 8 = 2400 bytes ≈ 2.4KB
     let expected_size = 300 * std::mem::size_of::<f64>();
-    assert!(
-        expected_size < 3000,
-        "Ring buffer should be ~2.4KB, got {} bytes",
-        expected_size
-    );
+    assert!(expected_size < 3000, "Ring buffer should be ~2.4KB, got {} bytes", expected_size);
 }
 
 #[test]
@@ -634,11 +577,7 @@ fn test_collect_metrics_fast() {
     app.collect_metrics();
     let elapsed = start.elapsed();
 
-    assert!(
-        elapsed.as_millis() < 100,
-        "1K syscalls + collect took {:?}",
-        elapsed
-    );
+    assert!(elapsed.as_millis() < 100, "1K syscalls + collect took {:?}", elapsed);
 }
 
 // ============================================================================
@@ -672,11 +611,7 @@ fn test_anomaly_collector_calculates_zscore() {
     // Add anomalous value - 100x the baseline
     let (z_score, _) = collector.process("read", 10000, None, None, 0);
 
-    assert!(
-        z_score > 3.0,
-        "Extreme value should have high Z-score, got {}",
-        z_score
-    );
+    assert!(z_score > 3.0, "Extreme value should have high Z-score, got {}", z_score);
 }
 
 #[test]
@@ -797,10 +732,7 @@ fn test_all_panels_have_render_tests() {
 #[test]
 fn test_deterministic_mode_config() {
     // Falsification Point 95: Deterministic mode exists
-    let config = VisualizeConfig {
-        deterministic: true,
-        ..Default::default()
-    };
+    let config = VisualizeConfig { deterministic: true, ..Default::default() };
     assert!(config.deterministic);
 }
 
@@ -839,11 +771,7 @@ fn test_invariant_ring_buffer_bounded() {
 
     for i in 0..1000 {
         buf.push(i as f64);
-        assert!(
-            buf.len() <= 300,
-            "Ring buffer exceeded capacity at iteration {}",
-            i
-        );
+        assert!(buf.len() <= 300, "Ring buffer exceeded capacity at iteration {}", i);
     }
 }
 
@@ -1039,10 +967,8 @@ fn test_anomaly_collector_per_syscall_stats() {
 
 #[test]
 fn test_syscall_event_builder_pattern() {
-    let event = SyscallEvent::new("read", 100)
-        .with_result(-1)
-        .with_pid(1234)
-        .with_source("test.c", 10);
+    let event =
+        SyscallEvent::new("read", 100).with_result(-1).with_pid(1234).with_source("test.c", 10);
 
     assert!(event.is_error());
     assert_eq!(event.pid, 1234);
@@ -1193,53 +1119,29 @@ fn test_syscall_category_from_name_file() {
 
 #[test]
 fn test_syscall_category_from_name_network() {
-    assert_eq!(
-        SyscallCategory::from_name("socket"),
-        SyscallCategory::Network
-    );
-    assert_eq!(
-        SyscallCategory::from_name("connect"),
-        SyscallCategory::Network
-    );
-    assert_eq!(
-        SyscallCategory::from_name("accept"),
-        SyscallCategory::Network
-    );
-    assert_eq!(
-        SyscallCategory::from_name("sendto"),
-        SyscallCategory::Network
-    );
+    assert_eq!(SyscallCategory::from_name("socket"), SyscallCategory::Network);
+    assert_eq!(SyscallCategory::from_name("connect"), SyscallCategory::Network);
+    assert_eq!(SyscallCategory::from_name("accept"), SyscallCategory::Network);
+    assert_eq!(SyscallCategory::from_name("sendto"), SyscallCategory::Network);
 }
 
 #[test]
 fn test_syscall_category_from_name_memory() {
     assert_eq!(SyscallCategory::from_name("mmap"), SyscallCategory::Memory);
-    assert_eq!(
-        SyscallCategory::from_name("munmap"),
-        SyscallCategory::Memory
-    );
+    assert_eq!(SyscallCategory::from_name("munmap"), SyscallCategory::Memory);
     assert_eq!(SyscallCategory::from_name("brk"), SyscallCategory::Memory);
 }
 
 #[test]
 fn test_syscall_category_from_name_process() {
     assert_eq!(SyscallCategory::from_name("fork"), SyscallCategory::Process);
-    assert_eq!(
-        SyscallCategory::from_name("clone"),
-        SyscallCategory::Process
-    );
-    assert_eq!(
-        SyscallCategory::from_name("execve"),
-        SyscallCategory::Process
-    );
+    assert_eq!(SyscallCategory::from_name("clone"), SyscallCategory::Process);
+    assert_eq!(SyscallCategory::from_name("execve"), SyscallCategory::Process);
 }
 
 #[test]
 fn test_syscall_category_from_name_other() {
-    assert_eq!(
-        SyscallCategory::from_name("unknown_syscall"),
-        SyscallCategory::Other
-    );
+    assert_eq!(SyscallCategory::from_name("unknown_syscall"), SyscallCategory::Other);
 }
 
 #[test]
@@ -1303,9 +1205,7 @@ fn test_app_state_after_recording() {
 #[test]
 fn test_severity_color_gradient_continuity() {
     // Test that severity colors transition smoothly
-    let colors: Vec<Color> = (0..=60)
-        .map(|z| theme::severity_color(z as f32 / 10.0))
-        .collect();
+    let colors: Vec<Color> = (0..=60).map(|z| theme::severity_color(z as f32 / 10.0)).collect();
 
     for (i, color) in colors.iter().enumerate() {
         assert!(
@@ -1417,13 +1317,8 @@ fn test_bridge_handles_empty_channel() {
     assert_eq!(app.total_syscalls, 0);
 
     // Now send one event
-    tx.send(VisualizerEvent {
-        name: "write".to_string(),
-        duration_us: 50,
-        result: 0,
-        pid: 5678,
-    })
-    .unwrap();
+    tx.send(VisualizerEvent { name: "write".to_string(), duration_us: 50, result: 0, pid: 5678 })
+        .unwrap();
 
     app.collect_metrics();
     assert_eq!(app.total_syscalls, 1);

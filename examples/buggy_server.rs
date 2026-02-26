@@ -31,10 +31,7 @@ fn main() {
 
         // Every 200 iterations, simulate an even worse scenario
         if iteration % 200 == 0 {
-            println!(
-                "[CRITICAL] Iteration {}: Synchronous disk flush!",
-                iteration
-            );
+            println!("[CRITICAL] Iteration {}: Synchronous disk flush!", iteration);
             catastrophic_flush();
         }
 
@@ -62,12 +59,7 @@ fn slow_buggy_operation() {
     let path = "/tmp/renacer_demo_largefile";
 
     // Create a "large" file if it doesn't exist
-    if let Ok(mut f) = OpenOptions::new()
-        .write(true)
-        .create(true)
-        .truncate(true)
-        .open(path)
-    {
+    if let Ok(mut f) = OpenOptions::new().write(true).create(true).truncate(true).open(path) {
         // Write 1MB of data
         let data = vec![0xABu8; 1024 * 1024];
         let _ = f.write_all(&data);
@@ -87,12 +79,7 @@ fn catastrophic_flush() {
     // In production this might be an accidental sync_all() in hot path
 
     let path = "/tmp/renacer_demo_sync";
-    if let Ok(mut f) = OpenOptions::new()
-        .write(true)
-        .create(true)
-        .truncate(true)
-        .open(path)
-    {
+    if let Ok(mut f) = OpenOptions::new().write(true).create(true).truncate(true).open(path) {
         // Write data
         let data = vec![0xFFu8; 4 * 1024 * 1024]; // 4MB
         let _ = f.write_all(&data);

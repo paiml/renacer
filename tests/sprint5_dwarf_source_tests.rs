@@ -142,10 +142,6 @@ fn test_dwarf_no_debug_info_graceful_fallback() {
         .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("--source")
-        .arg("--")
-        .arg(&bin_file)
-        .assert()
-        .success(); // Should not crash
-                    // Output should just be normal (no source info)
+    cmd.arg("--source").arg("--").arg(&bin_file).assert().success(); // Should not crash
+                                                                     // Output should just be normal (no source info)
 }

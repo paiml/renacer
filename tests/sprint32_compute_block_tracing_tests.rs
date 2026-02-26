@@ -19,10 +19,8 @@ use renacer::otlp_exporter::{ComputeBlock, OtlpConfig, OtlpExporter};
 #[cfg(feature = "otlp")]
 fn test_compute_block_traced_when_slow() {
     // Arrange: Create OTLP exporter
-    let config = OtlpConfig::new(
-        "http://localhost:4317".to_string(),
-        "test_compute_tracing".to_string(),
-    );
+    let config =
+        OtlpConfig::new("http://localhost:4317".to_string(), "test_compute_tracing".to_string());
     let exporter = OtlpExporter::new(config, None).expect("Failed to create exporter");
 
     // Act: Record a slow compute block (>100μs threshold)
@@ -44,10 +42,8 @@ fn test_compute_block_traced_when_slow() {
 #[cfg(feature = "otlp")]
 fn test_compute_block_not_traced_when_fast() {
     // Arrange: Create OTLP exporter
-    let config = OtlpConfig::new(
-        "http://localhost:4317".to_string(),
-        "test_compute_tracing".to_string(),
-    );
+    let config =
+        OtlpConfig::new("http://localhost:4317".to_string(), "test_compute_tracing".to_string());
     let exporter = OtlpExporter::new(config, None).expect("Failed to create exporter");
 
     // Act: Attempt to record a fast compute block (<100μs threshold)
@@ -105,10 +101,7 @@ fn test_compute_block_is_slow_flag() {
         elements: 10,
         is_slow: false, // 50 < 100
     };
-    assert!(
-        !fast.is_slow,
-        "Block with 50μs should NOT be marked as slow"
-    );
+    assert!(!fast.is_slow, "Block with 50μs should NOT be marked as slow");
     assert_eq!(fast.duration_us, 50);
 
     // Test case 3: Boundary case (exactly 100μs)
@@ -118,10 +111,7 @@ fn test_compute_block_is_slow_flag() {
         elements: 1_000,
         is_slow: false, // 100 is not > 100
     };
-    assert!(
-        !boundary.is_slow,
-        "Block with exactly 100μs should NOT be marked as slow"
-    );
+    assert!(!boundary.is_slow, "Block with exactly 100μs should NOT be marked as slow");
     assert_eq!(boundary.duration_us, 100);
 }
 
@@ -139,10 +129,7 @@ fn test_small_vector_compute_block() {
     // Assert: Block is constructed correctly for small vectors
     assert_eq!(small_vector_block.elements, 10);
     assert_eq!(small_vector_block.duration_us, 10);
-    assert!(
-        !small_vector_block.is_slow,
-        "Small vector operations should be fast"
-    );
+    assert!(!small_vector_block.is_slow, "Small vector operations should be fast");
 }
 
 /// Test ComputeBlock with various operation names
@@ -157,12 +144,8 @@ fn test_compute_block_operation_names() {
     ];
 
     for op in &operations {
-        let block = ComputeBlock {
-            operation: op,
-            duration_us: 200,
-            elements: 10_000,
-            is_slow: true,
-        };
+        let block =
+            ComputeBlock { operation: op, duration_us: 200, elements: 10_000, is_slow: true };
 
         assert_eq!(block.operation, *op);
     }
@@ -180,10 +163,7 @@ fn test_compute_block_large_elements() {
     };
 
     assert_eq!(large_block.elements, 1_000_000);
-    assert!(
-        large_block.duration_us > 100,
-        "Large dataset should be slow"
-    );
+    assert!(large_block.duration_us > 100, "Large dataset should be slow");
 }
 
 /// Test ComputeBlock boundary conditions
@@ -213,19 +193,14 @@ fn test_compute_block_boundary_conditions() {
 #[cfg(feature = "otlp")]
 fn test_otlp_exporter_creation_for_compute_tracing() {
     // Arrange: Create OTLP config with compute tracing context
-    let config = OtlpConfig::new(
-        "http://localhost:4317".to_string(),
-        "compute_tracer_test".to_string(),
-    );
+    let config =
+        OtlpConfig::new("http://localhost:4317".to_string(), "compute_tracer_test".to_string());
 
     // Act: Create exporter
     let result = OtlpExporter::new(config, None);
 
     // Assert: Exporter is created successfully
-    assert!(
-        result.is_ok(),
-        "OTLP exporter should be created successfully for compute tracing"
-    );
+    assert!(result.is_ok(), "OTLP exporter should be created successfully for compute tracing");
 }
 
 /// Test multiple compute blocks can be recorded sequentially
@@ -233,10 +208,8 @@ fn test_otlp_exporter_creation_for_compute_tracing() {
 #[cfg(feature = "otlp")]
 fn test_multiple_compute_blocks_sequential() {
     // Arrange: Create OTLP exporter
-    let config = OtlpConfig::new(
-        "http://localhost:4317".to_string(),
-        "test_sequential_blocks".to_string(),
-    );
+    let config =
+        OtlpConfig::new("http://localhost:4317".to_string(), "test_sequential_blocks".to_string());
     let exporter = OtlpExporter::new(config, None).expect("Failed to create exporter");
 
     // Act: Record multiple compute blocks
@@ -272,12 +245,8 @@ fn test_multiple_compute_blocks_sequential() {
 #[test]
 fn test_compute_block_edge_case_durations() {
     // Test case 1: 1 microsecond (extremely fast)
-    let ultra_fast = ComputeBlock {
-        operation: "cache_hit",
-        duration_us: 1,
-        elements: 1,
-        is_slow: false,
-    };
+    let ultra_fast =
+        ComputeBlock { operation: "cache_hit", duration_us: 1, elements: 1, is_slow: false };
     assert_eq!(ultra_fast.duration_us, 1);
 
     // Test case 2: Exactly threshold (100μs)
@@ -314,10 +283,8 @@ fn test_compute_block_otlp_export_properties() {
     };
 
     // Act: Verify block can be used with OTLP exporter
-    let config = OtlpConfig::new(
-        "http://localhost:4317".to_string(),
-        "test_export_properties".to_string(),
-    );
+    let config =
+        OtlpConfig::new("http://localhost:4317".to_string(), "test_export_properties".to_string());
     let exporter = OtlpExporter::new(config, None).expect("Failed to create exporter");
 
     // Assert: Export completes without error
@@ -361,10 +328,7 @@ fn test_compute_block_anomaly_scenario() {
     };
 
     assert_eq!(anomaly_block.operation, "detect_anomalies");
-    assert!(
-        anomaly_block.duration_us > 1000,
-        "Anomaly detection should take significant time"
-    );
+    assert!(anomaly_block.duration_us > 1000, "Anomaly detection should take significant time");
     assert!(
         anomaly_block.elements > 10_000,
         "Anomaly detection typically processes large datasets"
@@ -384,8 +348,5 @@ fn test_compute_block_statistics_scenario() {
 
     assert_eq!(stats_block.operation, "calculate_statistics");
     assert!(stats_block.is_slow);
-    assert!(
-        stats_block.elements >= 10_000,
-        "Statistics require sufficient data points"
-    );
+    assert!(stats_block.elements >= 10_000, "Statistics require sufficient data points");
 }

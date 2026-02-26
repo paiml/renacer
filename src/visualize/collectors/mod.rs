@@ -35,12 +35,7 @@ pub enum MetricValue {
     /// Rate of change (per second)
     Rate(f64),
     /// Histogram percentile values
-    Histogram {
-        p50: f64,
-        p95: f64,
-        p99: f64,
-        max: f64,
-    },
+    Histogram { p50: f64, p95: f64, p99: f64, max: f64 },
 }
 
 /// Collection of metrics from a single collection cycle
@@ -55,10 +50,7 @@ pub struct Metrics {
 impl Metrics {
     /// Create new metrics collection with current timestamp
     pub fn new(values: HashMap<String, MetricValue>) -> Self {
-        Self {
-            values,
-            timestamp_ns: std::time::Instant::now().elapsed().as_nanos() as u64,
-        }
+        Self { values, timestamp_ns: std::time::Instant::now().elapsed().as_nanos() as u64 }
     }
 
     /// Create empty metrics
@@ -107,11 +99,7 @@ pub struct MockCollector {
 impl MockCollector {
     /// Create new mock collector
     pub fn new() -> Self {
-        Self {
-            metrics: Metrics::empty(),
-            available: true,
-            collect_count: 0,
-        }
+        Self { metrics: Metrics::empty(), available: true, collect_count: 0 }
     }
 
     /// Set canned metrics to return
@@ -161,12 +149,7 @@ mod tests {
         let rate = MetricValue::Rate(1.5);
         assert!(format!("{:?}", rate).contains("1.5"));
 
-        let hist = MetricValue::Histogram {
-            p50: 10.0,
-            p95: 50.0,
-            p99: 90.0,
-            max: 100.0,
-        };
+        let hist = MetricValue::Histogram { p50: 10.0, p95: 50.0, p99: 90.0, max: 100.0 };
         assert!(format!("{:?}", hist).contains("p50"));
     }
 

@@ -20,9 +20,7 @@ pub fn draw(f: &mut Frame, app: &VisualizeApp, area: Rect) {
         .border_style(Style::default().fg(borders::STATS_SUMMARY))
         .title(Span::styled(
             header,
-            Style::default()
-                .fg(borders::STATS_SUMMARY)
-                .add_modifier(Modifier::BOLD),
+            Style::default().fg(borders::STATS_SUMMARY).add_modifier(Modifier::BOLD),
         ));
 
     let inner = block.inner(area);
@@ -44,50 +42,31 @@ pub fn draw(f: &mut Frame, app: &VisualizeApp, area: Rect) {
     let stats = vec![
         Line::from(vec![
             Span::styled("Total Calls: ", Style::default().fg(Color::DarkGray)),
-            Span::styled(
-                format!("{}", app.total_syscalls),
-                Style::default().fg(Color::White),
-            ),
+            Span::styled(format!("{}", app.total_syscalls), Style::default().fg(Color::White)),
         ]),
         Line::from(vec![
             Span::styled("Call Rate:   ", Style::default().fg(Color::DarkGray)),
-            Span::styled(
-                format_rate(app.syscall_rate),
-                Style::default().fg(Color::Yellow),
-            ),
+            Span::styled(format_rate(app.syscall_rate), Style::default().fg(Color::Yellow)),
         ]),
         Line::from(vec![
             Span::styled("Errors:      ", Style::default().fg(Color::DarkGray)),
             Span::styled(
                 format!("{}", app.total_errors),
-                Style::default().fg(if app.total_errors > 0 {
-                    Color::Red
-                } else {
-                    Color::Green
-                }),
+                Style::default().fg(if app.total_errors > 0 { Color::Red } else { Color::Green }),
             ),
         ]),
         Line::from(""),
         Line::from(vec![
             Span::styled("Latency Avg: ", Style::default().fg(Color::DarkGray)),
-            Span::styled(
-                format_duration_us(avg_latency as u64),
-                Style::default().fg(Color::Cyan),
-            ),
+            Span::styled(format_duration_us(avg_latency as u64), Style::default().fg(Color::Cyan)),
         ]),
         Line::from(vec![
             Span::styled("Latency Min: ", Style::default().fg(Color::DarkGray)),
-            Span::styled(
-                format_duration_us(min_latency as u64),
-                Style::default().fg(Color::Green),
-            ),
+            Span::styled(format_duration_us(min_latency as u64), Style::default().fg(Color::Green)),
         ]),
         Line::from(vec![
             Span::styled("Latency Max: ", Style::default().fg(Color::DarkGray)),
-            Span::styled(
-                format_duration_us(max_latency as u64),
-                Style::default().fg(Color::Red),
-            ),
+            Span::styled(format_duration_us(max_latency as u64), Style::default().fg(Color::Red)),
         ]),
         Line::from(vec![
             Span::styled("Latency σ:   ", Style::default().fg(Color::DarkGray)),
@@ -110,10 +89,7 @@ pub fn draw(f: &mut Frame, app: &VisualizeApp, area: Rect) {
         ]),
         Line::from(vec![
             Span::styled("Avg Z-Score: ", Style::default().fg(Color::DarkGray)),
-            Span::styled(
-                format!("{:.2}σ", avg_zscore),
-                Style::default().fg(Color::Cyan),
-            ),
+            Span::styled(format!("{:.2}σ", avg_zscore), Style::default().fg(Color::Cyan)),
         ]),
     ];
 

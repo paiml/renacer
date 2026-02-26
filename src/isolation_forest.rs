@@ -38,12 +38,7 @@ impl IsolationNode {
     /// Calculate path length from root to this node for a given sample
     fn path_length(&self, sample: &[f64], current_depth: usize) -> f64 {
         match self {
-            IsolationNode::Internal {
-                feature_idx,
-                threshold,
-                left,
-                right,
-            } => {
+            IsolationNode::Internal { feature_idx, threshold, left, right } => {
                 if sample[*feature_idx] < *threshold {
                     left.path_length(sample, current_depth + 1)
                 } else {
@@ -89,16 +84,12 @@ impl IsolationTree {
         }
 
         if depth >= max_depth || samples.len() <= 1 {
-            return IsolationNode::Leaf {
-                size: samples.len(),
-            };
+            return IsolationNode::Leaf { size: samples.len() };
         }
 
         // All samples are identical - create leaf
         if samples.windows(2).all(|w| w[0] == w[1]) {
-            return IsolationNode::Leaf {
-                size: samples.len(),
-            };
+            return IsolationNode::Leaf { size: samples.len() };
         }
 
         let num_features = samples[0].len();
@@ -118,37 +109,26 @@ impl IsolationTree {
 
         // If all values are the same for this feature, create leaf
         if (max_val - min_val).abs() < f64::EPSILON {
-            return IsolationNode::Leaf {
-                size: samples.len(),
-            };
+            return IsolationNode::Leaf { size: samples.len() };
         }
 
         // Random split threshold between min and max
         let threshold = rng.gen_range(min_val..max_val);
 
         // Partition samples
-        let (left_samples, right_samples): (Vec<Vec<f64>>, Vec<Vec<f64>>) = samples
-            .iter()
-            .cloned()
-            .partition(|sample| sample[feature_idx] < threshold);
+        let (left_samples, right_samples): (Vec<Vec<f64>>, Vec<Vec<f64>>) =
+            samples.iter().cloned().partition(|sample| sample[feature_idx] < threshold);
 
         // If partition is empty on one side, create leaf
         if left_samples.is_empty() || right_samples.is_empty() {
-            return IsolationNode::Leaf {
-                size: samples.len(),
-            };
+            return IsolationNode::Leaf { size: samples.len() };
         }
 
         // Recursively build children
         let left = Box::new(Self::build_node(&left_samples, depth + 1, max_depth));
         let right = Box::new(Self::build_node(&right_samples, depth + 1, max_depth));
 
-        IsolationNode::Internal {
-            feature_idx,
-            threshold,
-            left,
-            right,
-        }
+        IsolationNode::Internal { feature_idx, threshold, left, right }
     }
 
     /// Calculate path length for a sample
@@ -184,10 +164,8 @@ impl IsolationForest {
             let sample_size = self.subsample_size.min(samples.len());
             let mut indices: Vec<_> = (0..samples.len()).collect();
             indices.shuffle(&mut rng);
-            let subsamples: Vec<_> = indices[..sample_size]
-                .iter()
-                .map(|&i| samples[i].clone())
-                .collect();
+            let subsamples: Vec<_> =
+                indices[..sample_size].iter().map(|&i| samples[i].clone()).collect();
 
             // Build tree
             let tree = IsolationTree::build(&subsamples, max_depth);
@@ -203,12 +181,9 @@ impl IsolationForest {
         }
 
         // Average path length across all trees
-        let avg_path_length: f64 = self
-            .trees
-            .iter()
-            .map(|tree| tree.path_length(sample))
-            .sum::<f64>()
-            / self.trees.len() as f64;
+        let avg_path_length: f64 =
+            self.trees.iter().map(|tree| tree.path_length(sample)).sum::<f64>()
+                / self.trees.len() as f64;
 
         // Normalize by expected path length
         let c = IsolationNode::average_path_length(self.subsample_size);
@@ -315,11 +290,8 @@ pub fn analyze_outliers(
             let (count, total_time_ns) = syscall_data[name];
             let avg_duration_us = total_time_ns as f64 / 1000.0 / count as f64;
 
-            let feature_importance = if explain {
-                calculate_feature_importance(feature_vec)
-            } else {
-                Vec::new()
-            };
+            let feature_importance =
+                if explain { calculate_feature_importance(feature_vec) } else { Vec::new() };
 
             outliers.push(Outlier {
                 syscall: name.clone(),
@@ -333,17 +305,10 @@ pub fn analyze_outliers(
 
     // Sort by anomaly score (highest first, handle NaN gracefully)
     outliers.sort_by(|a, b| {
-        b.anomaly_score
-            .partial_cmp(&a.anomaly_score)
-            .unwrap_or(std::cmp::Ordering::Equal)
+        b.anomaly_score.partial_cmp(&a.anomaly_score).unwrap_or(std::cmp::Ordering::Equal)
     });
 
-    OutlierReport {
-        outliers,
-        total_samples: features.len(),
-        contamination,
-        num_trees,
-    }
+    OutlierReport { outliers, total_samples: features.len(), contamination, num_trees }
 }
 
 /// Calculate feature importance for explainability (XAI)
@@ -357,15 +322,18 @@ fn calculate_feature_importance(features: &[f64]) -> Vec<(String, f64)> {
         .iter()
         .zip(features.iter())
         .map(|(name, &value)| {
-            let importance = if total > 0.0 {
-                (value.abs() / total) * 100.0
-            } else {
-                0.0
-            };
+            let importance = if total > 0.0 { (value.abs() / total) * 100.0 } else { 0.0 };
             ((*name).to_string(), importance)
         })
         .collect()
 }
+
+// Compile-time thread-safety verification (Sprint 59)
+static_assertions::assert_impl_all!(IsolationTree: Send, Sync);
+static_assertions::assert_impl_all!(IsolationForest: Send, Sync);
+static_assertions::assert_impl_all!(SyscallFeature: Send, Sync);
+static_assertions::assert_impl_all!(Outlier: Send, Sync);
+static_assertions::assert_impl_all!(OutlierReport: Send, Sync);
 
 #[cfg(test)]
 mod tests {
@@ -422,11 +390,8 @@ mod tests {
             outlier_score,
             normal_score
         );
-        assert!(
-            outlier_score > 0.50,
-            "Outlier score ({}) should be > 0.50",
-            outlier_score
-        ); // Should be anomalous (>0.5 is anomaly baseline)
+        assert!(outlier_score > 0.50, "Outlier score ({}) should be > 0.50", outlier_score);
+        // Should be anomalous (>0.5 is anomaly baseline)
     }
 
     #[test]

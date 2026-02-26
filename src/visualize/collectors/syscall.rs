@@ -138,9 +138,8 @@ pub struct SyscallCollector {
     category_stats: HashMap<SyscallCategory, SyscallStats>,
     /// Collection window start time
     window_start: Instant,
-    /// Collection interval (reserved for future rate limiting)
-    #[allow(dead_code)]
-    interval: Duration,
+    /// Collection _interval (reserved for future rate limiting)
+    _interval: Duration,
     /// Total syscalls in current window
     total_count: u64,
     /// Total errors in current window
@@ -157,7 +156,7 @@ impl SyscallCollector {
             stats: HashMap::new(),
             category_stats: HashMap::new(),
             window_start: Instant::now(),
-            interval: Duration::from_secs(1),
+            _interval: Duration::from_secs(1),
             total_count: 0,
             total_errors: 0,
             available: true,
@@ -171,7 +170,7 @@ impl SyscallCollector {
             stats: HashMap::new(),
             category_stats: HashMap::new(),
             window_start: Instant::now(),
-            interval: Duration::from_secs(1),
+            _interval: Duration::from_secs(1),
             total_count: 0,
             total_errors: 0,
             available: true,
@@ -186,16 +185,10 @@ impl SyscallCollector {
     /// Process a single syscall event
     fn process_event(&mut self, event: &SyscallEvent) {
         // Update per-syscall stats
-        self.stats
-            .entry(event.name.clone())
-            .or_default()
-            .update(event);
+        self.stats.entry(event.name.clone()).or_default().update(event);
 
         // Update per-category stats
-        self.category_stats
-            .entry(event.category())
-            .or_default()
-            .update(event);
+        self.category_stats.entry(event.category()).or_default().update(event);
 
         // Update totals
         self.total_count += 1;
@@ -242,11 +235,8 @@ impl SyscallCollector {
 
     /// Get all syscall names sorted by count (descending)
     pub fn top_syscalls(&self, limit: usize) -> Vec<(&str, u64)> {
-        let mut syscalls: Vec<_> = self
-            .stats
-            .iter()
-            .map(|(name, stats)| (name.as_str(), stats.count))
-            .collect();
+        let mut syscalls: Vec<_> =
+            self.stats.iter().map(|(name, stats)| (name.as_str(), stats.count)).collect();
         syscalls.sort_by(|a, b| b.1.cmp(&a.1));
         syscalls.truncate(limit);
         syscalls
@@ -272,18 +262,9 @@ impl Collector for SyscallCollector {
         let mut values = HashMap::new();
 
         // Add total metrics
-        values.insert(
-            "syscall.total.rate".to_string(),
-            MetricValue::Rate(self.total_rate()),
-        );
-        values.insert(
-            "syscall.total.count".to_string(),
-            MetricValue::Counter(self.total_count),
-        );
-        values.insert(
-            "syscall.total.errors".to_string(),
-            MetricValue::Counter(self.total_errors),
-        );
+        values.insert("syscall.total.rate".to_string(), MetricValue::Rate(self.total_rate()));
+        values.insert("syscall.total.count".to_string(), MetricValue::Counter(self.total_count));
+        values.insert("syscall.total.errors".to_string(), MetricValue::Counter(self.total_errors));
 
         // Add per-category rates
         for (category, stats) in &self.category_stats {
@@ -348,22 +329,10 @@ mod tests {
 
     #[test]
     fn test_syscall_event_category() {
-        assert_eq!(
-            SyscallEvent::new("read", 0).category(),
-            SyscallCategory::File
-        );
-        assert_eq!(
-            SyscallEvent::new("socket", 0).category(),
-            SyscallCategory::Network
-        );
-        assert_eq!(
-            SyscallEvent::new("mmap", 0).category(),
-            SyscallCategory::Memory
-        );
-        assert_eq!(
-            SyscallEvent::new("fork", 0).category(),
-            SyscallCategory::Process
-        );
+        assert_eq!(SyscallEvent::new("read", 0).category(), SyscallCategory::File);
+        assert_eq!(SyscallEvent::new("socket", 0).category(), SyscallCategory::Network);
+        assert_eq!(SyscallEvent::new("mmap", 0).category(), SyscallCategory::Memory);
+        assert_eq!(SyscallEvent::new("fork", 0).category(), SyscallCategory::Process);
     }
 
     #[test]
@@ -431,14 +400,10 @@ mod tests {
         collector.inject(SyscallEvent::new("open", 50));
         collector.inject(SyscallEvent::new("socket", 200));
 
-        let file_stats = collector
-            .get_category_stats(&SyscallCategory::File)
-            .unwrap();
+        let file_stats = collector.get_category_stats(&SyscallCategory::File).unwrap();
         assert_eq!(file_stats.count, 2); // read + open
 
-        let net_stats = collector
-            .get_category_stats(&SyscallCategory::Network)
-            .unwrap();
+        let net_stats = collector.get_category_stats(&SyscallCategory::Network).unwrap();
         assert_eq!(net_stats.count, 1);
     }
 

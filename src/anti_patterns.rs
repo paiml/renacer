@@ -178,22 +178,14 @@ impl AntiPattern {
                      Consider decomposing or load balancing."
                 )
             }
-            AntiPattern::TightLoop {
-                syscall_name,
-                repetition_count,
-                total_duration,
-                ..
-            } => {
+            AntiPattern::TightLoop { syscall_name, repetition_count, total_duration, .. } => {
                 format!(
                     "Syscall '{syscall_name}' repeated {repetition_count} times (total {total_duration}ns). \
                      Consider batching with vectorized I/O (readv/writev)."
                 )
             }
             AntiPattern::PcieBottleneck {
-                transfer_time,
-                kernel_time,
-                transfer_percentage,
-                ..
+                transfer_time, kernel_time, transfer_percentage, ..
             } => {
                 format!(
                     "GPU memory transfers ({transfer_percentage:.1}% of kernel time) saturate PCIe: \
@@ -309,10 +301,8 @@ fn detect_god_process(
     }
 
     // Find process with most critical path time
-    let (&dominant_process, &process_duration) = process_time
-        .iter()
-        .max_by_key(|(_, &duration)| duration)
-        .unwrap_or((&0, &0));
+    let (&dominant_process, &process_duration) =
+        process_time.iter().max_by_key(|(_, &duration)| duration).unwrap_or((&0, &0));
 
     if process_duration == 0 {
         return Ok(None);
@@ -511,12 +501,7 @@ mod tests {
         assert_eq!(patterns.len(), 1);
         assert_eq!(patterns[0].name(), "God Process");
 
-        if let AntiPattern::GodProcess {
-            process_id,
-            critical_path_percentage,
-            ..
-        } = &patterns[0]
-        {
+        if let AntiPattern::GodProcess { process_id, critical_path_percentage, .. } = &patterns[0] {
             assert_eq!(*process_id, 1234);
             assert!(*critical_path_percentage > 80.0);
         } else {
@@ -537,17 +522,10 @@ mod tests {
         let patterns = detect_anti_patterns(&graph).expect("test");
 
         // Should detect Tight Loop (1500 > 1000 threshold)
-        let tight_loop = patterns
-            .iter()
-            .find(|p| p.name() == "Tight Loop")
-            .expect("Expected TightLoop pattern");
+        let tight_loop =
+            patterns.iter().find(|p| p.name() == "Tight Loop").expect("Expected TightLoop pattern");
 
-        if let AntiPattern::TightLoop {
-            syscall_name,
-            repetition_count,
-            ..
-        } = tight_loop
-        {
+        if let AntiPattern::TightLoop { syscall_name, repetition_count, .. } = tight_loop {
             assert_eq!(syscall_name, "read");
             assert_eq!(*repetition_count, 1500);
         } else {
@@ -574,11 +552,7 @@ mod tests {
             .find(|p| p.name() == "PCIe Bottleneck")
             .expect("Expected PCIe bottleneck");
 
-        if let AntiPattern::PcieBottleneck {
-            transfer_percentage,
-            ..
-        } = pcie
-        {
+        if let AntiPattern::PcieBottleneck { transfer_percentage, .. } = pcie {
             assert!(*transfer_percentage > 50.0);
         } else {
             panic!("Expected PcieBottleneck");

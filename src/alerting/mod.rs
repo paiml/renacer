@@ -32,3 +32,10 @@ mod state;
 pub use engine::AlertEngine;
 pub use rule::{AlertExpr, AlertRule, Severity};
 pub use state::{ActiveAlert, AlertState};
+
+// Compile-time thread-safety verification (Sprint 59)
+static_assertions::assert_impl_all!(AlertRule: Send, Sync);
+static_assertions::assert_impl_all!(AlertExpr: Send, Sync);
+static_assertions::assert_impl_all!(Severity: Send, Sync);
+static_assertions::assert_impl_all!(ActiveAlert: Send, Sync);
+static_assertions::assert_impl_all!(AlertState: Send, Sync);

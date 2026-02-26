@@ -187,12 +187,8 @@ fn test_ring_buffer_stats() {
 
 #[test]
 fn test_buffer_stats_calculations() {
-    let stats = BufferStats {
-        total_pushed: 1000,
-        total_dropped: 50,
-        current_size: 100,
-        capacity: 1024,
-    };
+    let stats =
+        BufferStats { total_pushed: 1000, total_dropped: 50, current_size: 100, capacity: 1024 };
 
     assert_eq!(stats.drop_rate(), 0.05); // 50/1000
     assert_eq!(stats.utilization(), 100.0 / 1024.0);
@@ -211,18 +207,9 @@ fn test_ring_buffer_trace_continuity() {
 
     // Push spans in order
     for i in 0..100 {
-        let parent = if i == 0 {
-            None
-        } else {
-            Some([(i - 1) as u8; 8])
-        };
-        let span = create_test_span(
-            trace_id,
-            [(i as u8); 8],
-            parent,
-            &format!("span_{}", i),
-            i as u64,
-        );
+        let parent = if i == 0 { None } else { Some([(i - 1) as u8; 8]) };
+        let span =
+            create_test_span(trace_id, [(i as u8); 8], parent, &format!("span_{}", i), i as u64);
         buffer.push(span);
     }
 
@@ -278,18 +265,11 @@ fn test_ring_buffer_high_throughput() {
     println!("  Total dropped: {}", stats.total_dropped);
     println!("  Drop rate: {:.2}%", stats.drop_rate() * 100.0);
     println!("  Elapsed: {:?}", elapsed);
-    println!(
-        "  Throughput: {:.0} spans/sec",
-        stats.total_pushed as f64 / elapsed.as_secs_f64()
-    );
+    println!("  Throughput: {:.0} spans/sec", stats.total_pushed as f64 / elapsed.as_secs_f64());
 
     assert_eq!(stats.total_pushed, 10000);
     // Drop rate should be minimal with large buffer
-    assert!(
-        stats.drop_rate() < 0.01,
-        "Drop rate too high: {}",
-        stats.drop_rate()
-    );
+    assert!(stats.drop_rate() < 0.01, "Drop rate too high: {}", stats.drop_rate());
 }
 
 #[test]

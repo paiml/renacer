@@ -110,10 +110,8 @@ mod gpu_transfer_tests {
     /// Test that large slow transfers are traced
     #[test]
     fn test_large_slow_transfer_traced() {
-        let config = OtlpConfig::new(
-            "http://localhost:4317".to_string(),
-            "test-large-transfer".to_string(),
-        );
+        let config =
+            OtlpConfig::new("http://localhost:4317".to_string(), "test-large-transfer".to_string());
         let exporter = OtlpExporter::new(config, None).expect("Failed to create OTLP exporter");
 
         // Create a large slow transfer (100MB taking 200ms)
@@ -165,10 +163,8 @@ mod gpu_transfer_tests {
     fn test_transfers_and_kernels_unified() {
         use renacer::otlp_exporter::{ComputeBlock, GpuKernel};
 
-        let config = OtlpConfig::new(
-            "http://localhost:4317".to_string(),
-            "test-unified-trace".to_string(),
-        );
+        let config =
+            OtlpConfig::new("http://localhost:4317".to_string(), "test-unified-trace".to_string());
         let mut exporter = OtlpExporter::new(config, None).expect("Failed to create OTLP exporter");
 
         // Start root span for the process

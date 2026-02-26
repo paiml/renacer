@@ -33,11 +33,7 @@ fn test_rewrite_errors_flag_accepted() {
     fs::write(&source_map, map_content).expect("test");
 
     let mut cmd = Command::cargo_bin("renacer").expect("test");
-    cmd.arg("--transpiler-map")
-        .arg(&source_map)
-        .arg("--rewrite-errors")
-        .arg("--")
-        .arg("true");
+    cmd.arg("--transpiler-map").arg(&source_map).arg("--rewrite-errors").arg("--").arg("true");
 
     // Should accept the flag without error
     cmd.assert().success();
@@ -205,10 +201,7 @@ fn test_backward_compatibility_without_rewrite_errors() {
 
     // Use source map WITHOUT --rewrite-errors
     let mut cmd = Command::cargo_bin("renacer").expect("test");
-    cmd.arg("--transpiler-map")
-        .arg(&source_map)
-        .arg("--")
-        .arg("true");
+    cmd.arg("--transpiler-map").arg(&source_map).arg("--").arg("true");
 
     // Should still succeed
     cmd.assert().success();
@@ -234,11 +227,7 @@ fn test_rewrite_errors_empty_mappings() {
     fs::write(&source_map, map_content).expect("test");
 
     let mut cmd = Command::cargo_bin("renacer").expect("test");
-    cmd.arg("--transpiler-map")
-        .arg(&source_map)
-        .arg("--rewrite-errors")
-        .arg("--")
-        .arg("true");
+    cmd.arg("--transpiler-map").arg(&source_map).arg("--rewrite-errors").arg("--").arg("true");
 
     // Should succeed even with no mappings
     cmd.assert().success();
@@ -365,11 +354,7 @@ fn test_multiple_error_mappings() {
     fs::write(&source_map, map_content).expect("test");
 
     let mut cmd = Command::cargo_bin("renacer").expect("test");
-    cmd.arg("--transpiler-map")
-        .arg(&source_map)
-        .arg("--rewrite-errors")
-        .arg("--")
-        .arg("true");
+    cmd.arg("--transpiler-map").arg(&source_map).arg("--rewrite-errors").arg("--").arg("true");
 
     cmd.assert().success();
 }

@@ -41,11 +41,7 @@ impl AdaptiveSampler {
     /// - Sample rate: 1% (for fast operations)
     /// - Trace all: false
     pub fn new() -> Self {
-        AdaptiveSampler {
-            threshold_us: 100,
-            sample_rate: 0.01,
-            trace_all: false,
-        }
+        AdaptiveSampler { threshold_us: 100, sample_rate: 0.01, trace_all: false }
     }
 
     /// Create sampler with custom threshold
@@ -54,11 +50,7 @@ impl AdaptiveSampler {
     ///
     /// * `threshold_us` - Minimum duration in microseconds to always trace
     pub fn with_threshold(threshold_us: u64) -> Self {
-        AdaptiveSampler {
-            threshold_us,
-            sample_rate: 0.01,
-            trace_all: false,
-        }
+        AdaptiveSampler { threshold_us, sample_rate: 0.01, trace_all: false }
     }
 
     /// Create sampler with custom sample rate
@@ -76,11 +68,7 @@ impl AdaptiveSampler {
 
     /// Create sampler that traces everything (debug mode)
     pub fn trace_all() -> Self {
-        AdaptiveSampler {
-            threshold_us: 0,
-            sample_rate: 1.0,
-            trace_all: true,
-        }
+        AdaptiveSampler { threshold_us: 0, sample_rate: 1.0, trace_all: true }
     }
 
     /// Preset: GPU kernel sampling (always trace >100μs)
@@ -170,7 +158,7 @@ impl AdaptiveSampler {
             return true;
         }
 
-        // Always trace slow operations (above threshold)
+        // Always trace operations exceeding the latency threshold
         if estimated_duration_us >= self.threshold_us {
             return true;
         }
@@ -266,6 +254,9 @@ impl Default for AdaptiveSampler {
         Self::new()
     }
 }
+
+// Compile-time thread-safety verification (Sprint 59)
+static_assertions::assert_impl_all!(AdaptiveSampler: Send, Sync);
 
 // ============================================================================
 // UNIT TESTS (EXTREME TDD)
@@ -508,5 +499,30 @@ mod tests {
         assert!(sampler.should_trace(50));
         assert!(sampler.should_trace(100));
         assert!(sampler.should_trace(1000));
+    }
+}
+
+#[cfg(kani)]
+mod kani_proofs {
+    use super::*;
+
+    /// Prove that sample_rate is always clamped to [0.0, 1.0]
+    #[kani::proof]
+    fn proof_sample_rate_clamped() {
+        let rate: f64 = kani::any();
+        kani::assume(!rate.is_nan());
+        let sampler = AdaptiveSampler::with_sample_rate(rate);
+        kani::assert(sampler.sample_rate >= 0.0, "sample rate must be >= 0");
+        kani::assert(sampler.sample_rate <= 1.0, "sample rate must be <= 1");
+    }
+
+    /// Prove that operations above threshold are always traced
+    #[kani::proof]
+    fn proof_above_threshold_always_traced() {
+        let threshold: u64 = kani::any();
+        kani::assume(threshold < u64::MAX);
+        let sampler = AdaptiveSampler::with_threshold(threshold);
+        let duration = threshold + 1;
+        kani::assert(sampler.should_trace(duration), "above-threshold must always trace");
     }
 }

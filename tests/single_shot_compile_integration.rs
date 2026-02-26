@@ -50,10 +50,7 @@ fn test_complete_workflow_baseline() {
     assert!(!attributions.is_empty(), "Should identify clusters");
 
     let hotspots = identify_hotspots(&attributions);
-    assert!(
-        hotspots.iter().any(|h| h.cluster == "FileIO"),
-        "FileIO should be a hotspot"
-    );
+    assert!(hotspots.iter().any(|h| h.cluster == "FileIO"), "FileIO should be a hotspot");
     assert!(
         hotspots.iter().all(|h| h.is_expected),
         "All hotspots should be expected for transpiler"
@@ -73,10 +70,7 @@ fn test_complete_workflow_baseline() {
     let assessment = assess_regression(&baseline_data, &baseline_data, &config).expect("test");
 
     // Baseline vs baseline should show no regression
-    assert_eq!(
-        assessment.verdict,
-        renacer::regression::RegressionVerdict::NoRegression
-    );
+    assert_eq!(assessment.verdict, renacer::regression::RegressionVerdict::NoRegression);
 }
 
 /// Test regression detection: File I/O regression
@@ -97,10 +91,7 @@ fn test_regression_file_io_slowdown() {
 
     // Should detect read() regression
     match assessment.verdict {
-        renacer::regression::RegressionVerdict::Regression {
-            ref regressed_syscalls,
-            ..
-        } => {
+        renacer::regression::RegressionVerdict::Regression { ref regressed_syscalls, .. } => {
             assert!(regressed_syscalls.contains(&"read".to_string()));
         }
         _ => panic!("Expected regression detection"),
@@ -134,14 +125,8 @@ fn test_anomaly_unexpected_networking() {
     let current_hotspots = identify_hotspots(&current_attributions);
 
     let networking_hotspot = current_hotspots.iter().find(|h| h.cluster == "Networking");
-    assert!(
-        networking_hotspot.is_some(),
-        "Should detect networking hotspot"
-    );
-    assert!(
-        !networking_hotspot.expect("test").is_expected,
-        "Networking should be unexpected"
-    );
+    assert!(networking_hotspot.is_some(), "Should detect networking hotspot");
+    assert!(!networking_hotspot.expect("test").is_expected, "Networking should be unexpected");
 
     // Sequence analysis should detect new patterns
     let baseline_syscalls: Vec<String> =
@@ -163,10 +148,7 @@ fn test_anomaly_unexpected_networking() {
         })
         .collect();
 
-    assert!(
-        !networking_anomalies.is_empty(),
-        "Should detect networking anomalies"
-    );
+    assert!(!networking_anomalies.is_empty(), "Should detect networking anomalies");
 }
 
 /// Test memory allocation pattern change detection
@@ -184,10 +166,7 @@ fn test_memory_allocation_pattern_change() {
     let anomalies = detect_sequence_anomalies(&baseline_ngrams, &current_ngrams, 0.30);
 
     // Should detect sequence changes (mmap→read vs brk→read)
-    assert!(
-        !anomalies.is_empty(),
-        "Should detect allocation pattern change"
-    );
+    assert!(!anomalies.is_empty(), "Should detect allocation pattern change");
 
     // Note: Semantic equivalence (Section 6.3) would validate this as acceptable
 }
@@ -220,14 +199,8 @@ fn test_complete_transpiler_validation() {
     let current_attr = calculate_time_attribution(&current_spans, &registry);
 
     // Verify optimization reduced time
-    let baseline_file_io = baseline_attr
-        .iter()
-        .find(|a| a.cluster == "FileIO")
-        .expect("test");
-    let current_file_io = current_attr
-        .iter()
-        .find(|a| a.cluster == "FileIO")
-        .expect("test");
+    let baseline_file_io = baseline_attr.iter().find(|a| a.cluster == "FileIO").expect("test");
+    let current_file_io = current_attr.iter().find(|a| a.cluster == "FileIO").expect("test");
 
     assert!(
         current_file_io.total_time < baseline_file_io.total_time,
@@ -243,11 +216,7 @@ fn test_complete_transpiler_validation() {
     let current_ngrams = extract_ngrams(&current_syscalls, 3);
 
     // Same sequences (optimization preserves behavior)
-    assert_eq!(
-        baseline_ngrams.len(),
-        current_ngrams.len(),
-        "Sequence grammar preserved"
-    );
+    assert_eq!(baseline_ngrams.len(), current_ngrams.len(), "Sequence grammar preserved");
 
     // Step 5: Statistical regression check
     let mut baseline_data = HashMap::new();
@@ -290,15 +259,9 @@ fn test_hotspot_identification_accuracy() {
     // Should identify FileIO (read+write) and MemoryAllocation (mmap) as hotspots
     // FileIO: 80ms + 10ms = 90ms (90%)
     // MemoryAllocation: 10ms (10%)
-    assert!(
-        !hotspots.is_empty(),
-        "Should identify hotspots (>5% threshold)"
-    );
+    assert!(!hotspots.is_empty(), "Should identify hotspots (>5% threshold)");
 
-    let file_io_hotspot = hotspots
-        .iter()
-        .find(|h| h.cluster == "FileIO")
-        .expect("test");
+    let file_io_hotspot = hotspots.iter().find(|h| h.cluster == "FileIO").expect("test");
     assert!(
         (file_io_hotspot.percentage - 90.0).abs() < 1.0,
         "FileIO should be ~90%, got {}",

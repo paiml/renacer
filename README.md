@@ -29,6 +29,7 @@ Renacer (Spanish: "to be reborn") is a next-generation binary inspection and tra
 - [Features](#features)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
+- [Usage](#usage)
 - [Examples](#examples)
 - [Performance](#performance)
 - [Quality Standards](#quality-standards)
@@ -392,6 +393,43 @@ renacer --otlp-endpoint http://localhost:4317 \
 
 # Attach to running process
 renacer -p 1234
+```
+
+## Usage
+
+### Command Line Interface
+
+```bash
+renacer [OPTIONS] [-- <COMMAND> [ARGS...]]
+renacer [OPTIONS] -p <PID>
+```
+
+### Options
+
+| Flag | Description |
+|------|-------------|
+| `--source` | Enable DWARF source correlation |
+| `--function-time` | Profile function execution times |
+| `--format <FMT>` | Output format: `text`, `json`, `csv`, `html` |
+| `-c, --count` | Show syscall count statistics |
+| `-T, --timestamps` | Include timestamps in output |
+| `-p <PID>` | Attach to running process by PID |
+| `-f <FILTER>` | Filter syscalls by name pattern |
+| `--tui` | Launch real-time TUI visualization |
+| `--stats-extended` | Show extended statistical analysis |
+
+### As a Library
+
+```rust
+use renacer::process_tracer::{ProcessTraceConfig, ProcessTrace};
+
+let config = ProcessTraceConfig::default();
+let trace = ProcessTrace::new(config);
+let result = trace.collect(pid)?;
+
+for event in &result.events {
+    println!("{}: {}us", event.syscall, event.duration_us);
+}
 ```
 
 ## Examples

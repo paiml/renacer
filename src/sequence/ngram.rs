@@ -62,10 +62,8 @@ pub fn ngram_coverage(ngrams: &NGramMap) -> f64 {
 
 /// Find most frequent N-grams (useful for identifying hot paths)
 pub fn top_ngrams(ngrams: &NGramMap, k: usize) -> Vec<(NGram, usize)> {
-    let mut ngram_vec: Vec<_> = ngrams
-        .iter()
-        .map(|(ngram, count)| (ngram.clone(), *count))
-        .collect();
+    let mut ngram_vec: Vec<_> =
+        ngrams.iter().map(|(ngram, count)| (ngram.clone(), *count)).collect();
 
     // Sort by frequency (descending)
     ngram_vec.sort_by(|a, b| b.1.cmp(&a.1));
@@ -79,12 +77,8 @@ mod tests {
 
     #[test]
     fn test_extract_ngrams_basic() {
-        let syscalls = vec![
-            "mmap".to_string(),
-            "read".to_string(),
-            "write".to_string(),
-            "close".to_string(),
-        ];
+        let syscalls =
+            vec!["mmap".to_string(), "read".to_string(), "write".to_string(), "close".to_string()];
 
         let ngrams = extract_ngrams(&syscalls, 3);
 

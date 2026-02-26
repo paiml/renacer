@@ -26,11 +26,7 @@ pub enum RegistryError {
     AlreadyRegistered { name: String },
 
     #[error("metric type mismatch: {name} is {existing}, not {requested}")]
-    TypeMismatch {
-        name: String,
-        existing: MetricType,
-        requested: MetricType,
-    },
+    TypeMismatch { name: String, existing: MetricType, requested: MetricType },
 
     #[error("label validation failed: {0}")]
     LabelError(#[from] super::labels::LabelError),
@@ -90,20 +86,12 @@ impl Default for Registry {
 impl Registry {
     /// Create a new registry with default settings
     pub fn new() -> Self {
-        Self {
-            metrics: DashMap::new(),
-            validator: LabelValidator::new(),
-            max_series: 100_000,
-        }
+        Self { metrics: DashMap::new(), validator: LabelValidator::new(), max_series: 100_000 }
     }
 
     /// Create registry with custom label validator
     pub fn with_validator(validator: LabelValidator) -> Self {
-        Self {
-            metrics: DashMap::new(),
-            validator,
-            max_series: 100_000,
-        }
+        Self { metrics: DashMap::new(), validator, max_series: 100_000 }
     }
 
     /// Set maximum series limit
@@ -141,8 +129,7 @@ impl Registry {
 
         // Create new counter
         let counter = Counter::new_arc(name, labels_map);
-        self.metrics
-            .insert(key, RegisteredMetric::Counter(counter.clone()));
+        self.metrics.insert(key, RegisteredMetric::Counter(counter.clone()));
 
         Ok(counter)
     }
@@ -172,8 +159,7 @@ impl Registry {
 
         // Create new gauge
         let gauge = Gauge::new_arc(name, labels_map);
-        self.metrics
-            .insert(key, RegisteredMetric::Gauge(gauge.clone()));
+        self.metrics.insert(key, RegisteredMetric::Gauge(gauge.clone()));
 
         Ok(gauge)
     }
@@ -217,8 +203,7 @@ impl Registry {
 
         // Create new histogram
         let histogram = Histogram::new_arc(name, labels_map, buckets);
-        self.metrics
-            .insert(key, RegisteredMetric::Histogram(histogram.clone()));
+        self.metrics.insert(key, RegisteredMetric::Histogram(histogram.clone()));
 
         Ok(histogram)
     }
@@ -308,10 +293,8 @@ impl Registry {
 
     /// Convert label pairs to Labels map with validation
     fn labels_from_pairs(&self, pairs: &[(&str, &str)]) -> Result<Labels, RegistryError> {
-        let labels: Labels = pairs
-            .iter()
-            .map(|(k, v)| ((*k).to_string(), (*v).to_string()))
-            .collect();
+        let labels: Labels =
+            pairs.iter().map(|(k, v)| ((*k).to_string(), (*v).to_string())).collect();
 
         self.validator.validate(&labels)?;
         Ok(labels)
@@ -340,17 +323,16 @@ fn metric_key(name: &str, labels: &Labels) -> String {
     key
 }
 
-/// Global default registry (lazy initialized)
-#[allow(dead_code)]
-pub fn default_registry() -> &'static Registry {
-    use std::sync::OnceLock;
-    static REGISTRY: OnceLock<Registry> = OnceLock::new();
-    REGISTRY.get_or_init(Registry::new)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Global default registry (lazy initialized)
+    fn default_registry() -> &'static Registry {
+        use std::sync::OnceLock;
+        static REGISTRY: OnceLock<Registry> = OnceLock::new();
+        REGISTRY.get_or_init(Registry::new)
+    }
 
     #[test]
     fn test_registry_counter() {
@@ -362,9 +344,7 @@ mod tests {
         let c2 = reg.counter("requests_total", &[("method", "GET")]).unwrap();
         assert_eq!(c2.get(), 1); // Same counter
 
-        let c3 = reg
-            .counter("requests_total", &[("method", "POST")])
-            .unwrap();
+        let c3 = reg.counter("requests_total", &[("method", "POST")]).unwrap();
         c3.inc();
         assert_eq!(c3.get(), 1); // Different counter
     }
@@ -373,14 +353,10 @@ mod tests {
     fn test_registry_gauge() {
         let reg = Registry::new();
 
-        let g = reg
-            .gauge("temperature", &[("location", "kitchen")])
-            .unwrap();
+        let g = reg.gauge("temperature", &[("location", "kitchen")]).unwrap();
         g.set(22);
 
-        let g2 = reg
-            .gauge("temperature", &[("location", "kitchen")])
-            .unwrap();
+        let g2 = reg.gauge("temperature", &[("location", "kitchen")]).unwrap();
         assert_eq!(g2.get(), 22);
     }
 
@@ -421,10 +397,7 @@ mod tests {
         reg.counter("metric2", &[]).unwrap();
         let result = reg.counter("metric3", &[]);
 
-        assert!(matches!(
-            result,
-            Err(RegistryError::CardinalityLimit { .. })
-        ));
+        assert!(matches!(result, Err(RegistryError::CardinalityLimit { .. })));
     }
 
     #[test]
@@ -600,26 +573,11 @@ mod tests {
         let reg = Registry::new();
 
         // Invalid names
-        assert!(matches!(
-            reg.counter("", &[]),
-            Err(RegistryError::InvalidName(_))
-        ));
-        assert!(matches!(
-            reg.counter("123start", &[]),
-            Err(RegistryError::InvalidName(_))
-        ));
-        assert!(matches!(
-            reg.counter("has-dash", &[]),
-            Err(RegistryError::InvalidName(_))
-        ));
-        assert!(matches!(
-            reg.counter("has.dot", &[]),
-            Err(RegistryError::InvalidName(_))
-        ));
-        assert!(matches!(
-            reg.counter("has space", &[]),
-            Err(RegistryError::InvalidName(_))
-        ));
+        assert!(matches!(reg.counter("", &[]), Err(RegistryError::InvalidName(_))));
+        assert!(matches!(reg.counter("123start", &[]), Err(RegistryError::InvalidName(_))));
+        assert!(matches!(reg.counter("has-dash", &[]), Err(RegistryError::InvalidName(_))));
+        assert!(matches!(reg.counter("has.dot", &[]), Err(RegistryError::InvalidName(_))));
+        assert!(matches!(reg.counter("has space", &[]), Err(RegistryError::InvalidName(_))));
     }
 
     #[test]
@@ -651,10 +609,7 @@ mod tests {
         let reg = Registry::new().max_series(1);
         reg.gauge("metric1", &[]).unwrap();
         let result = reg.gauge("metric2", &[]);
-        assert!(matches!(
-            result,
-            Err(RegistryError::CardinalityLimit { .. })
-        ));
+        assert!(matches!(result, Err(RegistryError::CardinalityLimit { .. })));
     }
 
     #[test]
@@ -662,17 +617,12 @@ mod tests {
         let reg = Registry::new().max_series(1);
         reg.histogram("metric1", &[]).unwrap();
         let result = reg.histogram("metric2", &[]);
-        assert!(matches!(
-            result,
-            Err(RegistryError::CardinalityLimit { .. })
-        ));
+        assert!(matches!(result, Err(RegistryError::CardinalityLimit { .. })));
     }
 
     #[test]
     fn test_registry_error_display() {
-        let err = RegistryError::AlreadyRegistered {
-            name: "test".to_string(),
-        };
+        let err = RegistryError::AlreadyRegistered { name: "test".to_string() };
         assert!(err.to_string().contains("test"));
 
         let err = RegistryError::TypeMismatch {
@@ -685,10 +635,7 @@ mod tests {
         let err = RegistryError::InvalidName("bad!name".to_string());
         assert!(err.to_string().contains("bad!name"));
 
-        let err = RegistryError::CardinalityLimit {
-            count: 100,
-            max: 50,
-        };
+        let err = RegistryError::CardinalityLimit { count: 100, max: 50 };
         assert!(err.to_string().contains("100"));
     }
 

@@ -17,10 +17,8 @@ fn create_test_span(
     let clock = LamportClock::new();
     let duration_ns = end_ns.saturating_sub(start_ns);
 
-    let args_vec: Vec<(Cow<'static, str>, String)> = args
-        .into_iter()
-        .map(|(k, v)| (Cow::Owned(k.to_string()), v.to_string()))
-        .collect();
+    let args_vec: Vec<(Cow<'static, str>, String)> =
+        args.into_iter().map(|(k, v)| (Cow::Owned(k.to_string()), v.to_string())).collect();
 
     SyscallSpan::new(
         1, // parent_span_id
@@ -74,11 +72,7 @@ fn test_identical_traces() {
     let result = validator.validate(&python_trace, &rust_trace);
 
     match result {
-        ValidationResult::Pass {
-            confidence,
-            matched_syscalls,
-            ..
-        } => {
+        ValidationResult::Pass { confidence, matched_syscalls, .. } => {
             assert!(confidence > 0.95, "Expected high confidence");
             assert_eq!(matched_syscalls, 2);
         }
@@ -93,24 +87,12 @@ fn test_different_syscall_order() {
     // Scenario: Same syscalls, different order = FAIL
 
     let mut python_trace = UnifiedTrace::new(1, "python_test".to_string());
-    python_trace.add_syscall(create_test_span(
-        "open",
-        vec![("path", "/tmp/file")],
-        3,
-        0,
-        1000,
-    ));
+    python_trace.add_syscall(create_test_span("open", vec![("path", "/tmp/file")], 3, 0, 1000));
     python_trace.add_syscall(create_test_span("write", vec![("fd", "3")], 10, 1000, 2000));
     python_trace.add_syscall(create_test_span("close", vec![("fd", "3")], 0, 2000, 3000));
 
     let mut rust_trace = UnifiedTrace::new(2, "rust_test".to_string());
-    rust_trace.add_syscall(create_test_span(
-        "open",
-        vec![("path", "/tmp/file")],
-        3,
-        0,
-        500,
-    ));
+    rust_trace.add_syscall(create_test_span("open", vec![("path", "/tmp/file")], 3, 0, 500));
     rust_trace.add_syscall(create_test_span("close", vec![("fd", "3")], 0, 500, 1000)); // Wrong order!
     rust_trace.add_syscall(create_test_span("write", vec![("fd", "3")], 10, 1000, 1500));
 
@@ -310,9 +292,7 @@ fn test_file_operations_equivalence() {
     let result = validator.validate(&python_trace, &rust_trace);
 
     match result {
-        ValidationResult::Pass {
-            matched_syscalls, ..
-        } => {
+        ValidationResult::Pass { matched_syscalls, .. } => {
             assert_eq!(matched_syscalls, 3);
         }
         ValidationResult::Fail { explanation, .. } => {
@@ -331,13 +311,7 @@ fn test_allocator_differences_ignored() {
     python_trace.add_syscall(create_test_span("write", vec![("fd", "1")], 5, 100, 200));
 
     let mut rust_trace = UnifiedTrace::new(2, "rust_test".to_string());
-    rust_trace.add_syscall(create_test_span(
-        "mmap",
-        vec![("length", "4096")],
-        0x2000,
-        0,
-        50,
-    ));
+    rust_trace.add_syscall(create_test_span("mmap", vec![("length", "4096")], 0x2000, 0, 50));
     rust_trace.add_syscall(create_test_span("write", vec![("fd", "1")], 5, 50, 100));
 
     // Validator should ignore allocator differences
@@ -366,9 +340,7 @@ fn test_empty_traces() {
     let result = validator.validate(&python_trace, &rust_trace);
 
     match result {
-        ValidationResult::Pass {
-            matched_syscalls, ..
-        } => {
+        ValidationResult::Pass { matched_syscalls, .. } => {
             assert_eq!(matched_syscalls, 0);
         }
         ValidationResult::Fail { .. } => {

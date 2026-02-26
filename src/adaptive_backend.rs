@@ -84,7 +84,6 @@ pub struct AdaptiveBackend {
     otlp_exporter: Option<Arc<OtlpExporter>>,
 
     #[cfg(not(feature = "otlp"))]
-    #[allow(dead_code)]
     otlp_exporter: Option<Arc<OtlpExporter>>,
 
     /// Performance history: (operation, `input_size`) → metrics
@@ -361,6 +360,10 @@ mod rand {
         T::from(0.5) // Deterministic for testing
     }
 }
+
+// Compile-time thread-safety verification (Sprint 59)
+static_assertions::assert_impl_all!(Backend: Send, Sync);
+static_assertions::assert_impl_all!(AdaptiveBackend: Send, Sync);
 
 #[cfg(test)]
 mod tests {

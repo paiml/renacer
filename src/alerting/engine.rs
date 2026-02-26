@@ -24,10 +24,7 @@ pub struct AlertEngineConfig {
 
 impl Default for AlertEngineConfig {
     fn default() -> Self {
-        Self {
-            evaluation_interval: Duration::from_secs(15),
-            max_active_alerts: 1000,
-        }
+        Self { evaluation_interval: Duration::from_secs(15), max_active_alerts: 1000 }
     }
 }
 
@@ -123,12 +120,7 @@ impl AlertEngine {
                 let current = self.get_metric_value(metric);
                 (op.compare(current, *value), current)
             }
-            AlertExpr::Rate {
-                metric,
-                window,
-                op,
-                threshold,
-            } => {
+            AlertExpr::Rate { metric, window, op, threshold } => {
                 let rate = self.calculate_rate(metric, *window);
                 (op.compare(rate, *threshold), rate)
             }
@@ -141,12 +133,7 @@ impl AlertEngine {
                 let score = self.get_anomaly_score(metric);
                 (score > *threshold, score)
             }
-            AlertExpr::Quantile {
-                metric,
-                quantile,
-                op,
-                value,
-            } => {
+            AlertExpr::Quantile { metric, quantile, op, value } => {
                 let q_value = self.get_quantile(metric, *quantile);
                 (op.compare(q_value, *value), q_value)
             }
@@ -155,12 +142,9 @@ impl AlertEngine {
 
     /// Handle alert triggered
     fn handle_alert_triggered(&mut self, rule: &AlertRule, value: f64) {
-        let alert = self
-            .active_alerts
-            .entry(rule.name.clone())
-            .or_insert_with(|| {
-                ActiveAlert::new(&rule.name, rule.severity, value, rule.labels.clone())
-            });
+        let alert = self.active_alerts.entry(rule.name.clone()).or_insert_with(|| {
+            ActiveAlert::new(&rule.name, rule.severity, value, rule.labels.clone())
+        });
 
         // Update value
         alert.value = value;
@@ -219,20 +203,9 @@ impl AlertEngine {
 
     /// Check if metric exists
     fn metric_exists(&self, metric_name: &str) -> bool {
-        self.registry
-            .counters()
-            .iter()
-            .any(|c| c.name() == metric_name)
-            || self
-                .registry
-                .gauges()
-                .iter()
-                .any(|g| g.name() == metric_name)
-            || self
-                .registry
-                .histograms()
-                .iter()
-                .any(|h| h.name() == metric_name)
+        self.registry.counters().iter().any(|c| c.name() == metric_name)
+            || self.registry.gauges().iter().any(|g| g.name() == metric_name)
+            || self.registry.histograms().iter().any(|h| h.name() == metric_name)
     }
 
     /// Calculate rate of change over window
@@ -241,10 +214,7 @@ impl AlertEngine {
         let current_value = self.get_metric_value(metric_name);
 
         // Add current sample to history
-        let history = self
-            .rate_history
-            .entry(metric_name.to_string())
-            .or_default();
+        let history = self.rate_history.entry(metric_name.to_string()).or_default();
         history.push((now, current_value));
 
         // Remove samples outside window
@@ -273,7 +243,7 @@ impl AlertEngine {
 
     /// Get anomaly score for metric
     fn get_anomaly_score(&self, _metric_name: &str) -> f64 {
-        // TODO: Integrate with isolation forest from ml_pipeline
+        // Future: Integrate with isolation forest from ml_pipeline
         0.0
     }
 
@@ -555,9 +525,7 @@ mod tests {
     #[test]
     fn test_get_metric_value_histogram() {
         let registry = Arc::new(Registry::new());
-        let histogram = registry
-            .histogram_with_buckets("latency", &[], &[0.1, 0.5, 1.0])
-            .unwrap();
+        let histogram = registry.histogram_with_buckets("latency", &[], &[0.1, 0.5, 1.0]).unwrap();
         histogram.observe(0.3);
         histogram.observe(0.7);
         histogram.observe(0.2);
@@ -609,16 +577,15 @@ mod tests {
     #[test]
     fn test_quantile_alert() {
         let registry = Arc::new(Registry::new());
-        let histogram = registry
-            .histogram_with_buckets("response_time", &[], &[0.1, 0.5, 1.0, 2.0])
-            .unwrap();
+        let histogram =
+            registry.histogram_with_buckets("response_time", &[], &[0.1, 0.5, 1.0, 2.0]).unwrap();
 
         // Add observations
         for _ in 0..100 {
             histogram.observe(0.3);
         }
 
-        let mut engine = AlertEngine::new(registry);
+        let _engine = AlertEngine::new(registry);
         // Create a quantile expression manually via evaluate
         // The AlertRule doesn't have a quantile constructor, so we test evaluate_expr indirectly
         // by using the get_quantile internal method that returns NaN for non-existent metrics
@@ -674,7 +641,7 @@ mod tests {
     #[test]
     fn test_rate_calculation_with_insufficient_samples() {
         let registry = Arc::new(Registry::new());
-        let counter = registry.counter("events", &[]).unwrap();
+        let _counter = registry.counter("events", &[]).unwrap();
 
         let mut engine = AlertEngine::new(registry);
         engine.add_rule(AlertRule::rate(

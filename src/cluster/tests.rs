@@ -10,6 +10,12 @@ use anyhow::Result;
 use std::io::Write;
 use tempfile::NamedTempFile;
 
+/// Helper: classify a syscall and return the cluster name (if any).
+fn classify_name(registry: &ClusterRegistry, syscall: &str) -> Option<String> {
+    let fds = FdTable::new();
+    registry.classify(syscall, &[], &fds).map(|c| c.name.clone())
+}
+
 /// Test that default transpiler clusters load correctly from embedded TOML
 #[test]
 fn test_default_transpiler_clusters() {
@@ -34,78 +40,33 @@ fn test_default_transpiler_clusters() {
 #[test]
 fn test_classify_standard_syscalls() {
     let registry = ClusterRegistry::default_transpiler_clusters().expect("test");
-    let fds = FdTable::new();
 
     // Memory allocation
-    assert_eq!(
-        registry
-            .classify("mmap", &[], &fds)
-            .map(|c| c.name.as_str()),
-        Some("MemoryAllocation")
-    );
-    assert_eq!(
-        registry.classify("brk", &[], &fds).map(|c| c.name.as_str()),
-        Some("MemoryAllocation")
-    );
+    assert_eq!(classify_name(&registry, "mmap").as_deref(), Some("MemoryAllocation"));
+    assert_eq!(classify_name(&registry, "brk").as_deref(), Some("MemoryAllocation"));
 
     // File I/O
-    assert_eq!(
-        registry
-            .classify("read", &[], &fds)
-            .map(|c| c.name.as_str()),
-        Some("FileIO")
-    );
-    assert_eq!(
-        registry
-            .classify("write", &[], &fds)
-            .map(|c| c.name.as_str()),
-        Some("FileIO")
-    );
+    assert_eq!(classify_name(&registry, "read").as_deref(), Some("FileIO"));
+    assert_eq!(classify_name(&registry, "write").as_deref(), Some("FileIO"));
 
     // Process control
-    assert_eq!(
-        registry
-            .classify("fork", &[], &fds)
-            .map(|c| c.name.as_str()),
-        Some("ProcessControl")
-    );
+    assert_eq!(classify_name(&registry, "fork").as_deref(), Some("ProcessControl"));
 
     // Synchronization (RED FLAG for single-threaded transpilers)
-    assert_eq!(
-        registry
-            .classify("futex", &[], &fds)
-            .map(|c| c.name.as_str()),
-        Some("Synchronization")
-    );
+    assert_eq!(classify_name(&registry, "futex").as_deref(), Some("Synchronization"));
 
     // Networking (CRITICAL - telemetry leaks)
-    assert_eq!(
-        registry
-            .classify("socket", &[], &fds)
-            .map(|c| c.name.as_str()),
-        Some("Networking")
-    );
+    assert_eq!(classify_name(&registry, "socket").as_deref(), Some("Networking"));
 }
 
 /// Test future-proof syscall support (mmap3, clone3)
 #[test]
 fn test_future_proof_syscalls() {
     let registry = ClusterRegistry::default_transpiler_clusters().expect("test");
-    let fds = FdTable::new();
 
     // New kernel syscalls should be pre-configured
-    assert_eq!(
-        registry
-            .classify("mmap3", &[], &fds)
-            .map(|c| c.name.as_str()),
-        Some("MemoryAllocation")
-    );
-    assert_eq!(
-        registry
-            .classify("clone3", &[], &fds)
-            .map(|c| c.name.as_str()),
-        Some("ProcessControl")
-    );
+    assert_eq!(classify_name(&registry, "mmap3").as_deref(), Some("MemoryAllocation"));
+    assert_eq!(classify_name(&registry, "clone3").as_deref(), Some("ProcessControl"));
 }
 
 /// Test GPU cluster with args_filter (context-aware classification)
@@ -115,9 +76,7 @@ fn test_gpu_cluster_with_filter() {
 
     // ioctl without GPU fd → no GPU cluster match
     let fds = FdTable::new();
-    assert!(registry
-        .classify("ioctl", &["3".to_string()], &fds)
-        .is_none());
+    assert!(registry.classify("ioctl", &["3".to_string()], &fds).is_none());
 
     // ioctl with GPU fd → GPU cluster match
     let mut fds_gpu = FdTable::new();
@@ -171,11 +130,8 @@ arg_contains = "libtensorflow"
     assert!(cluster.is_none());
 
     // dlopen with libtensorflow → TensorFlow cluster
-    let cluster = registry.classify(
-        "dlopen",
-        &["/usr/lib/libtensorflow.so".to_string()],
-        &FdTable::new(),
-    );
+    let cluster =
+        registry.classify("dlopen", &["/usr/lib/libtensorflow.so".to_string()], &FdTable::new());
     assert!(cluster.is_some());
     assert_eq!(cluster.expect("test").name, "TensorFlow");
 
@@ -223,38 +179,13 @@ fn test_expected_for_transpiler() {
     let registry = ClusterRegistry::default_transpiler_clusters().expect("test");
 
     // Expected clusters
-    assert!(
-        registry
-            .get_cluster("MemoryAllocation")
-            .expect("test")
-            .expected_for_transpiler
-    );
-    assert!(
-        registry
-            .get_cluster("FileIO")
-            .expect("test")
-            .expected_for_transpiler
-    );
+    assert!(registry.get_cluster("MemoryAllocation").expect("test").expected_for_transpiler);
+    assert!(registry.get_cluster("FileIO").expect("test").expected_for_transpiler);
 
     // Unexpected clusters (should trigger warnings)
-    assert!(
-        !registry
-            .get_cluster("Networking")
-            .expect("test")
-            .expected_for_transpiler
-    );
-    assert!(
-        !registry
-            .get_cluster("Synchronization")
-            .expect("test")
-            .expected_for_transpiler
-    );
-    assert!(
-        !registry
-            .get_cluster("GPU")
-            .expect("test")
-            .expected_for_transpiler
-    );
+    assert!(!registry.get_cluster("Networking").expect("test").expected_for_transpiler);
+    assert!(!registry.get_cluster("Synchronization").expect("test").expected_for_transpiler);
+    assert!(!registry.get_cluster("GPU").expect("test").expected_for_transpiler);
 }
 
 /// Test severity ordering for prioritization

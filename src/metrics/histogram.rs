@@ -26,24 +26,11 @@ use super::MetricDesc;
 
 /// Default histogram buckets (Prometheus-compatible)
 /// Covers common latency ranges from 5ms to 10s
-pub const DEFAULT_BUCKETS: &[f64] = &[
-    0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0,
-];
+pub const DEFAULT_BUCKETS: &[f64] =
+    &[0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0];
 
 /// Prometheus-compatible buckets (same as DEFAULT_BUCKETS)
 pub const PROMETHEUS_BUCKETS: &[f64] = DEFAULT_BUCKETS;
-
-/// Linear buckets: start, width, count
-#[allow(dead_code)]
-pub fn linear_buckets(start: f64, width: f64, count: usize) -> Vec<f64> {
-    (0..count).map(|i| start + width * i as f64).collect()
-}
-
-/// Exponential buckets: start, factor, count
-#[allow(dead_code)]
-pub fn exponential_buckets(start: f64, factor: f64, count: usize) -> Vec<f64> {
-    (0..count).map(|i| start * factor.powi(i as i32)).collect()
-}
 
 /// Histogram metric - distribution of observations
 ///
@@ -160,8 +147,11 @@ impl Histogram {
     /// SIMD bucket search using AVX2
     #[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
     #[inline]
+    #[allow(unsafe_code)]
     fn find_bucket_simd_avx2(&self, value: f64) -> usize {
-        use std::arch::x86_64::*;
+        use std::arch::x86_64::{
+            _mm256_cmp_pd, _mm256_loadu_pd, _mm256_movemask_pd, _mm256_set1_pd, _CMP_LE_OQ,
+        };
 
         // SAFETY: AVX2 intrinsics are safe when:
         // 1. Target CPU supports AVX2 (checked by #[target_feature(enable = "avx2")])
@@ -208,9 +198,7 @@ impl Histogram {
 
     /// Get bucket count at index
     pub fn get_bucket_count(&self, idx: usize) -> u64 {
-        self.counts
-            .get(idx)
-            .map_or(0, |c| c.load(Ordering::Relaxed))
+        self.counts.get(idx).map_or(0, |c| c.load(Ordering::Relaxed))
     }
 
     /// Get bucket upper bound at index
@@ -230,10 +218,7 @@ impl Histogram {
 
     /// Get all bucket counts
     pub fn bucket_counts(&self) -> Vec<u64> {
-        self.counts
-            .iter()
-            .map(|c| c.load(Ordering::Relaxed))
-            .collect()
+        self.counts.iter().map(|c| c.load(Ordering::Relaxed)).collect()
     }
 
     /// Get cumulative bucket counts (for Prometheus le format)
@@ -307,11 +292,7 @@ impl Clone for Histogram {
         Self {
             desc: self.desc.clone(),
             buckets: self.buckets.clone(),
-            counts: self
-                .counts
-                .iter()
-                .map(|c| AtomicU64::new(c.load(Ordering::Relaxed)))
-                .collect(),
+            counts: self.counts.iter().map(|c| AtomicU64::new(c.load(Ordering::Relaxed))).collect(),
             sum_bits: AtomicU64::new(self.sum_bits.load(Ordering::Relaxed)),
             count: AtomicU64::new(self.count.load(Ordering::Relaxed)),
             created_at: self.created_at,
@@ -319,113 +300,102 @@ impl Clone for Histogram {
     }
 }
 
-/// Histogram family - collection of histograms with same name but different labels
-#[derive(Debug)]
-#[allow(dead_code)]
-pub struct HistogramVec {
-    /// Base metric name
-    name: String,
-    /// Label keys (order matters for lookup)
-    label_keys: Vec<String>,
-    /// Bucket configuration
-    buckets: Vec<f64>,
-    /// Child histograms by label values
-    children: dashmap::DashMap<Vec<String>, Arc<Histogram>>,
-}
-
-#[allow(dead_code)]
-impl HistogramVec {
-    /// Create a new histogram family
-    pub fn new(
-        name: impl Into<String>,
-        label_keys: impl IntoIterator<Item = impl Into<String>>,
-        buckets: &[f64],
-    ) -> Self {
-        Self {
-            name: name.into(),
-            label_keys: label_keys.into_iter().map(Into::into).collect(),
-            buckets: buckets.to_vec(),
-            children: dashmap::DashMap::new(),
-        }
-    }
-
-    /// Get or create histogram with given label values
-    pub fn with_label_values(&self, values: &[&str]) -> Arc<Histogram> {
-        assert_eq!(
-            values.len(),
-            self.label_keys.len(),
-            "label count mismatch: expected {}, got {}",
-            self.label_keys.len(),
-            values.len()
-        );
-
-        let key: Vec<String> = values
-            .iter()
-            .map(std::string::ToString::to_string)
-            .collect();
-
-        self.children
-            .entry(key.clone())
-            .or_insert_with(|| {
-                let labels: Labels = self
-                    .label_keys
-                    .iter()
-                    .zip(values.iter())
-                    .map(|(k, v)| (k.clone(), (*v).to_string()))
-                    .collect();
-                Histogram::new_arc(&self.name, labels, &self.buckets)
-            })
-            .clone()
-    }
-
-    /// Get metric name
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-
-    /// Iterate over all histograms
-    pub fn iter(&self) -> impl Iterator<Item = Arc<Histogram>> + '_ {
-        self.children.iter().map(|entry| entry.value().clone())
-    }
-}
-
-/// Timer helper for measuring duration and recording to histogram
-#[allow(dead_code)]
-pub struct HistogramTimer {
-    histogram: Arc<Histogram>,
-    start: Instant,
-}
-
-#[allow(dead_code)]
-impl HistogramTimer {
-    /// Create a new timer
-    pub fn new(histogram: Arc<Histogram>) -> Self {
-        Self {
-            histogram,
-            start: Instant::now(),
-        }
-    }
-
-    /// Stop timer and record elapsed time in seconds
-    pub fn observe_duration(self) -> f64 {
-        let elapsed = self.start.elapsed().as_secs_f64();
-        self.histogram.observe(elapsed);
-        elapsed
-    }
-}
-
-impl Drop for HistogramTimer {
-    fn drop(&mut self) {
-        // Auto-observe on drop
-        let elapsed = self.start.elapsed().as_secs_f64();
-        self.histogram.observe(elapsed);
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::thread;
+
+    /// Linear buckets: start, width, count
+    fn linear_buckets(start: f64, width: f64, count: usize) -> Vec<f64> {
+        (0..count).map(|i| start + width * i as f64).collect()
+    }
+
+    /// Exponential buckets: start, factor, count
+    fn exponential_buckets(start: f64, factor: f64, count: usize) -> Vec<f64> {
+        (0..count).map(|i| start * factor.powi(i as i32)).collect()
+    }
+
+    /// Histogram family - collection of histograms with same name but different labels
+    #[derive(Debug)]
+    struct HistogramVec {
+        name: String,
+        label_keys: Vec<String>,
+        buckets: Vec<f64>,
+        children: dashmap::DashMap<Vec<String>, Arc<Histogram>>,
+    }
+
+    impl HistogramVec {
+        fn new(
+            name: impl Into<String>,
+            label_keys: impl IntoIterator<Item = impl Into<String>>,
+            buckets: &[f64],
+        ) -> Self {
+            Self {
+                name: name.into(),
+                label_keys: label_keys.into_iter().map(Into::into).collect(),
+                buckets: buckets.to_vec(),
+                children: dashmap::DashMap::new(),
+            }
+        }
+
+        fn with_label_values(&self, values: &[&str]) -> Arc<Histogram> {
+            assert_eq!(
+                values.len(),
+                self.label_keys.len(),
+                "label count mismatch: expected {}, got {}",
+                self.label_keys.len(),
+                values.len()
+            );
+
+            let key: Vec<String> = values.iter().map(std::string::ToString::to_string).collect();
+
+            self.children
+                .entry(key.clone())
+                .or_insert_with(|| {
+                    let labels: Labels = self
+                        .label_keys
+                        .iter()
+                        .zip(values.iter())
+                        .map(|(k, v)| (k.clone(), (*v).to_string()))
+                        .collect();
+                    Histogram::new_arc(&self.name, labels, &self.buckets)
+                })
+                .clone()
+        }
+
+        fn name(&self) -> &str {
+            &self.name
+        }
+
+        fn iter(&self) -> impl Iterator<Item = Arc<Histogram>> + '_ {
+            self.children.iter().map(|entry| entry.value().clone())
+        }
+    }
+
+    /// Timer helper for measuring duration and recording to histogram
+    struct HistogramTimer {
+        histogram: Arc<Histogram>,
+        start: Instant,
+    }
+
+    impl HistogramTimer {
+        fn new(histogram: Arc<Histogram>) -> Self {
+            Self { histogram, start: Instant::now() }
+        }
+
+        fn observe_duration(self) -> f64 {
+            let elapsed = self.start.elapsed().as_secs_f64();
+            self.histogram.observe(elapsed);
+            elapsed
+        }
+    }
+
+    impl Drop for HistogramTimer {
+        fn drop(&mut self) {
+            let elapsed = self.start.elapsed().as_secs_f64();
+            self.histogram.observe(elapsed);
+        }
+    }
 
     #[test]
     fn test_histogram_observe() {
@@ -575,9 +545,7 @@ mod tests {
 
     #[test]
     fn test_histogram_metadata() {
-        let labels: Labels = [("env".to_string(), "prod".to_string())]
-            .into_iter()
-            .collect();
+        let labels: Labels = [("env".to_string(), "prod".to_string())].into_iter().collect();
         let h = Histogram::new("request_duration", labels, &[1.0]);
 
         assert_eq!(h.name(), "request_duration");

@@ -114,10 +114,7 @@ fn test_parallel_execution_graph() {
 
     // Verify edge weights (should be child durations for critical path)
     let worker2_node = graph.get_node_by_span_id(&[3; 8]).expect("test");
-    let (_, weight) = children
-        .iter()
-        .find(|(node, _)| *node == worker2_node)
-        .expect("test");
+    let (_, weight) = children.iter().find(|(node, _)| *node == worker2_node).expect("test");
     assert_eq!(*weight as u64, 60_000); // worker.2 duration
 }
 
@@ -259,10 +256,8 @@ fn test_graph_statistics() {
 #[test]
 fn test_edge_weight_accuracy() {
     // Scenario: Verify edge weights represent child span durations
-    let spans = vec![
-        create_span(1, None, 0, 10_000, "parent"),
-        create_span(2, Some(1), 1, 5_000, "child"),
-    ];
+    let spans =
+        vec![create_span(1, None, 0, 10_000, "parent"), create_span(2, Some(1), 1, 5_000, "child")];
 
     let graph = CausalGraph::from_spans(&spans).expect("test");
 

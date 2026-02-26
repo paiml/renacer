@@ -69,12 +69,7 @@ impl SyscallFilter {
             None // Trace all except excluded
         };
 
-        Ok(Self {
-            include,
-            exclude: exclude_syscalls,
-            include_regex,
-            exclude_regex,
-        })
+        Ok(Self { include, exclude: exclude_syscalls, include_regex, exclude_regex })
     }
 
     /// Check if a syscall should be traced
@@ -100,18 +95,13 @@ impl SyscallFilter {
                     true
                 } else {
                     // If we have include regex, syscall must match at least one
-                    self.include_regex
-                        .iter()
-                        .any(|pattern| pattern.is_match(syscall_name))
+                    self.include_regex.iter().any(|pattern| pattern.is_match(syscall_name))
                 }
             }
             Some(set) => {
                 // Sprint 16: Match if in literal set OR matches include regex
                 set.contains(syscall_name)
-                    || self
-                        .include_regex
-                        .iter()
-                        .any(|pattern| pattern.is_match(syscall_name))
+                    || self.include_regex.iter().any(|pattern| pattern.is_match(syscall_name))
             }
         }
     }
@@ -153,13 +143,7 @@ fn parse_syscall_sets(spec: &str) -> Result<ParseResult> {
     let mut has_includes = false;
 
     if spec.is_empty() {
-        return Ok((
-            include_syscalls,
-            exclude_syscalls,
-            include_regex,
-            exclude_regex,
-            true,
-        ));
+        return Ok((include_syscalls, exclude_syscalls, include_regex, exclude_regex, true));
     }
 
     for part in spec.split(',') {
@@ -192,13 +176,7 @@ fn parse_syscall_sets(spec: &str) -> Result<ParseResult> {
         }
     }
 
-    Ok((
-        include_syscalls,
-        exclude_syscalls,
-        include_regex,
-        exclude_regex,
-        has_includes,
-    ))
+    Ok((include_syscalls, exclude_syscalls, include_regex, exclude_regex, has_includes))
 }
 
 /// Parse a regex pattern from /pattern/ syntax
@@ -282,6 +260,9 @@ fn expand_syscall_class(name: &str) -> Vec<String> {
         _ => vec![name.to_string()],
     }
 }
+
+// Compile-time thread-safety verification (Sprint 59)
+static_assertions::assert_impl_all!(SyscallFilter: Send, Sync);
 
 #[cfg(test)]
 mod tests {
@@ -449,10 +430,7 @@ mod tests {
     fn test_negation_invalid_syntax() {
         let result = SyscallFilter::from_expr("trace=!");
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("Invalid negation syntax"));
+        assert!(result.unwrap_err().to_string().contains("Invalid negation syntax"));
     }
 
     #[test]

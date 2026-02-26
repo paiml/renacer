@@ -29,9 +29,7 @@ pub fn draw(f: &mut Frame, app: &VisualizeApp, area: Rect) {
         .border_style(Style::default().fg(borders::METRICS))
         .title(Span::styled(
             header,
-            Style::default()
-                .fg(borders::METRICS)
-                .add_modifier(Modifier::BOLD),
+            Style::default().fg(borders::METRICS).add_modifier(Modifier::BOLD),
         ));
 
     let inner = block.inner(area);
@@ -47,28 +45,19 @@ pub fn draw(f: &mut Frame, app: &VisualizeApp, area: Rect) {
     // Section: Counters
     lines.push(Line::from(Span::styled(
         "─── Counters ───",
-        Style::default()
-            .fg(Color::Cyan)
-            .add_modifier(Modifier::BOLD),
+        Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
     )));
 
     lines.push(Line::from(vec![
         Span::styled("syscall_total:    ", Style::default().fg(Color::DarkGray)),
-        Span::styled(
-            format!("{}", app.total_syscalls),
-            Style::default().fg(Color::White),
-        ),
+        Span::styled(format!("{}", app.total_syscalls), Style::default().fg(Color::White)),
     ]));
 
     lines.push(Line::from(vec![
         Span::styled("error_total:      ", Style::default().fg(Color::DarkGray)),
         Span::styled(
             format!("{}", app.total_errors),
-            Style::default().fg(if app.total_errors > 0 {
-                Color::Red
-            } else {
-                Color::Green
-            }),
+            Style::default().fg(if app.total_errors > 0 { Color::Red } else { Color::Green }),
         ),
     ]));
 
@@ -76,11 +65,7 @@ pub fn draw(f: &mut Frame, app: &VisualizeApp, area: Rect) {
         Span::styled("anomaly_total:    ", Style::default().fg(Color::DarkGray)),
         Span::styled(
             format!("{}", app.anomaly_count),
-            Style::default().fg(if app.anomaly_count > 0 {
-                Color::Yellow
-            } else {
-                Color::Green
-            }),
+            Style::default().fg(if app.anomaly_count > 0 { Color::Yellow } else { Color::Green }),
         ),
     ]));
 
@@ -89,17 +74,12 @@ pub fn draw(f: &mut Frame, app: &VisualizeApp, area: Rect) {
     // Section: Gauges
     lines.push(Line::from(Span::styled(
         "─── Gauges ───",
-        Style::default()
-            .fg(Color::Green)
-            .add_modifier(Modifier::BOLD),
+        Style::default().fg(Color::Green).add_modifier(Modifier::BOLD),
     )));
 
     lines.push(Line::from(vec![
         Span::styled("syscall_rate:     ", Style::default().fg(Color::DarkGray)),
-        Span::styled(
-            format!("{:.1}/s", app.syscall_rate),
-            Style::default().fg(Color::Yellow),
-        ),
+        Span::styled(format!("{:.1}/s", app.syscall_rate), Style::default().fg(Color::Yellow)),
     ]));
 
     lines.push(Line::from(vec![
@@ -123,9 +103,7 @@ pub fn draw(f: &mut Frame, app: &VisualizeApp, area: Rect) {
     // Section: Histograms (latency distribution)
     lines.push(Line::from(Span::styled(
         "─── Latency Distribution ───",
-        Style::default()
-            .fg(Color::Magenta)
-            .add_modifier(Modifier::BOLD),
+        Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD),
     )));
 
     let min_latency = app.latency_history.min();
@@ -134,26 +112,17 @@ pub fn draw(f: &mut Frame, app: &VisualizeApp, area: Rect) {
 
     lines.push(Line::from(vec![
         Span::styled("min:              ", Style::default().fg(Color::DarkGray)),
-        Span::styled(
-            format_duration_us(min_latency as u64),
-            Style::default().fg(Color::Green),
-        ),
+        Span::styled(format_duration_us(min_latency as u64), Style::default().fg(Color::Green)),
     ]));
 
     lines.push(Line::from(vec![
         Span::styled("max:              ", Style::default().fg(Color::DarkGray)),
-        Span::styled(
-            format_duration_us(max_latency as u64),
-            Style::default().fg(Color::Red),
-        ),
+        Span::styled(format_duration_us(max_latency as u64), Style::default().fg(Color::Red)),
     ]));
 
     lines.push(Line::from(vec![
         Span::styled("stddev:           ", Style::default().fg(Color::DarkGray)),
-        Span::styled(
-            format_duration_us(stddev as u64),
-            Style::default().fg(Color::Yellow),
-        ),
+        Span::styled(format_duration_us(stddev as u64), Style::default().fg(Color::Yellow)),
     ]));
 
     // Visual sparkline of recent latencies
@@ -162,10 +131,7 @@ pub fn draw(f: &mut Frame, app: &VisualizeApp, area: Rect) {
         let values: Vec<f64> = app.latency_history.iter().copied().collect();
         let spark =
             crate::visualize::theme::sparkline(&values, inner.width.saturating_sub(2) as usize);
-        lines.push(Line::from(Span::styled(
-            spark,
-            Style::default().fg(Color::Cyan),
-        )));
+        lines.push(Line::from(Span::styled(spark, Style::default().fg(Color::Cyan))));
     }
 
     let paragraph = Paragraph::new(lines);

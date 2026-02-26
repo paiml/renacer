@@ -63,8 +63,7 @@ impl ProcessSpan {
 
     /// Get duration in nanoseconds
     pub fn duration_nanos(&self) -> Option<u64> {
-        self.end_timestamp_nanos
-            .map(|end| end.saturating_sub(self.start_timestamp_nanos))
+        self.end_timestamp_nanos.map(|end| end.saturating_sub(self.start_timestamp_nanos))
     }
 }
 
@@ -312,8 +311,8 @@ impl UnifiedTrace {
             }
         }
 
-        // TODO: Add GPU kernel timestamps when parent_span_id is added to GpuKernel
-        // TODO: Add compute block timestamps when parent_span_id is added
+        // Future: Add GPU kernel timestamps when parent_span_id is added to GpuKernel
+        // Future: Add compute block timestamps when parent_span_id is added
 
         None
     }
@@ -332,8 +331,8 @@ impl UnifiedTrace {
             return None;
         }
 
-        // TODO: Add GPU kernel parent IDs when field is added
-        // TODO: Add compute block parent IDs when field is added
+        // Future: Add GPU kernel parent IDs when field is added
+        // Future: Add compute block parent IDs when field is added
 
         None
     }
@@ -345,7 +344,7 @@ impl UnifiedTrace {
     pub fn correlate_spans(&mut self) {
         // Note: In full implementation, this would update parent_span_id fields
         // For now, we provide query methods (find_parent_syscall, etc.)
-        // TODO: Add parent_span_id field to GpuKernel and update it here
+        // Future: Add parent_span_id field to GpuKernel and update it here
     }
 
     /// Get total number of spans across all types
@@ -394,6 +393,11 @@ impl UnifiedTrace {
         Some(detector.analyze(self))
     }
 }
+
+// Compile-time thread-safety verification (Sprint 59)
+static_assertions::assert_impl_all!(ProcessSpan: Send, Sync);
+static_assertions::assert_impl_all!(SyscallSpan: Send, Sync);
+static_assertions::assert_impl_all!(UnifiedTrace: Send, Sync);
 
 // ============================================================================
 // UNIT TESTS (EXTREME TDD)
@@ -1064,10 +1068,7 @@ mod tests {
 
         let timestamp = trace.get_span_timestamp(process_id);
         assert!(timestamp.is_some());
-        assert_eq!(
-            timestamp.expect("test"),
-            trace.process_span.start_timestamp_nanos
-        );
+        assert_eq!(timestamp.expect("test"), trace.process_span.start_timestamp_nanos);
     }
 
     // Test 29: Get span timestamp (syscall span)
@@ -1139,10 +1140,7 @@ mod tests {
         let trace = UnifiedTrace::new(27000, "empty_quality".to_string());
 
         let quality = trace.architectural_quality();
-        assert!(
-            quality.is_none(),
-            "Empty trace should return None for architectural quality"
-        );
+        assert!(quality.is_none(), "Empty trace should return None for architectural quality");
     }
 
     // Test 33: Trace with syscalls returns Some for architectural quality
@@ -1205,9 +1203,6 @@ mod tests {
         let quality = trace.architectural_quality().expect("Should have quality");
 
         // With 100% syscalls from one process, should detect God Process
-        assert!(
-            !quality.anti_patterns.is_empty(),
-            "Should detect at least one anti-pattern"
-        );
+        assert!(!quality.anti_patterns.is_empty(), "Should detect at least one anti-pattern");
     }
 }

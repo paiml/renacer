@@ -23,11 +23,7 @@ pub struct CsvOutput {
 impl CsvOutput {
     /// Create a new CSV output formatter
     pub fn new(include_timing: bool, include_source: bool) -> Self {
-        Self {
-            syscalls: Vec::new(),
-            include_timing,
-            include_source,
-        }
+        Self { syscalls: Vec::new(), include_timing, include_source }
     }
 
     /// Add a syscall to the output
@@ -196,10 +192,7 @@ mod tests {
     #[test]
     fn test_csv_header_all_flags() {
         let output = CsvOutput::new(true, true);
-        assert_eq!(
-            output.header(),
-            "syscall,arguments,result,duration,source_location"
-        );
+        assert_eq!(output.header(), "syscall,arguments,result,duration,source_location");
     }
 
     #[test]
@@ -259,10 +252,7 @@ mod tests {
         };
 
         let row = output.format_syscall(&syscall);
-        assert_eq!(
-            row,
-            "openat,\"AT_FDCWD, \"\"/tmp/test\"\", O_RDONLY\",3,src/main.rs:42"
-        );
+        assert_eq!(row, "openat,\"AT_FDCWD, \"\"/tmp/test\"\", O_RDONLY\",3,src/main.rs:42");
     }
 
     #[test]

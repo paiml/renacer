@@ -116,11 +116,7 @@ impl GpuProfilerWrapper {
         let settings = wgpu_profiler::GpuProfilerSettings::default();
         let profiler = wgpu_profiler::GpuProfiler::new(settings)?;
 
-        Ok(GpuProfilerWrapper {
-            profiler,
-            otlp_exporter,
-            config,
-        })
+        Ok(GpuProfilerWrapper { profiler, otlp_exporter, config })
     }
 
     /// Get a reference to the underlying wgpu-profiler
@@ -171,8 +167,8 @@ impl GpuProfilerWrapper {
                             kernel: scope.label.clone(),
                             duration_us,
                             backend: "wgpu",
-                            workgroup_size: None, // TODO: Extract from wgpu metadata
-                            elements: None,       // TODO: User-provided via scope metadata
+                            workgroup_size: None, // Future: Extract from wgpu metadata
+                            elements: None,       // Future: User-provided via scope metadata
                             is_slow: duration_us > self.config.threshold_us,
                         };
 

@@ -44,15 +44,10 @@ int main() {
         .expect("Failed to compile test program");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("--anomaly-realtime")
-        .arg("-T")
-        .arg("--")
-        .arg(&test_program);
+    cmd.arg("--anomaly-realtime").arg("-T").arg("--").arg(&test_program);
 
     // Should show real-time anomaly alert
-    cmd.assert()
-        .success()
-        .stderr(predicate::str::contains("⚠️  ANOMALY"));
+    cmd.assert().success().stderr(predicate::str::contains("⚠️  ANOMALY"));
 }
 
 #[test]
@@ -127,9 +122,7 @@ int main() {
 
     // Should NOT report anomalies (insufficient samples for write syscalls)
     // With only 5 write syscalls, anomaly detection should not trigger
-    cmd.assert()
-        .success()
-        .stderr(predicate::str::contains("ANOMALY").not());
+    cmd.assert().success().stderr(predicate::str::contains("ANOMALY").not());
 }
 
 #[test]
@@ -166,10 +159,7 @@ int main() {
         .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("--anomaly-realtime")
-        .arg("-T")
-        .arg("--")
-        .arg(&test_program);
+    cmd.arg("--anomaly-realtime").arg("-T").arg("--").arg(&test_program);
 
     // Should classify anomaly with severity
     cmd.assert().success();
@@ -206,16 +196,10 @@ int main() {
         .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("-c")
-        .arg("--anomaly-realtime")
-        .arg("-T")
-        .arg("--")
-        .arg(&test_program);
+    cmd.arg("-c").arg("--anomaly-realtime").arg("-T").arg("--").arg(&test_program);
 
     // Should show both statistics summary and anomaly report
-    cmd.assert()
-        .success()
-        .stderr(predicate::str::contains("% time"));
+    cmd.assert().success().stderr(predicate::str::contains("% time"));
 }
 
 #[test]
@@ -302,11 +286,7 @@ int main() {
         .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("-f")
-        .arg("--anomaly-realtime")
-        .arg("-T")
-        .arg("--")
-        .arg(&test_program);
+    cmd.arg("-f").arg("--anomaly-realtime").arg("-T").arg("--").arg(&test_program);
 
     // Should detect anomalies across all processes
     cmd.assert().success();
@@ -386,10 +366,7 @@ int main() {
         .expect("test");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("--anomaly-realtime")
-        .arg("-T")
-        .arg("--")
-        .arg(&test_program);
+    cmd.arg("--anomaly-realtime").arg("-T").arg("--").arg(&test_program);
 
     // Should handle zero variance gracefully (no division by zero)
     cmd.assert().success();
@@ -462,9 +439,7 @@ int main() {
     cmd.arg("-T").arg("--").arg(&test_program);
 
     // Should NOT show any anomaly detection output
-    cmd.assert()
-        .success()
-        .stderr(predicate::str::contains("ANOMALY").not());
+    cmd.assert().success().stderr(predicate::str::contains("ANOMALY").not());
 }
 
 #[test]

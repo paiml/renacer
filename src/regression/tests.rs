@@ -39,10 +39,7 @@ fn test_decy_futex_regression() {
 
     // Should detect futex regression
     match assessment.verdict {
-        RegressionVerdict::Regression {
-            ref regressed_syscalls,
-            ..
-        } => {
+        RegressionVerdict::Regression { ref regressed_syscalls, .. } => {
             assert!(regressed_syscalls.contains(&"futex".to_string()));
             assert!(!regressed_syscalls.contains(&"mmap".to_string())); // mmap stable
         }
@@ -268,10 +265,7 @@ fn test_multiple_syscalls_mixed_results() {
     let assessment = assess_regression(&baseline, &current, &config).expect("test");
 
     match assessment.verdict {
-        RegressionVerdict::Regression {
-            ref regressed_syscalls,
-            ..
-        } => {
+        RegressionVerdict::Regression { ref regressed_syscalls, .. } => {
             assert!(regressed_syscalls.contains(&"mmap".to_string()));
             assert!(!regressed_syscalls.contains(&"read".to_string()));
             assert!(!regressed_syscalls.contains(&"write".to_string()));

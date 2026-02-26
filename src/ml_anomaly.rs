@@ -170,11 +170,7 @@ impl MlAnomalyAnalyzer {
                 }
             }
 
-            let a_i = if same_count > 0 {
-                same_cluster_dist / f64::from(same_count)
-            } else {
-                0.0
-            };
+            let a_i = if same_count > 0 { same_cluster_dist / f64::from(same_count) } else { 0.0 };
 
             // Calculate b(i): minimum average distance to other clusters
             let mut min_other_dist = f64::MAX;
@@ -202,19 +198,11 @@ impl MlAnomalyAnalyzer {
                 }
             }
 
-            let b_i = if min_other_dist == f64::MAX {
-                0.0
-            } else {
-                min_other_dist
-            };
+            let b_i = if min_other_dist == f64::MAX { 0.0 } else { min_other_dist };
 
             // Silhouette coefficient for point i
             let max_ab = a_i.max(b_i);
-            let s_i = if max_ab > 0.0 {
-                (b_i - a_i) / max_ab
-            } else {
-                0.0
-            };
+            let s_i = if max_ab > 0.0 { (b_i - a_i) / max_ab } else { 0.0 };
 
             total_score += s_i;
         }
@@ -255,9 +243,7 @@ impl MlAnomalyAnalyzer {
 
         // Sort by average time descending (handle NaN gracefully)
         anomalies.sort_by(|a, b| {
-            b.avg_time_us
-                .partial_cmp(&a.avg_time_us)
-                .unwrap_or(std::cmp::Ordering::Equal)
+            b.avg_time_us.partial_cmp(&a.avg_time_us).unwrap_or(std::cmp::Ordering::Equal)
         });
 
         anomalies
@@ -348,6 +334,11 @@ impl MlAnomalyReport {
         output
     }
 }
+
+// Compile-time thread-safety verification (Sprint 59)
+static_assertions::assert_impl_all!(MlAnomalyReport: Send, Sync);
+static_assertions::assert_impl_all!(MlAnomaly: Send, Sync);
+static_assertions::assert_impl_all!(MlAnomalyAnalyzer: Send, Sync);
 
 #[cfg(test)]
 mod tests {

@@ -75,8 +75,7 @@ pub struct HPUAnalysisReport {
 /// HPU Profiler for accelerated syscall analysis
 pub struct HPUProfiler {
     /// Force CPU backend (disable GPU)
-    #[allow(dead_code)]
-    force_cpu: bool,
+    _force_cpu: bool,
     /// Selected backend
     backend: HPUBackend,
 }
@@ -87,11 +86,11 @@ impl HPUProfiler {
         let backend = if force_cpu {
             HPUBackend::CPU
         } else {
-            // TODO: Detect GPU availability in Step 3
+            // Future: Detect GPU availability in Step 3
             HPUBackend::CPU
         };
 
-        Self { force_cpu, backend }
+        Self { _force_cpu: force_cpu, backend }
     }
 
     /// Get the selected backend
@@ -116,12 +115,7 @@ impl HPUProfiler {
 
         let compute_time_us = start.elapsed().as_micros() as u64;
 
-        HPUAnalysisReport {
-            backend: self.backend,
-            correlation,
-            clustering,
-            compute_time_us,
-        }
+        HPUAnalysisReport { backend: self.backend, correlation, clustering, compute_time_us }
     }
 
     /// Compute correlation matrix between syscalls
@@ -134,7 +128,7 @@ impl HPUProfiler {
         let mut matrix = vec![vec![0.0f32; n]; n];
 
         // Simple correlation based on count proximity
-        // TODO: Implement proper correlation in Step 4
+        // Future: Implement proper correlation in Step 4
         for i in 0..n {
             for j in 0..n {
                 if i == j {
@@ -143,20 +137,14 @@ impl HPUProfiler {
                     // Basic correlation based on count ratio
                     let count_i = data.get(&syscalls[i]).map_or(1, |(c, _)| *c) as f32;
                     let count_j = data.get(&syscalls[j]).map_or(1, |(c, _)| *c) as f32;
-                    let ratio = if count_i > count_j {
-                        count_j / count_i
-                    } else {
-                        count_i / count_j
-                    };
+                    let ratio =
+                        if count_i > count_j { count_j / count_i } else { count_i / count_j };
                     matrix[i][j] = ratio;
                 }
             }
         }
 
-        CorrelationResult {
-            syscalls: syscalls.to_vec(),
-            matrix,
-        }
+        CorrelationResult { syscalls: syscalls.to_vec(), matrix }
     }
 
     /// Perform K-means clustering on syscalls
@@ -167,10 +155,7 @@ impl HPUProfiler {
     ) -> ClusteringResult {
         // Handle empty input
         if syscalls.is_empty() {
-            return ClusteringResult {
-                k: 0,
-                clusters: Vec::new(),
-            };
+            return ClusteringResult { k: 0, clusters: Vec::new() };
         }
 
         // Determine number of clusters (1-4 based on syscall count)
@@ -182,11 +167,9 @@ impl HPUProfiler {
         };
 
         // Simple clustering by count magnitude
-        // TODO: Implement proper K-means in Step 5
-        let mut sorted: Vec<_> = syscalls
-            .iter()
-            .map(|s| (s.clone(), data.get(s).map_or(0, |(c, _)| *c)))
-            .collect();
+        // Future: Implement proper K-means in Step 5
+        let mut sorted: Vec<_> =
+            syscalls.iter().map(|s| (s.clone(), data.get(s).map_or(0, |(c, _)| *c))).collect();
         sorted.sort_by_key(|(_, c)| std::cmp::Reverse(*c));
 
         let chunk_size = sorted.len().div_ceil(k);
@@ -197,18 +180,11 @@ impl HPUProfiler {
                 let members: Vec<String> = chunk.iter().map(|(s, _)| s.clone()).collect();
                 let avg_count =
                     chunk.iter().map(|(_, c)| *c as f32).sum::<f32>() / chunk.len() as f32;
-                SyscallCluster {
-                    id,
-                    members,
-                    centroid: vec![avg_count],
-                }
+                SyscallCluster { id, members, centroid: vec![avg_count] }
             })
             .collect();
 
-        ClusteringResult {
-            k: clusters.len(),
-            clusters,
-        }
+        ClusteringResult { k: clusters.len(), clusters }
     }
 }
 

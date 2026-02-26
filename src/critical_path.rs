@@ -206,9 +206,7 @@ pub fn find_critical_path(graph: &CausalGraph) -> Result<CriticalPathResult> {
 
     // Initialize roots with their own durations
     for &root in graph.roots() {
-        let span = graph
-            .get_span(root)
-            .context("Root span not found in metadata")?;
+        let span = graph.get_span(root).context("Root span not found in metadata")?;
         dist.insert(root, span.duration_nanos);
         parent.insert(root, None);
     }
@@ -219,9 +217,7 @@ pub fn find_critical_path(graph: &CausalGraph) -> Result<CriticalPathResult> {
         let children = graph.children(node)?;
 
         for (child, _edge_weight) in children {
-            let child_span = graph
-                .get_span(child)
-                .context("Child span not found in metadata")?;
+            let child_span = graph.get_span(child).context("Child span not found in metadata")?;
 
             // dist[child] = max(dist[parent] + child.duration)
             let new_dist = dist.get(&node).unwrap_or(&0) + child_span.duration_nanos;
@@ -234,44 +230,46 @@ pub fn find_critical_path(graph: &CausalGraph) -> Result<CriticalPathResult> {
     }
 
     // Step 3: Find the node with maximum distance (end of critical path)
-    let (&critical_end, &total_duration) = dist
-        .iter()
-        .max_by_key(|(_, &d)| d)
-        .context("No paths found in graph")?;
+    let (&critical_end, &total_duration) =
+        dist.iter().max_by_key(|(_, &d)| d).context("No paths found in graph")?;
 
     // Step 4: Reconstruct the critical path by following parent pointers
+    let (path, node_durations, span_names) = reconstruct_path(graph, critical_end, &parent);
+
+    Ok(CriticalPathResult { path, total_duration, node_durations, span_names })
+}
+
+/// Reconstruct the critical path by walking parent pointers from end to root.
+///
+/// Returns `(path, node_durations, span_names)` in root-to-leaf order.
+fn reconstruct_path(
+    graph: &CausalGraph,
+    start: NodeId,
+    parent: &HashMap<NodeId, Option<NodeId>>,
+) -> (Vec<NodeId>, HashMap<NodeId, u64>, Vec<String>) {
     let mut path = Vec::new();
-    let mut current = critical_end;
     let mut node_durations = HashMap::new();
     let mut span_names = Vec::new();
+    let mut current = start;
 
     loop {
         path.push(current);
 
-        // Get span metadata
         if let Some(span) = graph.get_span(current) {
             node_durations.insert(current, span.duration_nanos);
             span_names.push(span.span_name.clone());
         }
 
-        // Move to parent
         match parent.get(&current) {
             Some(Some(p)) => current = *p,
-            Some(None) => break, // Reached root
-            None => break,       // No parent (shouldn't happen)
+            _ => break,
         }
     }
 
-    // Reverse to get root → leaf order
     path.reverse();
     span_names.reverse();
 
-    Ok(CriticalPathResult {
-        path,
-        total_duration,
-        node_durations,
-        span_names,
-    })
+    (path, node_durations, span_names)
 }
 
 /// Perform topological sort on the graph using DFS
@@ -337,9 +335,12 @@ pub fn find_all_critical_paths(
     _tolerance_ns: u64,
 ) -> Result<Vec<CriticalPathResult>> {
     // For now, just return the single longest path
-    // TODO: Implement multi-path finding if needed
+    // Future: Implement multi-path finding if needed
     Ok(vec![find_critical_path(graph)?])
 }
+
+// Compile-time thread-safety verification (Sprint 59)
+static_assertions::assert_impl_all!(CriticalPathResult: Send, Sync);
 
 #[cfg(test)]
 mod tests {

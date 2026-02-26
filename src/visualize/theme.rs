@@ -22,11 +22,7 @@ use ratatui::style::Color;
 #[allow(clippy::many_single_char_names)]
 pub fn percent_color(percent: f64) -> Color {
     // Clamp to valid range (handle NaN)
-    let p = if percent.is_nan() {
-        0.0
-    } else {
-        percent.clamp(0.0, 100.0)
-    };
+    let p = if percent.is_nan() { 0.0 } else { percent.clamp(0.0, 100.0) };
 
     // btop-style 5-stop gradient
     if p >= 90.0 {
@@ -63,45 +59,42 @@ pub fn percent_color(percent: f64) -> Color {
     }
 }
 
+/// Severity color thresholds: (min_z_score, color)
+/// Checked in order; first match wins.
+const SEVERITY_THRESHOLDS: &[(f32, Color)] = &[
+    (5.0, Color::Rgb(255, 64, 64)),   // High severity: bright red
+    (4.0, Color::Rgb(255, 180, 100)), // Medium severity: orange
+    (3.0, Color::Rgb(220, 220, 80)),  // Low severity: yellow
+];
+const SEVERITY_DEFAULT: Color = Color::Rgb(100, 220, 100); // Normal: green
+
 /// Severity color gradient for anomaly Z-scores
 /// Maps standard deviations to visual urgency
 pub fn severity_color(z_score: f32) -> Color {
     let z = if z_score.is_nan() { 0.0 } else { z_score.abs() };
-
-    if z >= 5.0 {
-        // High severity: bright red
-        Color::Rgb(255, 64, 64)
-    } else if z >= 4.0 {
-        // Medium severity: orange
-        Color::Rgb(255, 180, 100)
-    } else if z >= 3.0 {
-        // Low severity: yellow
-        Color::Rgb(220, 220, 80)
-    } else {
-        // Normal: green
-        Color::Rgb(100, 220, 100)
-    }
+    SEVERITY_THRESHOLDS
+        .iter()
+        .find(|(threshold, _)| z >= *threshold)
+        .map_or(SEVERITY_DEFAULT, |(_, color)| *color)
 }
+
+/// Latency color thresholds: (min_duration_us, color)
+/// Checked in order; first match wins.
+const LATENCY_THRESHOLDS: &[(u64, Color)] = &[
+    (100_000, Color::Rgb(255, 64, 64)),  // >100ms: critical red
+    (10_000, Color::Rgb(255, 180, 100)), // >10ms: orange
+    (1_000, Color::Rgb(220, 220, 80)),   // >1ms: yellow
+    (100, Color::Rgb(100, 220, 100)),    // >100us: green
+];
+const LATENCY_DEFAULT: Color = Color::Rgb(64, 180, 220); // <100us: cyan (fast)
 
 /// Latency color for syscall duration visualization
 /// Maps microseconds to urgency colors
 pub fn latency_color(duration_us: u64) -> Color {
-    if duration_us > 100_000 {
-        // >100ms: critical red
-        Color::Rgb(255, 64, 64)
-    } else if duration_us > 10_000 {
-        // >10ms: orange
-        Color::Rgb(255, 180, 100)
-    } else if duration_us > 1_000 {
-        // >1ms: yellow
-        Color::Rgb(220, 220, 80)
-    } else if duration_us > 100 {
-        // >100us: green
-        Color::Rgb(100, 220, 100)
-    } else {
-        // <100us: cyan (fast)
-        Color::Rgb(64, 180, 220)
-    }
+    LATENCY_THRESHOLDS
+        .iter()
+        .find(|(threshold, _)| duration_us > *threshold)
+        .map_or(LATENCY_DEFAULT, |(_, color)| *color)
 }
 
 /// Panel border colors - btop-style vibrant distinct colors
@@ -203,59 +196,47 @@ pub fn normalize_batch(values: &[f64]) -> Vec<f64> {
     trueno_viz::monitor::simd::kernels::simd_normalize(values, max)
 }
 
+/// Byte unit thresholds: (divisor, suffix)
+const BYTE_UNITS: &[(u64, &str)] =
+    &[(1024 * 1024 * 1024 * 1024, "T"), (1024 * 1024 * 1024, "G"), (1024 * 1024, "M"), (1024, "K")];
+
 /// Format bytes to human-readable string
 pub fn format_bytes(bytes: u64) -> String {
-    const KB: u64 = 1024;
-    const MB: u64 = KB * 1024;
-    const GB: u64 = MB * 1024;
-    const TB: u64 = GB * 1024;
-
-    if bytes >= TB {
-        format!("{:.1}T", bytes as f64 / TB as f64)
-    } else if bytes >= GB {
-        format!("{:.1}G", bytes as f64 / GB as f64)
-    } else if bytes >= MB {
-        format!("{:.1}M", bytes as f64 / MB as f64)
-    } else if bytes >= KB {
-        format!("{:.1}K", bytes as f64 / KB as f64)
-    } else {
-        format!("{bytes}B")
-    }
+    BYTE_UNITS.iter().find(|(threshold, _)| bytes >= *threshold).map_or_else(
+        || format!("{bytes}B"),
+        |(divisor, suffix)| format!("{:.1}{suffix}", bytes as f64 / *divisor as f64),
+    )
 }
+
+/// Duration unit thresholds: (divisor_us, suffix)
+const DURATION_UNITS: &[(u64, &str)] = &[(1_000_000, "s"), (1_000, "ms")];
 
 /// Format duration in microseconds to human-readable string
 pub fn format_duration_us(us: u64) -> String {
-    if us >= 1_000_000 {
-        format!("{:.1}s", us as f64 / 1_000_000.0)
-    } else if us >= 1_000 {
-        format!("{:.1}ms", us as f64 / 1_000.0)
-    } else {
-        format!("{us}us")
-    }
+    DURATION_UNITS.iter().find(|(threshold, _)| us >= *threshold).map_or_else(
+        || format!("{us}us"),
+        |(divisor, suffix)| format!("{:.1}{suffix}", us as f64 / *divisor as f64),
+    )
 }
+
+/// Rate unit thresholds: (divisor, suffix)
+const RATE_UNITS: &[(f64, &str)] = &[(1_000_000.0, "M/s"), (1_000.0, "K/s")];
 
 /// Format rate (calls per second)
 pub fn format_rate(rate: f64) -> String {
-    if rate >= 1_000_000.0 {
-        format!("{:.1}M/s", rate / 1_000_000.0)
-    } else if rate >= 1_000.0 {
-        format!("{:.1}K/s", rate / 1_000.0)
-    } else {
-        format!("{:.0}/s", rate)
-    }
+    RATE_UNITS.iter().find(|(threshold, _)| rate >= *threshold).map_or_else(
+        || format!("{:.0}/s", rate),
+        |(divisor, suffix)| format!("{:.1}{suffix}", rate / divisor),
+    )
 }
+
+/// Z-score severity indicators: (min_z, indicator_string)
+const ZSCORE_INDICATORS: &[(f32, &str)] = &[(5.0, "!!!"), (4.0, "!!"), (3.0, "!")];
 
 /// Format Z-score with severity indicator
 pub fn format_zscore(z: f32) -> String {
-    let indicator = if z >= 5.0 {
-        "!!!"
-    } else if z >= 4.0 {
-        "!!"
-    } else if z >= 3.0 {
-        "!"
-    } else {
-        ""
-    };
+    let indicator =
+        ZSCORE_INDICATORS.iter().find(|(threshold, _)| z >= *threshold).map_or("", |(_, ind)| ind);
     format!("{z:.1}σ{indicator}")
 }
 

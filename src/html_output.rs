@@ -25,11 +25,7 @@ pub struct HtmlOutput {
 impl HtmlOutput {
     /// Create a new HTML output formatter
     pub fn new(include_timing: bool, include_source: bool) -> Self {
-        Self {
-            syscalls: Vec::new(),
-            include_timing,
-            include_source,
-        }
+        Self { syscalls: Vec::new(), include_timing, include_source }
     }
 
     /// Add a syscall to the output
@@ -138,21 +134,11 @@ impl HtmlOutput {
 
     /// Format a syscall as HTML table row
     fn format_syscall_row(&self, syscall: &HtmlSyscall) -> String {
-        let result_class = if syscall.result < 0 {
-            "result result-error"
-        } else {
-            "result"
-        };
+        let result_class = if syscall.result < 0 { "result result-error" } else { "result" };
 
         let mut cells = vec![
-            format!(
-                r#"<td class="syscall">{}</td>"#,
-                Self::escape_html(&syscall.name)
-            ),
-            format!(
-                r#"<td class="args">{}</td>"#,
-                Self::escape_html(&syscall.arguments)
-            ),
+            format!(r#"<td class="syscall">{}</td>"#, Self::escape_html(&syscall.name)),
+            format!(r#"<td class="args">{}</td>"#, Self::escape_html(&syscall.arguments)),
             format!(r#"<td class="{}">{}</td>"#, result_class, syscall.result),
         ];
 
@@ -169,10 +155,7 @@ impl HtmlOutput {
 
         if self.include_source {
             let source_text = syscall.source_location.as_deref().unwrap_or("");
-            cells.push(format!(
-                r#"<td class="source">{}</td>"#,
-                Self::escape_html(source_text)
-            ));
+            cells.push(format!(r#"<td class="source">{}</td>"#, Self::escape_html(source_text)));
         }
 
         format!("<tr>{}</tr>", cells.join(""))
@@ -254,11 +237,7 @@ impl HtmlOutput {
                 0.0
             };
 
-            let usecs_per_call = if stat.count > 0 {
-                stat.total_time_us / stat.count
-            } else {
-                0
-            };
+            let usecs_per_call = if stat.count > 0 { stat.total_time_us / stat.count } else { 0 };
 
             let seconds = stat.total_time_us as f64 / 1_000_000.0;
 

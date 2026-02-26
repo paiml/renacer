@@ -6,11 +6,7 @@
 fn test_html_format_flag_accepted() {
     // Test that --format html flag is accepted by CLI
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("--format")
-        .arg("html")
-        .arg("--")
-        .arg("echo")
-        .arg("test");
+    cmd.arg("--format").arg("html").arg("--").arg("echo").arg("test");
 
     let output = cmd.output().expect("test");
     assert!(output.status.success(), "HTML format should be accepted");
@@ -20,11 +16,7 @@ fn test_html_format_flag_accepted() {
 fn test_html_output_basic() {
     // Test that HTML output generates valid HTML document
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("--format")
-        .arg("html")
-        .arg("--")
-        .arg("echo")
-        .arg("hello");
+    cmd.arg("--format").arg("html").arg("--").arg("echo").arg("hello");
 
     let output = cmd.output().expect("test");
     assert!(output.status.success());
@@ -43,11 +35,7 @@ fn test_html_output_basic() {
 fn test_html_output_contains_syscalls() {
     // Test that HTML output includes syscall traces
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("--format")
-        .arg("html")
-        .arg("--")
-        .arg("echo")
-        .arg("test");
+    cmd.arg("--format").arg("html").arg("--").arg("echo").arg("test");
 
     let output = cmd.output().expect("test");
     assert!(output.status.success());
@@ -65,12 +53,7 @@ fn test_html_output_contains_syscalls() {
 fn test_html_output_with_statistics() {
     // Test that HTML output includes statistics when -c flag used
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("--format")
-        .arg("html")
-        .arg("-c")
-        .arg("--")
-        .arg("echo")
-        .arg("test");
+    cmd.arg("--format").arg("html").arg("-c").arg("--").arg("echo").arg("test");
 
     let output = cmd.output().expect("test");
     assert!(output.status.success());
@@ -88,12 +71,7 @@ fn test_html_output_with_statistics() {
 fn test_html_output_with_timing() {
     // Test that HTML output includes timing when -T flag used
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("--format")
-        .arg("html")
-        .arg("-T")
-        .arg("--")
-        .arg("echo")
-        .arg("test");
+    cmd.arg("--format").arg("html").arg("-T").arg("--").arg("echo").arg("test");
 
     let output = cmd.output().expect("test");
     assert!(output.status.success());
@@ -111,13 +89,7 @@ fn test_html_output_with_timing() {
 fn test_html_output_with_filtering() {
     // Test that HTML output works with syscall filtering
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("--format")
-        .arg("html")
-        .arg("-e")
-        .arg("trace=write")
-        .arg("--")
-        .arg("echo")
-        .arg("test");
+    cmd.arg("--format").arg("html").arg("-e").arg("trace=write").arg("--").arg("echo").arg("test");
 
     let output = cmd.output().expect("test");
     assert!(output.status.success());
@@ -125,10 +97,7 @@ fn test_html_output_with_filtering() {
     let stdout = String::from_utf8_lossy(&output.stdout);
 
     // Should contain filtered syscalls
-    assert!(
-        stdout.contains("write"),
-        "HTML should contain write syscall"
-    );
+    assert!(stdout.contains("write"), "HTML should contain write syscall");
     // Should NOT contain non-filtered syscalls in trace
     // (exit_group might still appear in summary)
 }
@@ -137,11 +106,7 @@ fn test_html_output_with_filtering() {
 fn test_html_output_standalone() {
     // Test that HTML output is standalone (no external dependencies)
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("--format")
-        .arg("html")
-        .arg("--")
-        .arg("echo")
-        .arg("test");
+    cmd.arg("--format").arg("html").arg("--").arg("echo").arg("test");
 
     let output = cmd.output().expect("test");
     assert!(output.status.success());
@@ -161,11 +126,7 @@ fn test_html_output_standalone() {
 fn test_html_output_escape_special_chars() {
     // Test that HTML output escapes special characters (XSS prevention)
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("--format")
-        .arg("html")
-        .arg("--")
-        .arg("echo")
-        .arg("<script>alert('xss')</script>");
+    cmd.arg("--format").arg("html").arg("--").arg("echo").arg("<script>alert('xss')</script>");
 
     let output = cmd.output().expect("test");
     assert!(output.status.success());
@@ -173,17 +134,11 @@ fn test_html_output_escape_special_chars() {
     let stdout = String::from_utf8_lossy(&output.stdout);
 
     // Extract only the HTML portion (after <!DOCTYPE html>) to exclude child process output
-    let html_part = if let Some(idx) = stdout.find("<!DOCTYPE html>") {
-        &stdout[idx..]
-    } else {
-        &stdout[..]
-    };
+    let html_part =
+        if let Some(idx) = stdout.find("<!DOCTYPE html>") { &stdout[idx..] } else { &stdout[..] };
 
     // Should escape < and > characters in the HTML report
-    assert!(
-        !html_part.contains("<script>alert"),
-        "HTML should escape script tags"
-    );
+    assert!(!html_part.contains("<script>alert"), "HTML should escape script tags");
     // Should contain escaped version
     assert!(
         html_part.contains("&lt;") || html_part.contains("&gt;") || !html_part.contains("<script>"),
@@ -195,11 +150,7 @@ fn test_html_output_escape_special_chars() {
 fn test_html_output_has_table_structure() {
     // Test that HTML output uses table structure for traces
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("--format")
-        .arg("html")
-        .arg("--")
-        .arg("echo")
-        .arg("test");
+    cmd.arg("--format").arg("html").arg("--").arg("echo").arg("test");
 
     let output = cmd.output().expect("test");
     assert!(output.status.success());
@@ -207,10 +158,7 @@ fn test_html_output_has_table_structure() {
     let stdout = String::from_utf8_lossy(&output.stdout);
 
     // Should contain table elements
-    assert!(
-        stdout.contains("<table"),
-        "HTML should contain table element"
-    );
+    assert!(stdout.contains("<table"), "HTML should contain table element");
     assert!(
         stdout.contains("<tr") || stdout.contains("<th") || stdout.contains("<td"),
         "HTML should contain table row/cell elements"
@@ -221,18 +169,11 @@ fn test_html_output_has_table_structure() {
 fn test_html_output_backward_compatibility() {
     // Test that existing formats still work
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("--format")
-        .arg("json")
-        .arg("--")
-        .arg("echo")
-        .arg("test");
+    cmd.arg("--format").arg("json").arg("--").arg("echo").arg("test");
 
     let output = cmd.output().expect("test");
     assert!(output.status.success());
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(
-        stdout.contains("{") && stdout.contains("}"),
-        "JSON format should still work"
-    );
+    assert!(stdout.contains("{") && stdout.contains("}"), "JSON format should still work");
 }

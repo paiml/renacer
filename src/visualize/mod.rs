@@ -201,6 +201,7 @@ fn inject_demo_data(app: &mut app::VisualizeApp, tick: u64) {
 /// This is called in the tracer thread before running trace_command/attach_to_pid.
 /// Without this, print_syscall_entry(), stats summaries, and child process output
 /// would write to the same terminal that ratatui is using for TUI rendering.
+#[allow(unsafe_code)]
 fn suppress_stdio() {
     if let Ok(devnull) = File::open("/dev/null") {
         let devnull_fd = devnull.as_raw_fd();
@@ -230,56 +231,34 @@ fn create_tracer_handle(
 ) -> TracerSetup {
     if let Some(cmd) = command {
         let cmd_owned: Vec<String> = cmd.to_vec();
-        let tracer_config = TracerConfig {
-            visualizer_sink: Some(tx),
-            ..Default::default()
-        };
+        let tracer_config = TracerConfig { visualizer_sink: Some(tx), ..Default::default() };
         let handle = thread::spawn(move || {
             suppress_stdio();
             tracer::trace_command(&cmd_owned, tracer_config)
         });
-        return TracerSetup {
-            handle: Some(handle),
-            demo_mode: false,
-        };
+        return TracerSetup { handle: Some(handle), demo_mode: false };
     }
 
     if let Some(pid) = pid {
-        let tracer_config = TracerConfig {
-            visualizer_sink: Some(tx),
-            ..Default::default()
-        };
+        let tracer_config = TracerConfig { visualizer_sink: Some(tx), ..Default::default() };
         let handle = thread::spawn(move || {
             suppress_stdio();
             tracer::attach_to_pid(pid, tracer_config)
         });
-        return TracerSetup {
-            handle: Some(handle),
-            demo_mode: false,
-        };
+        return TracerSetup { handle: Some(handle), demo_mode: false };
     }
 
     // Demo mode - no tracer, drop tx so rx doesn't block
     drop(tx);
-    TracerSetup {
-        handle: None,
-        demo_mode: true,
-    }
+    TracerSetup { handle: None, demo_mode: true }
 }
 
 /// Open terminal for TUI rendering
 fn open_tty() -> File {
-    OpenOptions::new()
-        .read(true)
-        .write(true)
-        .open("/dev/tty")
-        .unwrap_or_else(|_| {
-            // Fallback to stdout if /dev/tty not available (e.g., in CI)
-            OpenOptions::new()
-                .write(true)
-                .open("/proc/self/fd/1")
-                .expect("Failed to open terminal")
-        })
+    OpenOptions::new().read(true).write(true).open("/dev/tty").unwrap_or_else(|_| {
+        // Fallback to stdout if /dev/tty not available (e.g., in CI)
+        OpenOptions::new().write(true).open("/proc/self/fd/1").expect("Failed to open terminal")
+    })
 }
 
 /// Terminal cleanup guard - ensures terminal is restored on panic
@@ -321,10 +300,7 @@ fn handle_tracer_finish(
     app: &mut app::VisualizeApp,
     tracer_handle: &mut Option<thread::JoinHandle<Result<i32>>>,
 ) {
-    if tracer_handle
-        .as_ref()
-        .is_some_and(std::thread::JoinHandle::is_finished)
-    {
+    if tracer_handle.as_ref().is_some_and(std::thread::JoinHandle::is_finished) {
         app.collect_metrics();
         app.trace_complete = true;
         app.event_receiver = None;
@@ -334,6 +310,50 @@ fn handle_tracer_finish(
         }
         let _ = enable_raw_mode();
     }
+}
+
+/// Process a tick interval: demo data injection and metric collection
+fn process_tick(
+    app: &mut app::VisualizeApp,
+    demo_mode: bool,
+    demo_tick: &mut u64,
+    last_tick: &mut Instant,
+) {
+    if demo_mode {
+        inject_demo_data(app, *demo_tick);
+        *demo_tick = demo_tick.wrapping_add(1);
+    }
+    app.collect_metrics();
+    *last_tick = Instant::now();
+}
+
+/// Poll for keyboard events, returns Some(true) to quit, Some(false) to continue, None on no event
+fn poll_keyboard(app: &mut app::VisualizeApp, timeout: Duration) -> Result<Option<bool>> {
+    if event::poll(timeout)? {
+        if let Event::Key(key) = event::read()? {
+            return Ok(Some(handle_key_input(app, key)));
+        }
+    }
+    Ok(None)
+}
+
+/// Initialize the terminal for TUI rendering
+fn init_terminal() -> Result<(Terminal<CrosstermBackend<File>>, TerminalGuard)> {
+    enable_raw_mode()?;
+    let mut tty = open_tty();
+    let guard = TerminalGuard;
+    execute!(tty, EnterAlternateScreen, EnableMouseCapture)?;
+    let backend = CrosstermBackend::new(tty);
+    let terminal = Terminal::new(backend)?;
+    Ok((terminal, guard))
+}
+
+/// Restore terminal state after TUI shutdown
+fn restore_terminal(terminal: &mut Terminal<CrosstermBackend<File>>) -> Result<()> {
+    disable_raw_mode()?;
+    execute!(terminal.backend_mut(), LeaveAlternateScreen, DisableMouseCapture)?;
+    terminal.show_cursor()?;
+    Ok(())
 }
 
 /// Run the visualization TUI
@@ -346,25 +366,55 @@ fn handle_tracer_finish(
 /// # Returns
 ///
 /// Exit code from the traced process (0 if successful)
+/// Result of a single event loop iteration.
+enum LoopAction {
+    /// Continue to the next iteration
+    Continue,
+    /// Exit the loop with the given exit code
+    Exit(i32),
+}
+
+/// Process one iteration of the event loop: draw, handle input, tick.
+fn run_event_loop_iteration(
+    terminal: &mut Terminal<CrosstermBackend<File>>,
+    app: &mut app::VisualizeApp,
+    frame_times: &mut Vec<u64>,
+    tick_rate: Duration,
+    demo_mode: bool,
+    demo_tick: &mut u64,
+    last_tick: &mut Instant,
+    tracer_handle: &mut Option<std::thread::JoinHandle<Result<i32>>>,
+) -> Result<LoopAction> {
+    let frame_start = Instant::now();
+    terminal.draw(|f| ui::draw(f, app))?;
+    update_frame_stats(app, frame_times, frame_start.elapsed().as_micros() as u64);
+
+    let timeout = tick_rate.saturating_sub(last_tick.elapsed());
+    if let Some(true) = poll_keyboard(app, timeout)? {
+        return Ok(LoopAction::Exit(0));
+    }
+
+    if last_tick.elapsed() >= tick_rate {
+        process_tick(app, demo_mode, demo_tick, last_tick);
+    }
+
+    if app.should_exit {
+        return Ok(LoopAction::Exit(app.exit_code));
+    }
+
+    handle_tracer_finish(app, tracer_handle);
+    Ok(LoopAction::Continue)
+}
+
 pub fn run_visualize(command: Option<&[String]>, config: VisualizeConfig) -> Result<i32> {
     let (tx, rx) = mpsc::channel::<VisualizerEvent>();
     let setup = create_tracer_handle(command, config.pid, tx);
     let mut tracer_handle = setup.handle;
     let demo_mode = setup.demo_mode;
 
-    enable_raw_mode()?;
-    let mut tty = open_tty();
-    let _guard = TerminalGuard;
+    let (mut terminal, _guard) = init_terminal()?;
 
-    execute!(tty, EnterAlternateScreen, EnableMouseCapture)?;
-    let backend = CrosstermBackend::new(tty);
-    let mut terminal = Terminal::new(backend)?;
-
-    let receiver = if tracer_handle.is_some() {
-        Some(rx)
-    } else {
-        None
-    };
+    let receiver = if tracer_handle.is_some() { Some(rx) } else { None };
     let mut app = app::VisualizeApp::with_receiver(config.clone(), receiver);
 
     let mut demo_tick: u64 = 0;
@@ -373,51 +423,26 @@ pub fn run_visualize(command: Option<&[String]>, config: VisualizeConfig) -> Res
     let mut frame_times: Vec<u64> = Vec::with_capacity(60);
 
     let result = loop {
-        let frame_start = Instant::now();
-        terminal.draw(|f| ui::draw(f, &mut app))?;
-        update_frame_stats(
+        match run_event_loop_iteration(
+            &mut terminal,
             &mut app,
             &mut frame_times,
-            frame_start.elapsed().as_micros() as u64,
-        );
-
-        let timeout = tick_rate.saturating_sub(last_tick.elapsed());
-        if event::poll(timeout)? {
-            if let Event::Key(key) = event::read()? {
-                if handle_key_input(&mut app, key) {
-                    break Ok(0);
-                }
-            }
+            tick_rate,
+            demo_mode,
+            &mut demo_tick,
+            &mut last_tick,
+            &mut tracer_handle,
+        )? {
+            LoopAction::Continue => {}
+            LoopAction::Exit(code) => break Ok(code),
         }
-
-        if last_tick.elapsed() >= tick_rate {
-            if demo_mode {
-                inject_demo_data(&mut app, demo_tick);
-                demo_tick = demo_tick.wrapping_add(1);
-            }
-            app.collect_metrics();
-            last_tick = Instant::now();
-        }
-
-        if app.should_exit {
-            break Ok(app.exit_code);
-        }
-
-        handle_tracer_finish(&mut app, &mut tracer_handle);
     };
 
     if let Some(handle) = tracer_handle {
         let _ = handle.join();
     }
 
-    disable_raw_mode()?;
-    execute!(
-        terminal.backend_mut(),
-        LeaveAlternateScreen,
-        DisableMouseCapture
-    )?;
-    terminal.show_cursor()?;
-
+    restore_terminal(&mut terminal)?;
     result
 }
 
@@ -480,10 +505,7 @@ mod tests {
         assert_eq!(config.pid, Some(1234));
         assert!(config.enable_source);
         assert_eq!(config.filter, Some("read|write".to_string()));
-        assert_eq!(
-            config.otlp_endpoint,
-            Some("http://localhost:4317".to_string())
-        );
+        assert_eq!(config.otlp_endpoint, Some("http://localhost:4317".to_string()));
         assert!(config.enable_metrics);
         assert!(config.enable_alerts);
         assert_eq!(config.alert_latency_threshold_us, 5000);
@@ -623,20 +645,15 @@ mod tests {
 
     #[test]
     fn test_config_with_pid() {
-        let config = VisualizeConfig {
-            pid: Some(12345),
-            ..Default::default()
-        };
+        let config = VisualizeConfig { pid: Some(12345), ..Default::default() };
 
         assert_eq!(config.pid, Some(12345));
     }
 
     #[test]
     fn test_config_with_filter() {
-        let config = VisualizeConfig {
-            filter: Some("mmap|munmap".to_string()),
-            ..Default::default()
-        };
+        let config =
+            VisualizeConfig { filter: Some("mmap|munmap".to_string()), ..Default::default() };
 
         assert_eq!(config.filter, Some("mmap|munmap".to_string()));
     }
@@ -653,10 +670,7 @@ mod tests {
 
     #[test]
     fn test_visualize_config_deterministic_mode() {
-        let config = VisualizeConfig {
-            deterministic: true,
-            ..Default::default()
-        };
+        let config = VisualizeConfig { deterministic: true, ..Default::default() };
 
         assert!(config.deterministic);
     }

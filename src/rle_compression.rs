@@ -246,6 +246,66 @@ impl CompressedTrace {
 /// # Ok(())
 /// # }
 /// ```
+/// Run statistics accumulated while scanning consecutive matching spans
+struct RunStats {
+    run_length: usize,
+    total_duration: u64,
+    min_duration: u64,
+    max_duration: u64,
+}
+
+/// Find the run length of consecutive matching spans starting at `start_idx`
+fn find_run(sorted_spans: &[SpanRecord], start_idx: usize) -> RunStats {
+    let current_span = &sorted_spans[start_idx];
+    let mut stats = RunStats {
+        run_length: 1,
+        total_duration: current_span.duration_nanos,
+        min_duration: current_span.duration_nanos,
+        max_duration: current_span.duration_nanos,
+    };
+
+    while start_idx + stats.run_length < sorted_spans.len() {
+        let next_span = &sorted_spans[start_idx + stats.run_length];
+
+        let matches = next_span.span_name == current_span.span_name
+            && next_span.process_id == current_span.process_id
+            && next_span.thread_id == current_span.thread_id
+            && spans_have_similar_attributes(current_span, next_span);
+
+        if !matches {
+            break;
+        }
+
+        stats.total_duration += next_span.duration_nanos;
+        stats.min_duration = stats.min_duration.min(next_span.duration_nanos);
+        stats.max_duration = stats.max_duration.max(next_span.duration_nanos);
+        stats.run_length += 1;
+    }
+
+    stats
+}
+
+/// Build an RLE segment from a run of matching spans
+fn build_segment(sorted_spans: &[SpanRecord], start_idx: usize, stats: &RunStats) -> RleSegment {
+    let current_span = &sorted_spans[start_idx];
+    let last_span = &sorted_spans[start_idx + stats.run_length - 1];
+
+    RleSegment {
+        syscall_name: current_span.span_name.clone(),
+        count: stats.run_length,
+        start_logical_clock: current_span.logical_clock,
+        end_logical_clock: last_span.logical_clock,
+        total_duration: stats.total_duration,
+        avg_duration: stats.total_duration / stats.run_length as u64,
+        min_duration: stats.min_duration,
+        max_duration: stats.max_duration,
+        common_attributes: current_span.attributes_json.clone(),
+        process_id: current_span.process_id,
+        thread_id: current_span.thread_id,
+        trace_id: current_span.trace_id,
+    }
+}
+
 pub fn compress_spans(spans: &[SpanRecord], min_run_length: usize) -> Result<CompressedTrace> {
     if spans.is_empty() {
         return Ok(CompressedTrace {
@@ -256,8 +316,6 @@ pub fn compress_spans(spans: &[SpanRecord], min_run_length: usize) -> Result<Com
     }
 
     let original_count = spans.len();
-
-    // Sort by logical clock
     let mut sorted_spans = spans.to_vec();
     sorted_spans.sort_by_key(|s| s.logical_clock);
 
@@ -266,67 +324,20 @@ pub fn compress_spans(spans: &[SpanRecord], min_run_length: usize) -> Result<Com
 
     let mut i = 0;
     while i < sorted_spans.len() {
-        let current_span = &sorted_spans[i];
-        let syscall_name = &current_span.span_name;
+        let stats = find_run(&sorted_spans, i);
 
-        // Find run length
-        let mut run_length = 1;
-        let mut total_duration = current_span.duration_nanos;
-        let mut min_duration = current_span.duration_nanos;
-        let mut max_duration = current_span.duration_nanos;
-
-        while i + run_length < sorted_spans.len() {
-            let next_span = &sorted_spans[i + run_length];
-
-            // Check if spans are identical (same syscall, process, thread)
-            if next_span.span_name == *syscall_name
-                && next_span.process_id == current_span.process_id
-                && next_span.thread_id == current_span.thread_id
-                && spans_have_similar_attributes(current_span, next_span)
-            {
-                total_duration += next_span.duration_nanos;
-                min_duration = min_duration.min(next_span.duration_nanos);
-                max_duration = max_duration.max(next_span.duration_nanos);
-                run_length += 1;
-            } else {
-                break;
-            }
-        }
-
-        // Compress if run length meets threshold
-        if run_length >= min_run_length {
-            let last_span = &sorted_spans[i + run_length - 1];
-
-            segments.push(RleSegment {
-                syscall_name: syscall_name.clone(),
-                count: run_length,
-                start_logical_clock: current_span.logical_clock,
-                end_logical_clock: last_span.logical_clock,
-                total_duration,
-                avg_duration: total_duration / run_length as u64,
-                min_duration,
-                max_duration,
-                common_attributes: current_span.attributes_json.clone(),
-                process_id: current_span.process_id,
-                thread_id: current_span.thread_id,
-                trace_id: current_span.trace_id,
-            });
-
-            i += run_length;
+        if stats.run_length >= min_run_length {
+            segments.push(build_segment(&sorted_spans, i, &stats));
         } else {
-            // Not enough repetitions - keep uncompressed
-            for j in 0..run_length {
+            for j in 0..stats.run_length {
                 uncompressed.push(sorted_spans[i + j].clone());
             }
-            i += run_length;
         }
+
+        i += stats.run_length;
     }
 
-    Ok(CompressedTrace {
-        segments,
-        uncompressed,
-        original_count,
-    })
+    Ok(CompressedTrace { segments, uncompressed, original_count })
 }
 
 /// Check if two spans have similar attributes (for RLE grouping)
@@ -401,6 +412,10 @@ pub fn decompress_segment(segment: &RleSegment) -> Vec<SpanRecord> {
 pub fn compress_trace(spans: &[SpanRecord]) -> Result<CompressedTrace> {
     compress_spans(spans, 10)
 }
+
+// Compile-time thread-safety verification (Sprint 59)
+static_assertions::assert_impl_all!(RleSegment: Send, Sync);
+static_assertions::assert_impl_all!(CompressedTrace: Send, Sync);
 
 #[cfg(test)]
 mod tests {

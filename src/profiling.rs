@@ -11,7 +11,6 @@ use std::time::{Duration, Instant};
 
 /// Categories of operations that can be profiled
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[allow(dead_code)] // Some categories reserved for future instrumentation
 pub enum ProfilingCategory {
     /// Time spent in ptrace system calls (getregs, setregs, etc)
     Ptrace,
@@ -55,10 +54,7 @@ pub struct ProfilingContext {
 impl ProfilingContext {
     /// Create a new profiling context
     pub fn new() -> Self {
-        Self {
-            start_time: Some(Instant::now()),
-            ..Default::default()
-        }
+        Self { start_time: Some(Instant::now()), ..Default::default() }
     }
 
     /// Record that a syscall was traced
@@ -104,19 +100,15 @@ impl ProfilingContext {
 
     /// Get the total wall clock time since profiling started
     pub fn wall_time(&self) -> Duration {
-        self.start_time
-            .map(|start| start.elapsed())
-            .unwrap_or_default()
+        self.start_time.map(|start| start.elapsed()).unwrap_or_default()
     }
 
     /// Get the total number of syscalls traced
-    #[allow(dead_code)] // Reserved for future use
     pub fn syscall_count(&self) -> u64 {
         self.syscall_count
     }
 
     /// Get time spent in a specific category
-    #[allow(dead_code)] // Reserved for future use
     pub fn time_in_category(&self, category: ProfilingCategory) -> Duration {
         match category {
             ProfilingCategory::Ptrace => self.ptrace_time,
@@ -217,16 +209,10 @@ mod tests {
         let duration = Duration::from_millis(100);
 
         ctx.record_time(ProfilingCategory::Formatting, duration);
-        assert_eq!(
-            ctx.time_in_category(ProfilingCategory::Formatting),
-            duration
-        );
+        assert_eq!(ctx.time_in_category(ProfilingCategory::Formatting), duration);
 
         ctx.record_time(ProfilingCategory::Formatting, duration);
-        assert_eq!(
-            ctx.time_in_category(ProfilingCategory::Formatting),
-            duration + duration
-        );
+        assert_eq!(ctx.time_in_category(ProfilingCategory::Formatting), duration + duration);
     }
 
     #[test]

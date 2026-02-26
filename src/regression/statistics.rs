@@ -85,12 +85,9 @@ pub fn compare_distributions(baseline: &[f32], current: &[f32]) -> Result<Statis
     let current_median = median(&current_vec)?;
 
     // trueno 0.7.0 returns Result<f32> for variance
-    let baseline_variance = baseline_vec
-        .variance()
-        .context("Failed to compute baseline variance")?;
-    let current_variance = current_vec
-        .variance()
-        .context("Failed to compute current variance")?;
+    let baseline_variance =
+        baseline_vec.variance().context("Failed to compute baseline variance")?;
+    let current_variance = current_vec.variance().context("Failed to compute current variance")?;
 
     Ok(StatisticalTest {
         statistic: ttest_result.statistic,
@@ -112,9 +109,7 @@ pub fn compare_distributions(baseline: &[f32], current: &[f32]) -> Result<Statis
 /// `QuickSelect` for O(n) performance (Floyd & Rivest 1975).
 pub fn median(vector: &Vector<f32>) -> Result<f32> {
     let stats = DescriptiveStats::new(vector);
-    stats
-        .quantile(0.5)
-        .map_err(|e| anyhow::anyhow!("Failed to compute median: {e}"))
+    stats.quantile(0.5).map_err(|e| anyhow::anyhow!("Failed to compute median: {e}"))
 }
 
 #[cfg(test)]
@@ -160,11 +155,7 @@ mod tests {
         let result = compare_distributions(&baseline, &current).expect("test");
 
         // Should detect significant difference
-        assert!(
-            result.pvalue < 0.05,
-            "p-value {} should be < 0.05",
-            result.pvalue
-        );
+        assert!(result.pvalue < 0.05, "p-value {} should be < 0.05", result.pvalue);
         assert!(result.current_median > result.baseline_median);
     }
 
@@ -177,11 +168,7 @@ mod tests {
         let result = compare_distributions(&baseline, &current).expect("test");
 
         // Should NOT detect significant difference
-        assert!(
-            result.pvalue >= 0.05,
-            "p-value {} should be >= 0.05",
-            result.pvalue
-        );
+        assert!(result.pvalue >= 0.05, "p-value {} should be >= 0.05", result.pvalue);
     }
 
     #[test]

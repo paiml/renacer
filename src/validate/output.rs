@@ -63,16 +63,10 @@ pub fn format_text_report(result: &ComparisonResult) -> String {
 
     // Summary
     output.push_str("Summary:\n");
-    output.push_str(&format!(
-        "  Total syscalls compared: {}\n",
-        result.summary.total_compared
-    ));
+    output.push_str(&format!("  Total syscalls compared: {}\n", result.summary.total_compared));
     output.push_str(&format!("  Matches: {}\n", result.summary.matches));
     output.push_str(&format!("  Mismatches: {}\n", result.summary.mismatches));
-    output.push_str(&format!(
-        "  Timing regressions: {}\n",
-        result.summary.timing_regressions
-    ));
+    output.push_str(&format!("  Timing regressions: {}\n", result.summary.timing_regressions));
     output.push('\n');
 
     // Syscall mismatches
@@ -113,11 +107,7 @@ pub fn format_text_report(result: &ComparisonResult) -> String {
 /// Format as JSON
 pub fn format_json_report(result: &ComparisonResult) -> String {
     let json_result = JsonValidationResult {
-        status: if result.passed {
-            "passed".to_string()
-        } else {
-            "failed".to_string()
-        },
+        status: if result.passed { "passed".to_string() } else { "failed".to_string() },
         total_compared: result.summary.total_compared,
         matches: result.summary.matches,
         mismatches: result.summary.mismatches,

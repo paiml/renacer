@@ -25,10 +25,8 @@ mod cuda_kernel_tests {
         }
 
         // Setup: OTLP exporter with test endpoint
-        let config = OtlpConfig::new(
-            "http://localhost:4317".to_string(),
-            "test-cuda-init".to_string(),
-        );
+        let config =
+            OtlpConfig::new("http://localhost:4317".to_string(), "test-cuda-init".to_string());
         let exporter = OtlpExporter::new(config, None).expect("Failed to create OTLP exporter");
         let exporter_arc = std::sync::Arc::new(exporter);
 
@@ -43,10 +41,7 @@ mod cuda_kernel_tests {
 
                 let info = device_info.expect("test");
                 assert_eq!(info.device_id, 0);
-                assert!(
-                    !info.device_name.is_empty(),
-                    "Device name should not be empty"
-                );
+                assert!(!info.device_name.is_empty(), "Device name should not be empty");
                 assert!(
                     !info.compute_capability.is_empty(),
                     "Compute capability should not be empty"
@@ -58,10 +53,7 @@ mod cuda_kernel_tests {
                 );
             }
             Err(e) => {
-                eprintln!(
-                    "CUDA initialization failed (expected on non-NVIDIA hardware): {}",
-                    e
-                );
+                eprintln!("CUDA initialization failed (expected on non-NVIDIA hardware): {}", e);
             }
         }
     }
@@ -107,10 +99,8 @@ mod cuda_kernel_tests {
             return;
         }
 
-        let config = OtlpConfig::new(
-            "http://localhost:4317".to_string(),
-            "test-cuda-kernel".to_string(),
-        );
+        let config =
+            OtlpConfig::new("http://localhost:4317".to_string(), "test-cuda-kernel".to_string());
         let exporter = OtlpExporter::new(config, None).expect("Failed to create OTLP exporter");
         let exporter_arc = std::sync::Arc::new(exporter);
 
@@ -185,10 +175,7 @@ mod cuda_kernel_tests {
 
         // Verify we have all expected attributes defined
         assert_eq!(expected_attributes.len(), 11);
-        println!(
-            "CUDA kernel span will include {} attributes",
-            expected_attributes.len()
-        );
+        println!("CUDA kernel span will include {} attributes", expected_attributes.len());
     }
 
     /// Test unified tracing: CUDA + wgpu + SIMD in one trace

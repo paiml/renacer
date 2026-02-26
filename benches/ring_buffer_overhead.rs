@@ -84,22 +84,18 @@ fn bench_ring_buffer_push_varying_capacity(c: &mut Criterion) {
     let mut group = c.benchmark_group("ring_buffer_push_capacity");
 
     for capacity in [1024, 4096, 8192, 16384, 32768] {
-        group.bench_with_input(
-            BenchmarkId::from_parameter(capacity),
-            &capacity,
-            |b, &capacity| {
-                let buffer = SpanRingBuffer::new(capacity);
-                let mut i = 0u64;
+        group.bench_with_input(BenchmarkId::from_parameter(capacity), &capacity, |b, &capacity| {
+            let buffer = SpanRingBuffer::new(capacity);
+            let mut i = 0u64;
 
-                b.iter(|| {
-                    let span = create_bench_span(i);
-                    buffer.push(black_box(span));
-                    i += 1;
-                });
+            b.iter(|| {
+                let span = create_bench_span(i);
+                buffer.push(black_box(span));
+                i += 1;
+            });
 
-                std::mem::drop(buffer);
-            },
-        );
+            std::mem::drop(buffer);
+        });
     }
 
     group.finish();

@@ -46,11 +46,7 @@ fn test_compute_jaeger_export() {
         .expect("Failed to execute renacer");
 
     // Verify command succeeded
-    assert!(
-        output.status.success(),
-        "Renacer failed: {}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    assert!(output.status.success(), "Renacer failed: {}", String::from_utf8_lossy(&output.stderr));
 
     // Wait for trace to appear in Jaeger (up to 10 seconds)
     std::thread::sleep(std::time::Duration::from_secs(2));
@@ -61,25 +57,14 @@ fn test_compute_jaeger_export() {
 
     // Verify root span exists
     let mut root_attrs = HashMap::new();
-    root_attrs.insert(
-        "process.command".to_string(),
-        "./tests/fixtures/simple_program".to_string(),
-    );
+    root_attrs.insert("process.command".to_string(), "./tests/fixtures/simple_program".to_string());
 
-    verify_span_exists(
-        &trace,
-        "process: ./tests/fixtures/simple_program",
-        &root_attrs,
-    )
-    .expect("Root span not found");
+    verify_span_exists(&trace, "process: ./tests/fixtures/simple_program", &root_attrs)
+        .expect("Root span not found");
 
     // Verify at least one syscall span
     let syscall_count = count_spans(&trace, |s| s.operation_name.starts_with("syscall:"));
-    assert!(
-        syscall_count > 0,
-        "Expected at least one syscall span, found {}",
-        syscall_count
-    );
+    assert!(syscall_count > 0, "Expected at least one syscall span, found {}", syscall_count);
 
     eprintln!("[test] ✓ Compute tracing Jaeger export verified");
     eprintln!("[test] ✓ Found {} syscall spans", syscall_count);
@@ -176,13 +161,9 @@ fn test_compute_trace_all_flag() {
     let traces = query_jaeger_traces(JAEGER_URL, "renacer", None).expect("Failed to query Jaeger");
 
     if !traces.is_empty() {
-        let compute_spans = count_spans(&traces[0], |s| {
-            s.operation_name.starts_with("compute_block:")
-        });
-        eprintln!(
-            "[test] Found {} compute_block spans with --trace-compute-all",
-            compute_spans
-        );
+        let compute_spans =
+            count_spans(&traces[0], |s| s.operation_name.starts_with("compute_block:"));
+        eprintln!("[test] Found {} compute_block spans with --trace-compute-all", compute_spans);
 
         // We might see spans with duration < 100μs now
         for span in &traces[0].spans {
@@ -285,10 +266,8 @@ fn test_compute_parent_child_relationship() {
             .expect("Root span not found");
 
         // Find a compute_block span
-        if let Some(compute_span) = trace
-            .spans
-            .iter()
-            .find(|s| s.operation_name.starts_with("compute_block:"))
+        if let Some(compute_span) =
+            trace.spans.iter().find(|s| s.operation_name.starts_with("compute_block:"))
         {
             // Verify compute span is child of root span
             let has_root_parent = compute_span
@@ -334,9 +313,8 @@ fn test_compute_multiple_blocks() {
     let traces = query_jaeger_traces(JAEGER_URL, "renacer", None).expect("Failed to query Jaeger");
 
     if !traces.is_empty() {
-        let compute_spans = count_spans(&traces[0], |s| {
-            s.operation_name.starts_with("compute_block:")
-        });
+        let compute_spans =
+            count_spans(&traces[0], |s| s.operation_name.starts_with("compute_block:"));
         eprintln!("[test] Found {} compute_block spans", compute_spans);
 
         // Just verify we can handle multiple blocks without errors
@@ -372,11 +350,7 @@ fn test_distributed_trace_context_propagation() {
         .output()
         .expect("Failed to execute renacer");
 
-    assert!(
-        output.status.success(),
-        "Renacer failed: {}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    assert!(output.status.success(), "Renacer failed: {}", String::from_utf8_lossy(&output.stderr));
 
     // Wait for trace
     std::thread::sleep(std::time::Duration::from_secs(2));
@@ -385,20 +359,12 @@ fn test_distributed_trace_context_propagation() {
     let traces =
         query_jaeger_traces(JAEGER_URL, "renacer", Some(trace_id)).expect("Failed to query Jaeger");
 
-    assert!(
-        !traces.is_empty(),
-        "Trace with ID {} not found in Jaeger",
-        trace_id
-    );
+    assert!(!traces.is_empty(), "Trace with ID {} not found in Jaeger", trace_id);
 
     let trace = &traces[0];
 
     // Verify trace ID matches
-    assert_eq!(
-        trace.trace_id.to_lowercase(),
-        trace_id.to_lowercase(),
-        "Trace ID mismatch"
-    );
+    assert_eq!(trace.trace_id.to_lowercase(), trace_id.to_lowercase(), "Trace ID mismatch");
 
     // Find Renacer's root span
     let root_span = trace
@@ -412,11 +378,7 @@ fn test_distributed_trace_context_propagation() {
         r.ref_type == "CHILD_OF" && r.span_id.to_lowercase() == parent_span_id.to_lowercase()
     });
 
-    assert!(
-        has_parent_ref,
-        "Root span does not have parent reference to {}",
-        parent_span_id
-    );
+    assert!(has_parent_ref, "Root span does not have parent reference to {}", parent_span_id);
 
     eprintln!("[test] ✓ Trace ID propagation verified: {}", trace_id);
     eprintln!("[test] ✓ Parent-child relationship verified");
@@ -693,10 +655,7 @@ fn test_full_stack_span_hierarchy() {
         r.ref_type == "CHILD_OF" && r.span_id.to_lowercase() == parent_span_id.to_lowercase()
     });
 
-    assert!(
-        has_external_parent,
-        "Root span should reference external parent"
-    );
+    assert!(has_external_parent, "Root span should reference external parent");
 
     // Count child spans of different types
     let syscall_children = trace
@@ -711,10 +670,7 @@ fn test_full_stack_span_hierarchy() {
         .count();
 
     eprintln!("[test] ✓ Span hierarchy verified");
-    eprintln!(
-        "[test] ✓ External parent → root span → {} syscall children",
-        syscall_children
-    );
+    eprintln!("[test] ✓ External parent → root span → {} syscall children", syscall_children);
 }
 
 /// Test 8: Performance overhead verification

@@ -89,11 +89,7 @@ fn main() {
     let norm_time = start.elapsed();
 
     println!("  Input range:  0.0 - {:.1}", values.last().unwrap());
-    println!(
-        "  Output range: {:.2} - {:.2}",
-        normalized[0],
-        normalized.last().unwrap()
-    );
+    println!("  Output range: {:.2} - {:.2}", normalized[0], normalized.last().unwrap());
     println!("  (Normalized 100 values in {norm_time:?})\n");
 
     // Benchmark: Compare buffer sizes

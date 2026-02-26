@@ -92,10 +92,7 @@ impl AssertionConfig {
     ///
     /// Filters assertions where `fail_on_violation = true`.
     pub fn fail_on_violation_assertions(&self) -> Vec<&Assertion> {
-        self.assertion
-            .iter()
-            .filter(|a| a.fail_on_violation)
-            .collect()
+        self.assertion.iter().filter(|a| a.fail_on_violation).collect()
     }
 }
 

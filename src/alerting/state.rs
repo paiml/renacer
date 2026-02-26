@@ -35,10 +35,7 @@ pub enum AlertState {
     /// Rule condition is true, waiting for `for` duration
     Pending { since: Instant },
     /// Rule condition true for >= `for` duration
-    Firing {
-        since: Instant,
-        notifications_sent: u32,
-    },
+    Firing { since: Instant, notifications_sent: u32 },
     /// Rule was firing, now resolved
     Resolved { resolved_at: Instant },
 }
@@ -102,9 +99,7 @@ impl ActiveAlert {
     ) -> Self {
         Self {
             name: name.into(),
-            state: AlertState::Pending {
-                since: Instant::now(),
-            },
+            state: AlertState::Pending { since: Instant::now() },
             severity,
             annotations: AlertAnnotations::default(),
             value,
@@ -115,18 +110,13 @@ impl ActiveAlert {
     /// Transition to firing state
     pub fn fire(&mut self) {
         if let AlertState::Pending { since } = self.state {
-            self.state = AlertState::Firing {
-                since,
-                notifications_sent: 0,
-            };
+            self.state = AlertState::Firing { since, notifications_sent: 0 };
         }
     }
 
     /// Transition to resolved state
     pub fn resolve(&mut self) {
-        self.state = AlertState::Resolved {
-            resolved_at: Instant::now(),
-        };
+        self.state = AlertState::Resolved { resolved_at: Instant::now() };
     }
 
     /// Get duration in current state
@@ -154,10 +144,7 @@ pub struct AlertAnnotations {
 impl AlertAnnotations {
     /// Create with summary
     pub fn with_summary(summary: impl Into<String>) -> Self {
-        Self {
-            summary: summary.into(),
-            ..Default::default()
-        }
+        Self { summary: summary.into(), ..Default::default() }
     }
 
     /// Set description
@@ -241,28 +228,9 @@ mod tests {
     #[test]
     fn test_state_icons() {
         assert_eq!(AlertState::Inactive.icon(), "○");
-        assert_eq!(
-            AlertState::Pending {
-                since: Instant::now()
-            }
-            .icon(),
-            "◐"
-        );
-        assert_eq!(
-            AlertState::Firing {
-                since: Instant::now(),
-                notifications_sent: 0
-            }
-            .icon(),
-            "●"
-        );
-        assert_eq!(
-            AlertState::Resolved {
-                resolved_at: Instant::now()
-            }
-            .icon(),
-            "◯"
-        );
+        assert_eq!(AlertState::Pending { since: Instant::now() }.icon(), "◐");
+        assert_eq!(AlertState::Firing { since: Instant::now(), notifications_sent: 0 }.icon(), "●");
+        assert_eq!(AlertState::Resolved { resolved_at: Instant::now() }.icon(), "◯");
     }
 
     #[test]
@@ -279,24 +247,17 @@ mod tests {
         assert_eq!(AlertState::Inactive.duration(), Duration::ZERO);
 
         // Pending should have elapsed time
-        let pending = AlertState::Pending {
-            since: Instant::now(),
-        };
+        let pending = AlertState::Pending { since: Instant::now() };
         std::thread::sleep(Duration::from_millis(5));
         assert!(pending.duration() >= Duration::from_millis(5));
 
         // Firing should have elapsed time
-        let firing = AlertState::Firing {
-            since: Instant::now(),
-            notifications_sent: 5,
-        };
+        let firing = AlertState::Firing { since: Instant::now(), notifications_sent: 5 };
         std::thread::sleep(Duration::from_millis(5));
         assert!(firing.duration() >= Duration::from_millis(5));
 
         // Resolved should have elapsed time
-        let resolved = AlertState::Resolved {
-            resolved_at: Instant::now(),
-        };
+        let resolved = AlertState::Resolved { resolved_at: Instant::now() };
         std::thread::sleep(Duration::from_millis(5));
         assert!(resolved.duration() >= Duration::from_millis(5));
     }
@@ -309,10 +270,7 @@ mod tests {
 
         assert_eq!(ann.summary, "High CPU usage");
         assert_eq!(ann.description, "CPU usage exceeds 90%");
-        assert_eq!(
-            ann.runbook_url,
-            Some("https://runbook.example.com/cpu".to_string())
-        );
+        assert_eq!(ann.runbook_url, Some("https://runbook.example.com/cpu".to_string()));
     }
 
     #[test]
@@ -389,18 +347,9 @@ mod tests {
 
     #[test]
     fn test_alert_state_clone() {
-        let state = AlertState::Firing {
-            since: Instant::now(),
-            notifications_sent: 3,
-        };
+        let state = AlertState::Firing { since: Instant::now(), notifications_sent: 3 };
         let cloned = state.clone();
-        assert!(matches!(
-            cloned,
-            AlertState::Firing {
-                notifications_sent: 3,
-                ..
-            }
-        ));
+        assert!(matches!(cloned, AlertState::Firing { notifications_sent: 3, .. }));
     }
 
     #[test]

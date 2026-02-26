@@ -32,10 +32,7 @@ int main() {
         .expect("Failed to compile test program");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("--otlp-endpoint")
-        .arg("http://localhost:4317")
-        .arg("--")
-        .arg(&test_program);
+    cmd.arg("--otlp-endpoint").arg("http://localhost:4317").arg("--").arg(&test_program);
 
     // Should accept the flag (may fail to connect, but flag should be accepted)
     cmd.assert().success();
@@ -97,11 +94,7 @@ int main() {
         .expect("Failed to compile test program");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("-c")
-        .arg("--otlp-endpoint")
-        .arg("http://localhost:4317")
-        .arg("--")
-        .arg(&test_program);
+    cmd.arg("-c").arg("--otlp-endpoint").arg("http://localhost:4317").arg("--").arg(&test_program);
 
     cmd.assert().success();
 }
@@ -164,10 +157,7 @@ int main() {
         .expect("Failed to compile test program");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("--otlp-endpoint")
-        .arg("invalid://endpoint")
-        .arg("--")
-        .arg(&test_program);
+    cmd.arg("--otlp-endpoint").arg("invalid://endpoint").arg("--").arg(&test_program);
 
     // Should still trace, but may log warning about export failure
     cmd.assert().success();
@@ -199,11 +189,7 @@ int main() {
         .expect("Failed to compile test program");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("-T")
-        .arg("--otlp-endpoint")
-        .arg("http://localhost:4317")
-        .arg("--")
-        .arg(&test_program);
+    cmd.arg("-T").arg("--otlp-endpoint").arg("http://localhost:4317").arg("--").arg(&test_program);
 
     cmd.assert().success();
 }
@@ -398,10 +384,7 @@ int main() {
         .expect("Failed to compile test program");
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("--otlp-endpoint")
-        .arg("http://localhost:4317")
-        .arg("--")
-        .arg(&test_program);
+    cmd.arg("--otlp-endpoint").arg("http://localhost:4317").arg("--").arg(&test_program);
 
     cmd.assert().success();
 }

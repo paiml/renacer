@@ -89,11 +89,7 @@ impl Default for OnlineStats {
 impl OnlineStats {
     /// Create new online stats tracker
     pub fn new() -> Self {
-        Self {
-            count: 0,
-            mean: 0.0,
-            m2: 0.0,
-        }
+        Self { count: 0, mean: 0.0, m2: 0.0 }
     }
 
     /// Update with new value using Welford's online algorithm
@@ -277,29 +273,17 @@ impl Collector for AnomalyCollector {
     fn collect(&mut self) -> Result<Metrics> {
         let mut values = HashMap::new();
 
-        values.insert(
-            "anomaly.total.count".to_string(),
-            MetricValue::Counter(self.total_anomalies),
-        );
-        values.insert(
-            "anomaly.avg_z_score".to_string(),
-            MetricValue::Gauge(self.avg_z_score),
-        );
-        values.insert(
-            "anomaly.threshold".to_string(),
-            MetricValue::Gauge(self.threshold as f64),
-        );
+        values
+            .insert("anomaly.total.count".to_string(), MetricValue::Counter(self.total_anomalies));
+        values.insert("anomaly.avg_z_score".to_string(), MetricValue::Gauge(self.avg_z_score));
+        values.insert("anomaly.threshold".to_string(), MetricValue::Gauge(self.threshold as f64));
         values.insert(
             "anomaly.recent.count".to_string(),
             MetricValue::Gauge(self.anomalies.len() as f64),
         );
 
         // High severity count
-        let high_severity = self
-            .anomalies
-            .iter()
-            .filter(|a| a.is_high_severity())
-            .count();
+        let high_severity = self.anomalies.iter().filter(|a| a.is_high_severity()).count();
         values.insert(
             "anomaly.high_severity.count".to_string(),
             MetricValue::Gauge(high_severity as f64),

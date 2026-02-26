@@ -158,11 +158,8 @@ fn test_experiment_span_timestamps() {
 fn test_equivalence_score_struct() {
     use renacer::experiment_span::EquivalenceScore;
 
-    let score = EquivalenceScore {
-        syscall_match: 0.95,
-        timing_variance: 0.02,
-        semantic_equiv: 0.98,
-    };
+    let score =
+        EquivalenceScore { syscall_match: 0.95, timing_variance: 0.02, semantic_equiv: 0.98 };
 
     assert_eq!(score.syscall_match, 0.95);
     assert_eq!(score.timing_variance, 0.02);
@@ -173,11 +170,8 @@ fn test_equivalence_score_struct() {
 fn test_equivalence_score_overall() {
     use renacer::experiment_span::EquivalenceScore;
 
-    let score = EquivalenceScore {
-        syscall_match: 0.90,
-        timing_variance: 0.10,
-        semantic_equiv: 0.95,
-    };
+    let score =
+        EquivalenceScore { syscall_match: 0.90, timing_variance: 0.10, semantic_equiv: 0.95 };
 
     // Overall score should be a weighted combination
     let overall = score.overall();
@@ -188,17 +182,11 @@ fn test_equivalence_score_overall() {
 fn test_equivalence_score_is_equivalent() {
     use renacer::experiment_span::EquivalenceScore;
 
-    let good_score = EquivalenceScore {
-        syscall_match: 0.95,
-        timing_variance: 0.05,
-        semantic_equiv: 0.98,
-    };
+    let good_score =
+        EquivalenceScore { syscall_match: 0.95, timing_variance: 0.05, semantic_equiv: 0.98 };
 
-    let bad_score = EquivalenceScore {
-        syscall_match: 0.50,
-        timing_variance: 0.80,
-        semantic_equiv: 0.40,
-    };
+    let bad_score =
+        EquivalenceScore { syscall_match: 0.50, timing_variance: 0.80, semantic_equiv: 0.40 };
 
     // Good score should be considered equivalent (threshold ~0.9)
     assert!(good_score.is_equivalent());
@@ -365,9 +353,6 @@ fn test_experiment_span_to_span_record() {
 
     // Attributes should contain experiment metadata
     let attrs = span_record.parse_attributes();
-    assert_eq!(
-        attrs.get("experiment.model_name"),
-        Some(&"gpt-neo".to_string())
-    );
+    assert_eq!(attrs.get("experiment.model_name"), Some(&"gpt-neo".to_string()));
     assert_eq!(attrs.get("experiment.epoch"), Some(&"1".to_string()));
 }

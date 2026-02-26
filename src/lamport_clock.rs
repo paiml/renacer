@@ -98,9 +98,7 @@ impl LamportClock {
     /// static CLOCK: LamportClock = LamportClock::new();
     /// ```
     pub const fn new() -> Self {
-        Self {
-            counter: AtomicU64::new(0),
-        }
+        Self { counter: AtomicU64::new(0) }
     }
 
     /// Create a new Lamport clock with a specific starting value
@@ -126,9 +124,7 @@ impl LamportClock {
     /// let clock = LamportClock::with_value(parent_clock);
     /// ```
     pub const fn with_value(initial_value: u64) -> Self {
-        Self {
-            counter: AtomicU64::new(initial_value),
-        }
+        Self { counter: AtomicU64::new(initial_value) }
     }
 
     /// Increment the clock on a local event (happens-before tick)

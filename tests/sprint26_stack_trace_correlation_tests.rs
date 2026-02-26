@@ -34,11 +34,7 @@ fn test_rewrite_stacktrace_flag_accepted() {
     fs::write(&source_map, map_content).expect("test");
 
     let mut cmd = Command::cargo_bin("renacer").expect("test");
-    cmd.arg("--transpiler-map")
-        .arg(&source_map)
-        .arg("--rewrite-stacktrace")
-        .arg("--")
-        .arg("true");
+    cmd.arg("--transpiler-map").arg(&source_map).arg("--rewrite-stacktrace").arg("--").arg("true");
 
     // Should accept the flag without error
     cmd.assert().success();
@@ -91,9 +87,7 @@ fn test_stack_trace_rewriting_with_mappings() {
         .arg("test");
 
     // Should show Python source info in output
-    cmd.assert()
-        .success()
-        .stdout(predicate::str::contains("simulation.py"));
+    cmd.assert().success().stdout(predicate::str::contains("simulation.py"));
 }
 
 // ============================================================================
@@ -219,9 +213,7 @@ fn test_rewrite_stacktrace_with_function_time() {
         .arg("true");
 
     // Should combine both features
-    cmd.assert()
-        .success()
-        .stdout(predicate::str::contains("hot_function"));
+    cmd.assert().success().stdout(predicate::str::contains("hot_function"));
 }
 
 // ============================================================================
@@ -295,10 +287,7 @@ fn test_backward_compatibility_without_rewrite() {
 
     // Use source map WITHOUT --rewrite-stacktrace
     let mut cmd = Command::cargo_bin("renacer").expect("test");
-    cmd.arg("--transpiler-map")
-        .arg(&source_map)
-        .arg("--")
-        .arg("true");
+    cmd.arg("--transpiler-map").arg(&source_map).arg("--").arg("true");
 
     // Should still succeed
     cmd.assert().success();
@@ -324,11 +313,7 @@ fn test_rewrite_stacktrace_empty_mappings() {
     fs::write(&source_map, map_content).expect("test");
 
     let mut cmd = Command::cargo_bin("renacer").expect("test");
-    cmd.arg("--transpiler-map")
-        .arg(&source_map)
-        .arg("--rewrite-stacktrace")
-        .arg("--")
-        .arg("true");
+    cmd.arg("--transpiler-map").arg(&source_map).arg("--rewrite-stacktrace").arg("--").arg("true");
 
     // Should succeed even with no mappings
     cmd.assert().success();

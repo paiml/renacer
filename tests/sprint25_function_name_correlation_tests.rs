@@ -86,11 +86,7 @@ fn test_function_name_with_source_context() {
     fs::write(&source_map, map_content).expect("test");
 
     let mut cmd = Command::cargo_bin("renacer").expect("test");
-    cmd.arg("--transpiler-map")
-        .arg(&source_map)
-        .arg("--function-time")
-        .arg("--")
-        .arg("true");
+    cmd.arg("--transpiler-map").arg(&source_map).arg("--function-time").arg("--").arg("true");
 
     cmd.assert()
         .success()
@@ -243,9 +239,7 @@ fn test_typescript_source_language() {
         .arg("echo")
         .arg("test");
 
-    cmd.assert()
-        .success()
-        .stdout(predicate::str::contains("processData"));
+    cmd.assert().success().stdout(predicate::str::contains("processData"));
 }
 
 // ============================================================================
@@ -274,11 +268,7 @@ fn test_multiple_temp_variables() {
     fs::write(&source_map, map_content).expect("test");
 
     let mut cmd = Command::cargo_bin("renacer").expect("test");
-    cmd.arg("--transpiler-map")
-        .arg(&source_map)
-        .arg("--function-time")
-        .arg("--")
-        .arg("true");
+    cmd.arg("--transpiler-map").arg(&source_map).arg("--function-time").arg("--").arg("true");
 
     cmd.assert().success();
 }
@@ -338,11 +328,7 @@ fn test_empty_function_map() {
     fs::write(&source_map, map_content).expect("test");
 
     let mut cmd = Command::cargo_bin("renacer").expect("test");
-    cmd.arg("--transpiler-map")
-        .arg(&source_map)
-        .arg("--function-time")
-        .arg("--")
-        .arg("true");
+    cmd.arg("--transpiler-map").arg(&source_map).arg("--function-time").arg("--").arg("true");
 
     // Should still work, just no function name translation
     cmd.assert().success();
@@ -372,11 +358,7 @@ fn test_source_map_without_function_time() {
     // Source map loaded but --function-time NOT enabled
     // Should still succeed, just not use function mapping
     let mut cmd = Command::cargo_bin("renacer").expect("test");
-    cmd.arg("--transpiler-map")
-        .arg(&source_map)
-        .arg("--")
-        .arg("echo")
-        .arg("test");
+    cmd.arg("--transpiler-map").arg(&source_map).arg("--").arg("echo").arg("test");
 
     cmd.assert().success();
 }

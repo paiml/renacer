@@ -96,9 +96,8 @@ pub fn query_jaeger_traces(
         return Err(anyhow!("Jaeger query failed: {}", response.status()));
     }
 
-    let traces_response: JaegerTracesResponse = response
-        .json()
-        .map_err(|e| anyhow!("Failed to parse Jaeger response: {}", e))?;
+    let traces_response: JaegerTracesResponse =
+        response.json().map_err(|e| anyhow!("Failed to parse Jaeger response: {}", e))?;
 
     Ok(traces_response.data)
 }
@@ -108,19 +107,12 @@ pub fn wait_for_trace(jaeger_url: &str, service: &str, timeout_secs: u64) -> Res
     for i in 0..timeout_secs {
         let traces = query_jaeger_traces(jaeger_url, service, None)?;
         if !traces.is_empty() {
-            eprintln!(
-                "[test-utils] Found trace after {} seconds: {}",
-                i, traces[0].trace_id
-            );
+            eprintln!("[test-utils] Found trace after {} seconds: {}", i, traces[0].trace_id);
             return Ok(traces[0].clone());
         }
         thread::sleep(Duration::from_secs(1));
     }
-    Err(anyhow!(
-        "No traces found for service '{}' after {} seconds",
-        service,
-        timeout_secs
-    ))
+    Err(anyhow!("No traces found for service '{}' after {} seconds", service, timeout_secs))
 }
 
 /// Verify span exists in trace with expected attributes
@@ -186,11 +178,7 @@ pub fn verify_parent_child(
         .any(|r| r.ref_type == "CHILD_OF" && r.span_id == parent_span.span_id);
 
     if !has_parent_ref {
-        return Err(anyhow!(
-            "Span '{}' is not a child of '{}'",
-            child_span_name,
-            parent_span_name
-        ));
+        return Err(anyhow!("Span '{}' is not a child of '{}'", child_span_name, parent_span_name));
     }
 
     eprintln!(

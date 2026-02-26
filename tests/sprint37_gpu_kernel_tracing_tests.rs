@@ -22,10 +22,8 @@ mod gpu_tracing_tests {
     #[test]
     fn test_gpu_kernel_traced_when_slow() {
         // Setup: OTLP exporter with test endpoint
-        let config = OtlpConfig::new(
-            "http://localhost:4317".to_string(),
-            "test-gpu-slow".to_string(),
-        );
+        let config =
+            OtlpConfig::new("http://localhost:4317".to_string(), "test-gpu-slow".to_string());
         let exporter = OtlpExporter::new(config, None).expect("Failed to create OTLP exporter");
 
         // Create a GpuKernel with slow duration
@@ -56,10 +54,8 @@ mod gpu_tracing_tests {
     #[test]
     fn test_gpu_kernel_not_traced_when_fast() {
         // Setup: OTLP exporter
-        let config = OtlpConfig::new(
-            "http://localhost:4317".to_string(),
-            "test-gpu-fast".to_string(),
-        );
+        let config =
+            OtlpConfig::new("http://localhost:4317".to_string(), "test-gpu-fast".to_string());
         let exporter = OtlpExporter::new(config, None).expect("Failed to create OTLP exporter");
 
         // Create a GpuKernel with fast duration
@@ -91,10 +87,8 @@ mod gpu_tracing_tests {
     /// - gpu.is_slow
     #[test]
     fn test_gpu_kernel_attributes() {
-        let config = OtlpConfig::new(
-            "http://localhost:4317".to_string(),
-            "test-gpu-attrs".to_string(),
-        );
+        let config =
+            OtlpConfig::new("http://localhost:4317".to_string(), "test-gpu-attrs".to_string());
         let exporter = OtlpExporter::new(config, None).expect("Failed to create OTLP exporter");
 
         let kernel = GpuKernel {
@@ -125,10 +119,8 @@ mod gpu_tracing_tests {
     #[test]
     #[cfg(feature = "otlp")]
     fn test_resource_level_gpu_attributes() {
-        let config = OtlpConfig::new(
-            "http://localhost:4317".to_string(),
-            "test-gpu-resource".to_string(),
-        );
+        let config =
+            OtlpConfig::new("http://localhost:4317".to_string(), "test-gpu-resource".to_string());
         let exporter = OtlpExporter::new(config, None).expect("Failed to create OTLP exporter");
 
         // NOTE: Full integration test would:
@@ -178,10 +170,8 @@ mod gpu_tracing_tests {
     fn test_gpu_and_simd_unified_trace() {
         use renacer::otlp_exporter::ComputeBlock;
 
-        let config = OtlpConfig::new(
-            "http://localhost:4317".to_string(),
-            "test-unified-trace".to_string(),
-        );
+        let config =
+            OtlpConfig::new("http://localhost:4317".to_string(), "test-unified-trace".to_string());
         let mut exporter = OtlpExporter::new(config, None).expect("Failed to create OTLP exporter");
 
         // Start root span for the process

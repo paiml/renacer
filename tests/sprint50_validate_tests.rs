@@ -175,10 +175,8 @@ fn test_trace_flags_bitfield() {
 /// Test identical syscall sequences match
 #[test]
 fn test_syscall_sequence_match_identical() {
-    let baseline = vec![
-        TraceSyscallEntry::simple(0, "read", 100),
-        TraceSyscallEntry::simple(1, "write", 50),
-    ];
+    let baseline =
+        vec![TraceSyscallEntry::simple(0, "read", 100), TraceSyscallEntry::simple(1, "write", 50)];
     let current = baseline.clone();
 
     let result = compare_syscalls(&baseline, &current, false).expect("Comparison failed");
@@ -190,10 +188,8 @@ fn test_syscall_sequence_match_identical() {
 /// Test syscall count mismatch detection
 #[test]
 fn test_syscall_sequence_mismatch_count() {
-    let baseline = vec![
-        TraceSyscallEntry::simple(0, "read", 100),
-        TraceSyscallEntry::simple(1, "write", 50),
-    ];
+    let baseline =
+        vec![TraceSyscallEntry::simple(0, "read", 100), TraceSyscallEntry::simple(1, "write", 50)];
     let current = vec![TraceSyscallEntry::simple(0, "read", 100)];
 
     let result = compare_syscalls(&baseline, &current, false).expect("Comparison failed");
@@ -205,14 +201,10 @@ fn test_syscall_sequence_mismatch_count() {
 /// Test syscall sequence order mismatch
 #[test]
 fn test_syscall_sequence_mismatch_order() {
-    let baseline = vec![
-        TraceSyscallEntry::simple(0, "read", 100),
-        TraceSyscallEntry::simple(1, "write", 50),
-    ];
-    let current = vec![
-        TraceSyscallEntry::simple(1, "write", 50),
-        TraceSyscallEntry::simple(0, "read", 100),
-    ];
+    let baseline =
+        vec![TraceSyscallEntry::simple(0, "read", 100), TraceSyscallEntry::simple(1, "write", 50)];
+    let current =
+        vec![TraceSyscallEntry::simple(1, "write", 50), TraceSyscallEntry::simple(0, "read", 100)];
 
     let result = compare_syscalls(&baseline, &current, false).expect("Comparison failed");
 
@@ -363,11 +355,7 @@ fn test_generate_creates_manifest() {
     let temp = tempdir().expect("Failed to create temp dir");
     let baseline_path = temp.path().join("golden");
 
-    let result = generate_baseline(
-        &["echo", "test"],
-        &baseline_path,
-        &ValidateConfig::default(),
-    );
+    let result = generate_baseline(&["echo", "test"], &baseline_path, &ValidateConfig::default());
 
     assert!(result.is_ok());
     assert!(baseline_path.join("manifest.json").exists());
@@ -384,11 +372,7 @@ fn test_generate_creates_binary_trace() {
     let temp = tempdir().expect("Failed to create temp dir");
     let baseline_path = temp.path().join("golden");
 
-    let result = generate_baseline(
-        &["echo", "test"],
-        &baseline_path,
-        &ValidateConfig::default(),
-    );
+    let result = generate_baseline(&["echo", "test"], &baseline_path, &ValidateConfig::default());
 
     assert!(result.is_ok());
     assert!(baseline_path.join("syscalls.trace").exists());
@@ -406,12 +390,8 @@ fn test_load_baseline_valid() {
     let baseline_path = temp.path().join("golden");
 
     // First generate
-    generate_baseline(
-        &["echo", "test"],
-        &baseline_path,
-        &ValidateConfig::default(),
-    )
-    .expect("Failed to generate");
+    generate_baseline(&["echo", "test"], &baseline_path, &ValidateConfig::default())
+        .expect("Failed to generate");
 
     // Then load
     let loaded = load_baseline(&baseline_path);
@@ -507,20 +487,14 @@ fn test_junit_xml_valid() {
 /// Test error codes match specification Section 9.1
 #[test]
 fn test_error_codes() {
-    let e1 = ValidateError::BaselineNotFound {
-        path: PathBuf::from("/test"),
-    };
+    let e1 = ValidateError::BaselineNotFound { path: PathBuf::from("/test") };
     assert!(format!("{e1}").contains("V001"));
 
-    let e2 = ValidateError::InvalidManifest {
-        reason: "bad json".to_string(),
-    };
+    let e2 = ValidateError::InvalidManifest { reason: "bad json".to_string() };
     assert!(format!("{e2}").contains("V002"));
 
-    let e3 = ValidateError::VersionMismatch {
-        expected: "1.0".to_string(),
-        found: "2.0".to_string(),
-    };
+    let e3 =
+        ValidateError::VersionMismatch { expected: "1.0".to_string(), found: "2.0".to_string() };
     assert!(format!("{e3}").contains("V003"));
 }
 
@@ -572,23 +546,13 @@ fn test_cli_validate_subcommand_exists() {
     use clap::Parser;
     use renacer::cli::{Cli, Commands};
 
-    let cli = Cli::parse_from([
-        "renacer",
-        "validate",
-        "--generate",
-        "/tmp/golden",
-        "--",
-        "echo",
-        "test",
-    ]);
+    let cli =
+        Cli::parse_from(["renacer", "validate", "--generate", "/tmp/golden", "--", "echo", "test"]);
 
     assert!(cli.subcommand.is_some());
     match cli.subcommand.expect("test") {
         Commands::Validate(args) => {
-            assert_eq!(
-                args.generate.expect("test").to_str().expect("test"),
-                "/tmp/golden"
-            );
+            assert_eq!(args.generate.expect("test").to_str().expect("test"), "/tmp/golden");
             assert_eq!(args.command, vec!["echo", "test"]);
         }
         _ => panic!("Expected Validate subcommand"),
@@ -613,10 +577,7 @@ fn test_cli_validate_baseline_flag() {
 
     match cli.subcommand.expect("test") {
         Commands::Validate(args) => {
-            assert_eq!(
-                args.baseline.expect("test").to_str().expect("test"),
-                "/golden/baseline"
-            );
+            assert_eq!(args.baseline.expect("test").to_str().expect("test"), "/golden/baseline");
         }
         _ => panic!("Expected Validate subcommand"),
     }
@@ -726,15 +687,8 @@ fn test_cli_validate_tolerance_default() {
     use clap::Parser;
     use renacer::cli::{Cli, Commands};
 
-    let cli = Cli::parse_from([
-        "renacer",
-        "validate",
-        "--generate",
-        "/tmp/golden",
-        "--",
-        "echo",
-        "test",
-    ]);
+    let cli =
+        Cli::parse_from(["renacer", "validate", "--generate", "/tmp/golden", "--", "echo", "test"]);
 
     match cli.subcommand.expect("test") {
         Commands::Validate(args) => {

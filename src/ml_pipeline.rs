@@ -137,10 +137,7 @@ pub fn extract_features(
 
     let n_samples = syscall_names.len();
     if n_samples < 2 {
-        return Err(PipelineError::InsufficientData {
-            required: 2,
-            actual: n_samples,
-        });
+        return Err(PipelineError::InsufficientData { required: 2, actual: n_samples });
     }
 
     let n_features = 3;
@@ -157,9 +154,7 @@ pub fn normalize_features(
 ) -> Result<NormalizedFeatures> {
     let mut scaler = StandardScaler::new().with_mean(true).with_std(true);
 
-    scaler
-        .fit(&features)
-        .map_err(|e| PipelineError::PreprocessingError(e.to_string()))?;
+    scaler.fit(&features).map_err(|e| PipelineError::PreprocessingError(e.to_string()))?;
 
     let normalized = scaler
         .transform(&features)
@@ -181,12 +176,8 @@ pub fn normalize_features(
 /// Calculate silhouette score for clustering quality
 pub fn calculate_silhouette(features: &Matrix<f32>, labels: &[i32]) -> Option<f32> {
     // Convert i32 labels to usize, filtering out noise points (-1)
-    let valid_indices: Vec<usize> = labels
-        .iter()
-        .enumerate()
-        .filter(|(_, &l)| l >= 0)
-        .map(|(i, _)| i)
-        .collect();
+    let valid_indices: Vec<usize> =
+        labels.iter().enumerate().filter(|(_, &l)| l >= 0).map(|(i, _)| i).collect();
 
     if valid_indices.len() < 2 {
         return None;
@@ -222,19 +213,14 @@ pub fn run_dbscan(
 ) -> Result<DBSCANResult> {
     let mut dbscan = DBSCAN::new(eps, min_samples);
 
-    dbscan
-        .fit(&features.data)
-        .map_err(|e| PipelineError::ClusteringError(e.to_string()))?;
+    dbscan.fit(&features.data).map_err(|e| PipelineError::ClusteringError(e.to_string()))?;
 
     let labels = dbscan.labels().clone();
 
     // Count clusters and noise
     let n_noise = labels.iter().filter(|&&l| l == -1).count();
-    let n_clusters = labels
-        .iter()
-        .filter(|&&l| l >= 0)
-        .collect::<std::collections::HashSet<_>>()
-        .len();
+    let n_clusters =
+        labels.iter().filter(|&&l| l >= 0).collect::<std::collections::HashSet<_>>().len();
 
     // Calculate silhouette score if we have enough clusters
     let silhouette = calculate_silhouette(&features.data, &labels);
@@ -255,12 +241,10 @@ pub fn run_lof(
     n_neighbors: usize,
     contamination: f32,
 ) -> Result<LOFResult> {
-    let mut lof = LocalOutlierFactor::new()
-        .with_n_neighbors(n_neighbors)
-        .with_contamination(contamination);
+    let mut lof =
+        LocalOutlierFactor::new().with_n_neighbors(n_neighbors).with_contamination(contamination);
 
-    lof.fit(&features.data)
-        .map_err(|e| PipelineError::ClusteringError(e.to_string()))?;
+    lof.fit(&features.data).map_err(|e| PipelineError::ClusteringError(e.to_string()))?;
 
     let labels = lof.predict(&features.data);
     let scores = lof.score_samples(&features.data);
@@ -273,11 +257,8 @@ pub fn run_lof(
             let syscall = &features.syscall_names[i];
             let (count, total_ns) = syscall_data.get(syscall).copied().unwrap_or((0, 0));
 
-            let avg_time_us = if count > 0 {
-                (total_ns as f64 / 1000.0) / count as f64
-            } else {
-                0.0
-            };
+            let avg_time_us =
+                if count > 0 { (total_ns as f64 / 1000.0) / count as f64 } else { 0.0 };
 
             outliers.push(OutlierInfo {
                 syscall: syscall.clone(),
@@ -289,18 +270,10 @@ pub fn run_lof(
     }
 
     // Sort by LOF score (highest first)
-    outliers.sort_by(|a, b| {
-        b.lof_score
-            .partial_cmp(&a.lof_score)
-            .unwrap_or(std::cmp::Ordering::Equal)
-    });
+    outliers
+        .sort_by(|a, b| b.lof_score.partial_cmp(&a.lof_score).unwrap_or(std::cmp::Ordering::Equal));
 
-    Ok(LOFResult {
-        labels,
-        scores,
-        syscall_names: features.syscall_names.clone(),
-        outliers,
-    })
+    Ok(LOFResult { labels, scores, syscall_names: features.syscall_names.clone(), outliers })
 }
 
 /// Run PCA dimensionality reduction
@@ -314,10 +287,8 @@ pub fn run_pca(features: &NormalizedFeatures, n_components: usize) -> Result<PCA
         .fit_transform(&features.data)
         .map_err(|e| PipelineError::PreprocessingError(e.to_string()))?;
 
-    let explained_variance_ratio = pca
-        .explained_variance_ratio()
-        .map(<[f32]>::to_vec)
-        .unwrap_or_default();
+    let explained_variance_ratio =
+        pca.explained_variance_ratio().map(<[f32]>::to_vec).unwrap_or_default();
 
     let total_variance_explained: f32 = explained_variance_ratio.iter().sum();
 
@@ -368,10 +339,7 @@ impl DBSCANResult {
 
         output.push_str("\n=== DBSCAN Clustering Results ===\n");
         output.push_str(&format!("Clusters found: {}\n", self.n_clusters));
-        output.push_str(&format!(
-            "Noise points (potential anomalies): {}\n",
-            self.n_noise
-        ));
+        output.push_str(&format!("Noise points (potential anomalies): {}\n", self.n_noise));
 
         if let Some(sil) = self.silhouette {
             output.push_str(&format!("Silhouette score: {sil:.3}\n"));
@@ -421,9 +389,7 @@ impl PCAResult {
 
         output.push_str("\n=== PCA Dimensionality Reduction ===\n");
         let (n_samples, n_components) = self.reduced_data.shape();
-        output.push_str(&format!(
-            "Reduced: {n_samples} samples x {n_components} components\n"
-        ));
+        output.push_str(&format!("Reduced: {n_samples} samples x {n_components} components\n"));
         output.push_str(&format!(
             "Total variance explained: {:.1}%\n",
             self.total_variance_explained * 100.0
@@ -437,6 +403,14 @@ impl PCAResult {
         output
     }
 }
+
+// Compile-time thread-safety verification (Sprint 59)
+static_assertions::assert_impl_all!(PipelineError: Send, Sync);
+static_assertions::assert_impl_all!(NormalizedFeatures: Send, Sync);
+static_assertions::assert_impl_all!(DBSCANResult: Send, Sync);
+static_assertions::assert_impl_all!(LOFResult: Send, Sync);
+static_assertions::assert_impl_all!(OutlierInfo: Send, Sync);
+static_assertions::assert_impl_all!(PCAResult: Send, Sync);
 
 #[cfg(test)]
 mod tests {
@@ -464,20 +438,14 @@ mod tests {
         data.insert("write".to_string(), (100, 1_000_000));
 
         let result = extract_features(&data);
-        assert!(matches!(
-            result,
-            Err(PipelineError::InsufficientData { .. })
-        ));
+        assert!(matches!(result, Err(PipelineError::InsufficientData { .. })));
     }
 
     #[test]
     fn test_extract_features_empty() {
         let data = HashMap::new();
         let result = extract_features(&data);
-        assert!(matches!(
-            result,
-            Err(PipelineError::InsufficientData { .. })
-        ));
+        assert!(matches!(result, Err(PipelineError::InsufficientData { .. })));
     }
 
     #[test]
@@ -525,12 +493,7 @@ mod tests {
         for j in 0..n_cols {
             let sum: f32 = (0..n_rows).map(|i| normalized.data.get(i, j)).sum();
             let mean = sum / n_rows as f32;
-            assert!(
-                mean.abs() < 0.01,
-                "Column {} mean should be ~0, got {}",
-                j,
-                mean
-            );
+            assert!(mean.abs() < 0.01, "Column {} mean should be ~0, got {}", j, mean);
         }
     }
 
@@ -551,11 +514,7 @@ mod tests {
         let score = calculate_silhouette(&matrix, &labels);
         assert!(score.is_some());
         let s = score.expect("test");
-        assert!(
-            s > 0.8,
-            "Well-separated clusters should have high silhouette, got {}",
-            s
-        );
+        assert!(s > 0.8, "Well-separated clusters should have high silhouette, got {}", s);
     }
 
     #[test]
@@ -589,10 +548,11 @@ mod tests {
     fn test_dbscan_finds_clusters() {
         let mut data = HashMap::new();
         // Group 1: fast syscalls
-        data.insert("write".to_string(), (1000, 10_000_000)); // 10µs avg
-        data.insert("read".to_string(), (1000, 10_000_000)); // 10µs avg
-                                                             // Group 2: slow syscalls
-        data.insert("mmap".to_string(), (100, 100_000_000)); // 1000µs avg
+        data.insert("write".to_string(), (1000, 10_000_000)); // 10us avg
+        data.insert("read".to_string(), (1000, 10_000_000)); // 10us avg
+
+        // Group 2: slow syscalls
+        data.insert("mmap".to_string(), (100, 100_000_000)); // 1000us avg
         data.insert("munmap".to_string(), (100, 100_000_000)); // 1000µs avg
 
         let (names, features) = extract_features(&data).expect("test");

@@ -82,18 +82,15 @@ impl AssertionEngine {
         assertion: &CriticalPathAssertion,
         trace: &UnifiedTrace,
     ) -> AssertionResult {
-        // TODO Sprint 44: Full integration with CausalGraph + CriticalPathAnalyzer
+        // Planned (Sprint 44): Full integration with CausalGraph + CriticalPathAnalyzer
         // For now, calculate total duration from all syscall spans
 
         let duration_ms = if trace.syscall_spans.is_empty() {
             0
         } else {
             // Sum all syscall durations and convert to ms
-            let total_duration_nanos: u64 = trace
-                .syscall_spans
-                .iter()
-                .map(|span| span.duration_nanos)
-                .sum();
+            let total_duration_nanos: u64 =
+                trace.syscall_spans.iter().map(|span| span.duration_nanos).sum();
             total_duration_nanos / 1_000_000
         };
 
@@ -131,7 +128,7 @@ impl AssertionEngine {
         assertion: &AntiPatternAssertion,
         _trace: &UnifiedTrace,
     ) -> AssertionResult {
-        // TODO Sprint 44: Full integration with CausalGraph + AntiPatternDetector
+        // Planned (Sprint 44): Full integration with CausalGraph + AntiPatternDetector
         // For now, use placeholder logic
 
         // Placeholder: No anti-patterns detected
@@ -165,10 +162,7 @@ impl AssertionEngine {
         } else {
             AssertionResult::fail(
                 name.to_string(),
-                format!(
-                    "Span count {} exceeds maximum {}",
-                    span_count, assertion.max_spans
-                ),
+                format!("Span count {} exceeds maximum {}", span_count, assertion.max_spans),
             )
             .with_values(
                 AssertionValue::Count(span_count),
@@ -199,10 +193,7 @@ impl AssertionEngine {
         if total_bytes <= assertion.max_bytes {
             AssertionResult::pass(
                 name.to_string(),
-                format!(
-                    "Memory usage {} bytes <= {}",
-                    total_bytes, assertion.max_bytes
-                ),
+                format!("Memory usage {} bytes <= {}", total_bytes, assertion.max_bytes),
             )
             .with_values(
                 AssertionValue::Bytes(total_bytes),

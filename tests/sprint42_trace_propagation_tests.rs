@@ -16,12 +16,7 @@ fn test_trace_context_env_propagation() {
     ];
     let parent_id = [0xb7, 0xad, 0x6b, 0x71, 0x69, 0x20, 0x33, 0x31];
 
-    let ctx = TraceContext {
-        version: 0,
-        trace_id,
-        parent_id,
-        trace_flags: 1,
-    };
+    let ctx = TraceContext { version: 0, trace_id, parent_id, trace_flags: 1 };
 
     // Set environment variable
     ctx.set_env();
@@ -93,12 +88,7 @@ fn test_combined_propagation() {
     // Parent process
     let trace_id = [1u8; 16];
     let parent_id = [2u8; 8];
-    let ctx = TraceContext {
-        version: 0,
-        trace_id,
-        parent_id,
-        trace_flags: 1,
-    };
+    let ctx = TraceContext { version: 0, trace_id, parent_id, trace_flags: 1 };
     ctx.set_env();
 
     let clock = LamportClock::new();
@@ -202,12 +192,7 @@ fn test_multi_hop_propagation() {
     // Process A
     let trace_id = [0xaa; 16];
     let span_a = [0x01; 8];
-    let ctx_a = TraceContext {
-        version: 0,
-        trace_id,
-        parent_id: span_a,
-        trace_flags: 1,
-    };
+    let ctx_a = TraceContext { version: 0, trace_id, parent_id: span_a, trace_flags: 1 };
     ctx_a.set_env();
 
     let clock_a = LamportClock::new();
@@ -224,12 +209,7 @@ fn test_multi_hop_propagation() {
     let clock_b = LamportClock::with_initial_value(ts_b_in);
     let ts_b = clock_b.tick();
     let span_b = [0x02; 8];
-    let ctx_b = TraceContext {
-        version: 0,
-        trace_id,
-        parent_id: span_b,
-        trace_flags: 1,
-    };
+    let ctx_b = TraceContext { version: 0, trace_id, parent_id: span_b, trace_flags: 1 };
     ctx_b.set_env();
     TraceContext::set_logical_clock_env(ts_b);
 

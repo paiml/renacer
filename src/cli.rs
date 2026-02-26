@@ -71,11 +71,7 @@ pub struct Cli {
     pub stats_extended: bool,
 
     /// Anomaly detection threshold in standard deviations (default: 3.0)
-    #[arg(
-        long = "anomaly-threshold",
-        value_name = "SIGMA",
-        default_value = "3.0"
-    )]
+    #[arg(long = "anomaly-threshold", value_name = "SIGMA", default_value = "3.0")]
     pub anomaly_threshold: f32,
 
     /// Enable real-time anomaly detection (Sprint 20)
@@ -83,11 +79,7 @@ pub struct Cli {
     pub anomaly_realtime: bool,
 
     /// Sliding window size for real-time anomaly detection (default: 100)
-    #[arg(
-        long = "anomaly-window-size",
-        value_name = "SIZE",
-        default_value = "100"
-    )]
+    #[arg(long = "anomaly-window-size", value_name = "SIZE", default_value = "100")]
     pub anomaly_window_size: usize,
 
     /// Enable HPU-accelerated analysis (GPU if available) (Sprint 21)
@@ -115,11 +107,7 @@ pub struct Cli {
     pub ml_outliers: bool,
 
     /// Contamination threshold for Isolation Forest (default: 0.1, range: 0.0-0.5)
-    #[arg(
-        long = "ml-outlier-threshold",
-        value_name = "THRESHOLD",
-        default_value = "0.1"
-    )]
+    #[arg(long = "ml-outlier-threshold", value_name = "THRESHOLD", default_value = "0.1")]
     pub ml_outlier_threshold: f32,
 
     /// Number of trees in Isolation Forest (default: 100, min: 10)
@@ -171,11 +159,7 @@ pub struct Cli {
     pub otlp_endpoint: Option<String>,
 
     /// Service name for OpenTelemetry traces (Sprint 30)
-    #[arg(
-        long = "otlp-service-name",
-        value_name = "NAME",
-        default_value = "renacer"
-    )]
+    #[arg(long = "otlp-service-name", value_name = "NAME", default_value = "renacer")]
     pub otlp_service_name: String,
 
     /// W3C Trace Context for distributed tracing (Sprint 33)
@@ -393,11 +377,7 @@ pub struct VisualizeArgs {
     pub ml_clusters: usize,
 
     /// Anomaly Z-score threshold (default: 3.0)
-    #[arg(
-        long = "anomaly-threshold",
-        value_name = "SIGMA",
-        default_value = "3.0"
-    )]
+    #[arg(long = "anomaly-threshold", value_name = "SIGMA", default_value = "3.0")]
     pub anomaly_threshold: f32,
 
     /// History buffer size (default: 300, matches ttop)
@@ -438,19 +418,11 @@ pub struct VisualizeArgs {
     pub enable_alerts: bool,
 
     /// Alert threshold for syscall latency anomaly (microseconds, default: 10000)
-    #[arg(
-        long = "alert-latency-threshold",
-        value_name = "US",
-        default_value = "10000"
-    )]
+    #[arg(long = "alert-latency-threshold", value_name = "US", default_value = "10000")]
     pub alert_latency_threshold: u64,
 
     /// Alert threshold for error rate percentage (default: 5.0)
-    #[arg(
-        long = "alert-error-rate",
-        value_name = "PERCENT",
-        default_value = "5.0"
-    )]
+    #[arg(long = "alert-error-rate", value_name = "PERCENT", default_value = "5.0")]
     pub alert_error_rate: f32,
 
     /// Command to trace (everything after --)
@@ -498,11 +470,7 @@ fn print_function_mappings(map: &transpiler_map::TranspilerMap, show_context: bo
 fn print_stack_trace_mappings(map: &transpiler_map::TranspilerMap, show_context: bool) {
     if show_context {
         println!("=== Stack Trace Mapping ===");
-        println!(
-            "Source: {} -> {}",
-            map.source_file().display(),
-            map.generated_file().display()
-        );
+        println!("Source: {} -> {}", map.source_file().display(), map.generated_file().display());
         println!();
     }
 
@@ -663,10 +631,7 @@ pub fn run() -> Result<i32> {
 
     // Validate ml_clusters range (must be >= 2)
     if args.ml_clusters < 2 {
-        anyhow::bail!(
-            "Invalid value for --ml-clusters: {} (must be >= 2)",
-            args.ml_clusters
-        );
+        anyhow::bail!("Invalid value for --ml-clusters: {} (must be >= 2)", args.ml_clusters);
     }
 
     // Initialize tracing if --debug flag is set
@@ -822,14 +787,7 @@ mod tests {
 
     #[test]
     fn test_cli_anomaly_threshold_custom() {
-        let cli = Cli::parse_from([
-            "renacer",
-            "--anomaly-threshold",
-            "2.5",
-            "--",
-            "echo",
-            "test",
-        ]);
+        let cli = Cli::parse_from(["renacer", "--anomaly-threshold", "2.5", "--", "echo", "test"]);
         assert_eq!(cli.anomaly_threshold, 2.5);
     }
 
@@ -875,14 +833,8 @@ mod tests {
 
     #[test]
     fn test_cli_hpu_analysis_with_cpu_only() {
-        let cli = Cli::parse_from([
-            "renacer",
-            "--hpu-analysis",
-            "--hpu-cpu-only",
-            "--",
-            "echo",
-            "test",
-        ]);
+        let cli =
+            Cli::parse_from(["renacer", "--hpu-analysis", "--hpu-cpu-only", "--", "echo", "test"]);
         assert!(cli.hpu_analysis);
         assert!(cli.hpu_cpu_only);
     }
@@ -1048,13 +1000,8 @@ mod tests {
 
     #[test]
     fn test_cli_trace_transpiler_decisions_flag() {
-        let cli = Cli::parse_from([
-            "renacer",
-            "--trace-transpiler-decisions",
-            "--",
-            "echo",
-            "test",
-        ]);
+        let cli =
+            Cli::parse_from(["renacer", "--trace-transpiler-decisions", "--", "echo", "test"]);
         assert!(cli.trace_transpiler_decisions);
         assert!(cli.command.is_some());
     }
@@ -1128,14 +1075,7 @@ mod tests {
 
     #[test]
     fn test_cli_explain_flag() {
-        let cli = Cli::parse_from([
-            "renacer",
-            "--ml-outliers",
-            "--explain",
-            "--",
-            "echo",
-            "test",
-        ]);
+        let cli = Cli::parse_from(["renacer", "--ml-outliers", "--explain", "--", "echo", "test"]);
         assert!(cli.ml_outliers);
         assert!(cli.explain);
     }
@@ -1155,14 +1095,8 @@ mod tests {
 
     #[test]
     fn test_cli_ml_outliers_with_kmeans() {
-        let cli = Cli::parse_from([
-            "renacer",
-            "--ml-outliers",
-            "--ml-anomaly",
-            "--",
-            "echo",
-            "test",
-        ]);
+        let cli =
+            Cli::parse_from(["renacer", "--ml-outliers", "--ml-anomaly", "--", "echo", "test"]);
         assert!(cli.ml_outliers);
         assert!(cli.ml_anomaly);
     }
@@ -1292,14 +1226,8 @@ mod tests {
 
     #[test]
     fn test_cli_otlp_service_name_custom() {
-        let cli = Cli::parse_from([
-            "renacer",
-            "--otlp-service-name",
-            "my-app",
-            "--",
-            "echo",
-            "test",
-        ]);
+        let cli =
+            Cli::parse_from(["renacer", "--otlp-service-name", "my-app", "--", "echo", "test"]);
         assert_eq!(cli.otlp_service_name, "my-app");
     }
 
@@ -1448,27 +1376,14 @@ mod tests {
 
     #[test]
     fn test_cli_chaos_memory_limit() {
-        let cli = Cli::parse_from([
-            "renacer",
-            "--chaos-memory-limit",
-            "64M",
-            "--",
-            "echo",
-            "test",
-        ]);
+        let cli = Cli::parse_from(["renacer", "--chaos-memory-limit", "64M", "--", "echo", "test"]);
         assert_eq!(cli.chaos_memory_limit.as_deref(), Some("64M"));
     }
 
     #[test]
     fn test_cli_chaos_memory_limit_bytes() {
-        let cli = Cli::parse_from([
-            "renacer",
-            "--chaos-memory-limit",
-            "67108864",
-            "--",
-            "echo",
-            "test",
-        ]);
+        let cli =
+            Cli::parse_from(["renacer", "--chaos-memory-limit", "67108864", "--", "echo", "test"]);
         assert_eq!(cli.chaos_memory_limit.as_deref(), Some("67108864"));
     }
 
@@ -1516,15 +1431,7 @@ mod tests {
 
     #[test]
     fn test_cli_chaos_combined_with_tracing() {
-        let cli = Cli::parse_from([
-            "renacer",
-            "-c",
-            "--chaos",
-            "aggressive",
-            "--",
-            "echo",
-            "test",
-        ]);
+        let cli = Cli::parse_from(["renacer", "-c", "--chaos", "aggressive", "--", "echo", "test"]);
         assert!(cli.statistics);
         assert_eq!(cli.chaos_preset.as_deref(), Some("aggressive"));
     }
@@ -1727,10 +1634,7 @@ mod tests {
     #[test]
     fn test_run_tracer_both_pid_and_command_errors() {
         use crate::filter::SyscallFilter;
-        let config = tracer::TracerConfig {
-            filter: SyscallFilter::all(),
-            ..Default::default()
-        };
+        let config = tracer::TracerConfig { filter: SyscallFilter::all(), ..Default::default() };
         let result = run_tracer(Some(1234), Some(vec!["echo".to_string()]), config);
         assert!(result.is_err());
         let err = result.unwrap_err();
@@ -1740,10 +1644,7 @@ mod tests {
     #[test]
     fn test_run_tracer_neither_pid_nor_command_errors() {
         use crate::filter::SyscallFilter;
-        let config = tracer::TracerConfig {
-            filter: SyscallFilter::all(),
-            ..Default::default()
-        };
+        let config = tracer::TracerConfig { filter: SyscallFilter::all(), ..Default::default() };
         let result = run_tracer(None, None, config);
         assert!(result.is_err());
         let err = result.unwrap_err();

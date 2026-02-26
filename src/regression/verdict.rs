@@ -56,28 +56,20 @@ impl RegressionAssessment {
         match &self.verdict {
             RegressionVerdict::NoRegression => {
                 report.push_str("✅ NO REGRESSION DETECTED\n\n");
-                report.push_str(&format!(
-                    "Statistical tests performed: {}\n",
-                    self.tests.len()
-                ));
+                report.push_str(&format!("Statistical tests performed: {}\n", self.tests.len()));
                 report.push_str(&format!(
                     "Significance level: {} ({}% confidence)\n",
                     self.config.significance_level,
                     (1.0 - self.config.significance_level) * 100.0
                 ));
             }
-            RegressionVerdict::Regression {
-                regressed_syscalls,
-                filtered_count,
-            } => {
+            RegressionVerdict::Regression { regressed_syscalls, filtered_count } => {
                 report.push_str(&format!(
                     "❌ REGRESSION DETECTED ({} syscalls)\n\n",
                     regressed_syscalls.len()
                 ));
-                report.push_str(&format!(
-                    "Regressed syscalls: {}\n",
-                    regressed_syscalls.join(", ")
-                ));
+                report
+                    .push_str(&format!("Regressed syscalls: {}\n", regressed_syscalls.join(", ")));
                 report.push_str(&format!("Filtered noisy syscalls: {filtered_count}\n"));
             }
             RegressionVerdict::InsufficientData { reason } => {
@@ -204,12 +196,7 @@ pub fn assess_regression(
         }
     };
 
-    Ok(RegressionAssessment {
-        verdict,
-        tests,
-        filtered_syscalls,
-        config: config.clone(),
-    })
+    Ok(RegressionAssessment { verdict, tests, filtered_syscalls, config: config.clone() })
 }
 
 #[cfg(test)]
@@ -243,10 +230,7 @@ mod tests {
         let assessment = assess_regression(&baseline, &current, &config).expect("test");
 
         match assessment.verdict {
-            RegressionVerdict::Regression {
-                ref regressed_syscalls,
-                ..
-            } => {
+            RegressionVerdict::Regression { ref regressed_syscalls, .. } => {
                 assert!(regressed_syscalls.contains(&"mmap".to_string()));
             }
             _ => panic!("Expected Regression verdict"),

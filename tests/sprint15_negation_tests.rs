@@ -6,11 +6,7 @@
 fn test_negation_single_syscall() {
     // Test that trace=!close excludes only the close syscall
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("-e")
-        .arg("trace=!close")
-        .arg("--")
-        .arg("echo")
-        .arg("test");
+    cmd.arg("-e").arg("trace=!close").arg("--").arg("echo").arg("test");
 
     let output = cmd.output().expect("test");
     assert!(output.status.success());
@@ -18,16 +14,10 @@ fn test_negation_single_syscall() {
     let stdout = String::from_utf8_lossy(&output.stdout);
 
     // Should show other syscalls like write
-    assert!(
-        stdout.contains("write("),
-        "Should show write syscall when excluding close"
-    );
+    assert!(stdout.contains("write("), "Should show write syscall when excluding close");
 
     // Should NOT show close syscall
-    assert!(
-        !stdout.contains("close("),
-        "Should not show close syscall when using trace=!close"
-    );
+    assert!(!stdout.contains("close("), "Should not show close syscall when using trace=!close");
 }
 
 /// Test negation of multiple syscalls
@@ -35,11 +25,7 @@ fn test_negation_single_syscall() {
 fn test_negation_multiple_syscalls() {
     // Test that trace=!open,!close excludes both syscalls
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("-e")
-        .arg("trace=!open,!close")
-        .arg("--")
-        .arg("echo")
-        .arg("test");
+    cmd.arg("-e").arg("trace=!open,!close").arg("--").arg("echo").arg("test");
 
     let output = cmd.output().expect("test");
     assert!(output.status.success());
@@ -59,11 +45,7 @@ fn test_negation_multiple_syscalls() {
 fn test_negation_syscall_class() {
     // Test that trace=!file excludes all file operations
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("-e")
-        .arg("trace=!file")
-        .arg("--")
-        .arg("echo")
-        .arg("test");
+    cmd.arg("-e").arg("trace=!file").arg("--").arg("echo").arg("test");
 
     let output = cmd.output().expect("test");
     assert!(output.status.success());
@@ -85,11 +67,7 @@ fn test_negation_syscall_class() {
 fn test_mixed_positive_negative() {
     // Test that trace=file,!close shows file operations except close
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("-e")
-        .arg("trace=file,!close")
-        .arg("--")
-        .arg("cat")
-        .arg("/dev/null");
+    cmd.arg("-e").arg("trace=file,!close").arg("--").arg("cat").arg("/dev/null");
 
     let output = cmd.output().expect("test");
     assert!(output.status.success());
@@ -97,16 +75,10 @@ fn test_mixed_positive_negative() {
     let stdout = String::from_utf8_lossy(&output.stdout);
 
     // Should show openat (file operation)
-    assert!(
-        stdout.contains("openat("),
-        "Should show openat when filtering file operations"
-    );
+    assert!(stdout.contains("openat("), "Should show openat when filtering file operations");
 
     // Should NOT show close even though it's a file operation
-    assert!(
-        !stdout.contains("close("),
-        "Should not show close when explicitly excluded"
-    );
+    assert!(!stdout.contains("close("), "Should not show close when explicitly excluded");
 }
 
 /// Test negation with statistics mode
@@ -114,12 +86,7 @@ fn test_mixed_positive_negative() {
 fn test_negation_with_statistics() {
     // Verify negation works with -c flag
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("-e")
-        .arg("trace=!close")
-        .arg("-c")
-        .arg("--")
-        .arg("echo")
-        .arg("test");
+    cmd.arg("-e").arg("trace=!close").arg("-c").arg("--").arg("echo").arg("test");
 
     let output = cmd.output().expect("test");
     assert!(output.status.success());
@@ -127,10 +94,7 @@ fn test_negation_with_statistics() {
     let stdout = String::from_utf8_lossy(&output.stdout);
 
     // Statistics output should not include close
-    assert!(
-        !stdout.contains("close"),
-        "Statistics should not include excluded syscalls"
-    );
+    assert!(!stdout.contains("close"), "Statistics should not include excluded syscalls");
 }
 
 /// Test invalid negation syntax
@@ -138,11 +102,7 @@ fn test_negation_with_statistics() {
 fn test_invalid_negation_syntax() {
     // Test that trace=! (empty negation) returns an error
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("-e")
-        .arg("trace=!")
-        .arg("--")
-        .arg("echo")
-        .arg("test");
+    cmd.arg("-e").arg("trace=!").arg("--").arg("echo").arg("test");
 
     let output = cmd.output().expect("test");
     // Should fail with invalid syntax
@@ -154,11 +114,7 @@ fn test_invalid_negation_syntax() {
 fn test_negation_nonexistent_syscall() {
     // Test that trace=!nonexistent doesn't cause errors
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("renacer");
-    cmd.arg("-e")
-        .arg("trace=!nonexistent_syscall")
-        .arg("--")
-        .arg("echo")
-        .arg("test");
+    cmd.arg("-e").arg("trace=!nonexistent_syscall").arg("--").arg("echo").arg("test");
 
     let output = cmd.output().expect("test");
     // Should succeed and show all syscalls (nothing excluded)

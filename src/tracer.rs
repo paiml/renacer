@@ -125,6 +125,7 @@ pub fn attach_to_pid(pid: i32, config: TracerConfig) -> Result<i32> {
 /// - Timing per syscall via -T flag
 /// - JSON output via --format json
 /// - Fork following via -f flag
+#[allow(unsafe_code)]
 pub fn trace_command(command: &[String], config: TracerConfig) -> Result<i32> {
     if command.is_empty() {
         anyhow::bail!("Command array is empty");
@@ -171,7 +172,6 @@ struct Tracers {
     csv_stats_output: Option<crate::csv_output::CsvStatsOutput>,
     html_output: Option<crate::html_output::HtmlOutput>, // Sprint 22
     anomaly_detector: Option<crate::anomaly::AnomalyDetector>, // Sprint 20
-    #[allow(dead_code)] // Sprint 26: Will be used once stderr capture is wired
     decision_tracer: Option<crate::decision_trace::DecisionTracer>, // Sprint 26
     #[cfg(feature = "otlp")]
     otlp_exporter: Option<crate::otlp_exporter::OtlpExporter>, // Sprint 30
@@ -187,11 +187,8 @@ fn initialize_profiling_tracers(
     Option<crate::function_profiler::FunctionProfiler>,
     Option<crate::anomaly::AnomalyDetector>,
 ) {
-    let profiling_ctx = if config.profile_self {
-        Some(crate::profiling::ProfilingContext::new())
-    } else {
-        None
-    };
+    let profiling_ctx =
+        if config.profile_self { Some(crate::profiling::ProfilingContext::new()) } else { None };
 
     let function_profiler = if config.function_time {
         Some(crate::function_profiler::FunctionProfiler::new())
@@ -230,10 +227,7 @@ fn initialize_output_tracers(
 
     let csv_output = if matches!(config.output_format, OutputFormat::Csv) && !config.statistics_mode
     {
-        Some(crate::csv_output::CsvOutput::new(
-            config.timing_mode,
-            config.enable_source,
-        ))
+        Some(crate::csv_output::CsvOutput::new(config.timing_mode, config.enable_source))
     } else {
         None
     };
@@ -246,10 +240,7 @@ fn initialize_output_tracers(
         };
 
     let html_output = if matches!(config.output_format, OutputFormat::Html) {
-        Some(crate::html_output::HtmlOutput::new(
-            config.timing_mode,
-            config.enable_source,
-        ))
+        Some(crate::html_output::HtmlOutput::new(config.timing_mode, config.enable_source))
     } else {
         None
     };
@@ -374,10 +365,7 @@ fn load_dwarf_context(child: Pid) -> Option<crate::dwarf::DwarfContext> {
     if let Ok(exe_path) = std::fs::read_link(format!("/proc/{child}/exe")) {
         match crate::dwarf::DwarfContext::load(&exe_path) {
             Ok(ctx) => {
-                eprintln!(
-                    "[renacer: DWARF debug info loaded from {}]",
-                    exe_path.display()
-                );
+                eprintln!("[renacer: DWARF debug info loaded from {}]", exe_path.display());
                 Some(ctx)
             }
             Err(e) => {
@@ -423,10 +411,7 @@ fn handle_ptrace_event(
                         setup_ptrace_options_internal(new_pid, config.follow_forks, false)
                     {
                         // Child may have exited between waitpid and setoptions
-                        warn!(
-                            "Failed to setup ptrace options for child {}: {}",
-                            new_pid, e
-                        );
+                        warn!("Failed to setup ptrace options for child {}: {}", new_pid, e);
                         return Ok(());
                     }
 
@@ -479,9 +464,8 @@ fn handle_syscall_event(
 
     if *in_syscall {
         // Syscall exit - calculate duration
-        let duration_us = syscall_entry_time
-            .map(|start| start.elapsed().as_micros() as u64)
-            .unwrap_or(0);
+        let duration_us =
+            syscall_entry_time.map(|start| start.elapsed().as_micros() as u64).unwrap_or(0);
 
         process_syscall_exit(
             child,
@@ -557,26 +541,14 @@ fn process_syscall_exit(
     if let Some(mut prof) = tracers.profiling_ctx.take() {
         // Temporarily take profiling_ctx out to avoid borrow conflict
         let result = prof.measure(crate::profiling::ProfilingCategory::Other, || {
-            handle_syscall_exit(
-                child,
-                current_syscall_entry,
-                tracers,
-                timing_mode,
-                duration_us,
-            )
+            handle_syscall_exit(child, current_syscall_entry, tracers, timing_mode, duration_us)
         });
         prof.record_syscall();
         // Put profiling_ctx back
         tracers.profiling_ctx = Some(prof);
         result
     } else {
-        handle_syscall_exit(
-            child,
-            current_syscall_entry,
-            tracers,
-            timing_mode,
-            duration_us,
-        )
+        handle_syscall_exit(child, current_syscall_entry, tracers, timing_mode, duration_us)
     }
 }
 
@@ -641,12 +613,7 @@ fn generate_isolation_forest_analysis_for_json(
             let total_time_ns = stats.total_time_us * 1000;
             data.insert(syscall_name.clone(), (stats.count, total_time_ns));
         }
-        Some(crate::isolation_forest::analyze_outliers(
-            &data,
-            num_trees,
-            contamination,
-            explain,
-        ))
+        Some(crate::isolation_forest::analyze_outliers(&data, num_trees, contamination, explain))
     } else {
         None
     }
@@ -666,13 +633,7 @@ fn generate_autoencoder_analysis_for_json(
             let total_time_ns = stats.total_time_us * 1000;
             data.insert(syscall_name.clone(), (stats.count, total_time_ns));
         }
-        Some(crate::autoencoder::analyze_anomalies(
-            &data,
-            hidden_size,
-            epochs,
-            threshold,
-            explain,
-        ))
+        Some(crate::autoencoder::analyze_anomalies(&data, hidden_size, epochs, threshold, explain))
     } else {
         None
     }
@@ -688,11 +649,7 @@ fn print_csv_stats(
 ) {
     if let Some(ref tracker) = stats_tracker {
         for (syscall_name, stats) in tracker.stats_map() {
-            let total_time_us = if timing_mode {
-                Some(stats.total_time_us)
-            } else {
-                None
-            };
+            let total_time_us = if timing_mode { Some(stats.total_time_us) } else { None };
             csv_stats.add_stat(crate::csv_output::CsvStat {
                 syscall: syscall_name.clone(),
                 calls: stats.count,
@@ -798,10 +755,7 @@ fn print_isolation_forest_analysis(
         } else {
             eprintln!("Detected {} outlier(s):\n", report.outliers.len());
             for outlier in &report.outliers {
-                eprintln!(
-                    "  {} (anomaly score: {:.3})",
-                    outlier.syscall, outlier.anomaly_score
-                );
+                eprintln!("  {} (anomaly score: {:.3})", outlier.syscall, outlier.anomaly_score);
                 eprintln!(
                     "    Avg duration: {:.2} μs, Calls: {}",
                     outlier.avg_duration_us, outlier.call_count
@@ -933,11 +887,7 @@ fn print_decision_trace_summary(decision_tracer: Option<crate::decision_trace::D
                 println!("\n✅ Decision traces written to: {}", mmap_path.display());
             }
             Err(e) => {
-                eprintln!(
-                    "⚠️  Failed to write decision traces to {}: {}",
-                    mmap_path.display(),
-                    e
-                );
+                eprintln!("⚠️  Failed to write decision traces to {}: {}", mmap_path.display(), e);
             }
         }
 
@@ -949,10 +899,7 @@ fn print_decision_trace_summary(decision_tracer: Option<crate::decision_trace::D
             Some(env!("CARGO_PKG_VERSION")),
         ) {
             Ok(()) => {
-                println!(
-                    "✅ Decision manifest written to: {}",
-                    manifest_path.display()
-                );
+                println!("✅ Decision manifest written to: {}", manifest_path.display());
             }
             Err(e) => {
                 eprintln!(
@@ -1103,12 +1050,7 @@ fn print_summaries(tracers: Tracers, timing_mode: bool, exit_code: i32, analysis
             otlp_exporter.as_ref(),
         );
         #[cfg(not(feature = "otlp"))]
-        print_text_stats(
-            &stats_tracker,
-            analysis.stats_extended,
-            analysis.anomaly_threshold,
-            None,
-        );
+        print_text_stats(&stats_tracker, analysis.stats_extended, analysis.anomaly_threshold, None);
     }
 
     // Sprint 30: End root span and shutdown OTLP exporter
@@ -1239,6 +1181,65 @@ fn process_syscall_for_pid(
     ptrace::syscall(pid, None).context("Failed to PTRACE_SYSCALL")
 }
 
+/// Start the OTLP root span if the feature is enabled and exporter is configured.
+#[cfg(feature = "otlp")]
+fn start_otlp_root_span(tracers: &mut Tracers, child: Pid) {
+    if let Some(ref mut exporter) = tracers.otlp_exporter {
+        let program_name = std::fs::read_to_string(format!("/proc/{child}/cmdline"))
+            .ok()
+            .and_then(|s| s.split('\0').next().map(std::string::ToString::to_string))
+            .unwrap_or_else(|| format!("pid:{child}"));
+        exporter.start_root_span(&program_name, child.as_raw());
+    }
+}
+
+/// Build analysis configuration from tracer configuration.
+fn build_analysis_config(config: &TracerConfig) -> AnalysisConfig {
+    AnalysisConfig {
+        stats_extended: config.stats_extended,
+        anomaly_threshold: config.anomaly_threshold,
+        hpu_analysis: config.hpu_analysis,
+        hpu_cpu_only: config.hpu_cpu_only,
+        ml_anomaly: config.ml_anomaly,
+        ml_clusters: config.ml_clusters,
+        ml_compare: config.ml_compare,
+        ml_outliers: config.ml_outliers,
+        ml_outlier_threshold: config.ml_outlier_threshold,
+        ml_outlier_trees: config.ml_outlier_trees,
+        dl_anomaly: config.dl_anomaly,
+        dl_threshold: config.dl_threshold,
+        dl_hidden_size: config.dl_hidden_size,
+        dl_epochs: config.dl_epochs,
+        explain: config.explain,
+    }
+}
+
+/// Wait for next process event, returning the wait status.
+/// Returns `Ok(None)` when all processes have exited.
+fn wait_for_event(
+    config: &TracerConfig,
+    child: Pid,
+    processes: &std::collections::HashMap<Pid, ProcessState>,
+) -> Result<Option<nix::sys::wait::WaitStatus>> {
+    let wait_result =
+        if config.follow_forks { waitpid(Pid::from_raw(-1), None) } else { waitpid(child, None) };
+
+    match wait_result {
+        Ok(s) => {
+            trace!(status = ?s, "waitpid returned");
+            Ok(Some(s))
+        }
+        Err(_) if processes.is_empty() => {
+            trace!("waitpid error but processes empty, breaking");
+            Ok(None)
+        }
+        Err(e) => {
+            warn!(error = %e, "waitpid failed");
+            Err(e).context("Failed to waitpid")
+        }
+    }
+}
+
 /// Trace a child process, filtering syscalls based on filter
 fn trace_child(child: Pid, config: TracerConfig) -> Result<i32> {
     info!(pid = %child, "starting trace_child");
@@ -1246,17 +1247,8 @@ fn trace_child(child: Pid, config: TracerConfig) -> Result<i32> {
     let mut tracers = initialize_tracers(&config);
     trace!("tracers initialized");
 
-    // Sprint 30: Start root span for OTLP exporter
     #[cfg(feature = "otlp")]
-    if let Some(ref mut exporter) = tracers.otlp_exporter {
-        // Get program name from /proc/{pid}/cmdline
-        let program_name = std::fs::read_to_string(format!("/proc/{child}/cmdline"))
-            .ok()
-            .and_then(|s| s.split('\0').next().map(std::string::ToString::to_string))
-            .unwrap_or_else(|| format!("pid:{child}"));
-
-        exporter.start_root_span(&program_name, child.as_raw());
-    }
+    start_otlp_root_span(&mut tracers, child);
 
     trace!("calling setup_ptrace_options");
     setup_ptrace_options(child, config.follow_forks)?;
@@ -1272,25 +1264,8 @@ fn trace_child(child: Pid, config: TracerConfig) -> Result<i32> {
     info!("entering main wait loop");
     while !processes.is_empty() {
         trace!(num_processes = processes.len(), "calling waitpid");
-        let wait_result = if config.follow_forks {
-            waitpid(Pid::from_raw(-1), None)
-        } else {
-            waitpid(child, None)
-        };
-
-        let status = match wait_result {
-            Ok(s) => {
-                trace!(status = ?s, "waitpid returned");
-                s
-            }
-            Err(_) if processes.is_empty() => {
-                trace!("waitpid error but processes empty, breaking");
-                break;
-            }
-            Err(e) => {
-                warn!(error = %e, "waitpid failed");
-                return Err(e).context("Failed to waitpid");
-            }
+        let Some(status) = wait_for_event(&config, child, &processes)? else {
+            break;
         };
 
         let pid = if let Some(p) = handle_traced_process_status(
@@ -1314,28 +1289,7 @@ fn trace_child(child: Pid, config: TracerConfig) -> Result<i32> {
 
     info!("exited main wait loop");
 
-    print_summaries(
-        tracers,
-        config.timing_mode,
-        main_exit_code,
-        &AnalysisConfig {
-            stats_extended: config.stats_extended,
-            anomaly_threshold: config.anomaly_threshold,
-            hpu_analysis: config.hpu_analysis,
-            hpu_cpu_only: config.hpu_cpu_only,
-            ml_anomaly: config.ml_anomaly,
-            ml_clusters: config.ml_clusters,
-            ml_compare: config.ml_compare,
-            ml_outliers: config.ml_outliers, // Sprint 22
-            ml_outlier_threshold: config.ml_outlier_threshold, // Sprint 22
-            ml_outlier_trees: config.ml_outlier_trees, // Sprint 22
-            dl_anomaly: config.dl_anomaly,   // Sprint 23
-            dl_threshold: config.dl_threshold, // Sprint 23
-            dl_hidden_size: config.dl_hidden_size, // Sprint 23
-            dl_epochs: config.dl_epochs,     // Sprint 23
-            explain: config.explain,         // Sprint 22/23
-        },
-    );
+    print_summaries(tracers, config.timing_mode, main_exit_code, &build_analysis_config(&config));
     Ok(main_exit_code)
 }
 
@@ -1350,23 +1304,28 @@ struct SyscallEntry {
     // Sprint 26: Raw args for decision trace capture (write syscall interception)
     raw_arg1: Option<u64>,
     raw_arg2: Option<u64>,
-    #[allow(dead_code)] // May be used in future for more complex decision trace patterns
-    raw_arg3: Option<u64>,
+    _raw_arg3: Option<u64>,
 }
 
-/// Find the user function that triggered a syscall by unwinding the stack
-///
-/// Syscalls execute in libc, not user code. To attribute syscalls to the
-/// user function that triggered them, we need to unwind the stack and find
-/// the first non-libc function.
-///
-/// Returns the function name if found, None otherwise.
-#[allow(dead_code)] // Reserved for future use (available as helper function)
-fn find_user_function_via_unwinding(
-    child: Pid,
+/// Check if a function name belongs to libc/system code (not user code)
+fn is_system_function(name: &str) -> bool {
+    name.starts_with("__")
+        || name.contains("libc")
+        || name.contains("@plt")
+        || name.contains("@@GLIBC")
+}
+
+/// Extract user function name from a stack frame's DWARF info, if available.
+fn extract_user_function(
+    frame: &crate::stack_unwind::StackFrame,
     dwarf_ctx: &crate::dwarf::DwarfContext,
 ) -> Option<String> {
-    find_user_function_with_caller(child, dwarf_ctx).map(|(func, _)| func)
+    let source_info = dwarf_ctx.lookup(frame.rip).ok().flatten()?;
+    let func_name = source_info.function?;
+    if is_system_function(&func_name) {
+        return None;
+    }
+    Some(func_name.clone())
 }
 
 /// Find user function and its caller from stack unwinding
@@ -1376,30 +1335,10 @@ fn find_user_function_with_caller(
     dwarf_ctx: &crate::dwarf::DwarfContext,
 ) -> Option<(String, Option<String>)> {
     // Unwind the stack to get all frames
-    let frames = match crate::stack_unwind::unwind_stack(child) {
-        Ok(frames) => frames,
-        Err(_) => return None, // Stack unwinding failed
-    };
+    let frames = crate::stack_unwind::unwind_stack(child).ok()?;
 
-    let mut user_functions = Vec::new();
-
-    // Walk through frames and collect user functions
-    for frame in frames {
-        // Look up this address in DWARF
-        if let Some(source_info) = dwarf_ctx.lookup(frame.rip).ok().flatten() {
-            if let Some(func_name) = source_info.function {
-                // Filter out libc/system functions
-                let is_libc = func_name.starts_with("__")
-                    || func_name.contains("libc")
-                    || func_name.contains("@plt")
-                    || func_name.contains("@@GLIBC");
-
-                if !is_libc {
-                    user_functions.push(func_name.clone());
-                }
-            }
-        }
-    }
+    let user_functions: Vec<String> =
+        frames.iter().filter_map(|frame| extract_user_function(frame, dwarf_ctx)).collect();
 
     // Return the first user function and its caller (if available)
     match user_functions.len() {
@@ -1421,17 +1360,9 @@ fn format_syscall_args_for_json(
         "openat" => {
             let filename =
                 read_string(child, arg2 as usize).unwrap_or_else(|_| format!("{arg2:#x}"));
-            vec![
-                format!("{:#x}", arg1),
-                format!("\"{}\"", filename),
-                format!("{:#x}", arg3),
-            ]
+            vec![format!("{:#x}", arg1), format!("\"{}\"", filename), format!("{:#x}", arg3)]
         }
-        _ => vec![
-            format!("{:#x}", arg1),
-            format!("{:#x}", arg2),
-            format!("{:#x}", arg3),
-        ],
+        _ => vec![format!("{:#x}", arg1), format!("{:#x}", arg2), format!("{:#x}", arg3)],
     }
 }
 
@@ -1563,13 +1494,11 @@ fn handle_syscall_entry(
     let (function_name, caller_name) =
         extract_function_names(child, dwarf_ctx, &source_info, function_profiling_enabled);
 
-    let json_source = source_info
-        .as_ref()
-        .map(|src| crate::json_output::JsonSourceLocation {
-            file: src.file.clone(),
-            line: src.line,
-            function: src.function.clone(),
-        });
+    let json_source = source_info.as_ref().map(|src| crate::json_output::JsonSourceLocation {
+        file: src.file.clone(),
+        line: src.line,
+        function: src.function.clone(),
+    });
 
     // Return syscall entry data
     Ok(Some(SyscallEntry {
@@ -1581,7 +1510,7 @@ fn handle_syscall_entry(
         // Sprint 26: Store raw args for decision trace capture
         raw_arg1: Some(arg1),
         raw_arg2: Some(arg2),
-        raw_arg3: Some(arg3),
+        _raw_arg3: Some(arg3),
     }))
 }
 
@@ -1618,10 +1547,7 @@ fn read_string(child: Pid, addr: usize) -> Result<String> {
     // Read up to 4096 bytes (max path length)
     let mut buf = vec![0u8; 4096];
     let mut local_iov = [IoSliceMut::new(&mut buf)];
-    let remote_iov = [RemoteIoVec {
-        base: addr,
-        len: 4096,
-    }];
+    let remote_iov = [RemoteIoVec { base: addr, len: 4096 }];
 
     let bytes_read = process_vm_readv(child, &mut local_iov, &remote_iov)
         .context("Failed to read string from tracee memory")?;
@@ -1658,11 +1584,7 @@ fn record_json_for_syscall(
     duration_us: u64,
 ) {
     if let (Some(entry), Some(output)) = (syscall_entry, json_output) {
-        let duration = if timing_mode && duration_us > 0 {
-            Some(duration_us)
-        } else {
-            None
-        };
+        let duration = if timing_mode && duration_us > 0 { Some(duration_us) } else { None };
 
         output.add_syscall(crate::json_output::JsonSyscall {
             name: entry.name.clone(),
@@ -1683,11 +1605,7 @@ fn record_csv_for_syscall(
     duration_us: u64,
 ) {
     if let (Some(entry), Some(output)) = (syscall_entry, csv_output) {
-        let duration = if timing_mode && duration_us > 0 {
-            Some(duration_us)
-        } else {
-            None
-        };
+        let duration = if timing_mode && duration_us > 0 { Some(duration_us) } else { None };
 
         // Format source location as "file:line" string
         let source_location = entry.source.as_ref().map(|src| {
@@ -1720,11 +1638,7 @@ fn record_html_for_syscall(
     duration_us: u64,
 ) {
     if let (Some(entry), Some(output)) = (syscall_entry, html_output) {
-        let duration = if timing_mode && duration_us > 0 {
-            Some(duration_us)
-        } else {
-            None
-        };
+        let duration = if timing_mode && duration_us > 0 { Some(duration_us) } else { None };
 
         // Format source location as "file:line" string
         let source_location = entry.source.as_ref().map(|src| {
@@ -1756,12 +1670,7 @@ fn record_function_profiling(
 ) {
     if let (Some(entry), Some(profiler)) = (syscall_entry, function_profiler) {
         if let Some(function_name) = &entry.function_name {
-            profiler.record(
-                function_name,
-                &entry.name,
-                duration_us,
-                entry.caller_name.as_deref(),
-            );
+            profiler.record(function_name, &entry.name, duration_us, entry.caller_name.as_deref());
         }
     }
 }
@@ -1857,10 +1766,7 @@ fn capture_decision_trace(
 
     let mut buffer = vec![0u8; buffer_size];
     let mut local_iov = [IoSliceMut::new(&mut buffer)];
-    let remote_iov = [RemoteIoVec {
-        base: buffer_addr as usize,
-        len: buffer_size,
-    }];
+    let remote_iov = [RemoteIoVec { base: buffer_addr as usize, len: buffer_size }];
 
     // Try to read; silently ignore errors (child may have exited, etc.)
     if process_vm_readv(child, &mut local_iov, &remote_iov).is_err() {
@@ -1894,12 +1800,7 @@ fn handle_syscall_exit(
     let in_html_mode = tracers.html_output.is_some();
 
     // Record statistics
-    record_stats_for_syscall(
-        syscall_entry,
-        tracers.stats_tracker.as_mut(),
-        result,
-        duration_us,
-    );
+    record_stats_for_syscall(syscall_entry, tracers.stats_tracker.as_mut(), result, duration_us);
 
     // Record JSON output
     record_json_for_syscall(
@@ -1929,12 +1830,7 @@ fn handle_syscall_exit(
     );
 
     // Sprint 26: Capture decision traces from stderr writes
-    capture_decision_trace(
-        child,
-        syscall_entry,
-        tracers.decision_tracer.as_mut(),
-        result,
-    );
+    capture_decision_trace(child, syscall_entry, tracers.decision_tracer.as_mut(), result);
 
     // Record CSV stats (we'll handle this in print_summaries)
     if let (Some(entry), Some(stats)) = (syscall_entry, tracers.csv_stats_output.as_mut()) {
@@ -1943,27 +1839,15 @@ fn handle_syscall_exit(
     }
 
     // Record function profiling
-    record_function_profiling(
-        syscall_entry,
-        tracers.function_profiler.as_mut(),
-        duration_us,
-    );
+    record_function_profiling(syscall_entry, tracers.function_profiler.as_mut(), duration_us);
 
     // Sprint 20: Real-time anomaly detection
-    handle_anomaly_detection(
-        syscall_entry,
-        tracers.anomaly_detector.as_mut(),
-        duration_us,
-    );
+    handle_anomaly_detection(syscall_entry, tracers.anomaly_detector.as_mut(), duration_us);
 
     // Sprint 52-55: Send event to visualizer
     if let (Some(entry), Some(ref sink)) = (syscall_entry, &tracers.visualizer_sink) {
-        let event = VisualizerEvent {
-            name: entry.name.clone(),
-            duration_us,
-            result,
-            pid: child.as_raw(),
-        };
+        let event =
+            VisualizerEvent { name: entry.name.clone(), duration_us, result, pid: child.as_raw() };
         // Non-blocking send - if channel is full, drop the event
         let _ = sink.send(event);
     }
@@ -1976,11 +1860,7 @@ fn handle_syscall_exit(
 
         exporter.record_syscall(
             &entry.name,
-            if duration_us > 0 {
-                Some(duration_us)
-            } else {
-                None
-            },
+            if duration_us > 0 { Some(duration_us) } else { None },
             result,
             source_file,
             source_line,
@@ -1988,13 +1868,7 @@ fn handle_syscall_exit(
     }
 
     // Print result if not in statistics, JSON, CSV, or HTML mode
-    if should_print_result(
-        syscall_entry,
-        in_stats_mode,
-        in_json_mode,
-        in_csv_mode,
-        in_html_mode,
-    ) {
+    if should_print_result(syscall_entry, in_stats_mode, in_json_mode, in_csv_mode, in_html_mode) {
         print_syscall_result(result, timing_mode, duration_us);
     }
 
@@ -2100,7 +1974,7 @@ mod tests {
             caller_name: None,
             raw_arg1: Some(1),
             raw_arg2: Some(2),
-            raw_arg3: Some(3),
+            _raw_arg3: Some(3),
         };
         assert_eq!(entry.name, "open");
         assert_eq!(entry.args.len(), 2);
@@ -2123,7 +1997,7 @@ mod tests {
             caller_name: None,
             raw_arg1: Some(0),
             raw_arg2: Some(0),
-            raw_arg3: Some(0),
+            _raw_arg3: Some(0),
         };
         assert_eq!(entry.name, "read");
         assert!(entry.source.is_some());
@@ -2142,11 +2016,7 @@ mod tests {
         assert!(result.is_err());
         // Error message should mention attach failure
         let err_msg = result.unwrap_err().to_string();
-        assert!(
-            err_msg.contains("attach") || err_msg.contains("Failed"),
-            "Error: {}",
-            err_msg
-        );
+        assert!(err_msg.contains("attach") || err_msg.contains("Failed"), "Error: {}", err_msg);
     }
 
     // TracerConfig default tests
@@ -2391,11 +2261,11 @@ mod tests {
             caller_name: Some("caller_fn".to_string()),
             raw_arg1: Some(1),
             raw_arg2: Some(0x7fff_0000_0000),
-            raw_arg3: Some(10),
+            _raw_arg3: Some(10),
         };
         assert_eq!(entry.raw_arg1, Some(1));
         assert_eq!(entry.raw_arg2, Some(0x7fff_0000_0000));
-        assert_eq!(entry.raw_arg3, Some(10));
+        assert_eq!(entry._raw_arg3, Some(10));
         assert_eq!(entry.caller_name, Some("caller_fn".to_string()));
     }
 
@@ -2409,7 +2279,7 @@ mod tests {
             caller_name: None,
             raw_arg1: None,
             raw_arg2: None,
-            raw_arg3: None,
+            _raw_arg3: None,
         };
         assert!(entry.args.is_empty());
         assert!(entry.raw_arg1.is_none());
@@ -3069,7 +2939,7 @@ mod tests {
             caller_name: None,
             raw_arg1: None,
             raw_arg2: None,
-            raw_arg3: None,
+            _raw_arg3: None,
         });
         assert!(should_print_result(&entry, false, false, false, false));
     }
@@ -3084,7 +2954,7 @@ mod tests {
             caller_name: None,
             raw_arg1: None,
             raw_arg2: None,
-            raw_arg3: None,
+            _raw_arg3: None,
         });
         assert!(!should_print_result(&entry, true, false, false, false));
     }
@@ -3099,7 +2969,7 @@ mod tests {
             caller_name: None,
             raw_arg1: None,
             raw_arg2: None,
-            raw_arg3: None,
+            _raw_arg3: None,
         });
         assert!(!should_print_result(&entry, false, true, false, false));
     }
@@ -3114,7 +2984,7 @@ mod tests {
             caller_name: None,
             raw_arg1: None,
             raw_arg2: None,
-            raw_arg3: None,
+            _raw_arg3: None,
         });
         assert!(!should_print_result(&entry, false, false, true, false));
     }
@@ -3129,7 +2999,7 @@ mod tests {
             caller_name: None,
             raw_arg1: None,
             raw_arg2: None,
-            raw_arg3: None,
+            _raw_arg3: None,
         });
         assert!(!should_print_result(&entry, false, false, false, true));
     }
@@ -3144,7 +3014,7 @@ mod tests {
             caller_name: None,
             raw_arg1: None,
             raw_arg2: None,
-            raw_arg3: None,
+            _raw_arg3: None,
         });
         assert!(!should_print_result(&entry, true, true, true, true));
     }
@@ -3187,7 +3057,7 @@ mod tests {
             caller_name: None,
             raw_arg1: None,
             raw_arg2: None,
-            raw_arg3: None,
+            _raw_arg3: None,
         });
         record_stats_for_syscall(&entry, None, 0, 100);
     }
@@ -3202,7 +3072,7 @@ mod tests {
             caller_name: None,
             raw_arg1: None,
             raw_arg2: None,
-            raw_arg3: None,
+            _raw_arg3: None,
         });
         let mut tracker = Some(crate::stats::StatsTracker::new());
         record_stats_for_syscall(&entry, tracker.as_mut(), 100, 500);
@@ -3225,7 +3095,7 @@ mod tests {
             caller_name: None,
             raw_arg1: None,
             raw_arg2: None,
-            raw_arg3: None,
+            _raw_arg3: None,
         });
         record_function_profiling(&entry, None, 100);
     }
@@ -3240,7 +3110,7 @@ mod tests {
             caller_name: None,
             raw_arg1: None,
             raw_arg2: None,
-            raw_arg3: None,
+            _raw_arg3: None,
         });
         let mut profiler = Some(crate::function_profiler::FunctionProfiler::new());
         record_function_profiling(&entry, profiler.as_mut(), 100);
@@ -3256,7 +3126,7 @@ mod tests {
             caller_name: None,
             raw_arg1: None,
             raw_arg2: None,
-            raw_arg3: None,
+            _raw_arg3: None,
         });
         let mut profiler = Some(crate::function_profiler::FunctionProfiler::new());
         record_function_profiling(&entry, profiler.as_mut(), 100);
@@ -3279,7 +3149,7 @@ mod tests {
             caller_name: None,
             raw_arg1: None,
             raw_arg2: None,
-            raw_arg3: None,
+            _raw_arg3: None,
         });
         handle_anomaly_detection(&entry, None, 100);
     }
@@ -3294,7 +3164,7 @@ mod tests {
             caller_name: None,
             raw_arg1: None,
             raw_arg2: None,
-            raw_arg3: None,
+            _raw_arg3: None,
         });
         let mut detector = Some(crate::anomaly::AnomalyDetector::new(100, 2.0));
         handle_anomaly_detection(&entry, detector.as_mut(), 100);

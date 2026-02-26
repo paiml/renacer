@@ -25,9 +25,7 @@ pub fn draw(f: &mut Frame, app: &VisualizeApp, area: Rect) {
         .border_style(Style::default().fg(borders::PROCESS_SYSCALLS))
         .title(Span::styled(
             header,
-            Style::default()
-                .fg(borders::PROCESS_SYSCALLS)
-                .add_modifier(Modifier::BOLD),
+            Style::default().fg(borders::PROCESS_SYSCALLS).add_modifier(Modifier::BOLD),
         ));
 
     let inner = block.inner(area);
@@ -79,9 +77,7 @@ pub fn draw(f: &mut Frame, app: &VisualizeApp, area: Rect) {
             let trend = sparkline(&proc.history, 8);
 
             let style = if is_selected {
-                Style::default()
-                    .bg(Color::Rgb(40, 40, 60))
-                    .add_modifier(Modifier::BOLD)
+                Style::default().bg(Color::Rgb(40, 40, 60)).add_modifier(Modifier::BOLD)
             } else {
                 Style::default()
             };
@@ -98,11 +94,7 @@ pub fn draw(f: &mut Frame, app: &VisualizeApp, area: Rect) {
                 Span::styled(trend, style.fg(Color::Green)),
                 Span::styled(
                     format!("{:>6}", proc.error_count),
-                    style.fg(if proc.error_count > 0 {
-                        Color::Red
-                    } else {
-                        Color::DarkGray
-                    }),
+                    style.fg(if proc.error_count > 0 { Color::Red } else { Color::DarkGray }),
                 ),
             ])
             .style(style)

@@ -19,28 +19,19 @@ pub struct SpanPoolConfig {
 
 impl Default for SpanPoolConfig {
     fn default() -> Self {
-        SpanPoolConfig {
-            capacity: 1024,
-            enabled: true,
-        }
+        SpanPoolConfig { capacity: 1024, enabled: true }
     }
 }
 
 impl SpanPoolConfig {
     /// Create a new pool configuration
     pub fn new(capacity: usize) -> Self {
-        SpanPoolConfig {
-            capacity,
-            enabled: true,
-        }
+        SpanPoolConfig { capacity, enabled: true }
     }
 
     /// Disable pooling (for debugging)
     pub fn disabled() -> Self {
-        SpanPoolConfig {
-            capacity: 0,
-            enabled: false,
-        }
+        SpanPoolConfig { capacity: 0, enabled: false }
     }
 }
 
@@ -234,6 +225,11 @@ impl PoolStats {
         (used as f64 / self.capacity as f64) * 100.0
     }
 }
+
+// Compile-time thread-safety verification (Sprint 59)
+static_assertions::assert_impl_all!(SpanPoolConfig: Send, Sync);
+static_assertions::assert_impl_all!(PooledSpan: Send, Sync);
+static_assertions::assert_impl_all!(PoolStats: Send, Sync);
 
 #[cfg(test)]
 mod tests {

@@ -71,11 +71,7 @@ pub struct BrickEscalationThresholds {
 
 impl Default for BrickEscalationThresholds {
     fn default() -> Self {
-        Self {
-            cv_percent: 15.0,
-            efficiency_percent: 25.0,
-            max_traces_per_sec: 100,
-        }
+        Self { cv_percent: 15.0, efficiency_percent: 25.0, max_traces_per_sec: 100 }
     }
 }
 
@@ -140,10 +136,7 @@ impl SyscallBreakdown {
             breakdown.syscall_count += 1;
 
             let syscall_name = &event.syscall;
-            *breakdown
-                .syscall_counts
-                .entry(syscall_name.clone())
-                .or_insert(0) += 1;
+            *breakdown.syscall_counts.entry(syscall_name.clone()).or_insert(0) += 1;
 
             match syscall_name.as_str() {
                 "mmap" | "munmap" | "mprotect" | "brk" => breakdown.mmap_us += duration_us,
@@ -442,17 +435,11 @@ impl BrickTracer {
         // For now, we don't have syscall capture integrated here
         // This would require ptrace which needs to be in a separate process
         // We provide the infrastructure for when syscall events are available
-        let breakdown = SyscallBreakdown {
-            compute_us: duration_us,
-            ..Default::default()
-        };
+        let breakdown = SyscallBreakdown { compute_us: duration_us, ..Default::default() };
 
         let over_budget = duration_us > budget_us;
-        let efficiency = if duration_us > 0 {
-            (budget_us as f64 / duration_us as f64).min(1.0)
-        } else {
-            1.0
-        };
+        let efficiency =
+            if duration_us > 0 { (budget_us as f64 / duration_us as f64).min(1.0) } else { 1.0 };
 
         let metadata = BrickMetadata {
             name: brick_name.to_string(),
@@ -635,9 +622,7 @@ mod tests {
     // F025: Threshold configurable
     #[test]
     fn f025_thresholds_configurable() {
-        let thresholds = BrickEscalationThresholds::default()
-            .with_cv(20.0)
-            .with_efficiency(30.0);
+        let thresholds = BrickEscalationThresholds::default().with_cv(20.0).with_efficiency(30.0);
         let tracer = BrickTracer::new_local().with_thresholds(thresholds);
 
         // With CV=20%, should not trace at 15%
@@ -730,10 +715,7 @@ mod tests {
     #[test]
     fn test_escalation_reason_display() {
         assert_eq!(format!("{}", EscalationReason::CvExceeded), "cv_exceeded");
-        assert_eq!(
-            format!("{}", EscalationReason::EfficiencyLow),
-            "efficiency_low"
-        );
+        assert_eq!(format!("{}", EscalationReason::EfficiencyLow), "efficiency_low");
         assert_eq!(format!("{}", EscalationReason::Both), "cv_and_efficiency");
         assert_eq!(format!("{}", EscalationReason::Manual), "manual");
     }
@@ -743,19 +725,10 @@ mod tests {
     fn test_escalation_reason_determination() {
         let tracer = BrickTracer::new_local();
 
-        assert_eq!(
-            tracer.escalation_reason(20.0, 80.0),
-            EscalationReason::CvExceeded
-        );
-        assert_eq!(
-            tracer.escalation_reason(5.0, 10.0),
-            EscalationReason::EfficiencyLow
-        );
+        assert_eq!(tracer.escalation_reason(20.0, 80.0), EscalationReason::CvExceeded);
+        assert_eq!(tracer.escalation_reason(5.0, 10.0), EscalationReason::EfficiencyLow);
         assert_eq!(tracer.escalation_reason(20.0, 10.0), EscalationReason::Both);
-        assert_eq!(
-            tracer.escalation_reason(5.0, 80.0),
-            EscalationReason::Manual
-        );
+        assert_eq!(tracer.escalation_reason(5.0, 80.0), EscalationReason::Manual);
     }
 
     // Test default thresholds

@@ -49,9 +49,7 @@ impl Autoencoder {
         // Initialize encoder weights (input_dim x hidden_dim)
         let encoder_weights: Vec<Vec<f64>> = (0..input_dim)
             .map(|_| {
-                (0..hidden_dim)
-                    .map(|_| rng.gen_range(-encoder_scale..encoder_scale))
-                    .collect()
+                (0..hidden_dim).map(|_| rng.gen_range(-encoder_scale..encoder_scale)).collect()
             })
             .collect();
 
@@ -59,11 +57,7 @@ impl Autoencoder {
 
         // Initialize decoder weights (hidden_dim x input_dim)
         let decoder_weights: Vec<Vec<f64>> = (0..hidden_dim)
-            .map(|_| {
-                (0..input_dim)
-                    .map(|_| rng.gen_range(-decoder_scale..decoder_scale))
-                    .collect()
-            })
+            .map(|_| (0..input_dim).map(|_| rng.gen_range(-decoder_scale..decoder_scale)).collect())
             .collect();
 
         let decoder_bias: Vec<f64> = (0..input_dim).map(|_| 0.0).collect();
@@ -273,21 +267,15 @@ fn normalize_features(features: &[Vec<f64>]) -> (Vec<Vec<f64>>, Vec<f64>, Vec<f6
 fn calculate_feature_contributions(original: &[f64], reconstructed: &[f64]) -> Vec<(String, f64)> {
     let feature_names = ["avg_duration", "call_frequency", "total_duration"];
 
-    let total_error: f64 = original
-        .iter()
-        .zip(reconstructed.iter())
-        .map(|(&o, &r)| (o - r).abs())
-        .sum();
+    let total_error: f64 =
+        original.iter().zip(reconstructed.iter()).map(|(&o, &r)| (o - r).abs()).sum();
 
     feature_names
         .iter()
         .zip(original.iter().zip(reconstructed.iter()))
         .map(|(name, (&o, &r))| {
-            let contribution = if total_error > 0.0 {
-                ((o - r).abs() / total_error) * 100.0
-            } else {
-                0.0
-            };
+            let contribution =
+                if total_error > 0.0 { ((o - r).abs() / total_error) * 100.0 } else { 0.0 };
             ((*name).to_string(), contribution)
         })
         .collect()
@@ -325,19 +313,15 @@ pub fn analyze_anomalies(
     autoencoder.train(&normalized_features, epochs, 0.01);
 
     // Calculate baseline threshold if not provided
-    let reconstruction_errors: Vec<f64> = normalized_features
-        .iter()
-        .map(|f| autoencoder.reconstruction_error(f))
-        .collect();
+    let reconstruction_errors: Vec<f64> =
+        normalized_features.iter().map(|f| autoencoder.reconstruction_error(f)).collect();
 
     let mean_error: f64 =
         reconstruction_errors.iter().sum::<f64>() / reconstruction_errors.len() as f64;
     let std_error: f64 = {
-        let variance: f64 = reconstruction_errors
-            .iter()
-            .map(|&e| (e - mean_error).powi(2))
-            .sum::<f64>()
-            / reconstruction_errors.len() as f64;
+        let variance: f64 =
+            reconstruction_errors.iter().map(|&e| (e - mean_error).powi(2)).sum::<f64>()
+                / reconstruction_errors.len() as f64;
         variance.sqrt()
     };
 
@@ -387,6 +371,10 @@ pub fn analyze_anomalies(
     }
 }
 
+// Compile-time thread-safety verification (Sprint 59)
+static_assertions::assert_impl_all!(Autoencoder: Send, Sync);
+static_assertions::assert_impl_all!(AutoencoderReport: Send, Sync);
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -419,11 +407,7 @@ mod tests {
     #[test]
     fn test_training_reduces_error() {
         let mut ae = Autoencoder::new(3, 2);
-        let samples = vec![
-            vec![1.0, 2.0, 3.0],
-            vec![1.1, 2.1, 3.1],
-            vec![0.9, 1.9, 2.9],
-        ];
+        let samples = vec![vec![1.0, 2.0, 3.0], vec![1.1, 2.1, 3.1], vec![0.9, 1.9, 2.9]];
 
         let initial_error = ae.reconstruction_error(&samples[0]);
         ae.train(&samples, 100, 0.01);
@@ -443,11 +427,7 @@ mod tests {
         let mut ae = Autoencoder::new(3, 2);
 
         // Normal samples
-        let normal_samples = vec![
-            vec![1.0, 2.0, 3.0],
-            vec![1.1, 2.1, 3.1],
-            vec![0.9, 1.9, 2.9],
-        ];
+        let normal_samples = vec![vec![1.0, 2.0, 3.0], vec![1.1, 2.1, 3.1], vec![0.9, 1.9, 2.9]];
 
         ae.train(&normal_samples, 100, 0.01);
 
@@ -481,11 +461,7 @@ mod tests {
 
     #[test]
     fn test_feature_normalization() {
-        let features = vec![
-            vec![1.0, 10.0, 100.0],
-            vec![2.0, 20.0, 200.0],
-            vec![3.0, 30.0, 300.0],
-        ];
+        let features = vec![vec![1.0, 10.0, 100.0], vec![2.0, 20.0, 200.0], vec![3.0, 30.0, 300.0]];
 
         let (normalized, _min_vals, _max_vals) = normalize_features(&features);
 
@@ -511,10 +487,7 @@ mod tests {
 
         let report = analyze_anomalies(&data, 2, 100, 1.5, false);
 
-        assert!(
-            !report.anomalies.is_empty(),
-            "Should detect at least one anomaly"
-        );
+        assert!(!report.anomalies.is_empty(), "Should detect at least one anomaly");
         assert_eq!(report.total_samples, 7);
     }
 

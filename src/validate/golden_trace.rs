@@ -76,13 +76,7 @@ impl TraceHeader {
     /// Create a new trace header
     pub fn new(entry_count: u64, flags: TraceFlags) -> Self {
         let checksum = Self::compute_checksum(entry_count, flags.raw());
-        Self {
-            magic: *TRACE_MAGIC,
-            version: TRACE_VERSION,
-            flags,
-            entry_count,
-            checksum,
-        }
+        Self { magic: *TRACE_MAGIC, version: TRACE_VERSION, flags, entry_count, checksum }
     }
 
     /// Compute checksum from entry count and flags
@@ -107,9 +101,7 @@ impl TraceHeader {
     /// Decode header from bytes
     pub fn decode(data: &[u8]) -> Result<Self> {
         if data.len() < 32 {
-            return Err(ValidateError::InvalidManifest {
-                reason: "Header too short".to_string(),
-            });
+            return Err(ValidateError::InvalidManifest { reason: "Header too short".to_string() });
         }
 
         let magic: [u8; 4] = data[0..4].try_into().expect("slice length verified above");
@@ -119,32 +111,17 @@ impl TraceHeader {
             });
         }
 
-        let version = u32::from_le_bytes(
-            data[4..8]
-                .try_into()
-                .expect("4-byte slice for u32 conversion"),
-        );
+        let version =
+            u32::from_le_bytes(data[4..8].try_into().expect("4-byte slice for u32 conversion"));
         let flags = TraceFlags(u32::from_le_bytes(
             data[8..12].try_into().expect("4-byte slice for u32 flags"),
         ));
-        let entry_count = u64::from_le_bytes(
-            data[12..20]
-                .try_into()
-                .expect("8-byte slice for u64 entry_count"),
-        );
-        let checksum = u64::from_le_bytes(
-            data[20..28]
-                .try_into()
-                .expect("8-byte slice for u64 checksum"),
-        );
+        let entry_count =
+            u64::from_le_bytes(data[12..20].try_into().expect("8-byte slice for u64 entry_count"));
+        let checksum =
+            u64::from_le_bytes(data[20..28].try_into().expect("8-byte slice for u64 checksum"));
 
-        Ok(Self {
-            magic,
-            version,
-            flags,
-            entry_count,
-            checksum,
-        })
+        Ok(Self { magic, version, flags, entry_count, checksum })
     }
 }
 
@@ -208,28 +185,17 @@ impl TraceSyscallEntry {
     pub fn decode(data: &[u8]) -> Result<Self> {
         if data.len() < 29 {
             // minimum size
-            return Err(ValidateError::InvalidManifest {
-                reason: "Entry too short".to_string(),
-            });
+            return Err(ValidateError::InvalidManifest { reason: "Entry too short".to_string() });
         }
 
-        let timestamp_ns = u64::from_le_bytes(
-            data[0..8]
-                .try_into()
-                .expect("8-byte slice for timestamp_ns"),
-        );
+        let timestamp_ns =
+            u64::from_le_bytes(data[0..8].try_into().expect("8-byte slice for timestamp_ns"));
         let syscall_nr =
             u32::from_le_bytes(data[8..12].try_into().expect("4-byte slice for syscall_nr"));
-        let duration_ns = u64::from_le_bytes(
-            data[12..20]
-                .try_into()
-                .expect("8-byte slice for duration_ns"),
-        );
-        let return_value = i64::from_le_bytes(
-            data[20..28]
-                .try_into()
-                .expect("8-byte slice for return_value"),
-        );
+        let duration_ns =
+            u64::from_le_bytes(data[12..20].try_into().expect("8-byte slice for duration_ns"));
+        let return_value =
+            i64::from_le_bytes(data[20..28].try_into().expect("8-byte slice for return_value"));
 
         let mut offset = 28;
         let arg_count = data[offset] as usize;
@@ -243,18 +209,12 @@ impl TraceSyscallEntry {
                 });
             }
             args.push(u64::from_le_bytes(
-                data[offset..offset + 8]
-                    .try_into()
-                    .expect("8-byte slice for arg value"),
+                data[offset..offset + 8].try_into().expect("8-byte slice for arg value"),
             ));
             offset += 8;
         }
 
-        let string_count = if offset < data.len() {
-            data[offset] as usize
-        } else {
-            0
-        };
+        let string_count = if offset < data.len() { data[offset] as usize } else { 0 };
         offset += 1;
 
         let mut string_args = Vec::with_capacity(string_count);
@@ -263,9 +223,7 @@ impl TraceSyscallEntry {
                 break;
             }
             let len = u32::from_le_bytes(
-                data[offset..offset + 4]
-                    .try_into()
-                    .expect("4-byte slice for string length"),
+                data[offset..offset + 4].try_into().expect("4-byte slice for string length"),
             ) as usize;
             offset += 4;
             if offset + len > data.len() {
@@ -276,14 +234,7 @@ impl TraceSyscallEntry {
             offset += len;
         }
 
-        Ok(Self {
-            timestamp_ns,
-            syscall_nr,
-            duration_ns,
-            return_value,
-            args,
-            string_args,
-        })
+        Ok(Self { timestamp_ns, syscall_nr, duration_ns, return_value, args, string_args })
     }
 }
 
@@ -427,9 +378,7 @@ impl TraceManifest {
 /// Get current timestamp in ISO 8601 format
 fn get_iso_timestamp() -> String {
     use std::time::{SystemTime, UNIX_EPOCH};
-    let duration = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default();
+    let duration = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default();
     format!("{}", duration.as_secs())
 }
 
@@ -500,24 +449,18 @@ pub fn generate_baseline(
 pub fn load_baseline(baseline_dir: &Path) -> Result<GoldenBaseline> {
     // Check directory exists
     if !baseline_dir.exists() {
-        return Err(ValidateError::BaselineNotFound {
-            path: baseline_dir.to_path_buf(),
-        });
+        return Err(ValidateError::BaselineNotFound { path: baseline_dir.to_path_buf() });
     }
 
     // Load manifest
     let manifest_path = baseline_dir.join("manifest.json");
     if !manifest_path.exists() {
-        return Err(ValidateError::BaselineNotFound {
-            path: manifest_path,
-        });
+        return Err(ValidateError::BaselineNotFound { path: manifest_path });
     }
 
     let manifest_content = fs::read_to_string(&manifest_path)?;
-    let manifest: TraceManifest =
-        serde_json::from_str(&manifest_content).map_err(|e| ValidateError::InvalidManifest {
-            reason: e.to_string(),
-        })?;
+    let manifest: TraceManifest = serde_json::from_str(&manifest_content)
+        .map_err(|e| ValidateError::InvalidManifest { reason: e.to_string() })?;
 
     // Load timing stats
     let timing_path = baseline_dir.join("timing.stats");
@@ -531,11 +474,7 @@ pub fn load_baseline(baseline_dir: &Path) -> Result<GoldenBaseline> {
     // Load syscall trace (simplified for now)
     let syscalls = Vec::new();
 
-    Ok(GoldenBaseline {
-        manifest,
-        syscalls,
-        timing,
-    })
+    Ok(GoldenBaseline { manifest, syscalls, timing })
 }
 
 #[cfg(test)]

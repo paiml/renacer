@@ -98,9 +98,8 @@ pub fn calculate_time_attribution(
         let args: Vec<String> = span.args.iter().map(|(_, v)| v.clone()).collect();
 
         // For time attribution, we don't track FDs, so use simple classification
-        let cluster_name = registry
-            .classify_simple(&span.name, &args)
-            .unwrap_or("Unclassified".to_string());
+        let cluster_name =
+            registry.classify_simple(&span.name, &args).unwrap_or("Unclassified".to_string());
 
         *cluster_time.entry(cluster_name.clone()).or_default() += span.duration_nanos;
         *cluster_count.entry(cluster_name).or_default() += 1;
@@ -164,10 +163,7 @@ mod tests {
         assert_eq!(attributions.len(), 2);
 
         // FileIO should dominate (10ms out of 11ms)
-        let file_io = attributions
-            .iter()
-            .find(|a| a.cluster == "FileIO")
-            .expect("test");
+        let file_io = attributions.iter().find(|a| a.cluster == "FileIO").expect("test");
         assert!((file_io.percentage - 90.9).abs() < 0.1); // ~90.9%
         assert_eq!(file_io.call_count, 2);
     }
@@ -215,10 +211,7 @@ mod tests {
         ];
 
         let attributions = calculate_time_attribution(&spans, &registry);
-        let file_io = attributions
-            .iter()
-            .find(|a| a.cluster == "FileIO")
-            .expect("test");
+        let file_io = attributions.iter().find(|a| a.cluster == "FileIO").expect("test");
 
         // Total: 6000ns, 3 calls = 2000ns avg
         assert_eq!(file_io.avg_per_call, Duration::from_nanos(2000));

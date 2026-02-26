@@ -76,10 +76,7 @@ impl Default for ValidateConfig {
 impl ValidateConfig {
     /// Create a new config with specified tolerance
     pub fn with_tolerance(tolerance: f32) -> Self {
-        Self {
-            tolerance_percent: tolerance,
-            ..Self::default()
-        }
+        Self { tolerance_percent: tolerance, ..Self::default() }
     }
 
     /// Set the tolerance percentage
@@ -189,9 +186,7 @@ mod tests {
 
     #[test]
     fn test_with_strict_mode_false_preserves_tolerance() {
-        let config = ValidateConfig::default()
-            .set_tolerance(20.0)
-            .with_strict_mode(false);
+        let config = ValidateConfig::default().set_tolerance(20.0).with_strict_mode(false);
         assert!(!config.strict_mode);
         assert!((config.tolerance_percent - 20.0).abs() < f32::EPSILON);
     }
