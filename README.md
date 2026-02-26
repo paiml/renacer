@@ -45,7 +45,7 @@ Renacer (Spanish: "to be reborn") is a next-generation binary inspection and tra
 
 | Metric | Value |
 |--------|-------|
-| **Current Version** | 0.9.5 |
+| **Current Version** | 0.10.0 |
 | **Status** | Production-Ready |
 | **Test Coverage** | 1693+ tests (all passing), 92.84% line coverage |
 | **TDG Score** | 95.1/100 (A+ grade) |
