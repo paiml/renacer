@@ -5,6 +5,14 @@ All notable changes to Renacer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.0] - 2026-02-26
+
+### Changed
+- Updated trueno dependency from 0.15 to 0.16.0
+- Updated aprender dependency from 0.26 to 0.27
+- Updated trueno-viz dependency from 0.1 to 0.2 (with `default-features = false`)
+- Added package exclude patterns to reduce crate size (221 MiB → 5.8 MiB)
+
 ## [0.9.4] - 2026-01-07
 
 ### Added
