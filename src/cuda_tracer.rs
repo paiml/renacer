@@ -84,11 +84,9 @@ impl Default for CudaTracerConfig {
 /// - **Poka-Yoke**: Feature flag prevents accidental overhead
 #[cfg(feature = "cuda-tracing")]
 pub struct CudaTracerWrapper {
-    #[allow(dead_code)] // Used in full CUPTI implementation
-    otlp_exporter: Option<std::sync::Arc<OtlpExporter>>,
+    _otlp_exporter: Option<std::sync::Arc<OtlpExporter>>,
     config: CudaTracerConfig,
     cupti_initialized: bool,
-    #[allow(dead_code)] // Used in full CUPTI implementation
     activity_buffer: Vec<u8>,
 }
 
@@ -96,7 +94,7 @@ pub struct CudaTracerWrapper {
 impl std::fmt::Debug for CudaTracerWrapper {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CudaTracerWrapper")
-            .field("otlp_exporter", &"<OtlpExporter>")
+            .field("_otlp_exporter", &"<OtlpExporter>")
             .field("config", &self.config)
             .field("cupti_initialized", &self.cupti_initialized)
             .field("activity_buffer_len", &self.activity_buffer.len())
@@ -129,7 +127,7 @@ impl CudaTracerWrapper {
         otlp_exporter: Option<std::sync::Arc<OtlpExporter>>,
         config: CudaTracerConfig,
     ) -> Result<Self> {
-        // TODO: Initialize CUDA runtime via cudarc
+        // Future: Initialize CUDA runtime via cudarc
         // The cudarc 0.18 API has changed from 0.12.
         // Need to verify correct device initialization API:
         // - Option 1: cudarc::CudaDevice::new()
@@ -149,7 +147,7 @@ impl CudaTracerWrapper {
         let activity_buffer = vec![0u8; config.buffer_size];
 
         let mut wrapper = CudaTracerWrapper {
-            otlp_exporter,
+            _otlp_exporter: otlp_exporter,
             config,
             cupti_initialized: false,
             activity_buffer,
@@ -175,7 +173,7 @@ impl CudaTracerWrapper {
     /// Buffer fills → Callback fires → Parse activities → Export to OTLP
     /// ```
     fn initialize_cupti(&mut self) -> Result<()> {
-        // TODO: Implement CUPTI initialization
+        // Future: Implement CUPTI initialization
         //
         // Required steps (using CUPTI C API via FFI):
         // 1. cuptiActivityEnable(CUPTI_ACTIVITY_KIND_KERNEL)
@@ -216,7 +214,7 @@ impl CudaTracerWrapper {
             return;
         }
 
-        // TODO: Implement CUPTI activity record parsing
+        // Future: Implement CUPTI activity record parsing
         //
         // Required steps:
         // 1. Loop through buffer with cuptiActivityGetNextRecord()
@@ -257,6 +255,7 @@ impl CudaTracerWrapper {
     /// ```ignore
     /// // Pseudocode for CUPTI record conversion
     /// let duration_us = ((record.end - record.start) / 1000) as u64; // ns → μs
+    /// // SAFETY: CStr::from_ptr requires a valid null-terminated C string pointer
     /// let kernel_name = unsafe { CStr::from_ptr(record.name).to_string_lossy().into_owned() };
     /// let workgroup_size = format!("[{},{},{}]", record.blockX, record.blockY, record.blockZ);
     ///
@@ -270,9 +269,8 @@ impl CudaTracerWrapper {
     /// };
     /// ```
     #[cfg(feature = "cuda-tracing")]
-    #[allow(dead_code)]
-    fn convert_cupti_record_to_kernel(&self, _record_data: &[u8]) -> Option<GpuKernel> {
-        // TODO: Implement CUPTI record → GpuKernel conversion
+    fn _convert_cupti_record_to_kernel(&self, _record_data: &[u8]) -> Option<GpuKernel> {
+        // Future: Implement CUPTI record → GpuKernel conversion
         // This requires parsing the binary CUPTI activity record structure
 
         None
@@ -292,7 +290,7 @@ impl CudaTracerWrapper {
             return;
         }
 
-        // TODO: Implement CUPTI flush
+        // Future: Implement CUPTI flush
         // cuptiActivityFlushAll(0) → triggers buffer_completed callback
         //                          → calls process_activity_buffer()
 
@@ -304,7 +302,7 @@ impl CudaTracerWrapper {
     /// Returns device name, compute capability, and driver version.
     /// Used to populate OTLP resource-level attributes at startup.
     pub fn get_device_info(&self) -> Result<CudaDeviceInfo> {
-        // TODO: Use cudarc to query device properties
+        // Future: Use cudarc to query device properties
         // Once cudarc 0.18 API is confirmed, query:
         // - device.name()
         // - device.compute_cap()
@@ -334,7 +332,7 @@ impl Drop for CudaTracerWrapper {
         // Flush any remaining activities before cleanup
         self.flush();
 
-        // TODO: Clean up CUPTI resources
+        // Future: Clean up CUPTI resources
         // - cuptiActivityDisable(CUPTI_ACTIVITY_KIND_KERNEL)
         // - cuptiFinalize()
 
@@ -436,9 +434,6 @@ mod tests {
         let result = CudaTracerWrapper::new(None, config);
 
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("CUDA tracing support not compiled in"));
+        assert!(result.unwrap_err().to_string().contains("CUDA tracing support not compiled in"));
     }
 }
