@@ -4,7 +4,7 @@
 .SUFFIXES:
 
 .PHONY: help test coverage coverage-html coverage-clean mutants mutants-quick clean build release lint format check \
-	tier1 tier2 tier3 chaos-test chaos-full check-regression fuzz benchmark install-llvm verify-llvm
+	tier1 tier2 tier3 chaos-test chaos-full check-regression fuzz benchmark bench install-llvm verify-llvm
 
 # =============================================================================
 # Installation & Dependencies
@@ -183,6 +183,8 @@ clean: ## Clean build artifacts
 benchmark: ## Run performance benchmarks
 	@echo "📊 Running benchmarks..."
 	@cargo test --test benchmark_vs_strace -- --nocapture --test-threads=1
+
+bench: benchmark ## Alias for benchmark
 
 mutants: ## Run mutation testing (full analysis)
 	@echo "🧬 Running mutation testing..."
