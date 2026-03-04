@@ -16,6 +16,7 @@ pub mod autoencoder;
 pub mod brick_tracer; // Sprint 58: ComputeBrick-aware tracing for trueno/cbtop integration
 pub mod causal_graph; // Sprint 41: Causal graph construction for critical path analysis
 pub mod chaos;
+#[cfg(target_arch = "x86_64")]
 pub mod cli;
 pub mod cluster; // Single-Shot Compile Tooling: TOML-based syscall clustering (Section 6.1)
 pub mod critical_path; // Sprint 41: Critical path analysis (longest path in DAG)
@@ -39,6 +40,7 @@ pub mod ml_anomaly;
 pub mod ml_pipeline; // Sprint 48: Enhanced ML pipeline (StandardScaler, DBSCAN, LOF, PCA)
 pub mod model_persistence; // Sprint 48: .apr model persistence (Toyota Way: Muda elimination)
 pub mod otlp_exporter;
+#[cfg(target_arch = "x86_64")]
 pub mod process_tracer; // Sprint 59: Process-level syscall tracing for ptop integration (SPEC-057)
 pub mod profiling;
 pub mod regression; // Single-Shot Compile Tooling: Statistical regression detection (Section 6.4)
@@ -48,17 +50,21 @@ pub mod semantic_equivalence; // Sprint 40: Semantic Equivalence (Specification 
 pub mod sequence; // Single-Shot Compile Tooling: N-gram sequence mining (Section 6.1.1)
 pub mod span_pool; // Sprint 36: Memory pool for span allocations
 pub mod span_record; // Sprint 40: Parquet-compatible span schema
+#[cfg(target_arch = "x86_64")]
 pub mod stack_unwind;
 pub mod stats;
 pub mod syscalls;
 pub mod time_attribution; // Single-Shot Compile Tooling: Time-weighted attribution (Section 6.2)
 pub mod trace_context; // Sprint 33: W3C Trace Context propagation
+#[cfg(target_arch = "x86_64")]
 pub mod tracer;
 pub mod transpiler_map;
 pub mod trueno_db_storage; // Sprint 40: Trueno-DB Parquet storage for golden thread traces
 pub mod unified_trace; // Sprint 40: Unified Trace Model (Specification Section 3.1)
+#[cfg(target_arch = "x86_64")]
 pub mod validate; // Sprint 50: Golden trace validation (APR Runtime Support)
 pub mod validation_engine; // Sprint 40: ValidationEngine for Batuta Integration (Specification Section 5.1)
+#[cfg(target_arch = "x86_64")]
 pub mod visualize; // Sprint 52-55: Real-time tracing visualization (ttop-identical TUI)
 
 // Sprint 56-57: Metrics, Alerting, Visualization (METRICS-001)
