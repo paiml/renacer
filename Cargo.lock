@@ -107,7 +107,30 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_yaml_ng",
- "trueno",
+ "trueno 0.15.0",
+ "trueno-quant",
+]
+
+[[package]]
+name = "aprender"
+version = "0.27.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e171b81f0d7aac048e8d0a33c50a096698b6420ce6709e7cc28d36c5b7cabf7"
+dependencies = [
+ "batuta-common",
+ "bincode",
+ "getrandom 0.2.17",
+ "memmap2",
+ "minijinja",
+ "provable-contracts-macros",
+ "rand 0.9.2",
+ "rand_chacha 0.9.0",
+ "rayon",
+ "rmp-serde",
+ "serde",
+ "serde_json",
+ "serde_yaml_ng",
+ "trueno 0.16.2",
  "trueno-quant",
 ]
 
@@ -3063,11 +3086,11 @@ checksum = "dc897dd8d9e8bd1ed8cdad82b5966c3e0ecae09fb1907d58efaa013543185d0a"
 
 [[package]]
 name = "renacer"
-version = "0.9.10"
+version = "0.10.0"
 dependencies = [
  "addr2line",
  "anyhow",
- "aprender",
+ "aprender 0.27.4",
  "arbitrary",
  "assert_cmd",
  "backtrace",
@@ -3106,7 +3129,7 @@ dependencies = [
  "toml",
  "tracing",
  "tracing-subscriber",
- "trueno",
+ "trueno 0.16.2",
  "trueno-db",
  "trueno-graph",
  "trueno-viz",
@@ -4133,6 +4156,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "trueno"
+version = "0.16.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2676205d0af0b161e0fb1805ed6b5cbfe32d10d3630d3572609c7fa07d53816e"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "hostname",
+ "num_cpus",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "toml",
+ "trueno-quant",
+]
+
+[[package]]
 name = "trueno-db"
 version = "0.3.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4156,7 +4196,7 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-subscriber",
- "trueno",
+ "trueno 0.15.0",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
@@ -4169,12 +4209,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "516bd31de3fc84dee42266f2360f15baf307c32f8573d27a22944a6bd192fad5"
 dependencies = [
  "anyhow",
- "aprender",
+ "aprender 0.26.3",
  "arrow",
  "parquet",
  "thiserror 2.0.18",
  "tokio",
- "trueno",
+ "trueno 0.15.0",
  "trueno-db",
 ]
 
@@ -4189,9 +4229,9 @@ dependencies = [
 
 [[package]]
 name = "trueno-viz"
-version = "0.1.27"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "882ffd53613bef43526c08f0a87d6058a10c276a599c7055caa985103475faf9"
+checksum = "6a8517b57060a70bcda986e3560fb9369af165fccf0c05dd593bd2db231d7e8f"
 dependencies = [
  "base64",
  "batuta-common",
@@ -4203,7 +4243,7 @@ dependencies = [
  "serde",
  "serde_yaml_ng",
  "thiserror 2.0.18",
- "trueno",
+ "trueno 0.16.2",
 ]
 
 [[package]]
