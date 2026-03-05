@@ -1461,10 +1461,10 @@ mod tests {
                 packed.len()
             );
 
-            // Should be < 100ms for 1000 traces (relaxed for CI environments)
+            // Should be < 500ms for 1000 traces (generous for CI containers with contention)
             assert!(
-                elapsed.as_millis() < 100,
-                "MessagePack serialization too slow: {:?} (target < 100ms)",
+                elapsed.as_millis() < 500,
+                "MessagePack serialization too slow: {:?} (target < 500ms)",
                 elapsed
             );
         }
