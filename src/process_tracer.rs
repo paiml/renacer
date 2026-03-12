@@ -946,8 +946,8 @@ impl SyscallCollector {
     fn handle_syscall_stop(&mut self, nix_pid: Pid) -> Result<(), TracerError> {
         if self.in_syscall {
             let duration = self.syscall_start.elapsed();
-            let regs = ptrace::getregs(nix_pid)?;
-            let result = regs.rax as i64;
+            let regs = crate::arch::PtraceRegs::get_nix(nix_pid)?;
+            let result = regs.syscall_return();
 
             self.events.push(SyscallEvent {
                 syscall: syscall_name(self.current_syscall_nr).to_string(),
@@ -958,8 +958,8 @@ impl SyscallCollector {
             });
             self.in_syscall = false;
         } else {
-            let regs = ptrace::getregs(nix_pid)?;
-            self.current_syscall_nr = regs.orig_rax as i64;
+            let regs = crate::arch::PtraceRegs::get_nix(nix_pid)?;
+            self.current_syscall_nr = regs.syscall_number();
             self.syscall_start = Instant::now();
             self.in_syscall = true;
         }
@@ -1095,11 +1095,11 @@ impl Iterator for SyscallStream {
                     if in_syscall {
                         // Syscall exit - return event
                         let duration = syscall_start.elapsed();
-                        let regs = match ptrace::getregs(nix_pid) {
+                        let regs = match crate::arch::PtraceRegs::get_nix(nix_pid) {
                             Ok(r) => r,
                             Err(e) => return Some(Err(TracerError::PtraceError(e))),
                         };
-                        let result = regs.rax as i64;
+                        let result = regs.syscall_return();
 
                         return Some(Ok(SyscallEvent {
                             syscall: syscall_name(current_syscall_nr).to_string(),
@@ -1110,11 +1110,11 @@ impl Iterator for SyscallStream {
                         }));
                     } else {
                         // Syscall entry
-                        let regs = match ptrace::getregs(nix_pid) {
+                        let regs = match crate::arch::PtraceRegs::get_nix(nix_pid) {
                             Ok(r) => r,
                             Err(e) => return Some(Err(TracerError::PtraceError(e))),
                         };
-                        current_syscall_nr = regs.orig_rax as i64;
+                        current_syscall_nr = regs.syscall_number();
                         syscall_start = Instant::now();
                         in_syscall = true;
 

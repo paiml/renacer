@@ -7,7 +7,6 @@
 //! remote process's memory and registers to reconstruct the call stack.
 
 use anyhow::{Context, Result};
-use nix::sys::ptrace;
 use nix::sys::uio::{process_vm_readv, RemoteIoVec};
 use nix::unistd::Pid;
 use std::io::IoSliceMut;
@@ -31,22 +30,22 @@ pub struct StackFrame {
 ///
 /// # Algorithm
 ///
-/// 1. Get current RIP and RBP from registers
-/// 2. Walk the frame pointer chain (RBP) to find return addresses
-/// 3. Stop when RBP is 0, points to invalid memory, or exceeds max depth
+/// 1. Get current PC and FP from registers
+/// 2. Walk the frame pointer chain to find return addresses
+/// 3. Stop when FP is 0, points to invalid memory, or exceeds max depth
 ///
 /// # Note
 ///
-/// This uses the traditional `x86_64` frame pointer convention. It may not
-/// work correctly with binaries compiled with `-fomit-frame-pointer`.
+/// This uses the frame pointer convention (RBP on x86_64, x29 on aarch64).
+/// It may not work correctly with binaries compiled with `-fomit-frame-pointer`.
 pub fn unwind_stack(pid: Pid) -> Result<Vec<StackFrame>> {
     let mut frames = Vec::with_capacity(16);
 
-    // Get current registers
-    let regs = ptrace::getregs(pid).context("Failed to get registers for stack unwinding")?;
+    // Get current registers (arch-neutral)
+    let regs = crate::arch::PtraceRegs::get(pid)?;
 
-    let rip = regs.rip;
-    let mut rbp = regs.rbp;
+    let rip = regs.instruction_pointer();
+    let mut rbp = regs.frame_pointer();
 
     // Add current frame
     frames.push(StackFrame { rip, rbp });

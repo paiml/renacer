@@ -1442,10 +1442,9 @@ fn handle_syscall_entry(
     function_profiling_enabled: bool,
     transpiler_map: Option<&crate::transpiler_map::TranspilerMap>,
 ) -> Result<Option<SyscallEntry>> {
-    let regs = ptrace::getregs(child).context("Failed to get registers")?;
+    let regs = crate::arch::PtraceRegs::get(child)?;
 
-    // On x86_64: syscall number in orig_rax
-    let syscall_num = regs.orig_rax as i64;
+    let syscall_num = regs.syscall_number();
 
     // Get syscall name
     let name = syscalls::syscall_name(syscall_num);
@@ -1456,14 +1455,13 @@ fn handle_syscall_entry(
         return Ok(None);
     }
 
-    // Arguments in rdi, rsi, rdx, r10, r8, r9 for x86_64
-    let arg1 = regs.rdi;
-    let arg2 = regs.rsi;
-    let arg3 = regs.rdx;
+    let arg1 = regs.arg1();
+    let arg2 = regs.arg2();
+    let arg3 = regs.arg3();
 
     // Sprint 5-6: Look up source location using instruction pointer if DWARF is available
     let source_info = if let Some(ctx) = dwarf_ctx {
-        let ip = regs.rip;
+        let ip = regs.instruction_pointer();
         ctx.lookup(ip).ok().flatten()
     } else {
         None
@@ -1790,8 +1788,8 @@ fn handle_syscall_exit(
     timing_mode: bool,
     duration_us: u64,
 ) -> Result<()> {
-    let regs = ptrace::getregs(child).context("Failed to get registers")?;
-    let result = regs.rax as i64;
+    let regs = crate::arch::PtraceRegs::get(child)?;
+    let result = regs.syscall_return();
 
     // Check modes before borrowing
     let in_stats_mode = tracers.stats_tracker.is_some();
