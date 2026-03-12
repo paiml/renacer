@@ -668,7 +668,10 @@ cargo deny check
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
-### v0.6.6 ✅ (Current - 2025-11-30)
+### v0.10.0 ✅ (Current)
+- See [CHANGELOG.md](CHANGELOG.md) for details
+
+### v0.6.6 ✅ (2025-11-30)
 - Experiment Span Tracking - ML experiment integration with entrenar (REN-001)
 - SpanType::Experiment variant for ML training spans
 - ExperimentMetadata struct (model_name, epoch, step, loss, metrics)
