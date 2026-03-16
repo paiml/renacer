@@ -850,7 +850,8 @@ impl DecisionGraph {
             let input_str = serde_json::to_string(input_j).unwrap_or_default();
 
             // Look for matching values (simplified heuristic)
-            if input_str.contains(&result_str[1..result_str.len() - 1]) {
+            // Need at least 3 chars to strip outer delimiters (e.g., `"x"`)
+            if result_str.len() >= 3 && input_str.contains(&result_str[1..result_str.len() - 1]) {
                 return true;
             }
         }
