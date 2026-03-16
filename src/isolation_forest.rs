@@ -180,6 +180,10 @@ impl IsolationForest {
             return 0.0;
         }
 
+        if self.trees.is_empty() {
+            return 0.5; // No trees → indeterminate score
+        }
+
         // Average path length across all trees
         let avg_path_length: f64 =
             self.trees.iter().map(|tree| tree.path_length(sample)).sum::<f64>()
@@ -187,6 +191,9 @@ impl IsolationForest {
 
         // Normalize by expected path length
         let c = IsolationNode::average_path_length(self.subsample_size);
+        if c == 0.0 {
+            return 0.5; // subsample_size <= 1 → indeterminate
+        }
         2_f64.powf(-avg_path_length / c)
     }
 
