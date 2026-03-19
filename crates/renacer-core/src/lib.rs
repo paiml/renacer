@@ -27,11 +27,13 @@
 //! ```
 
 pub mod lazy_span;
+pub mod phase_timer;
 pub mod span_pool;
 pub mod span_record;
 pub mod trace_context;
 
 pub use lazy_span::LazySpan;
+pub use phase_timer::PhaseTimer;
 pub use span_pool::SpanPool;
 pub use span_record::{SpanKind, SpanRecord, StatusCode};
 pub use trace_context::{LamportClock, TraceContext};
