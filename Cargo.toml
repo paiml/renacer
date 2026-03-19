@@ -1,5 +1,6 @@
 [workspace]
 resolver = "2"
+members = [".", "crates/renacer-core"]
 
 [workspace.package]
 version = "0.10.1"
@@ -51,6 +52,9 @@ nix = { version = "0.30", default-features = false, features = ["ptrace", "proce
 libc = "0.2"
 
 # Error handling
+# PMAT-284: Core tracing primitives (extracted to break circular dep)
+renacer-core = { version = "0.1", path = "crates/renacer-core" }
+
 anyhow = "1.0"
 thiserror = "2.0"
 
