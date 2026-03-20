@@ -3,6 +3,7 @@
 //! Demonstrates the SIMD-accelerated ring buffer and statistics
 //! for real-time visualization in renacer.
 //!
+#![allow(clippy::unwrap_used)]
 //! # Run
 //!
 //! ```bash

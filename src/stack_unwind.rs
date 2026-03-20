@@ -108,9 +108,9 @@ mod tests {
     #[test]
     fn test_stack_frame_clone() {
         let frame = StackFrame { rip: 0xDEADBEEF, rbp: 0xCAFEBABE };
-        let cloned = frame.clone();
-        assert_eq!(cloned.rip, 0xDEADBEEF);
-        assert_eq!(cloned.rbp, 0xCAFEBABE);
+        let copied = frame;
+        assert_eq!(copied.rip, 0xDEADBEEF);
+        assert_eq!(copied.rbp, 0xCAFEBABE);
     }
 
     #[test]

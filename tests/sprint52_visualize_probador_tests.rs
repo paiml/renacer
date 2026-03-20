@@ -13,7 +13,10 @@
 //! - Performance: 5 tests
 //! - Invariants: 10 tests
 //! - Edge cases: 12 tests
+//!
 //! Total: 100 tests
+
+#![allow(clippy::unwrap_used, clippy::clone_on_copy, clippy::doc_lazy_continuation)]
 
 use crossterm::event::{KeyCode, KeyModifiers};
 use ratatui::style::Color;

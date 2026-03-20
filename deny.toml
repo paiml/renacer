@@ -8,7 +8,9 @@ all-features = false
 no-default-features = false
 
 [advisories]
-ignore = []
+# RUSTSEC-2026-0002: lru IterMut stacked borrows violation — transitive via ratatui 0.29,
+# we don't use IterMut directly. Will be resolved when ratatui upgrades to lru 0.13+.
+ignore = ["RUSTSEC-2026-0002"]
 
 [licenses]
 allow = [

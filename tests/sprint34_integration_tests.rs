@@ -7,6 +7,7 @@
 // Cleanup: docker-compose -f docker-compose-test.yml down
 
 #![allow(deprecated)] // assert_cmd::Command::cargo_bin deprecation
+#![allow(unreachable_pub)] // Test utility structs
 
 mod utils;
 

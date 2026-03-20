@@ -3,11 +3,11 @@
 //! Popper Falsification Criteria:
 //! - Counter.inc() must complete in <50ns (p99)
 //! - Histogram.observe() must complete in <200ns (SIMD)
-//! - 100 threads × 1M increments must yield exactly 100M (atomicity)
+//! - 100 threads x 1M increments must yield exactly 100M (atomicity)
+
+#![allow(clippy::unwrap_used, clippy::semicolon_if_nothing_returned)]
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use std::sync::Arc;
-use std::thread;
 
 use renacer::metrics::{Counter, Gauge, Histogram, Labels, Registry, DEFAULT_BUCKETS};
 
@@ -126,9 +126,11 @@ fn bench_registry_operations(c: &mut Criterion) {
 }
 
 /// CRITICAL: Thread safety stress test
-/// 100 threads × 10K increments must yield exactly 1M
+/// 100 threads x 10K increments must yield exactly 1M
 #[test]
 fn test_counter_thread_safety_stress() {
+    use std::sync::Arc;
+    use std::thread;
     let counter = Arc::new(Counter::new("stress_counter", Labels::new()));
     let num_threads = 100;
     let increments_per_thread = 10_000;
@@ -159,6 +161,8 @@ fn test_counter_thread_safety_stress() {
 /// CRITICAL: Histogram thread safety stress test
 #[test]
 fn test_histogram_thread_safety_stress() {
+    use std::sync::Arc;
+    use std::thread;
     let histogram = Arc::new(Histogram::new("stress_histogram", Labels::new(), DEFAULT_BUCKETS));
     let num_threads = 50;
     let observations_per_thread = 10_000;

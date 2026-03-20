@@ -3,6 +3,7 @@
 //! This test suite covers all core features of renacer using property-based testing
 //! with proptest. Designed to run under 30 seconds as a pre-commit quality gate.
 //!
+#![allow(clippy::unwrap_used, clippy::clone_on_copy)]
 //! Core features tested:
 //! 1. Syscall tracing and filtering
 //! 2. DWARF debug info parsing

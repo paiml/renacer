@@ -3,6 +3,8 @@
 //! Implements `renacer validate` for golden trace comparison.
 //!
 //! # Toyota Way Principle
+
+#![allow(clippy::unwrap_used)]
 //!
 //! *Jidoka* (自動化) - Stop on regression detection (Andon principle)
 //!

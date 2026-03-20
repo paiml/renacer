@@ -144,7 +144,7 @@ fn main() {
     // Create TraceResult with anomaly detection
     println!("\n7. Building TraceResult with anomaly detection...");
     let result =
-        TraceResult::new(std::process::id(), Duration::from_micros(total_time_us as u64), events)
+        TraceResult::new(std::process::id(), Duration::from_micros(total_time_us), events)
             .with_baseline(&baseline, config.anomaly_threshold);
 
     println!("   PID: {}", result.pid);

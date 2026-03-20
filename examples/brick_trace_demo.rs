@@ -3,6 +3,7 @@
 //! This example demonstrates how to use renacer's ComputeBrick tracing
 //! to detect performance anomalies and get syscall-level visibility.
 //!
+#![allow(clippy::unwrap_used)]
 //! # Background
 //!
 //! The BrickTracer integrates with trueno's cbtop to provide escalation

@@ -1184,7 +1184,7 @@ mod tests {
         }
 
         // We can't actually attach to ourselves, so spawn a child
-        let child = std::process::Command::new("sleep")
+        let mut child = std::process::Command::new("sleep")
             .arg("10")
             .spawn()
             .expect("Failed to spawn test process");
@@ -1194,8 +1194,9 @@ mod tests {
 
         let result = attach(child_pid, config);
 
-        // Clean up
+        // Clean up — kill and wait to avoid zombie
         std::process::Command::new("kill").args(["-9", &child_pid.to_string()]).output().ok();
+        let _ = child.wait();
 
         // If we got permission denied, that's expected in some environments
         match result {
@@ -1243,7 +1244,7 @@ mod tests {
         assert!(
             matches!(
                 result,
-                Err(TracerError::PermissionDenied(_)) | Err(TracerError::ProcessNotFound { .. })
+                Err(TracerError::PermissionDenied(_) | TracerError::ProcessNotFound { .. })
             ),
             "Expected PermissionDenied or ProcessNotFound, got {:?}",
             result

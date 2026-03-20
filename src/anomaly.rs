@@ -380,7 +380,7 @@ mod tests {
         // Should not panic
         detector.print_summary();
 
-        assert!(detector.get_anomalies().len() >= 1);
+        assert!(!detector.get_anomalies().is_empty());
     }
 
     #[test]
@@ -522,8 +522,7 @@ mod tests {
         // Anomalously fast syscall
         let result = detector.record_and_check("write", 1);
         // This would be a negative z-score - anomalously fast
-        if result.is_some() {
-            let anomaly = result.unwrap();
+        if let Some(anomaly) = result {
             assert!(anomaly.z_score < 0.0);
         }
     }

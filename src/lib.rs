@@ -4,6 +4,9 @@
 //! in Rust binaries, with support for DWARF debug information, function profiling,
 //! and comprehensive filtering.
 
+// Allow unwrap/expect in test code — production code is lint-clean
+#![cfg_attr(test, allow(clippy::unwrap_used, clippy::unwrap_in_result))]
+
 pub mod adaptive_backend; // Sprint 40: Adaptive Backend Selection (Specification Section 5.2)
 pub mod adaptive_sampler; // Sprint 40: Adaptive Sampling (Specification Section 7.3)
 pub mod analysis; // REN-002: Architectural anti-pattern detection (§27)
