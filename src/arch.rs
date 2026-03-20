@@ -106,8 +106,6 @@ impl PtraceRegs {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[test]
     fn test_ptrace_regs_struct_exists() {
         // Verify the type compiles on this architecture
