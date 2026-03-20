@@ -24,7 +24,6 @@
 //!
 //! Output: `[PMAT-283] iter=42, m=4: lock=3µs sched=12µs decode=7412µs dist=84µs total=7511µs`
 
-use std::sync::OnceLock;
 use std::time::Instant;
 
 /// Lightweight sub-phase timer for hot-path instrumentation.
@@ -46,8 +45,6 @@ impl PhaseTimer {
     ///
     /// Returns a disabled (zero-cost) timer if the env var is unset or != "1".
     pub fn from_env(env_var: &'static str, label: &'static str) -> Self {
-        // Cache the env lookup
-        static CACHE: OnceLock<Vec<(&str, bool)>> = OnceLock::new();
         let enabled = std::env::var(env_var).map(|v| v == "1").unwrap_or(false);
         Self {
             enabled,
