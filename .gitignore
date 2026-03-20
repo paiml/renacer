@@ -24,12 +24,21 @@ target
 *.proptest-regressions
 book/book/
 
-# PMAT
+# PMAT (all generated DB/index/cache files)
+.pmat/context.db
+.pmat/context.db-shm
+.pmat/context.db-wal
+.pmat/coverage-cache.json
+.pmat/bug-hunter-cache/
 .pmat/backup/
 .pmat-qa/
 .pmat/context.idx/
 .pmat/workspace.idx/
 .pmat/deps-cache.json
+
+# Compiled test/bench fixtures (rebuild with: make build-fixtures)
+tests/fixtures/simple_program
+benches/fixtures/syscall_heavy
 
 # Machine-specific cargo config (contains local target-dir paths)
 .cargo/config.toml

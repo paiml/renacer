@@ -4,7 +4,7 @@
 .SUFFIXES:
 
 .PHONY: help test coverage coverage-html coverage-clean mutants mutants-quick clean build release lint format check \
-	tier1 tier2 tier3 chaos-test chaos-full check-regression fuzz benchmark bench install-llvm verify-llvm
+	tier1 tier2 tier3 chaos-test chaos-full check-regression fuzz benchmark bench install-llvm verify-llvm build-fixtures
 
 # =============================================================================
 # Installation & Dependencies
@@ -77,6 +77,16 @@ verify-llvm: ## Verify LLVM/Clang installation
 	fi
 
 # =============================================================================
+# Fixtures (compiled ELF binaries for tests/benchmarks)
+# =============================================================================
+
+build-fixtures: ## Build test/bench fixture binaries from source
+	@echo "Building test fixtures..."
+	@rustc tests/fixtures/simple_program.rs -o tests/fixtures/simple_program -g
+	@rustc benches/fixtures/syscall_heavy.rs -o benches/fixtures/syscall_heavy -g
+	@echo "Fixtures built."
+
+# =============================================================================
 # Testing & Quality
 # =============================================================================
 
@@ -86,7 +96,7 @@ help: ## Show this help message
 	@echo "Available targets:"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-test: ## Run tests (fast, no coverage)
+test: build-fixtures ## Run tests (fast, no coverage)
 	@echo "🧪 Running tests..."
 	@cargo test --quiet
 
