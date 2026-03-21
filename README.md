@@ -12,6 +12,7 @@
 
 <p align="center">
   <a href="https://github.com/paiml/renacer/actions/workflows/ci.yml"><img src="https://github.com/paiml/renacer/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+[![Documentation](https://docs.rs/renacer/badge.svg)](https://docs.rs/renacer)
 </p>
 
 </div>
@@ -724,6 +725,10 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 ## MSRV
 
 Minimum Supported Rust Version: **1.75**
+
+## See Also
+
+- [Cookbook](https://github.com/paiml/sovereign-ai-cookbook)
 
 ## License
 
