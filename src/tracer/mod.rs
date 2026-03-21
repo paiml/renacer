@@ -2,6 +2,10 @@
 //!
 //! Sprint 3-4: Trace all syscalls with name resolution
 
+mod ml_analysis;
+mod output;
+mod syscall_handling;
+
 use anyhow::{Context, Result};
 use nix::sys::ptrace;
 use nix::sys::wait::{waitpid, WaitStatus};
@@ -9,8 +13,6 @@ use nix::unistd::{fork, ForkResult, Pid};
 use std::os::unix::process::CommandExt;
 use std::process::Command;
 use tracing::{info, trace, warn};
-
-use crate::syscalls;
 
 /// Real-time syscall event for visualization (Sprint 52-55)
 #[derive(Debug, Clone)]
@@ -36,7 +38,7 @@ pub struct TracerConfig {
     pub profile_self: bool,
     pub function_time: bool,
     pub stats_extended: bool,   // Sprint 19: Extended statistics with Trueno
-    pub anomaly_threshold: f32, // Sprint 19: Anomaly detection threshold (σ)
+    pub anomaly_threshold: f32, // Sprint 19: Anomaly detection threshold (sigma)
     pub anomaly_realtime: bool, // Sprint 20: Real-time anomaly detection
     pub anomaly_window_size: usize, // Sprint 20: Sliding window size
     pub hpu_analysis: bool,     // Sprint 21: HPU-accelerated analysis (GPU if available)
@@ -49,7 +51,7 @@ pub struct TracerConfig {
     pub ml_outlier_trees: usize, // Sprint 22: Number of trees
     pub explain: bool,          // Sprint 22: Enable explainability
     pub dl_anomaly: bool,       // Sprint 23: Deep Learning Autoencoder anomaly detection
-    pub dl_threshold: f32,      // Sprint 23: Reconstruction error threshold (σ multiplier)
+    pub dl_threshold: f32,      // Sprint 23: Reconstruction error threshold (sigma multiplier)
     pub dl_hidden_size: usize,  // Sprint 23: Autoencoder hidden layer size
     pub dl_epochs: usize,       // Sprint 23: Training epochs
     pub trace_transpiler_decisions: bool, // Sprint 26: Trace transpiler compile-time decisions
@@ -506,7 +508,7 @@ fn process_syscall_entry(
 ) -> Result<Option<SyscallEntry>> {
     if let Some(prof) = profiling_ctx {
         prof.measure(crate::profiling::ProfilingCategory::Other, || {
-            handle_syscall_entry(
+            syscall_handling::handle_syscall_entry(
                 child,
                 dwarf_ctx,
                 &config.filter,
@@ -517,7 +519,7 @@ fn process_syscall_entry(
             )
         })
     } else {
-        handle_syscall_entry(
+        syscall_handling::handle_syscall_entry(
             child,
             dwarf_ctx,
             &config.filter,
@@ -541,297 +543,26 @@ fn process_syscall_exit(
     if let Some(mut prof) = tracers.profiling_ctx.take() {
         // Temporarily take profiling_ctx out to avoid borrow conflict
         let result = prof.measure(crate::profiling::ProfilingCategory::Other, || {
-            handle_syscall_exit(child, current_syscall_entry, tracers, timing_mode, duration_us)
+            syscall_handling::handle_syscall_exit(
+                child,
+                current_syscall_entry,
+                tracers,
+                timing_mode,
+                duration_us,
+            )
         });
         prof.record_syscall();
         // Put profiling_ctx back
         tracers.profiling_ctx = Some(prof);
         result
     } else {
-        handle_syscall_exit(child, current_syscall_entry, tracers, timing_mode, duration_us)
-    }
-}
-
-/// Print text statistics summary
-///
-/// Sprint 32: Now accepts optional `OtlpExporter` for compute block tracing
-fn print_text_stats(
-    stats_tracker: &Option<crate::stats::StatsTracker>,
-    stats_extended: bool,
-    anomaly_threshold: f32,
-    #[cfg(feature = "otlp")] otlp_exporter: Option<&crate::otlp_exporter::OtlpExporter>,
-    #[cfg(not(feature = "otlp"))] _otlp_exporter: Option<&()>,
-) {
-    if let Some(ref tracker) = stats_tracker {
-        tracker.print_summary();
-        if stats_extended {
-            #[cfg(feature = "otlp")]
-            tracker.print_extended_summary(anomaly_threshold, otlp_exporter);
-            #[cfg(not(feature = "otlp"))]
-            tracker.print_extended_summary(anomaly_threshold, _otlp_exporter);
-        }
-    }
-}
-
-/// Print JSON output
-fn print_json_output(mut output: crate::json_output::JsonOutput, exit_code: i32) {
-    output.set_exit_code(exit_code);
-    match output.to_json() {
-        Ok(json) => println!("{json}"),
-        Err(e) => eprintln!("Failed to serialize JSON: {e}"),
-    }
-}
-
-/// Generate and populate ML analysis for JSON output
-fn generate_ml_analysis_for_json(
-    stats_tracker: &Option<crate::stats::StatsTracker>,
-    ml_clusters: usize,
-) -> Option<crate::ml_anomaly::MlAnomalyReport> {
-    if let Some(ref tracker) = stats_tracker {
-        let mut ml_data = std::collections::HashMap::new();
-        for (syscall_name, stats) in tracker.stats_map() {
-            let total_time_ns = stats.total_time_us * 1000;
-            ml_data.insert(syscall_name.clone(), (stats.count, total_time_ns));
-        }
-        let analyzer = crate::ml_anomaly::MlAnomalyAnalyzer::new(ml_clusters);
-        Some(analyzer.analyze(&ml_data))
-    } else {
-        None
-    }
-}
-
-/// Generate Isolation Forest analysis for JSON output (Sprint 22)
-fn generate_isolation_forest_analysis_for_json(
-    stats_tracker: &Option<crate::stats::StatsTracker>,
-    num_trees: usize,
-    contamination: f32,
-    explain: bool,
-) -> Option<crate::isolation_forest::OutlierReport> {
-    if let Some(ref tracker) = stats_tracker {
-        let mut data = std::collections::HashMap::new();
-        for (syscall_name, stats) in tracker.stats_map() {
-            let total_time_ns = stats.total_time_us * 1000;
-            data.insert(syscall_name.clone(), (stats.count, total_time_ns));
-        }
-        Some(crate::isolation_forest::analyze_outliers(&data, num_trees, contamination, explain))
-    } else {
-        None
-    }
-}
-
-/// Generate Autoencoder analysis for JSON output (Sprint 23)
-fn generate_autoencoder_analysis_for_json(
-    stats_tracker: &Option<crate::stats::StatsTracker>,
-    hidden_size: usize,
-    epochs: usize,
-    threshold: f64,
-    explain: bool,
-) -> Option<crate::autoencoder::AutoencoderReport> {
-    if let Some(ref tracker) = stats_tracker {
-        let mut data = std::collections::HashMap::new();
-        for (syscall_name, stats) in tracker.stats_map() {
-            let total_time_ns = stats.total_time_us * 1000;
-            data.insert(syscall_name.clone(), (stats.count, total_time_ns));
-        }
-        Some(crate::autoencoder::analyze_anomalies(&data, hidden_size, epochs, threshold, explain))
-    } else {
-        None
-    }
-}
-
-/// Print CSV statistics output
-fn print_csv_stats(
-    mut csv_stats: crate::csv_output::CsvStatsOutput,
-    stats_tracker: &Option<crate::stats::StatsTracker>,
-    timing_mode: bool,
-    stats_extended: bool,
-    anomaly_threshold: f32,
-) {
-    if let Some(ref tracker) = stats_tracker {
-        for (syscall_name, stats) in tracker.stats_map() {
-            let total_time_us = if timing_mode { Some(stats.total_time_us) } else { None };
-            csv_stats.add_stat(crate::csv_output::CsvStat {
-                syscall: syscall_name.clone(),
-                calls: stats.count,
-                errors: stats.errors,
-                total_time_us,
-            });
-        }
-        if stats_extended {
-            // Note: CSV output doesn't get OTLP tracing - pass None
-            #[cfg(feature = "otlp")]
-            tracker.print_extended_summary(anomaly_threshold, None);
-            #[cfg(not(feature = "otlp"))]
-            tracker.print_extended_summary(anomaly_threshold, None);
-        }
-    }
-    print!("{}", csv_stats.to_csv(timing_mode));
-}
-
-/// Print HPU analysis report
-fn print_hpu_analysis(stats_tracker: &Option<crate::stats::StatsTracker>, hpu_cpu_only: bool) {
-    if let Some(ref tracker) = stats_tracker {
-        let mut hpu_data = std::collections::HashMap::new();
-        for (syscall_name, stats) in tracker.stats_map() {
-            let total_time_ns = stats.total_time_us * 1000;
-            hpu_data.insert(syscall_name.clone(), (stats.count, total_time_ns));
-        }
-        let profiler = crate::hpu::HPUProfiler::new(hpu_cpu_only);
-        let report = profiler.analyze(&hpu_data);
-        print!("{}", report.format());
-    }
-}
-
-/// Print ML anomaly analysis report (Sprint 23)
-fn print_ml_analysis(
-    stats_tracker: &Option<crate::stats::StatsTracker>,
-    ml_clusters: usize,
-    ml_compare: bool,
-    anomaly_threshold: f32,
-) {
-    if let Some(ref tracker) = stats_tracker {
-        let mut ml_data = std::collections::HashMap::new();
-        for (syscall_name, stats) in tracker.stats_map() {
-            let total_time_ns = stats.total_time_us * 1000;
-            ml_data.insert(syscall_name.clone(), (stats.count, total_time_ns));
-        }
-        let analyzer = crate::ml_anomaly::MlAnomalyAnalyzer::new(ml_clusters);
-        let report = analyzer.analyze(&ml_data);
-
-        if ml_compare {
-            // Compare with z-score anomaly detection
-            let mut zscore_anomalies = Vec::new();
-            for syscall_name in tracker.stats_map().keys() {
-                // Note: Pass None - this is for comparison, not primary compute
-                #[cfg(feature = "otlp")]
-                let extended = tracker.calculate_extended_statistics(syscall_name, None);
-                #[cfg(not(feature = "otlp"))]
-                let extended = tracker.calculate_extended_statistics(syscall_name, None);
-
-                if let Some(extended) = extended {
-                    if extended.stddev > 0.0 {
-                        let z_score = (extended.max - extended.mean) / extended.stddev;
-                        if z_score > anomaly_threshold {
-                            zscore_anomalies.push((syscall_name.clone(), f64::from(z_score)));
-                        }
-                    }
-                }
-            }
-            eprint!("{}", report.format_comparison(&zscore_anomalies));
-        } else {
-            eprint!("{}", report.format());
-        }
-    }
-}
-
-/// Print Isolation Forest outlier analysis report (Sprint 22)
-fn print_isolation_forest_analysis(
-    stats_tracker: &Option<crate::stats::StatsTracker>,
-    num_trees: usize,
-    contamination: f32,
-    explain: bool,
-) {
-    if let Some(ref tracker) = stats_tracker {
-        let mut data = std::collections::HashMap::new();
-        for (syscall_name, stats) in tracker.stats_map() {
-            let total_time_ns = stats.total_time_us * 1000;
-            data.insert(syscall_name.clone(), (stats.count, total_time_ns));
-        }
-
-        let report =
-            crate::isolation_forest::analyze_outliers(&data, num_trees, contamination, explain);
-
-        // Print report
-        eprintln!("\n=== Isolation Forest Anomaly Detection ===");
-        eprintln!(
-            "Trees: {}, Contamination: {:.1}%, Samples: {}\n",
-            report.num_trees,
-            report.contamination * 100.0,
-            report.total_samples
-        );
-
-        if report.outliers.is_empty() {
-            eprintln!("No outliers detected.");
-        } else {
-            eprintln!("Detected {} outlier(s):\n", report.outliers.len());
-            for outlier in &report.outliers {
-                eprintln!("  {} (anomaly score: {:.3})", outlier.syscall, outlier.anomaly_score);
-                eprintln!(
-                    "    Avg duration: {:.2} μs, Calls: {}",
-                    outlier.avg_duration_us, outlier.call_count
-                );
-
-                if explain && !outlier.feature_importance.is_empty() {
-                    eprintln!("    Feature Importance:");
-                    for (feature, importance) in &outlier.feature_importance {
-                        eprintln!("      {feature}: {importance:.1}%");
-                    }
-                }
-                eprintln!();
-            }
-        }
-        eprintln!("=========================================\n");
-    }
-}
-
-/// Print Autoencoder anomaly detection report (Sprint 23)
-fn print_autoencoder_analysis(
-    stats_tracker: &Option<crate::stats::StatsTracker>,
-    hidden_size: usize,
-    epochs: usize,
-    threshold: f32,
-    explain: bool,
-) {
-    if let Some(ref tracker) = stats_tracker {
-        let mut data = std::collections::HashMap::new();
-        for (syscall_name, stats) in tracker.stats_map() {
-            let total_time_ns = stats.total_time_us * 1000;
-            data.insert(syscall_name.clone(), (stats.count, total_time_ns));
-        }
-
-        let report = crate::autoencoder::analyze_anomalies(
-            &data,
-            hidden_size,
-            epochs,
-            f64::from(threshold),
-            explain,
-        );
-
-        // Print report
-        eprintln!("\n=== Autoencoder Anomaly Detection ===");
-        eprintln!(
-            "Hidden Size: {}, Epochs: {}, Threshold: {:.2}σ",
-            report.hidden_size, report.epochs, threshold
-        );
-        eprintln!(
-            "Samples: {}, Adaptive Threshold: {:.4}\n",
-            report.total_samples, report.threshold
-        );
-
-        if report.anomalies.is_empty() {
-            eprintln!("No anomalies detected.");
-        } else {
-            eprintln!("Detected {} anomal(y/ies):\n", report.anomalies.len());
-            for anomaly in &report.anomalies {
-                eprintln!(
-                    "  {} (reconstruction error: {:.4})",
-                    anomaly.syscall, anomaly.reconstruction_error
-                );
-                eprintln!(
-                    "    Avg duration: {:.2} μs, Calls: {}",
-                    anomaly.avg_duration_us, anomaly.call_count
-                );
-
-                if explain && !anomaly.feature_contributions.is_empty() {
-                    eprintln!("    Feature Contributions to Error:");
-                    for (feature, contribution) in &anomaly.feature_contributions {
-                        eprintln!("      {feature}: {contribution:.1}%");
-                    }
-                }
-                eprintln!();
-            }
-        }
-        eprintln!("======================================\n");
+        syscall_handling::handle_syscall_exit(
+            child,
+            current_syscall_entry,
+            tracers,
+            timing_mode,
+            duration_us,
+        )
     }
 }
 
@@ -848,242 +579,10 @@ struct AnalysisConfig {
     ml_outlier_threshold: f32, // Sprint 22: Contamination threshold
     ml_outlier_trees: usize,   // Sprint 22: Number of trees
     dl_anomaly: bool,          // Sprint 23: Deep Learning Autoencoder anomaly detection
-    dl_threshold: f32,         // Sprint 23: Reconstruction error threshold (σ multiplier)
+    dl_threshold: f32,         // Sprint 23: Reconstruction error threshold (sigma multiplier)
     dl_hidden_size: usize,     // Sprint 23: Hidden layer size
     dl_epochs: usize,          // Sprint 23: Training epochs
     explain: bool,             // Sprint 22/23: Enable explainability
-}
-
-/// Print optional profiling and tracing summaries
-fn print_optional_summaries(
-    profiling_ctx: Option<crate::profiling::ProfilingContext>,
-    function_profiler: Option<crate::function_profiler::FunctionProfiler>,
-    anomaly_detector: Option<crate::anomaly::AnomalyDetector>,
-) {
-    if let Some(ctx) = profiling_ctx {
-        ctx.print_summary();
-    }
-    if let Some(profiler) = function_profiler {
-        profiler.print_summary();
-    }
-    if let Some(detector) = anomaly_detector {
-        detector.print_summary();
-    }
-}
-/// Sprint 26: Print decision trace summary
-fn print_decision_trace_summary(decision_tracer: Option<crate::decision_trace::DecisionTracer>) {
-    if let Some(tracer) = decision_tracer {
-        if tracer.count() == 0 {
-            return;
-        }
-
-        // Sprint 27 Phase 3: Write to memory-mapped file (.ruchy/decisions.msgpack)
-        let mmap_path = std::path::Path::new(".ruchy/decisions.msgpack");
-        let manifest_path = std::path::Path::new(".ruchy/decision_manifest.json");
-
-        // Write MessagePack file
-        match tracer.write_to_msgpack(mmap_path) {
-            Ok(()) => {
-                println!("\n✅ Decision traces written to: {}", mmap_path.display());
-            }
-            Err(e) => {
-                eprintln!("⚠️  Failed to write decision traces to {}: {}", mmap_path.display(), e);
-            }
-        }
-
-        // Write manifest file
-        match tracer.write_manifest(
-            manifest_path,
-            "2.0.0",
-            None, // git_commit (could add via git2 crate)
-            Some(env!("CARGO_PKG_VERSION")),
-        ) {
-            Ok(()) => {
-                println!("✅ Decision manifest written to: {}", manifest_path.display());
-            }
-            Err(e) => {
-                eprintln!(
-                    "⚠️  Failed to write decision manifest to {}: {}",
-                    manifest_path.display(),
-                    e
-                );
-            }
-        }
-
-        // Also print summary to stdout for convenience
-        println!("\n=== Transpiler Decision Traces ===\n");
-
-        for trace in tracer.traces() {
-            // Format: category::name with input and result
-            print!("[{}::{}] ", trace.category, trace.name);
-
-            // Print input (compact JSON)
-            print!("input={}", trace.input);
-
-            // Print result if available
-            if let Some(ref result) = trace.result {
-                print!(" result={result}");
-            }
-
-            // Print decision_id if available (Sprint 27)
-            if let Some(decision_id) = trace.decision_id {
-                print!(" id=0x{decision_id:X}");
-            }
-
-            println!();
-        }
-
-        println!("\nTotal decision traces: {}", tracer.count());
-        println!("Decision manifest: {}", manifest_path.display());
-        println!("Binary traces: {}", mmap_path.display());
-    }
-}
-
-/// Print analysis summaries (HPU, ML, Isolation Forest, Autoencoder)
-fn print_analysis_summaries(
-    stats_tracker: &Option<crate::stats::StatsTracker>,
-    analysis: &AnalysisConfig,
-) {
-    if analysis.hpu_analysis {
-        print_hpu_analysis(stats_tracker, analysis.hpu_cpu_only);
-    }
-    if analysis.ml_anomaly {
-        print_ml_analysis(
-            stats_tracker,
-            analysis.ml_clusters,
-            analysis.ml_compare,
-            analysis.anomaly_threshold,
-        );
-    }
-    if analysis.ml_outliers {
-        print_isolation_forest_analysis(
-            stats_tracker,
-            analysis.ml_outlier_trees,
-            analysis.ml_outlier_threshold,
-            analysis.explain,
-        );
-    }
-    if analysis.dl_anomaly {
-        print_autoencoder_analysis(
-            stats_tracker,
-            analysis.dl_hidden_size,
-            analysis.dl_epochs,
-            analysis.dl_threshold,
-            analysis.explain,
-        );
-    }
-}
-
-/// Handle JSON output with ML analysis additions
-fn handle_json_output(
-    mut output: crate::json_output::JsonOutput,
-    stats_tracker: &Option<crate::stats::StatsTracker>,
-    analysis: &AnalysisConfig,
-    exit_code: i32,
-) {
-    if analysis.ml_anomaly {
-        if let Some(report) = generate_ml_analysis_for_json(stats_tracker, analysis.ml_clusters) {
-            output.set_ml_analysis(report);
-        }
-    }
-    if analysis.ml_outliers {
-        if let Some(report) = generate_isolation_forest_analysis_for_json(
-            stats_tracker,
-            analysis.ml_outlier_trees,
-            analysis.ml_outlier_threshold,
-            analysis.explain,
-        ) {
-            output.set_isolation_forest_analysis(report, analysis.explain);
-        }
-    }
-    if analysis.dl_anomaly {
-        if let Some(report) = generate_autoencoder_analysis_for_json(
-            stats_tracker,
-            analysis.dl_hidden_size,
-            analysis.dl_epochs,
-            f64::from(analysis.dl_threshold),
-            analysis.explain,
-        ) {
-            output.set_autoencoder_analysis(report, analysis.dl_threshold, analysis.explain);
-        }
-    }
-    print_json_output(output, exit_code);
-}
-
-/// Print all summaries at end of tracing
-fn print_summaries(tracers: Tracers, timing_mode: bool, exit_code: i32, analysis: &AnalysisConfig) {
-    let Tracers {
-        stats_tracker,
-        json_output,
-        csv_output,
-        csv_stats_output,
-        html_output,
-        profiling_ctx,
-        function_profiler,
-        anomaly_detector,
-        decision_tracer,
-        #[cfg(feature = "otlp")]
-        mut otlp_exporter,
-        visualizer_sink: _,
-    } = tracers;
-
-    // Sprint 31: Export decision traces to OTLP (before ending root span)
-    #[cfg(feature = "otlp")]
-    if let (Some(ref mut exporter), Some(ref tracer)) = (&mut otlp_exporter, &decision_tracer) {
-        for trace in tracer.traces() {
-            exporter.record_decision(
-                &trace.category,
-                &trace.name,
-                trace.result.as_ref().and_then(|v| v.as_str()),
-                trace.timestamp_us,
-            );
-        }
-    }
-
-    // Print statistics summary if in statistics mode (text format)
-    if stats_tracker.is_some() && csv_stats_output.is_none() {
-        #[cfg(feature = "otlp")]
-        print_text_stats(
-            &stats_tracker,
-            analysis.stats_extended,
-            analysis.anomaly_threshold,
-            otlp_exporter.as_ref(),
-        );
-        #[cfg(not(feature = "otlp"))]
-        print_text_stats(&stats_tracker, analysis.stats_extended, analysis.anomaly_threshold, None);
-    }
-
-    // Sprint 30: End root span and shutdown OTLP exporter
-    #[cfg(feature = "otlp")]
-    if let Some(ref mut exporter) = otlp_exporter {
-        exporter.end_root_span(exit_code);
-        exporter.shutdown();
-    }
-
-    // Handle output formats
-    if let Some(output) = json_output {
-        handle_json_output(output, &stats_tracker, analysis, exit_code);
-    }
-    if let Some(output) = csv_output {
-        print!("{}", output.to_csv());
-    }
-    if let Some(csv_stats) = csv_stats_output {
-        print_csv_stats(
-            csv_stats,
-            &stats_tracker,
-            timing_mode,
-            analysis.stats_extended,
-            analysis.anomaly_threshold,
-        );
-    }
-    if let Some(output) = html_output {
-        print!("{}", output.to_html(stats_tracker.as_ref()));
-    }
-
-    // Print profiling and tracing summaries
-    print_optional_summaries(profiling_ctx, function_profiler, anomaly_detector);
-    print_analysis_summaries(&stats_tracker, analysis);
-    print_decision_trace_summary(decision_tracer);
 }
 
 /// Per-process state for multi-process tracing
@@ -1289,7 +788,12 @@ fn trace_child(child: Pid, config: TracerConfig) -> Result<i32> {
 
     info!("exited main wait loop");
 
-    print_summaries(tracers, config.timing_mode, main_exit_code, &build_analysis_config(&config));
+    output::print_summaries(
+        tracers,
+        config.timing_mode,
+        main_exit_code,
+        &build_analysis_config(&config),
+    );
     Ok(main_exit_code)
 }
 
@@ -1305,572 +809,6 @@ struct SyscallEntry {
     raw_arg1: Option<u64>,
     raw_arg2: Option<u64>,
     _raw_arg3: Option<u64>,
-}
-
-/// Check if a function name belongs to libc/system code (not user code)
-fn is_system_function(name: &str) -> bool {
-    name.starts_with("__")
-        || name.contains("libc")
-        || name.contains("@plt")
-        || name.contains("@@GLIBC")
-}
-
-/// Extract user function name from a stack frame's DWARF info, if available.
-fn extract_user_function(
-    frame: &crate::stack_unwind::StackFrame,
-    dwarf_ctx: &crate::dwarf::DwarfContext,
-) -> Option<String> {
-    let source_info = dwarf_ctx.lookup(frame.rip).ok().flatten()?;
-    let func_name = source_info.function?;
-    if is_system_function(&func_name) {
-        return None;
-    }
-    Some(func_name.clone())
-}
-
-/// Find user function and its caller from stack unwinding
-/// Returns (`current_function`, `caller_function`)
-fn find_user_function_with_caller(
-    child: Pid,
-    dwarf_ctx: &crate::dwarf::DwarfContext,
-) -> Option<(String, Option<String>)> {
-    // Unwind the stack to get all frames
-    let frames = crate::stack_unwind::unwind_stack(child).ok()?;
-
-    let user_functions: Vec<String> =
-        frames.iter().filter_map(|frame| extract_user_function(frame, dwarf_ctx)).collect();
-
-    // Return the first user function and its caller (if available)
-    match user_functions.len() {
-        0 => None,
-        1 => Some((user_functions[0].clone(), None)),
-        _ => Some((user_functions[0].clone(), Some(user_functions[1].clone()))),
-    }
-}
-
-/// Format syscall arguments for JSON output
-fn format_syscall_args_for_json(
-    child: Pid,
-    name: &str,
-    arg1: u64,
-    arg2: u64,
-    arg3: u64,
-) -> Vec<String> {
-    match name {
-        "openat" => {
-            let filename =
-                read_string(child, arg2 as usize).unwrap_or_else(|_| format!("{arg2:#x}"));
-            vec![format!("{:#x}", arg1), format!("\"{}\"", filename), format!("{:#x}", arg3)]
-        }
-        _ => vec![format!("{:#x}", arg1), format!("{:#x}", arg2), format!("{:#x}", arg3)],
-    }
-}
-
-/// Print syscall entry with optional source location
-#[allow(clippy::too_many_arguments)]
-fn print_syscall_entry(
-    child: Pid,
-    name: &str,
-    syscall_num: i64,
-    arg1: u64,
-    arg2: u64,
-    arg3: u64,
-    source_info: &Option<crate::dwarf::SourceLocation>,
-    transpiler_map: Option<&crate::transpiler_map::TranspilerMap>,
-) {
-    // Print source location if available
-    if let Some(src) = source_info {
-        // Try to map to transpiler source first
-        if let Some(transpiled_source) = map_to_transpiler_source(src, transpiler_map) {
-            // Show both Rust and original source
-            print!("{transpiled_source} ");
-        } else {
-            // Show just Rust source from DWARF
-            print!("{}:{} ", src.file, src.line);
-            if let Some(func) = &src.function {
-                print!("{func} ");
-            }
-        }
-    }
-
-    // Print syscall with arguments
-    match name {
-        "openat" => {
-            let filename =
-                read_string(child, arg2 as usize).unwrap_or_else(|_| format!("{arg2:#x}"));
-            print!("{name}({arg1:#x}, \"{filename}\", {arg3:#x}) = ");
-        }
-        "unknown" => {
-            print!("syscall_{syscall_num}({arg1:#x}, {arg2:#x}, {arg3:#x}) = ");
-        }
-        _ => {
-            print!("{name}({arg1:#x}, {arg2:#x}, {arg3:#x}) = ");
-        }
-    }
-    std::io::Write::flush(&mut std::io::stdout()).ok();
-}
-
-/// Extract function name and caller from DWARF context
-fn extract_function_names(
-    child: Pid,
-    dwarf_ctx: Option<&crate::dwarf::DwarfContext>,
-    source_info: &Option<crate::dwarf::SourceLocation>,
-    function_profiling_enabled: bool,
-) -> (Option<String>, Option<String>) {
-    if function_profiling_enabled {
-        if let Some(ctx) = dwarf_ctx {
-            find_user_function_with_caller(child, ctx)
-                .map_or((None, None), |(func, caller)| (Some(func), caller))
-        } else {
-            let func = source_info.as_ref().and_then(|src| src.function.clone());
-            (func, None)
-        }
-    } else {
-        let func = source_info.as_ref().and_then(|src| src.function.clone());
-        (func, None)
-    }
-}
-
-/// Handle syscall entry - record syscall number and arguments
-/// Returns the syscall entry data if it should be traced, None otherwise
-fn handle_syscall_entry(
-    child: Pid,
-    dwarf_ctx: Option<&crate::dwarf::DwarfContext>,
-    filter: &crate::filter::SyscallFilter,
-    statistics_mode: bool,
-    structured_output: bool,
-    function_profiling_enabled: bool,
-    transpiler_map: Option<&crate::transpiler_map::TranspilerMap>,
-) -> Result<Option<SyscallEntry>> {
-    let regs = crate::arch::PtraceRegs::get(child)?;
-
-    let syscall_num = regs.syscall_number();
-
-    // Get syscall name
-    let name = syscalls::syscall_name(syscall_num);
-
-    // Sprint 9-10: Filter syscalls based on -e trace= expression
-    if !filter.should_trace(name) {
-        // Don't print or track this syscall
-        return Ok(None);
-    }
-
-    let arg1 = regs.arg1();
-    let arg2 = regs.arg2();
-    let arg3 = regs.arg3();
-
-    // Sprint 5-6: Look up source location using instruction pointer if DWARF is available
-    let source_info = if let Some(ctx) = dwarf_ctx {
-        let ip = regs.instruction_pointer();
-        ctx.lookup(ip).ok().flatten()
-    } else {
-        None
-    };
-
-    // Format arguments for structured output modes (JSON, CSV, HTML) if needed
-    let args = if structured_output {
-        format_syscall_args_for_json(child, name, arg1, arg2, arg3)
-    } else {
-        Vec::new()
-    };
-
-    // Print syscall entry if not in statistics or structured output mode
-    if !statistics_mode && !structured_output {
-        print_syscall_entry(
-            child,
-            name,
-            syscall_num,
-            arg1,
-            arg2,
-            arg3,
-            &source_info,
-            transpiler_map,
-        );
-    }
-
-    // Extract function names for profiling
-    let (function_name, caller_name) =
-        extract_function_names(child, dwarf_ctx, &source_info, function_profiling_enabled);
-
-    let json_source = source_info.as_ref().map(|src| crate::json_output::JsonSourceLocation {
-        file: src.file.clone(),
-        line: src.line,
-        function: src.function.clone(),
-    });
-
-    // Return syscall entry data
-    Ok(Some(SyscallEntry {
-        name: name.to_string(),
-        args,
-        source: json_source,
-        function_name,
-        caller_name,
-        // Sprint 26: Store raw args for decision trace capture
-        raw_arg1: Some(arg1),
-        raw_arg2: Some(arg2),
-        _raw_arg3: Some(arg3),
-    }))
-}
-
-/// Map DWARF source location to transpiler source (Sprint 24-28)
-/// Returns a formatted string with the original source location if mapping is available
-fn map_to_transpiler_source(
-    dwarf_source: &crate::dwarf::SourceLocation,
-    transpiler_map: Option<&crate::transpiler_map::TranspilerMap>,
-) -> Option<String> {
-    if let Some(map) = transpiler_map {
-        // Extract line number from DWARF source location
-        let rust_line = dwarf_source.line as usize;
-
-        // Look up in transpiler map
-        if let Some(mapping) = map.lookup_line(rust_line) {
-            // Format as "python_file:line in python_function"
-            return Some(format!(
-                "{}:{} in {} [{}]",
-                map.source_file().display(),
-                mapping.python_line,
-                mapping.python_function,
-                map.source_language()
-            ));
-        }
-    }
-    None
-}
-
-/// Read a null-terminated string from the tracee's memory
-fn read_string(child: Pid, addr: usize) -> Result<String> {
-    use nix::sys::uio::{process_vm_readv, RemoteIoVec};
-    use std::io::IoSliceMut;
-
-    // Read up to 4096 bytes (max path length)
-    let mut buf = vec![0u8; 4096];
-    let mut local_iov = [IoSliceMut::new(&mut buf)];
-    let remote_iov = [RemoteIoVec { base: addr, len: 4096 }];
-
-    let bytes_read = process_vm_readv(child, &mut local_iov, &remote_iov)
-        .context("Failed to read string from tracee memory")?;
-
-    if bytes_read == 0 {
-        anyhow::bail!("Read 0 bytes from tracee");
-    }
-
-    // Find null terminator
-    let null_pos = buf.iter().position(|&b| b == 0).unwrap_or(bytes_read);
-
-    // Convert to UTF-8 string (lossy - invalid UTF-8 will be replaced with �)
-    Ok(String::from_utf8_lossy(&buf[..null_pos]).to_string())
-}
-
-/// Record statistics for a syscall
-fn record_stats_for_syscall(
-    syscall_entry: &Option<SyscallEntry>,
-    stats_tracker: Option<&mut crate::stats::StatsTracker>,
-    result: i64,
-    duration_us: u64,
-) {
-    if let (Some(entry), Some(tracker)) = (syscall_entry, stats_tracker) {
-        tracker.record(&entry.name, result, duration_us);
-    }
-}
-
-/// Record JSON output for a syscall
-fn record_json_for_syscall(
-    syscall_entry: &Option<SyscallEntry>,
-    json_output: Option<&mut crate::json_output::JsonOutput>,
-    result: i64,
-    timing_mode: bool,
-    duration_us: u64,
-) {
-    if let (Some(entry), Some(output)) = (syscall_entry, json_output) {
-        let duration = if timing_mode && duration_us > 0 { Some(duration_us) } else { None };
-
-        output.add_syscall(crate::json_output::JsonSyscall {
-            name: entry.name.clone(),
-            args: entry.args.clone(),
-            result,
-            duration_us: duration,
-            source: entry.source.clone(),
-        });
-    }
-}
-
-/// Record CSV output for a syscall
-fn record_csv_for_syscall(
-    syscall_entry: &Option<SyscallEntry>,
-    csv_output: Option<&mut crate::csv_output::CsvOutput>,
-    result: i64,
-    timing_mode: bool,
-    duration_us: u64,
-) {
-    if let (Some(entry), Some(output)) = (syscall_entry, csv_output) {
-        let duration = if timing_mode && duration_us > 0 { Some(duration_us) } else { None };
-
-        // Format source location as "file:line" string
-        let source_location = entry.source.as_ref().map(|src| {
-            if let Some(func) = &src.function {
-                format!("{}:{} in {}", src.file, src.line, func)
-            } else {
-                format!("{}:{}", src.file, src.line)
-            }
-        });
-
-        // Format arguments as comma-separated string
-        let arguments = entry.args.join(", ");
-
-        output.add_syscall(crate::csv_output::CsvSyscall {
-            name: entry.name.clone(),
-            arguments,
-            result,
-            duration_us: duration,
-            source_location,
-        });
-    }
-}
-
-/// Record HTML output for a syscall
-fn record_html_for_syscall(
-    syscall_entry: &Option<SyscallEntry>,
-    html_output: Option<&mut crate::html_output::HtmlOutput>,
-    result: i64,
-    timing_mode: bool,
-    duration_us: u64,
-) {
-    if let (Some(entry), Some(output)) = (syscall_entry, html_output) {
-        let duration = if timing_mode && duration_us > 0 { Some(duration_us) } else { None };
-
-        // Format source location as "file:line" string
-        let source_location = entry.source.as_ref().map(|src| {
-            if let Some(func) = &src.function {
-                format!("{}:{} in {}", src.file, src.line, func)
-            } else {
-                format!("{}:{}", src.file, src.line)
-            }
-        });
-
-        // Format arguments as comma-separated string
-        let arguments = entry.args.join(", ");
-
-        output.add_syscall(crate::html_output::HtmlSyscall {
-            name: entry.name.clone(),
-            arguments,
-            result,
-            duration_us: duration,
-            source_location,
-        });
-    }
-}
-
-/// Record function profiling data
-fn record_function_profiling(
-    syscall_entry: &Option<SyscallEntry>,
-    function_profiler: Option<&mut crate::function_profiler::FunctionProfiler>,
-    duration_us: u64,
-) {
-    if let (Some(entry), Some(profiler)) = (syscall_entry, function_profiler) {
-        if let Some(function_name) = &entry.function_name {
-            profiler.record(function_name, &entry.name, duration_us, entry.caller_name.as_deref());
-        }
-    }
-}
-
-/// Print syscall result
-fn print_syscall_result(result: i64, timing_mode: bool, duration_us: u64) {
-    if timing_mode && duration_us > 0 {
-        println!("{} <{:.6}>", result, duration_us as f64 / 1_000_000.0);
-    } else {
-        println!("{result}");
-    }
-}
-
-/// Handle syscall exit - print return value and record statistics
-/// Handle real-time anomaly detection and alerts
-fn handle_anomaly_detection(
-    syscall_entry: &Option<SyscallEntry>,
-    anomaly_detector: Option<&mut crate::anomaly::AnomalyDetector>,
-    duration_us: u64,
-) {
-    if let (Some(entry), Some(detector)) = (syscall_entry, anomaly_detector) {
-        if let Some(anomaly) = detector.record_and_check(&entry.name, duration_us) {
-            // Print real-time anomaly alert to stderr
-            let severity_label = match anomaly.severity {
-                crate::anomaly::AnomalySeverity::Low => "🟢 Low",
-                crate::anomaly::AnomalySeverity::Medium => "🟡 Medium",
-                crate::anomaly::AnomalySeverity::High => "🔴 High",
-            };
-            eprintln!(
-                "⚠️  ANOMALY: {} took {} μs ({:.1}σ from baseline {:.1} μs) - {}",
-                anomaly.syscall_name,
-                anomaly.duration_us,
-                anomaly.z_score.abs(),
-                anomaly.baseline_mean,
-                severity_label
-            );
-        }
-    }
-}
-
-/// Check if syscall result should be printed to stdout
-fn should_print_result(
-    syscall_entry: &Option<SyscallEntry>,
-    in_stats_mode: bool,
-    in_json_mode: bool,
-    in_csv_mode: bool,
-    in_html_mode: bool,
-) -> bool {
-    syscall_entry.is_some() && !in_stats_mode && !in_json_mode && !in_csv_mode && !in_html_mode
-}
-
-/// Sprint 26: Capture decision traces from `write()` syscalls to stderr
-///
-/// Intercepts write(2, buffer, count) calls and parses [DECISION] and [RESULT] lines
-fn capture_decision_trace(
-    child: Pid,
-    syscall_entry: &Option<SyscallEntry>,
-    decision_tracer: Option<&mut crate::decision_trace::DecisionTracer>,
-    bytes_written: i64,
-) {
-    // Only process if decision tracing is enabled
-    let Some(tracer) = decision_tracer else {
-        return;
-    };
-
-    // Only process if we have a syscall entry
-    let Some(entry) = syscall_entry else {
-        return;
-    };
-
-    // Only intercept write() syscalls
-    if entry.name != "write" {
-        return;
-    }
-
-    // Check if writing to stderr (fd = 2)
-    if entry.raw_arg1 != Some(2) {
-        return;
-    }
-
-    // Only process successful writes
-    if bytes_written <= 0 {
-        return;
-    }
-
-    // Get buffer address and size
-    let buffer_addr = entry.raw_arg2.unwrap_or(0);
-    let buffer_size = bytes_written as usize;
-
-    // Read buffer from child process memory
-    use nix::sys::uio::{process_vm_readv, RemoteIoVec};
-    use std::io::IoSliceMut;
-
-    let mut buffer = vec![0u8; buffer_size];
-    let mut local_iov = [IoSliceMut::new(&mut buffer)];
-    let remote_iov = [RemoteIoVec { base: buffer_addr as usize, len: buffer_size }];
-
-    // Try to read; silently ignore errors (child may have exited, etc.)
-    if process_vm_readv(child, &mut local_iov, &remote_iov).is_err() {
-        return;
-    }
-
-    // Convert to string, replacing invalid UTF-8 with replacement character
-    let content = String::from_utf8_lossy(&buffer);
-
-    // Parse each line through DecisionTracer
-    for line in content.lines() {
-        // Ignore parse errors - not all stderr lines are decision traces
-        let _ = tracer.parse_line(line);
-    }
-}
-
-fn handle_syscall_exit(
-    child: Pid,
-    syscall_entry: &Option<SyscallEntry>,
-    tracers: &mut Tracers,
-    timing_mode: bool,
-    duration_us: u64,
-) -> Result<()> {
-    let regs = crate::arch::PtraceRegs::get(child)?;
-    let result = regs.syscall_return();
-
-    // Check modes before borrowing
-    let in_stats_mode = tracers.stats_tracker.is_some();
-    let in_json_mode = tracers.json_output.is_some();
-    let in_csv_mode = tracers.csv_output.is_some() || tracers.csv_stats_output.is_some();
-    let in_html_mode = tracers.html_output.is_some();
-
-    // Record statistics
-    record_stats_for_syscall(syscall_entry, tracers.stats_tracker.as_mut(), result, duration_us);
-
-    // Record JSON output
-    record_json_for_syscall(
-        syscall_entry,
-        tracers.json_output.as_mut(),
-        result,
-        timing_mode,
-        duration_us,
-    );
-
-    // Record CSV output
-    record_csv_for_syscall(
-        syscall_entry,
-        tracers.csv_output.as_mut(),
-        result,
-        timing_mode,
-        duration_us,
-    );
-
-    // Record HTML output
-    record_html_for_syscall(
-        syscall_entry,
-        tracers.html_output.as_mut(),
-        result,
-        timing_mode,
-        duration_us,
-    );
-
-    // Sprint 26: Capture decision traces from stderr writes
-    capture_decision_trace(child, syscall_entry, tracers.decision_tracer.as_mut(), result);
-
-    // Record CSV stats (we'll handle this in print_summaries)
-    if let (Some(entry), Some(stats)) = (syscall_entry, tracers.csv_stats_output.as_mut()) {
-        // CSV stats are accumulated in stats_tracker and printed at the end
-        let _ = (entry, stats); // Suppress unused warning for now
-    }
-
-    // Record function profiling
-    record_function_profiling(syscall_entry, tracers.function_profiler.as_mut(), duration_us);
-
-    // Sprint 20: Real-time anomaly detection
-    handle_anomaly_detection(syscall_entry, tracers.anomaly_detector.as_mut(), duration_us);
-
-    // Sprint 52-55: Send event to visualizer
-    if let (Some(entry), Some(ref sink)) = (syscall_entry, &tracers.visualizer_sink) {
-        let event =
-            VisualizerEvent { name: entry.name.clone(), duration_us, result, pid: child.as_raw() };
-        // Non-blocking send - if channel is full, drop the event
-        let _ = sink.send(event);
-    }
-
-    // Sprint 30: Record syscall to OTLP exporter
-    #[cfg(feature = "otlp")]
-    if let (Some(entry), Some(exporter)) = (syscall_entry, tracers.otlp_exporter.as_ref()) {
-        let source_file = entry.source.as_ref().map(|s| s.file.as_str());
-        let source_line = entry.source.as_ref().map(|s| s.line);
-
-        exporter.record_syscall(
-            &entry.name,
-            if duration_us > 0 { Some(duration_us) } else { None },
-            result,
-            source_file,
-            source_line,
-        );
-    }
-
-    // Print result if not in statistics, JSON, CSV, or HTML mode
-    if should_print_result(syscall_entry, in_stats_mode, in_json_mode, in_csv_mode, in_html_mode) {
-        print_syscall_result(result, timing_mode, duration_us);
-    }
-
-    Ok(())
 }
 
 #[cfg(test)]
@@ -2378,9 +1316,9 @@ mod tests {
     fn test_print_text_stats_none() {
         let stats_tracker: Option<crate::stats::StatsTracker> = None;
         #[cfg(feature = "otlp")]
-        print_text_stats(&stats_tracker, false, 2.0, None);
+        output::print_text_stats(&stats_tracker, false, 2.0, None);
         #[cfg(not(feature = "otlp"))]
-        print_text_stats(&stats_tracker, false, 2.0, None);
+        output::print_text_stats(&stats_tracker, false, 2.0, None);
         // Should not panic with None
     }
 
@@ -2388,162 +1326,167 @@ mod tests {
     fn test_print_text_stats_with_tracker() {
         let stats_tracker = Some(crate::stats::StatsTracker::new());
         #[cfg(feature = "otlp")]
-        print_text_stats(&stats_tracker, false, 2.0, None);
+        output::print_text_stats(&stats_tracker, false, 2.0, None);
         #[cfg(not(feature = "otlp"))]
-        print_text_stats(&stats_tracker, false, 2.0, None);
+        output::print_text_stats(&stats_tracker, false, 2.0, None);
     }
 
     #[test]
     fn test_print_text_stats_extended() {
         let stats_tracker = Some(crate::stats::StatsTracker::new());
         #[cfg(feature = "otlp")]
-        print_text_stats(&stats_tracker, true, 3.0, None);
+        output::print_text_stats(&stats_tracker, true, 3.0, None);
         #[cfg(not(feature = "otlp"))]
-        print_text_stats(&stats_tracker, true, 3.0, None);
+        output::print_text_stats(&stats_tracker, true, 3.0, None);
     }
 
     #[test]
     fn test_print_json_output() {
-        let output = crate::json_output::JsonOutput::new();
+        let json_out = crate::json_output::JsonOutput::new();
         // Should not panic
-        print_json_output(output, 0);
+        output::print_json_output(json_out, 0);
     }
 
     #[test]
     fn test_print_json_output_nonzero_exit() {
-        let output = crate::json_output::JsonOutput::new();
-        print_json_output(output, 1);
+        let json_out = crate::json_output::JsonOutput::new();
+        output::print_json_output(json_out, 1);
     }
 
     #[test]
     fn test_generate_ml_analysis_none() {
-        let result = generate_ml_analysis_for_json(&None, 5);
+        let result = ml_analysis::generate_ml_analysis_for_json(&None, 5);
         assert!(result.is_none());
     }
 
     #[test]
     fn test_generate_ml_analysis_empty_tracker() {
         let tracker = Some(crate::stats::StatsTracker::new());
-        let result = generate_ml_analysis_for_json(&tracker, 3);
+        let result = ml_analysis::generate_ml_analysis_for_json(&tracker, 3);
         assert!(result.is_some());
     }
 
     #[test]
     fn test_generate_isolation_forest_none() {
-        let result = generate_isolation_forest_analysis_for_json(&None, 100, 0.1, false);
+        let result =
+            ml_analysis::generate_isolation_forest_analysis_for_json(&None, 100, 0.1, false);
         assert!(result.is_none());
     }
 
     #[test]
     fn test_generate_isolation_forest_empty_tracker() {
         let tracker = Some(crate::stats::StatsTracker::new());
-        let result = generate_isolation_forest_analysis_for_json(&tracker, 50, 0.1, false);
+        let result =
+            ml_analysis::generate_isolation_forest_analysis_for_json(&tracker, 50, 0.1, false);
         assert!(result.is_some());
     }
 
     #[test]
     fn test_generate_isolation_forest_with_explain() {
         let tracker = Some(crate::stats::StatsTracker::new());
-        let result = generate_isolation_forest_analysis_for_json(&tracker, 50, 0.1, true);
+        let result =
+            ml_analysis::generate_isolation_forest_analysis_for_json(&tracker, 50, 0.1, true);
         assert!(result.is_some());
     }
 
     #[test]
     fn test_generate_autoencoder_none() {
-        let result = generate_autoencoder_analysis_for_json(&None, 8, 50, 2.0, false);
+        let result = ml_analysis::generate_autoencoder_analysis_for_json(&None, 8, 50, 2.0, false);
         assert!(result.is_none());
     }
 
     #[test]
     fn test_generate_autoencoder_empty_tracker() {
         let tracker = Some(crate::stats::StatsTracker::new());
-        let result = generate_autoencoder_analysis_for_json(&tracker, 8, 50, 2.0, false);
+        let result =
+            ml_analysis::generate_autoencoder_analysis_for_json(&tracker, 8, 50, 2.0, false);
         assert!(result.is_some());
     }
 
     #[test]
     fn test_generate_autoencoder_with_explain() {
         let tracker = Some(crate::stats::StatsTracker::new());
-        let result = generate_autoencoder_analysis_for_json(&tracker, 8, 50, 2.0, true);
+        let result =
+            ml_analysis::generate_autoencoder_analysis_for_json(&tracker, 8, 50, 2.0, true);
         assert!(result.is_some());
     }
 
     #[test]
     fn test_print_csv_stats_none() {
         let csv_stats = crate::csv_output::CsvStatsOutput::new();
-        print_csv_stats(csv_stats, &None, false, false, 2.0);
+        output::print_csv_stats(csv_stats, &None, false, false, 2.0);
     }
 
     #[test]
     fn test_print_csv_stats_with_tracker() {
         let csv_stats = crate::csv_output::CsvStatsOutput::new();
         let tracker = Some(crate::stats::StatsTracker::new());
-        print_csv_stats(csv_stats, &tracker, false, false, 2.0);
+        output::print_csv_stats(csv_stats, &tracker, false, false, 2.0);
     }
 
     #[test]
     fn test_print_csv_stats_with_timing() {
         let csv_stats = crate::csv_output::CsvStatsOutput::new();
         let tracker = Some(crate::stats::StatsTracker::new());
-        print_csv_stats(csv_stats, &tracker, true, false, 2.0);
+        output::print_csv_stats(csv_stats, &tracker, true, false, 2.0);
     }
 
     #[test]
     fn test_print_csv_stats_extended() {
         let csv_stats = crate::csv_output::CsvStatsOutput::new();
         let tracker = Some(crate::stats::StatsTracker::new());
-        print_csv_stats(csv_stats, &tracker, true, true, 3.0);
+        output::print_csv_stats(csv_stats, &tracker, true, true, 3.0);
     }
 
     #[test]
     fn test_print_hpu_analysis_none() {
-        print_hpu_analysis(&None, false);
+        output::print_hpu_analysis(&None, false);
     }
 
     #[test]
     fn test_print_hpu_analysis_cpu_only() {
         let tracker = Some(crate::stats::StatsTracker::new());
-        print_hpu_analysis(&tracker, true);
+        output::print_hpu_analysis(&tracker, true);
     }
 
     #[test]
     fn test_print_hpu_analysis_with_tracker() {
         let tracker = Some(crate::stats::StatsTracker::new());
-        print_hpu_analysis(&tracker, false);
+        output::print_hpu_analysis(&tracker, false);
     }
 
     #[test]
     fn test_print_ml_analysis_none() {
-        print_ml_analysis(&None, 5, false, 2.0);
+        ml_analysis::print_ml_analysis(&None, 5, false, 2.0);
     }
 
     #[test]
     fn test_print_ml_analysis_with_tracker() {
         let tracker = Some(crate::stats::StatsTracker::new());
-        print_ml_analysis(&tracker, 5, false, 2.0);
+        ml_analysis::print_ml_analysis(&tracker, 5, false, 2.0);
     }
 
     #[test]
     fn test_print_ml_analysis_compare() {
         let tracker = Some(crate::stats::StatsTracker::new());
-        print_ml_analysis(&tracker, 5, true, 2.0);
+        ml_analysis::print_ml_analysis(&tracker, 5, true, 2.0);
     }
 
     #[test]
     fn test_print_isolation_forest_none() {
-        print_isolation_forest_analysis(&None, 100, 0.1, false);
+        ml_analysis::print_isolation_forest_analysis(&None, 100, 0.1, false);
     }
 
     #[test]
     fn test_print_isolation_forest_with_tracker() {
         let tracker = Some(crate::stats::StatsTracker::new());
-        print_isolation_forest_analysis(&tracker, 100, 0.1, false);
+        ml_analysis::print_isolation_forest_analysis(&tracker, 100, 0.1, false);
     }
 
     #[test]
     fn test_print_isolation_forest_with_explain() {
         let tracker = Some(crate::stats::StatsTracker::new());
-        print_isolation_forest_analysis(&tracker, 100, 0.1, true);
+        ml_analysis::print_isolation_forest_analysis(&tracker, 100, 0.1, true);
     }
 
     #[test]
@@ -2581,42 +1524,42 @@ mod tests {
 
     #[test]
     fn test_print_autoencoder_none() {
-        print_autoencoder_analysis(&None, 8, 50, 2.0, false);
+        ml_analysis::print_autoencoder_analysis(&None, 8, 50, 2.0, false);
     }
 
     #[test]
     fn test_print_autoencoder_with_tracker() {
         let tracker = Some(crate::stats::StatsTracker::new());
-        print_autoencoder_analysis(&tracker, 8, 50, 2.0, false);
+        ml_analysis::print_autoencoder_analysis(&tracker, 8, 50, 2.0, false);
     }
 
     #[test]
     fn test_print_autoencoder_with_explain() {
         let tracker = Some(crate::stats::StatsTracker::new());
-        print_autoencoder_analysis(&tracker, 8, 50, 2.0, true);
+        ml_analysis::print_autoencoder_analysis(&tracker, 8, 50, 2.0, true);
     }
 
     #[test]
     fn test_print_optional_summaries_all_none() {
-        print_optional_summaries(None, None, None);
+        output::print_optional_summaries(None, None, None);
     }
 
     #[test]
     fn test_print_optional_summaries_with_profiling() {
         let ctx = Some(crate::profiling::ProfilingContext::new());
-        print_optional_summaries(ctx, None, None);
+        output::print_optional_summaries(ctx, None, None);
     }
 
     #[test]
     fn test_print_optional_summaries_with_function_profiler() {
         let profiler = Some(crate::function_profiler::FunctionProfiler::new());
-        print_optional_summaries(None, profiler, None);
+        output::print_optional_summaries(None, profiler, None);
     }
 
     #[test]
     fn test_print_optional_summaries_with_anomaly_detector() {
         let detector = Some(crate::anomaly::AnomalyDetector::new(100, 2.0));
-        print_optional_summaries(None, None, detector);
+        output::print_optional_summaries(None, None, detector);
     }
 
     #[test]
@@ -2624,18 +1567,18 @@ mod tests {
         let ctx = Some(crate::profiling::ProfilingContext::new());
         let profiler = Some(crate::function_profiler::FunctionProfiler::new());
         let detector = Some(crate::anomaly::AnomalyDetector::new(100, 2.0));
-        print_optional_summaries(ctx, profiler, detector);
+        output::print_optional_summaries(ctx, profiler, detector);
     }
 
     #[test]
     fn test_print_decision_trace_summary_none() {
-        print_decision_trace_summary(None);
+        output::print_decision_trace_summary(None);
     }
 
     #[test]
     fn test_print_decision_trace_summary_empty() {
         let tracer = Some(crate::decision_trace::DecisionTracer::new());
-        print_decision_trace_summary(tracer);
+        output::print_decision_trace_summary(tracer);
     }
 
     #[test]
@@ -2684,7 +1627,7 @@ mod tests {
             dl_epochs: 50,
             explain: false,
         };
-        print_analysis_summaries(&None, &analysis);
+        output::print_analysis_summaries(&None, &analysis);
     }
 
     #[test]
@@ -2707,7 +1650,7 @@ mod tests {
             dl_epochs: 50,
             explain: false,
         };
-        print_analysis_summaries(&tracker, &analysis);
+        output::print_analysis_summaries(&tracker, &analysis);
     }
 
     #[test]
@@ -2730,7 +1673,7 @@ mod tests {
             dl_epochs: 50,
             explain: false,
         };
-        print_analysis_summaries(&tracker, &analysis);
+        output::print_analysis_summaries(&tracker, &analysis);
     }
 
     #[test]
@@ -2753,7 +1696,7 @@ mod tests {
             dl_epochs: 50,
             explain: false,
         };
-        print_analysis_summaries(&tracker, &analysis);
+        output::print_analysis_summaries(&tracker, &analysis);
     }
 
     #[test]
@@ -2776,7 +1719,7 @@ mod tests {
             dl_epochs: 50,
             explain: false,
         };
-        print_analysis_summaries(&tracker, &analysis);
+        output::print_analysis_summaries(&tracker, &analysis);
     }
 
     #[test]
@@ -2799,12 +1742,12 @@ mod tests {
             dl_epochs: 50,
             explain: true,
         };
-        print_analysis_summaries(&tracker, &analysis);
+        output::print_analysis_summaries(&tracker, &analysis);
     }
 
     #[test]
     fn test_handle_json_output_basic() {
-        let output = crate::json_output::JsonOutput::new();
+        let json_out = crate::json_output::JsonOutput::new();
         let analysis = AnalysisConfig {
             stats_extended: false,
             anomaly_threshold: 2.0,
@@ -2822,12 +1765,12 @@ mod tests {
             dl_epochs: 50,
             explain: false,
         };
-        handle_json_output(output, &None, &analysis, 0);
+        output::handle_json_output(json_out, &None, &analysis, 0);
     }
 
     #[test]
     fn test_handle_json_output_with_ml() {
-        let output = crate::json_output::JsonOutput::new();
+        let json_out = crate::json_output::JsonOutput::new();
         let tracker = Some(crate::stats::StatsTracker::new());
         let analysis = AnalysisConfig {
             stats_extended: false,
@@ -2846,12 +1789,12 @@ mod tests {
             dl_epochs: 50,
             explain: false,
         };
-        handle_json_output(output, &tracker, &analysis, 0);
+        output::handle_json_output(json_out, &tracker, &analysis, 0);
     }
 
     #[test]
     fn test_handle_json_output_with_outliers() {
-        let output = crate::json_output::JsonOutput::new();
+        let json_out = crate::json_output::JsonOutput::new();
         let tracker = Some(crate::stats::StatsTracker::new());
         let analysis = AnalysisConfig {
             stats_extended: false,
@@ -2870,12 +1813,12 @@ mod tests {
             dl_epochs: 50,
             explain: true,
         };
-        handle_json_output(output, &tracker, &analysis, 0);
+        output::handle_json_output(json_out, &tracker, &analysis, 0);
     }
 
     #[test]
     fn test_handle_json_output_with_dl() {
-        let output = crate::json_output::JsonOutput::new();
+        let json_out = crate::json_output::JsonOutput::new();
         let tracker = Some(crate::stats::StatsTracker::new());
         let analysis = AnalysisConfig {
             stats_extended: false,
@@ -2894,12 +1837,12 @@ mod tests {
             dl_epochs: 50,
             explain: false,
         };
-        handle_json_output(output, &tracker, &analysis, 0);
+        output::handle_json_output(json_out, &tracker, &analysis, 0);
     }
 
     #[test]
     fn test_handle_json_output_all_analysis() {
-        let output = crate::json_output::JsonOutput::new();
+        let json_out = crate::json_output::JsonOutput::new();
         let tracker = Some(crate::stats::StatsTracker::new());
         let analysis = AnalysisConfig {
             stats_extended: true,
@@ -2918,13 +1861,13 @@ mod tests {
             dl_epochs: 50,
             explain: true,
         };
-        handle_json_output(output, &tracker, &analysis, 1);
+        output::handle_json_output(json_out, &tracker, &analysis, 1);
     }
 
     // should_print_result tests
     #[test]
     fn test_should_print_result_none_entry() {
-        assert!(!should_print_result(&None, false, false, false, false));
+        assert!(!output::should_print_result(&None, false, false, false, false));
     }
 
     #[test]
@@ -2939,7 +1882,7 @@ mod tests {
             raw_arg2: None,
             _raw_arg3: None,
         });
-        assert!(should_print_result(&entry, false, false, false, false));
+        assert!(output::should_print_result(&entry, false, false, false, false));
     }
 
     #[test]
@@ -2954,7 +1897,7 @@ mod tests {
             raw_arg2: None,
             _raw_arg3: None,
         });
-        assert!(!should_print_result(&entry, true, false, false, false));
+        assert!(!output::should_print_result(&entry, true, false, false, false));
     }
 
     #[test]
@@ -2969,7 +1912,7 @@ mod tests {
             raw_arg2: None,
             _raw_arg3: None,
         });
-        assert!(!should_print_result(&entry, false, true, false, false));
+        assert!(!output::should_print_result(&entry, false, true, false, false));
     }
 
     #[test]
@@ -2984,7 +1927,7 @@ mod tests {
             raw_arg2: None,
             _raw_arg3: None,
         });
-        assert!(!should_print_result(&entry, false, false, true, false));
+        assert!(!output::should_print_result(&entry, false, false, true, false));
     }
 
     #[test]
@@ -2999,7 +1942,7 @@ mod tests {
             raw_arg2: None,
             _raw_arg3: None,
         });
-        assert!(!should_print_result(&entry, false, false, false, true));
+        assert!(!output::should_print_result(&entry, false, false, false, true));
     }
 
     #[test]
@@ -3014,35 +1957,35 @@ mod tests {
             raw_arg2: None,
             _raw_arg3: None,
         });
-        assert!(!should_print_result(&entry, true, true, true, true));
+        assert!(!output::should_print_result(&entry, true, true, true, true));
     }
 
     // print_syscall_result tests
     #[test]
     fn test_print_syscall_result_success() {
-        print_syscall_result(0, false, 0);
+        output::print_syscall_result(0, false, 0);
     }
 
     #[test]
     fn test_print_syscall_result_error() {
-        print_syscall_result(-1, false, 0);
+        output::print_syscall_result(-1, false, 0);
     }
 
     #[test]
     fn test_print_syscall_result_with_timing() {
-        print_syscall_result(42, true, 1234);
+        output::print_syscall_result(42, true, 1234);
     }
 
     #[test]
     fn test_print_syscall_result_negative_with_timing() {
-        print_syscall_result(-22, true, 5678);
+        output::print_syscall_result(-22, true, 5678);
     }
 
     // record_stats_for_syscall tests
     #[test]
     fn test_record_stats_for_syscall_none_entry() {
         let mut tracker = Some(crate::stats::StatsTracker::new());
-        record_stats_for_syscall(&None, tracker.as_mut(), 0, 100);
+        syscall_handling::record_stats_for_syscall_test(&None, tracker.as_mut(), 0, 100);
     }
 
     #[test]
@@ -3057,7 +2000,7 @@ mod tests {
             raw_arg2: None,
             _raw_arg3: None,
         });
-        record_stats_for_syscall(&entry, None, 0, 100);
+        syscall_handling::record_stats_for_syscall_test(&entry, None, 0, 100);
     }
 
     #[test]
@@ -3073,14 +2016,14 @@ mod tests {
             _raw_arg3: None,
         });
         let mut tracker = Some(crate::stats::StatsTracker::new());
-        record_stats_for_syscall(&entry, tracker.as_mut(), 100, 500);
+        syscall_handling::record_stats_for_syscall_test(&entry, tracker.as_mut(), 100, 500);
     }
 
     // record_function_profiling tests
     #[test]
     fn test_record_function_profiling_none_entry() {
         let mut profiler = Some(crate::function_profiler::FunctionProfiler::new());
-        record_function_profiling(&None, profiler.as_mut(), 100);
+        syscall_handling::record_function_profiling_test(&None, profiler.as_mut(), 100);
     }
 
     #[test]
@@ -3095,7 +2038,7 @@ mod tests {
             raw_arg2: None,
             _raw_arg3: None,
         });
-        record_function_profiling(&entry, None, 100);
+        syscall_handling::record_function_profiling_test(&entry, None, 100);
     }
 
     #[test]
@@ -3111,7 +2054,7 @@ mod tests {
             _raw_arg3: None,
         });
         let mut profiler = Some(crate::function_profiler::FunctionProfiler::new());
-        record_function_profiling(&entry, profiler.as_mut(), 100);
+        syscall_handling::record_function_profiling_test(&entry, profiler.as_mut(), 100);
     }
 
     #[test]
@@ -3127,14 +2070,14 @@ mod tests {
             _raw_arg3: None,
         });
         let mut profiler = Some(crate::function_profiler::FunctionProfiler::new());
-        record_function_profiling(&entry, profiler.as_mut(), 100);
+        syscall_handling::record_function_profiling_test(&entry, profiler.as_mut(), 100);
     }
 
     // handle_anomaly_detection tests
     #[test]
     fn test_handle_anomaly_detection_none_entry() {
         let mut detector = Some(crate::anomaly::AnomalyDetector::new(100, 2.0));
-        handle_anomaly_detection(&None, detector.as_mut(), 100);
+        syscall_handling::handle_anomaly_detection_test(&None, detector.as_mut(), 100);
     }
 
     #[test]
@@ -3149,7 +2092,7 @@ mod tests {
             raw_arg2: None,
             _raw_arg3: None,
         });
-        handle_anomaly_detection(&entry, None, 100);
+        syscall_handling::handle_anomaly_detection_test(&entry, None, 100);
     }
 
     #[test]
@@ -3165,7 +2108,7 @@ mod tests {
             _raw_arg3: None,
         });
         let mut detector = Some(crate::anomaly::AnomalyDetector::new(100, 2.0));
-        handle_anomaly_detection(&entry, detector.as_mut(), 100);
+        syscall_handling::handle_anomaly_detection_test(&entry, detector.as_mut(), 100);
     }
 
     // print_summaries tests with Tracers struct
@@ -3202,7 +2145,7 @@ mod tests {
             dl_epochs: 50,
             explain: false,
         };
-        print_summaries(tracers, false, 0, &analysis);
+        output::print_summaries(tracers, false, 0, &analysis);
     }
 
     #[test]
@@ -3238,7 +2181,7 @@ mod tests {
             dl_epochs: 50,
             explain: false,
         };
-        print_summaries(tracers, true, 0, &analysis);
+        output::print_summaries(tracers, true, 0, &analysis);
     }
 
     #[test]
@@ -3274,7 +2217,7 @@ mod tests {
             dl_epochs: 50,
             explain: false,
         };
-        print_summaries(tracers, false, 0, &analysis);
+        output::print_summaries(tracers, false, 0, &analysis);
     }
 
     #[test]
@@ -3310,7 +2253,7 @@ mod tests {
             dl_epochs: 50,
             explain: false,
         };
-        print_summaries(tracers, true, 0, &analysis);
+        output::print_summaries(tracers, true, 0, &analysis);
     }
 
     #[test]
@@ -3346,7 +2289,7 @@ mod tests {
             dl_epochs: 50,
             explain: false,
         };
-        print_summaries(tracers, false, 0, &analysis);
+        output::print_summaries(tracers, false, 0, &analysis);
     }
 
     #[test]
@@ -3382,7 +2325,7 @@ mod tests {
             dl_epochs: 50,
             explain: false,
         };
-        print_summaries(tracers, false, 0, &analysis);
+        output::print_summaries(tracers, false, 0, &analysis);
     }
 
     #[test]
@@ -3418,7 +2361,7 @@ mod tests {
             dl_epochs: 50,
             explain: false,
         };
-        print_summaries(tracers, false, 0, &analysis);
+        output::print_summaries(tracers, false, 0, &analysis);
     }
 
     #[test]
@@ -3454,7 +2397,7 @@ mod tests {
             dl_epochs: 50,
             explain: true,
         };
-        print_summaries(tracers, true, 0, &analysis);
+        output::print_summaries(tracers, true, 0, &analysis);
     }
 
     // Tests with populated stats tracker to cover iteration paths
@@ -3473,7 +2416,7 @@ mod tests {
     #[test]
     fn test_generate_ml_analysis_populated() {
         let tracker = Some(create_populated_stats_tracker());
-        let result = generate_ml_analysis_for_json(&tracker, 3);
+        let result = ml_analysis::generate_ml_analysis_for_json(&tracker, 3);
         assert!(result.is_some());
         let report = result.expect("test");
         assert!(report.total_samples > 0);
@@ -3482,28 +2425,32 @@ mod tests {
     #[test]
     fn test_generate_isolation_forest_populated() {
         let tracker = Some(create_populated_stats_tracker());
-        let result = generate_isolation_forest_analysis_for_json(&tracker, 50, 0.1, false);
+        let result =
+            ml_analysis::generate_isolation_forest_analysis_for_json(&tracker, 50, 0.1, false);
         assert!(result.is_some());
     }
 
     #[test]
     fn test_generate_isolation_forest_populated_with_explain() {
         let tracker = Some(create_populated_stats_tracker());
-        let result = generate_isolation_forest_analysis_for_json(&tracker, 50, 0.1, true);
+        let result =
+            ml_analysis::generate_isolation_forest_analysis_for_json(&tracker, 50, 0.1, true);
         assert!(result.is_some());
     }
 
     #[test]
     fn test_generate_autoencoder_populated() {
         let tracker = Some(create_populated_stats_tracker());
-        let result = generate_autoencoder_analysis_for_json(&tracker, 8, 10, 2.0, false);
+        let result =
+            ml_analysis::generate_autoencoder_analysis_for_json(&tracker, 8, 10, 2.0, false);
         assert!(result.is_some());
     }
 
     #[test]
     fn test_generate_autoencoder_populated_with_explain() {
         let tracker = Some(create_populated_stats_tracker());
-        let result = generate_autoencoder_analysis_for_json(&tracker, 8, 10, 2.0, true);
+        let result =
+            ml_analysis::generate_autoencoder_analysis_for_json(&tracker, 8, 10, 2.0, true);
         assert!(result.is_some());
     }
 
@@ -3511,85 +2458,85 @@ mod tests {
     fn test_print_text_stats_populated() {
         let tracker = Some(create_populated_stats_tracker());
         #[cfg(feature = "otlp")]
-        print_text_stats(&tracker, false, 2.0, None);
+        output::print_text_stats(&tracker, false, 2.0, None);
         #[cfg(not(feature = "otlp"))]
-        print_text_stats(&tracker, false, 2.0, None);
+        output::print_text_stats(&tracker, false, 2.0, None);
     }
 
     #[test]
     fn test_print_text_stats_populated_extended() {
         let tracker = Some(create_populated_stats_tracker());
         #[cfg(feature = "otlp")]
-        print_text_stats(&tracker, true, 2.0, None);
+        output::print_text_stats(&tracker, true, 2.0, None);
         #[cfg(not(feature = "otlp"))]
-        print_text_stats(&tracker, true, 2.0, None);
+        output::print_text_stats(&tracker, true, 2.0, None);
     }
 
     #[test]
     fn test_print_csv_stats_populated() {
         let csv_stats = crate::csv_output::CsvStatsOutput::new();
         let tracker = Some(create_populated_stats_tracker());
-        print_csv_stats(csv_stats, &tracker, false, false, 2.0);
+        output::print_csv_stats(csv_stats, &tracker, false, false, 2.0);
     }
 
     #[test]
     fn test_print_csv_stats_populated_extended() {
         let csv_stats = crate::csv_output::CsvStatsOutput::new();
         let tracker = Some(create_populated_stats_tracker());
-        print_csv_stats(csv_stats, &tracker, true, true, 2.0);
+        output::print_csv_stats(csv_stats, &tracker, true, true, 2.0);
     }
 
     #[test]
     fn test_print_hpu_analysis_populated() {
         let tracker = Some(create_populated_stats_tracker());
-        print_hpu_analysis(&tracker, false);
+        output::print_hpu_analysis(&tracker, false);
     }
 
     #[test]
     fn test_print_hpu_analysis_populated_cpu_only() {
         let tracker = Some(create_populated_stats_tracker());
-        print_hpu_analysis(&tracker, true);
+        output::print_hpu_analysis(&tracker, true);
     }
 
     #[test]
     fn test_print_ml_analysis_populated() {
         let tracker = Some(create_populated_stats_tracker());
-        print_ml_analysis(&tracker, 3, false, 2.0);
+        ml_analysis::print_ml_analysis(&tracker, 3, false, 2.0);
     }
 
     #[test]
     fn test_print_ml_analysis_populated_compare() {
         let tracker = Some(create_populated_stats_tracker());
-        print_ml_analysis(&tracker, 3, true, 2.0);
+        ml_analysis::print_ml_analysis(&tracker, 3, true, 2.0);
     }
 
     #[test]
     fn test_print_isolation_forest_populated() {
         let tracker = Some(create_populated_stats_tracker());
-        print_isolation_forest_analysis(&tracker, 50, 0.1, false);
+        ml_analysis::print_isolation_forest_analysis(&tracker, 50, 0.1, false);
     }
 
     #[test]
     fn test_print_isolation_forest_populated_explain() {
         let tracker = Some(create_populated_stats_tracker());
-        print_isolation_forest_analysis(&tracker, 50, 0.1, true);
+        ml_analysis::print_isolation_forest_analysis(&tracker, 50, 0.1, true);
     }
 
     #[test]
     fn test_print_autoencoder_populated() {
         let tracker = Some(create_populated_stats_tracker());
-        print_autoencoder_analysis(&tracker, 8, 10, 2.0, false);
+        ml_analysis::print_autoencoder_analysis(&tracker, 8, 10, 2.0, false);
     }
 
     #[test]
     fn test_print_autoencoder_populated_explain() {
         let tracker = Some(create_populated_stats_tracker());
-        print_autoencoder_analysis(&tracker, 8, 10, 2.0, true);
+        ml_analysis::print_autoencoder_analysis(&tracker, 8, 10, 2.0, true);
     }
 
     #[test]
     fn test_handle_json_output_populated() {
-        let output = crate::json_output::JsonOutput::new();
+        let json_out = crate::json_output::JsonOutput::new();
         let tracker = Some(create_populated_stats_tracker());
         let analysis = AnalysisConfig {
             stats_extended: false,
@@ -3608,12 +2555,12 @@ mod tests {
             dl_epochs: 50,
             explain: false,
         };
-        handle_json_output(output, &tracker, &analysis, 0);
+        output::handle_json_output(json_out, &tracker, &analysis, 0);
     }
 
     #[test]
     fn test_handle_json_output_populated_ml() {
-        let output = crate::json_output::JsonOutput::new();
+        let json_out = crate::json_output::JsonOutput::new();
         let tracker = Some(create_populated_stats_tracker());
         let analysis = AnalysisConfig {
             stats_extended: false,
@@ -3632,12 +2579,12 @@ mod tests {
             dl_epochs: 50,
             explain: false,
         };
-        handle_json_output(output, &tracker, &analysis, 0);
+        output::handle_json_output(json_out, &tracker, &analysis, 0);
     }
 
     #[test]
     fn test_handle_json_output_populated_outliers() {
-        let output = crate::json_output::JsonOutput::new();
+        let json_out = crate::json_output::JsonOutput::new();
         let tracker = Some(create_populated_stats_tracker());
         let analysis = AnalysisConfig {
             stats_extended: false,
@@ -3656,12 +2603,12 @@ mod tests {
             dl_epochs: 50,
             explain: true,
         };
-        handle_json_output(output, &tracker, &analysis, 0);
+        output::handle_json_output(json_out, &tracker, &analysis, 0);
     }
 
     #[test]
     fn test_handle_json_output_populated_dl() {
-        let output = crate::json_output::JsonOutput::new();
+        let json_out = crate::json_output::JsonOutput::new();
         let tracker = Some(create_populated_stats_tracker());
         let analysis = AnalysisConfig {
             stats_extended: false,
@@ -3680,12 +2627,12 @@ mod tests {
             dl_epochs: 10,
             explain: false,
         };
-        handle_json_output(output, &tracker, &analysis, 0);
+        output::handle_json_output(json_out, &tracker, &analysis, 0);
     }
 
     #[test]
     fn test_handle_json_output_populated_all() {
-        let output = crate::json_output::JsonOutput::new();
+        let json_out = crate::json_output::JsonOutput::new();
         let tracker = Some(create_populated_stats_tracker());
         let analysis = AnalysisConfig {
             stats_extended: true,
@@ -3704,7 +2651,7 @@ mod tests {
             dl_epochs: 10,
             explain: true,
         };
-        handle_json_output(output, &tracker, &analysis, 1);
+        output::handle_json_output(json_out, &tracker, &analysis, 1);
     }
 
     #[test]
@@ -3727,7 +2674,7 @@ mod tests {
             dl_epochs: 50,
             explain: false,
         };
-        print_analysis_summaries(&tracker, &analysis);
+        output::print_analysis_summaries(&tracker, &analysis);
     }
 
     #[test]
@@ -3750,7 +2697,7 @@ mod tests {
             dl_epochs: 10,
             explain: true,
         };
-        print_analysis_summaries(&tracker, &analysis);
+        output::print_analysis_summaries(&tracker, &analysis);
     }
 
     #[test]
@@ -3786,7 +2733,7 @@ mod tests {
             dl_epochs: 10,
             explain: true,
         };
-        print_summaries(tracers, true, 0, &analysis);
+        output::print_summaries(tracers, true, 0, &analysis);
     }
 
     #[test]
@@ -3822,7 +2769,7 @@ mod tests {
             dl_epochs: 50,
             explain: false,
         };
-        print_summaries(tracers, true, 0, &analysis);
+        output::print_summaries(tracers, true, 0, &analysis);
     }
 
     #[test]
@@ -3858,6 +2805,6 @@ mod tests {
             dl_epochs: 10,
             explain: true,
         };
-        print_summaries(tracers, true, 0, &analysis);
+        output::print_summaries(tracers, true, 0, &analysis);
     }
 }
