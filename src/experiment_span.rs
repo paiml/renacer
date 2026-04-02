@@ -311,6 +311,7 @@ impl EquivalenceScore {
 /// assert!(score.is_equivalent());
 /// ```
 pub fn compare_traces(baseline: &UnifiedTrace, candidate: &UnifiedTrace) -> EquivalenceScore {
+    contract_pre_error_handling!();
     let syscall_match = compute_syscall_match(baseline, candidate);
     let timing_variance = compute_timing_variance(baseline, candidate);
     let semantic_equiv = compute_semantic_equiv(baseline, candidate);

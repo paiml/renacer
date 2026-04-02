@@ -102,6 +102,7 @@ impl AntiPatternDetector {
     /// Returns an `ArchitecturalQuality` assessment with detected patterns
     /// and recommendations.
     pub fn analyze(&self, trace: &UnifiedTrace) -> ArchitecturalQuality {
+        contract_pre_error_handling!();
         let mut anti_patterns = Vec::new();
         let mut recommendations = Vec::new();
 

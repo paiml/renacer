@@ -68,6 +68,8 @@ impl AdaptiveSampler {
 
     /// Create sampler that traces everything (debug mode)
     pub fn trace_all() -> Self {
+        contract_pre_error_handling!();
+        contract_post_error_handling!(&"ok");
         AdaptiveSampler { threshold_us: 0, sample_rate: 1.0, trace_all: true }
     }
 
@@ -119,7 +121,9 @@ impl AdaptiveSampler {
 
     /// Enable/disable trace-all mode
     pub fn set_trace_all(&mut self, trace_all: bool) {
+        contract_pre_error_handling!();
         self.trace_all = trace_all;
+        contract_post_error_handling!(&"ok");
     }
 
     /// Get current threshold
@@ -134,6 +138,7 @@ impl AdaptiveSampler {
 
     /// Check if trace-all mode is enabled
     pub fn is_trace_all(&self) -> bool {
+        contract_pre_error_handling!();
         self.trace_all
     }
 
@@ -181,6 +186,7 @@ impl AdaptiveSampler {
     /// * `operation` - Operation type (e.g., "gpu", "simd", "syscall:read")
     /// * `estimated_duration_us` - Estimated duration in microseconds
     pub fn should_trace_operation(&self, operation: &str, estimated_duration_us: u64) -> bool {
+        contract_pre_error_handling!(operation);
         // Debug mode: trace everything
         if self.trace_all {
             return true;

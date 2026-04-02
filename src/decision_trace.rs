@@ -123,6 +123,7 @@ pub mod sampling {
     /// - Total: ~5ns per call
     #[inline(always)]
     pub fn should_sample_trace(probability: f64) -> bool {
+        contract_pre_error_handling!();
         // Check global rate limiter first (circuit breaker)
         let current_count = GLOBAL_TRACE_COUNT.load(Ordering::Relaxed);
         if current_count >= GLOBAL_TRACE_LIMIT {
@@ -157,6 +158,7 @@ pub mod sampling {
     /// });
     /// ```
     pub fn reset_trace_counter() {
+        contract_pre_error_handling!();
         GLOBAL_TRACE_COUNT.store(0, Ordering::Relaxed);
     }
 

@@ -56,6 +56,7 @@ pub struct OtlpConfig {
 impl OtlpConfig {
     /// Create a new OTLP configuration with default batching settings
     pub fn new(endpoint: String, service_name: String) -> Self {
+        contract_pre_error_handling!(endpoint);
         OtlpConfig {
             endpoint,
             service_name,
@@ -673,6 +674,7 @@ impl OtlpExporter {
         &mut self,
         trace: &crate::unified_trace::UnifiedTrace,
     ) -> Result<()> {
+        contract_pre_error_handling!();
         // 1. Export process span as root span
         self.start_root_span(&trace.process_span.name, trace.process_span.pid);
 

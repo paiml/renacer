@@ -46,9 +46,9 @@ Renacer (Spanish: "to be reborn") is a next-generation binary inspection and tra
 
 | Metric | Value |
 |--------|-------|
-| **Current Version** | 0.10.0 |
+| **Current Version** | 0.10.1 |
 | **Status** | Production-Ready |
-| **Test Coverage** | 1693+ tests (all passing), 92.84% line coverage |
+| **Test Coverage** | 1713 tests (all passing), 92.84% line coverage |
 | **TDG Score** | 95.1/100 (A+ grade) |
 | **Performance** | <5% overhead (basic), <10% overhead (full stack) |
 | **Specification** | [deep-strace-rust-wasm-binary-spec.md](docs/specifications/deep-strace-rust-wasm-binary-spec.md) |
@@ -570,7 +570,7 @@ Following [paiml-mcp-agent-toolkit](https://github.com/paiml/paiml-mcp-agent-too
 - **Test Coverage:** 91.21% overall, 100% on critical modules
 - **Mutation Score:** 80%+ (via cargo-mutants)
 - **TDG Score:** 94.2/100 (A grade)
-- **Zero Tolerance:** All 142 tests pass, zero warnings
+- **Zero Tolerance:** All 1713 tests pass, zero warnings
 
 ## Development
 
@@ -596,7 +596,7 @@ chmod +x .git/hooks/pre-commit
 
 ### Testing
 ```bash
-# All tests (142 unit + integration)
+# All tests (1713 unit + integration)
 cargo test
 
 # Property-based tests only (670+ cases)
@@ -669,7 +669,8 @@ cargo deny check
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
-### v0.10.0 ✅ (Current)
+### v0.10.1 ✅ (Current)
+- `parse()` handles empty string input gracefully (returns `Err` instead of panic)
 - See [CHANGELOG.md](CHANGELOG.md) for details
 
 ### v0.6.6 ✅ (2025-11-30)

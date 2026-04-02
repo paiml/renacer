@@ -140,6 +140,7 @@ impl ValidateConfig {
 
     /// Enable layer tracing
     pub fn with_trace_layers(mut self, enabled: bool) -> Self {
+        contract_pre_error_handling!();
         self.trace_layers = enabled;
         self
     }

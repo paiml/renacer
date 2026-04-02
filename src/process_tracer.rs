@@ -271,6 +271,7 @@ pub struct SyscallBreakdown {
 impl SyscallBreakdown {
     /// Create breakdown from syscall events
     pub fn from_events(events: &[SyscallEvent], total_duration_us: u64) -> Self {
+        // contract_pre_absolute_position_add!(events); // FIXME: macro hygiene
         let mut breakdown = Self { total_us: total_duration_us, ..Default::default() };
         let mut syscall_time_us: u64 = 0;
 
@@ -912,6 +913,7 @@ pub fn detach(mut trace: ProcessTrace) -> Result<(), TracerError> {
         return Ok(());
     }
 
+    contract_pre_error_handling!();
     let nix_pid = Pid::from_raw(trace.pid as i32);
 
     // Detach and continue process
@@ -1019,6 +1021,7 @@ pub fn collect(trace: &mut ProcessTrace) -> Result<TraceResult, TracerError> {
         return Err(TracerError::NotAttached);
     }
 
+    contract_pre_error_handling!();
     let nix_pid = Pid::from_raw(trace.pid as i32);
     let start = Instant::now();
     let timeout = trace.config.timeout;

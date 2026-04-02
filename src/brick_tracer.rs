@@ -410,6 +410,7 @@ impl BrickTracer {
     where
         F: FnOnce() -> R,
     {
+        contract_pre_error_handling!(brick_name);
         self.trace_with_reason(brick_name, budget_us, EscalationReason::Manual, f)
     }
 
@@ -424,6 +425,7 @@ impl BrickTracer {
     where
         F: FnOnce() -> R,
     {
+        contract_pre_error_handling!(brick_name);
         let start = Instant::now();
 
         // Execute the brick

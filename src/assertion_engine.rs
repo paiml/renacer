@@ -54,6 +54,7 @@ impl AssertionEngine {
             return AssertionResult::pass(assertion.name.clone(), "Assertion disabled".to_string());
         }
 
+        contract_pre_error_handling!();
         match &assertion.assertion_type {
             AssertionType::CriticalPath(cp) => {
                 self.evaluate_critical_path(&assertion.name, cp, trace)

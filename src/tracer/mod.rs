@@ -811,7 +811,6 @@ struct SyscallEntry {
     _raw_arg3: Option<u64>,
 }
 
-
 #[cfg(test)]
 #[path = "core_tests.rs"]
 mod core_tests;

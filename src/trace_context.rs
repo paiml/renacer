@@ -26,6 +26,7 @@ impl TraceContext {
     /// Format: "00-{trace_id}-{parent_id}-{flags}"
     /// Example: "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"
     pub fn parse(traceparent: &str) -> Result<Self, TraceContextError> {
+        contract_pre_parse!(traceparent);
         // Split into 4 parts: version-trace_id-parent_id-flags
         let parts: Vec<&str> = traceparent.split('-').collect();
         if parts.len() != 4 {
@@ -68,7 +69,9 @@ impl TraceContext {
         let trace_flags =
             u8::from_str_radix(parts[3], 16).map_err(|_| TraceContextError::InvalidTraceFlags)?;
 
-        Ok(TraceContext { version, trace_id, parent_id, trace_flags })
+        let result = TraceContext { version, trace_id, parent_id, trace_flags };
+        contract_post_configuration!(&"ok");
+        Ok(result)
     }
 
     /// Extract trace context from environment variables
@@ -113,12 +116,14 @@ impl TraceContext {
     /// Convert `trace_id` to OpenTelemetry `TraceId`
     #[cfg(feature = "otlp")]
     pub fn otel_trace_id(&self) -> opentelemetry::trace::TraceId {
+        contract_pre_error_handling!();
         opentelemetry::trace::TraceId::from_bytes(self.trace_id)
     }
 
     /// Convert `parent_id` to OpenTelemetry `SpanId`
     #[cfg(feature = "otlp")]
     pub fn otel_parent_id(&self) -> opentelemetry::trace::SpanId {
+        contract_pre_error_handling!();
         opentelemetry::trace::SpanId::from_bytes(self.parent_id)
     }
 }

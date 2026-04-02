@@ -74,6 +74,8 @@ impl SyscallFilter {
 
     /// Check if a syscall should be traced
     pub fn should_trace(&self, syscall_name: &str) -> bool {
+        contract_pre_error_handling!(syscall_name);
+        contract_post_error_handling!(&"ok");
         // Sprint 15: First check exclusions (highest priority)
         if self.exclude.contains(syscall_name) {
             return false;

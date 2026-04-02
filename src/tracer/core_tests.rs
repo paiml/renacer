@@ -553,24 +553,21 @@ fn test_generate_ml_analysis_empty_tracker() {
 
 #[test]
 fn test_generate_isolation_forest_none() {
-    let result =
-        ml_analysis::generate_isolation_forest_analysis_for_json(&None, 100, 0.1, false);
+    let result = ml_analysis::generate_isolation_forest_analysis_for_json(&None, 100, 0.1, false);
     assert!(result.is_none());
 }
 
 #[test]
 fn test_generate_isolation_forest_empty_tracker() {
     let tracker = Some(crate::stats::StatsTracker::new());
-    let result =
-        ml_analysis::generate_isolation_forest_analysis_for_json(&tracker, 50, 0.1, false);
+    let result = ml_analysis::generate_isolation_forest_analysis_for_json(&tracker, 50, 0.1, false);
     assert!(result.is_some());
 }
 
 #[test]
 fn test_generate_isolation_forest_with_explain() {
     let tracker = Some(crate::stats::StatsTracker::new());
-    let result =
-        ml_analysis::generate_isolation_forest_analysis_for_json(&tracker, 50, 0.1, true);
+    let result = ml_analysis::generate_isolation_forest_analysis_for_json(&tracker, 50, 0.1, true);
     assert!(result.is_some());
 }
 
@@ -583,16 +580,14 @@ fn test_generate_autoencoder_none() {
 #[test]
 fn test_generate_autoencoder_empty_tracker() {
     let tracker = Some(crate::stats::StatsTracker::new());
-    let result =
-        ml_analysis::generate_autoencoder_analysis_for_json(&tracker, 8, 50, 2.0, false);
+    let result = ml_analysis::generate_autoencoder_analysis_for_json(&tracker, 8, 50, 2.0, false);
     assert!(result.is_some());
 }
 
 #[test]
 fn test_generate_autoencoder_with_explain() {
     let tracker = Some(crate::stats::StatsTracker::new());
-    let result =
-        ml_analysis::generate_autoencoder_analysis_for_json(&tracker, 8, 50, 2.0, true);
+    let result = ml_analysis::generate_autoencoder_analysis_for_json(&tracker, 8, 50, 2.0, true);
     assert!(result.is_some());
 }
 
@@ -1610,32 +1605,28 @@ fn test_generate_ml_analysis_populated() {
 #[test]
 fn test_generate_isolation_forest_populated() {
     let tracker = Some(create_populated_stats_tracker());
-    let result =
-        ml_analysis::generate_isolation_forest_analysis_for_json(&tracker, 50, 0.1, false);
+    let result = ml_analysis::generate_isolation_forest_analysis_for_json(&tracker, 50, 0.1, false);
     assert!(result.is_some());
 }
 
 #[test]
 fn test_generate_isolation_forest_populated_with_explain() {
     let tracker = Some(create_populated_stats_tracker());
-    let result =
-        ml_analysis::generate_isolation_forest_analysis_for_json(&tracker, 50, 0.1, true);
+    let result = ml_analysis::generate_isolation_forest_analysis_for_json(&tracker, 50, 0.1, true);
     assert!(result.is_some());
 }
 
 #[test]
 fn test_generate_autoencoder_populated() {
     let tracker = Some(create_populated_stats_tracker());
-    let result =
-        ml_analysis::generate_autoencoder_analysis_for_json(&tracker, 8, 10, 2.0, false);
+    let result = ml_analysis::generate_autoencoder_analysis_for_json(&tracker, 8, 10, 2.0, false);
     assert!(result.is_some());
 }
 
 #[test]
 fn test_generate_autoencoder_populated_with_explain() {
     let tracker = Some(create_populated_stats_tracker());
-    let result =
-        ml_analysis::generate_autoencoder_analysis_for_json(&tracker, 8, 10, 2.0, true);
+    let result = ml_analysis::generate_autoencoder_analysis_for_json(&tracker, 8, 10, 2.0, true);
     assert!(result.is_some());
 }
 

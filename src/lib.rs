@@ -3,10 +3,11 @@
 //! This library provides the core functionality for tracing system calls
 //! in Rust binaries, with support for DWARF debug information, function profiling,
 //! and comprehensive filtering.
-
 // Allow unwrap/expect in test code — production code is lint-clean
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::unwrap_in_result))]
-
+#[macro_use]
+#[allow(unused_macros)]
+mod generated_contracts;
 pub mod adaptive_backend; // Sprint 40: Adaptive Backend Selection (Specification Section 5.2)
 pub mod adaptive_sampler; // Sprint 40: Adaptive Sampling (Specification Section 7.3)
 pub mod analysis; // REN-002: Architectural anti-pattern detection (§27)
@@ -71,7 +72,6 @@ pub mod validate; // Sprint 50: Golden trace validation (APR Runtime Support)
 pub mod validation_engine; // Sprint 40: ValidationEngine for Batuta Integration (Specification Section 5.1)
 #[cfg(target_os = "linux")]
 pub mod visualize; // Sprint 52-55: Real-time tracing visualization (ttop-identical TUI)
-
-// Sprint 56-57: Metrics, Alerting, Visualization (METRICS-001)
+                   // Sprint 56-57: Metrics, Alerting, Visualization (METRICS-001)
 pub mod alerting; // Sprint 57: Alert engine (threshold, rate, anomaly-based)
 pub mod metrics; // Sprint 56: Counter, Gauge, Histogram with SIMD
