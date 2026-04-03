@@ -2,6 +2,16 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## CRITICAL: Contract-First Design
+
+**NEVER write code before writing a provable contract.**
+
+All code changes MUST have a corresponding contract (YAML in ../provable-contracts/contracts/<project>/ or .pmat-work/<TICKET>/contract.json) BEFORE implementation. This is enforced by `pmat comply` CB-1400.
+
+- Use `pmat comply check` to verify contract coverage
+- Minimum verification level: L1 (recommended L3+)
+- See docs/agent-instructions/provable-contract-first-agents.md for the full workflow
+
 ## Project Overview
 
 **renacer** is a pure Rust system call tracer with source-aware correlation for Rust binaries. It provides `strace`-like functionality with enhanced debugging capabilities including source code mapping and semantic analysis.
