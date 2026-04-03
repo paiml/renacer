@@ -91,10 +91,10 @@ crossbeam = { version = "0.8", default-features = false, features = ["crossbeam-
 dashmap = "6.1"
 
 # Parquet storage for golden thread traces (Sprint 40)
-trueno-db = "0.3.13"
+trueno-db = "0.3.16"
 
 # Graph database for causal analysis (Sprint 41)
-trueno-graph = "0.1.13"
+trueno-graph = "0.1.17"
 
 # SHA-256 hashing for state-based semantic equivalence (Sprint 42)
 sha2 = { version = "0.10", default-features = false, features = ["std"] }
