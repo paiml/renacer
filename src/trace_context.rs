@@ -26,6 +26,9 @@ impl TraceContext {
     /// Format: "00-{trace_id}-{parent_id}-{flags}"
     /// Example: "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"
     pub fn parse(traceparent: &str) -> Result<Self, TraceContextError> {
+        if traceparent.is_empty() {
+            return Err(TraceContextError::InvalidFormat);
+        }
         contract_pre_parse!(traceparent);
         // Split into 4 parts: version-trace_id-parent_id-flags
         let parts: Vec<&str> = traceparent.split('-').collect();
