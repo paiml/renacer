@@ -46,6 +46,7 @@ pub mod ml_anomaly;
 pub mod ml_pipeline; // Sprint 48: Enhanced ML pipeline (StandardScaler, DBSCAN, LOF, PCA)
 pub mod model_persistence; // Sprint 48: .apr model persistence (Toyota Way: Muda elimination)
 pub mod otlp_exporter;
+pub mod otlp_types;
 #[cfg(target_os = "linux")]
 pub mod process_tracer; // Sprint 59: Process-level syscall tracing for ptop integration (SPEC-057)
 pub mod profiling;

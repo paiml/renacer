@@ -1,19 +1,4 @@
-//! OpenTelemetry OTLP Exporter for Renacer (Sprint 30)
-//!
-//! Exports syscall traces as OpenTelemetry spans via OTLP protocol.
-//!
-//! # Architecture
-//!
-//! - Each traced process gets a root span
-//! - Each syscall becomes a child span with attributes
-//! - Spans are exported to an OTLP endpoint (Jaeger, Tempo, etc.)
-//!
-//! # Example
-//!
-//! ```bash
-//! renacer --otlp-endpoint http://localhost:4317 --otlp-service-name my-app -- ./program
-//! ```
-
+//! OpenTelemetry OTLP Exporter — exports syscall traces as spans via OTLP protocol.
 #[cfg(feature = "otlp")]
 use anyhow::Result;
 #[cfg(feature = "otlp")]
@@ -33,308 +18,12 @@ use opentelemetry_sdk::{
 };
 
 #[allow(unused_imports)]
-use crate::trace_context::TraceContext; // Sprint 33
+use crate::trace_context::TraceContext;
 
-// Sprint 56: Metrics registry for OTLP export
 use crate::metrics::Registry;
 
-/// Configuration for OTLP exporter (Sprint 36: added batch config)
-#[derive(Debug, Clone)]
-pub struct OtlpConfig {
-    /// OTLP endpoint URL (e.g., "<http://localhost:4317>")
-    pub endpoint: String,
-    /// Service name for traces
-    pub service_name: String,
-    /// Maximum number of spans per batch (default: 512)
-    pub batch_size: usize,
-    /// Maximum batch delay in milliseconds (default: 1000ms)
-    pub batch_delay_ms: u64,
-    /// Maximum queue size (default: 2048)
-    pub queue_size: usize,
-}
-
-impl OtlpConfig {
-    /// Create a new OTLP configuration with default batching settings
-    pub fn new(endpoint: String, service_name: String) -> Self {
-        contract_pre_error_handling!(endpoint);
-        OtlpConfig {
-            endpoint,
-            service_name,
-            batch_size: 512,
-            batch_delay_ms: 1000,
-            queue_size: 2048,
-        }
-    }
-
-    /// Performance preset: Balanced (default)
-    pub fn balanced(endpoint: String, service_name: String) -> Self {
-        Self::new(endpoint, service_name)
-    }
-
-    /// Performance preset: Aggressive (max throughput)
-    pub fn aggressive(endpoint: String, service_name: String) -> Self {
-        OtlpConfig {
-            endpoint,
-            service_name,
-            batch_size: 2048,
-            batch_delay_ms: 5000,
-            queue_size: 8192,
-        }
-    }
-
-    /// Performance preset: Low-latency (min delay)
-    pub fn low_latency(endpoint: String, service_name: String) -> Self {
-        OtlpConfig { endpoint, service_name, batch_size: 128, batch_delay_ms: 100, queue_size: 512 }
-    }
-
-    /// Set custom batch size
-    pub fn with_batch_size(mut self, size: usize) -> Self {
-        self.batch_size = size;
-        self
-    }
-
-    /// Set custom batch delay
-    pub fn with_batch_delay_ms(mut self, delay_ms: u64) -> Self {
-        self.batch_delay_ms = delay_ms;
-        self
-    }
-
-    /// Set custom queue size
-    pub fn with_queue_size(mut self, size: usize) -> Self {
-        self.queue_size = size;
-        self
-    }
-}
-
-/// Compute block metadata for tracing (Sprint 32)
-///
-/// Represents a block of statistical computation containing multiple
-/// Trueno SIMD operations (e.g., mean, stddev, percentiles).
-#[derive(Debug, Clone)]
-pub struct ComputeBlock {
-    /// Operation name (e.g., "`calculate_statistics`", "`detect_anomalies`")
-    pub operation: &'static str,
-    /// Total duration of the block in microseconds
-    pub duration_us: u64,
-    /// Number of elements processed
-    pub elements: usize,
-    /// Whether this block exceeded the slow threshold (>100μs)
-    pub is_slow: bool,
-}
-
-/// GPU kernel metadata for tracing (Sprint 37)
-///
-/// Represents a single GPU kernel execution (compute shader, render pass, etc.)
-/// captured via wgpu timestamp queries.
-#[derive(Debug, Clone)]
-pub struct GpuKernel {
-    /// Kernel name (e.g., "`sum_aggregation`", "`matrix_multiply`")
-    pub kernel: String,
-    /// Total duration in microseconds
-    pub duration_us: u64,
-    /// GPU backend (always "wgpu" for Phase 1)
-    pub backend: &'static str,
-    /// Workgroup size for compute shaders (e.g., "`[256,1,1]`")
-    pub workgroup_size: Option<String>,
-    /// Number of elements processed (if known)
-    pub elements: Option<usize>,
-    /// Whether this kernel exceeded the slow threshold (>100μs)
-    pub is_slow: bool,
-}
-
-/// GPU memory transfer direction (Sprint 39 - Phase 4)
-///
-/// Represents the direction of CPU↔GPU data movement.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TransferDirection {
-    /// CPU → GPU (buffer upload, `write_buffer`)
-    CpuToGpu,
-    /// GPU → CPU (buffer download/readback, `map_async`)
-    GpuToCpu,
-}
-
-impl TransferDirection {
-    /// Get string representation of transfer direction
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            TransferDirection::CpuToGpu => "cpu_to_gpu",
-            TransferDirection::GpuToCpu => "gpu_to_cpu",
-        }
-    }
-}
-
-/// GPU memory transfer metadata for tracing (Sprint 39 - Phase 4)
-///
-/// Represents a single CPU↔GPU memory transfer operation captured via wall-clock timing.
-/// Tracks buffer uploads (CPU→GPU) and downloads (GPU→CPU) to identify `PCIe` bandwidth
-/// bottlenecks.
-#[derive(Debug, Clone)]
-pub struct GpuMemoryTransfer {
-    /// Transfer name/label (e.g., "`mesh_data_upload`", "`framebuffer_readback`")
-    pub label: String,
-    /// Transfer direction (CPU→GPU or GPU→CPU)
-    pub direction: TransferDirection,
-    /// Number of bytes transferred
-    pub bytes: usize,
-    /// Total duration in microseconds
-    pub duration_us: u64,
-    /// Calculated bandwidth in MB/s
-    pub bandwidth_mbps: f64,
-    /// Optional buffer usage hint (e.g., "VERTEX", "UNIFORM", "STORAGE")
-    pub buffer_usage: Option<String>,
-    /// Whether this transfer exceeded the slow threshold (>100μs)
-    pub is_slow: bool,
-}
-
-/// Metrics snapshot for OTLP export (Sprint 56)
-///
-/// Contains all metrics collected at a point in time for export.
-#[derive(Debug, Clone, Default)]
-pub struct MetricsSnapshot {
-    /// Timestamp in nanoseconds since epoch
-    pub timestamp_nanos: u64,
-    /// Counter metrics
-    pub counters: Vec<CounterSnapshot>,
-    /// Gauge metrics
-    pub gauges: Vec<GaugeSnapshot>,
-    /// Histogram metrics
-    pub histograms: Vec<HistogramSnapshot>,
-}
-
-/// Snapshot of a counter metric
-#[derive(Debug, Clone)]
-pub struct CounterSnapshot {
-    pub name: String,
-    pub labels: Vec<(String, String)>,
-    pub value: u64,
-}
-
-/// Snapshot of a gauge metric
-#[derive(Debug, Clone)]
-pub struct GaugeSnapshot {
-    pub name: String,
-    pub labels: Vec<(String, String)>,
-    pub value: i64,
-}
-
-/// Snapshot of a histogram metric
-#[derive(Debug, Clone)]
-pub struct HistogramSnapshot {
-    pub name: String,
-    pub labels: Vec<(String, String)>,
-    pub count: u64,
-    pub sum: f64,
-    pub buckets: Vec<(f64, u64)>, // (le, cumulative_count)
-}
-
-impl MetricsSnapshot {
-    /// Create a new metrics snapshot from a registry
-    pub fn from_registry(registry: &Registry) -> Self {
-        use std::time::{SystemTime, UNIX_EPOCH};
-
-        let timestamp_nanos =
-            SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_nanos() as u64).unwrap_or(0);
-
-        let counters = registry
-            .counters()
-            .iter()
-            .map(|c| CounterSnapshot {
-                name: c.name().to_string(),
-                labels: c.labels().iter().map(|(k, v)| (k.clone(), v.clone())).collect(),
-                value: c.get(),
-            })
-            .collect();
-
-        let gauges = registry
-            .gauges()
-            .iter()
-            .map(|g| GaugeSnapshot {
-                name: g.name().to_string(),
-                labels: g.labels().iter().map(|(k, v)| (k.clone(), v.clone())).collect(),
-                value: g.get(),
-            })
-            .collect();
-
-        let histograms = registry
-            .histograms()
-            .iter()
-            .map(|h| {
-                let cumulative = h.cumulative_counts();
-                let buckets: Vec<(f64, u64)> = h
-                    .buckets()
-                    .iter()
-                    .zip(cumulative.iter())
-                    .map(|(&bound, &count)| (bound, count))
-                    .collect();
-
-                HistogramSnapshot {
-                    name: h.name().to_string(),
-                    labels: h.labels().iter().map(|(k, v)| (k.clone(), v.clone())).collect(),
-                    count: h.get_count(),
-                    sum: h.get_sum(),
-                    buckets,
-                }
-            })
-            .collect();
-
-        MetricsSnapshot { timestamp_nanos, counters, gauges, histograms }
-    }
-
-    /// Check if snapshot is empty
-    pub fn is_empty(&self) -> bool {
-        self.counters.is_empty() && self.gauges.is_empty() && self.histograms.is_empty()
-    }
-
-    /// Get total metric count
-    pub fn len(&self) -> usize {
-        self.counters.len() + self.gauges.len() + self.histograms.len()
-    }
-}
-
-impl GpuMemoryTransfer {
-    /// Create a new GPU memory transfer record
-    ///
-    /// Automatically calculates bandwidth from bytes and duration.
-    ///
-    /// # Arguments
-    ///
-    /// * `label` - Transfer name/label
-    /// * `direction` - Transfer direction (CPU→GPU or GPU→CPU)
-    /// * `bytes` - Number of bytes transferred
-    /// * `duration_us` - Transfer duration in microseconds
-    /// * `buffer_usage` - Optional buffer usage hint
-    /// * `threshold_us` - Slow threshold for adaptive sampling
-    ///
-    /// # Returns
-    ///
-    /// New `GpuMemoryTransfer` with calculated bandwidth
-    pub fn new(
-        label: String,
-        direction: TransferDirection,
-        bytes: usize,
-        duration_us: u64,
-        buffer_usage: Option<String>,
-        threshold_us: u64,
-    ) -> Self {
-        // Calculate bandwidth: MB/s = (bytes / 1_048_576) / (duration_us / 1_000_000)
-        // Simplified: (bytes * 1_000_000) / (duration_us * 1_048_576)
-        let bandwidth_mbps = if duration_us > 0 {
-            (bytes as f64 * 1_000_000.0) / (duration_us as f64 * 1_048_576.0)
-        } else {
-            0.0
-        };
-
-        GpuMemoryTransfer {
-            label,
-            direction,
-            bytes,
-            duration_us,
-            bandwidth_mbps,
-            buffer_usage,
-            is_slow: duration_us > threshold_us,
-        }
-    }
-}
+// Data types extracted to otlp_types.rs (500-line limit compliance)
+pub use crate::otlp_types::*;
 
 /// OTLP exporter for syscall traces
 #[cfg(feature = "otlp")]
@@ -343,7 +32,7 @@ pub struct OtlpExporter {
     _provider: TracerProvider,
     tracer: opentelemetry_sdk::trace::Tracer,
     root_span: Option<opentelemetry_sdk::trace::Span>,
-    remote_parent_context: Option<opentelemetry::Context>, // Sprint 33: W3C Trace Context
+    remote_parent_context: Option<opentelemetry::Context>,
 }
 
 #[cfg(feature = "otlp")]
@@ -354,36 +43,30 @@ impl OtlpExporter {
         let runtime = tokio::runtime::Runtime::new()
             .map_err(|e| anyhow::anyhow!("Failed to create Tokio runtime: {e}"))?;
 
-        // Build OTLP exporter within the runtime context
         let (provider, tracer) = runtime.block_on(async {
-            // Create OTLP exporter
             let exporter = opentelemetry_otlp::SpanExporter::builder()
                 .with_tonic()
                 .with_endpoint(&config.endpoint)
                 .build()?;
 
-            // Create batch span processor (Sprint 36: batching for performance)
-            // Note: OpenTelemetry SDK 0.31.0 uses default batch settings
-            // config.batch_size, batch_delay_ms, and queue_size are available
-            // for future versions or custom implementations
+            // Default 30s export timeout causes CI hangs. Set 5s if unset.
+            if std::env::var("OTEL_BSP_EXPORT_TIMEOUT").is_err() {
+                std::env::set_var("OTEL_BSP_EXPORT_TIMEOUT", "5000");
+            }
             let span_processor = BatchSpanProcessor::builder(exporter).build();
 
-            // Log batch configuration for transparency
             eprintln!(
                 "[renacer: OTLP batch config - size: {}, delay: {}ms, queue: {}]",
                 config.batch_size, config.batch_delay_ms, config.queue_size
             );
 
-            // Create resource with service name + compute tracing attributes (Sprint 32 + 37)
             #[cfg_attr(not(feature = "gpu-tracing"), allow(unused_mut))]
             let mut resource_attrs = vec![
-                // Sprint 32: Static SIMD compute tracing attributes at Resource level (Toyota Way: no waste)
                 KeyValue::new("compute.library", "trueno"),
                 KeyValue::new("compute.library.version", "0.4.0"),
                 KeyValue::new("compute.tracing.abstraction", "block_level"),
             ];
 
-            // Sprint 37: GPU kernel tracing attributes (only if gpu-tracing feature enabled)
             #[cfg(feature = "gpu-tracing")]
             {
                 resource_attrs.push(KeyValue::new("gpu.library", "wgpu"));
@@ -401,13 +84,11 @@ impl OtlpExporter {
                 .with_resource(resource)
                 .build();
 
-            // Get tracer
             let tracer = provider.tracer("renacer");
 
             Ok::<_, anyhow::Error>((provider, tracer))
         })?;
 
-        // Sprint 33: Create remote parent context from W3C Trace Context
         let remote_parent_context = trace_context.map(|ctx| {
             let span_context = SpanContext::new(
                 ctx.otel_trace_id(),
@@ -440,7 +121,6 @@ impl OtlpExporter {
                 KeyValue::new("process.pid", i64::from(pid)),
             ]);
 
-        // Sprint 33: If we have a remote parent context, make this span a child
         let span = if let Some(ref parent_ctx) = self.remote_parent_context {
             span_builder.start_with_context(&self.tracer, parent_ctx)
         } else {
@@ -626,34 +306,27 @@ impl OtlpExporter {
             .with_kind(SpanKind::Internal)
             .with_attributes(span_attrs)
             .start(&self.tracer);
-
         span.set_status(Status::Ok);
         span.end();
     }
-
     /// Finish the root span
     pub fn end_root_span(&mut self, exit_code: i32) {
         if let Some(mut span) = self.root_span.take() {
             span.set_attribute(KeyValue::new("process.exit_code", i64::from(exit_code)));
-
             if exit_code != 0 {
                 span.set_status(Status::Error {
                     description: format!("process exited with code: {exit_code}").into(),
                 });
             }
-
             span.end();
         }
     }
-
     /// Export a complete `UnifiedTrace` to OTLP (Sprint 40 - Section 7.1)
     ///
-    /// Exports all layers of the `UnifiedTrace` structure to OTLP:
     /// - `ProcessSpan` as root span
     /// - `SyscallSpans` as children of process span
     /// - GPU kernels, GPU memory transfers, SIMD blocks, transpiler decisions
     ///
-    /// Preserves happens-before relationships via `parent_span_id`.
     ///
     /// # Arguments
     ///
@@ -675,10 +348,8 @@ impl OtlpExporter {
         trace: &crate::unified_trace::UnifiedTrace,
     ) -> Result<()> {
         contract_pre_error_handling!();
-        // 1. Export process span as root span
         self.start_root_span(&trace.process_span.name, trace.process_span.pid);
 
-        // 2. Export all syscall spans
         for syscall in &trace.syscall_spans {
             self.record_syscall(
                 &syscall.name,
@@ -689,22 +360,17 @@ impl OtlpExporter {
             );
         }
 
-        // 3. Export all GPU kernels
         for gpu_kernel in &trace.gpu_spans {
             self.record_gpu_kernel(gpu_kernel.clone());
         }
 
-        // 4. Export all GPU memory transfers
         for gpu_transfer in &trace.gpu_memory_transfers {
             self.record_gpu_transfer(gpu_transfer.clone());
         }
-
-        // 5. Export all SIMD compute blocks
         for simd_block in &trace.simd_spans {
             self.record_compute_block(simd_block.clone());
         }
 
-        // 6. Export all transpiler decisions
         for decision in &trace.transpiler_spans {
             self.record_decision(
                 &decision.category,
@@ -808,315 +474,27 @@ impl Drop for OtlpExporter {
     }
 }
 
-// Stub implementation when OTLP feature is disabled
 #[cfg(not(feature = "otlp"))]
 pub struct OtlpExporter;
-
 #[cfg(not(feature = "otlp"))]
 impl OtlpExporter {
     pub fn new(
-        _config: OtlpConfig,
-        _trace_context: Option<crate::trace_context::TraceContext>,
+        _: crate::otlp_types::OtlpConfig,
+        _: Option<crate::trace_context::TraceContext>,
     ) -> anyhow::Result<Self> {
-        anyhow::bail!("OTLP support not compiled in. Enable the 'otlp' feature.");
+        anyhow::bail!("OTLP not compiled in")
     }
-
-    pub fn start_root_span(&mut self, _program: &str, _pid: i32) {}
-
-    pub fn record_syscall(
-        &self,
-        _name: &str,
-        _duration_us: Option<u64>,
-        _result: i64,
-        _source_file: Option<&str>,
-        _source_line: Option<u32>,
-    ) {
+    pub fn start_root_span(&mut self, _: &str, _: i32) {}
+    pub fn record_syscall(&self, _: &str, _: Option<u64>, _: i64, _: Option<&str>, _: Option<u32>) {
     }
-
-    pub fn record_decision(
-        &mut self,
-        _category: &str,
-        _name: &str,
-        _result: Option<&str>,
-        _timestamp_us: u64,
-    ) {
-    }
-
-    pub fn record_metrics(&mut self, _snapshot: &MetricsSnapshot) {}
-
-    pub fn export_metrics(&mut self, _registry: &std::sync::Arc<Registry>) {}
-
-    pub fn record_compute_block(&self, _block: ComputeBlock) {}
-
-    pub fn end_root_span(&mut self, _exit_code: i32) {}
-
+    pub fn record_decision(&mut self, _: &str, _: &str, _: Option<&str>, _: u64) {}
+    pub fn record_metrics(&mut self, _: &MetricsSnapshot) {}
+    pub fn export_metrics(&mut self, _: &std::sync::Arc<crate::metrics::Registry>) {}
+    pub fn record_compute_block(&self, _: ComputeBlock) {}
+    pub fn end_root_span(&mut self, _: i32) {}
     pub fn shutdown(&mut self) {}
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    #[cfg(feature = "otlp")]
-    fn test_otlp_config_creation() {
-        let config =
-            OtlpConfig::new("http://localhost:4317".to_string(), "test-service".to_string());
-
-        assert_eq!(config.endpoint, "http://localhost:4317");
-        assert_eq!(config.service_name, "test-service");
-        assert_eq!(config.batch_size, 512); // Sprint 36: default batch size
-        assert_eq!(config.batch_delay_ms, 1000); // Sprint 36: default delay
-        assert_eq!(config.queue_size, 2048); // Sprint 36: default queue size
-    }
-
-    #[test]
-    #[cfg(feature = "otlp")]
-    fn test_otlp_config_presets() {
-        // Test balanced preset
-        let balanced =
-            OtlpConfig::balanced("http://localhost:4317".to_string(), "test".to_string());
-        assert_eq!(balanced.batch_size, 512);
-        assert_eq!(balanced.batch_delay_ms, 1000);
-
-        // Test aggressive preset
-        let aggressive =
-            OtlpConfig::aggressive("http://localhost:4317".to_string(), "test".to_string());
-        assert_eq!(aggressive.batch_size, 2048);
-        assert_eq!(aggressive.batch_delay_ms, 5000);
-
-        // Test low-latency preset
-        let low_latency =
-            OtlpConfig::low_latency("http://localhost:4317".to_string(), "test".to_string());
-        assert_eq!(low_latency.batch_size, 128);
-        assert_eq!(low_latency.batch_delay_ms, 100);
-    }
-
-    #[test]
-    #[cfg(feature = "otlp")]
-    fn test_otlp_config_builder() {
-        let config = OtlpConfig::new("http://localhost:4317".to_string(), "test".to_string())
-            .with_batch_size(1024)
-            .with_batch_delay_ms(2000)
-            .with_queue_size(4096);
-
-        assert_eq!(config.batch_size, 1024);
-        assert_eq!(config.batch_delay_ms, 2000);
-        assert_eq!(config.queue_size, 4096);
-    }
-
-    #[test]
-    #[cfg(not(feature = "otlp"))]
-    fn test_otlp_disabled_returns_error() {
-        let config = OtlpConfig::new("http://localhost:4317".to_string(), "test".to_string());
-
-        let result = OtlpExporter::new(config, None);
-        assert!(result.is_err());
-    }
-
-    // Sprint 40: UnifiedTrace export tests (Section 7.1)
-
-    #[test]
-    #[cfg(feature = "otlp")]
-    fn test_export_unified_trace_basic() {
-        use crate::unified_trace::UnifiedTrace;
-
-        // Create basic unified trace
-        let trace = UnifiedTrace::new(1234, "test_program".to_string());
-
-        // Create OTLP exporter
-        let config = OtlpConfig::new("http://localhost:4317".to_string(), "test".to_string());
-        let mut exporter = OtlpExporter::new(config, None).expect("Failed to create exporter");
-
-        // Export should succeed
-        let result = exporter.export_unified_trace(&trace);
-        assert!(result.is_ok(), "Export should succeed for basic trace");
-    }
-
-    #[test]
-    #[cfg(feature = "otlp")]
-    fn test_export_unified_trace_with_syscalls() {
-        use crate::unified_trace::{SyscallSpan, UnifiedTrace};
-        use std::borrow::Cow;
-
-        // Create trace with syscalls
-        let mut trace = UnifiedTrace::new(1234, "test_program".to_string());
-
-        // Add syscall spans
-        let syscall1 = SyscallSpan::new(
-            trace.process_span.span_id,
-            Cow::Borrowed("open"),
-            vec![],
-            0,
-            1000,
-            500,
-            None,
-            &trace.clock,
-        );
-        trace.syscall_spans.push(syscall1);
-
-        let syscall2 = SyscallSpan::new(
-            trace.process_span.span_id,
-            Cow::Borrowed("read"),
-            vec![],
-            512,
-            1500,
-            200,
-            None,
-            &trace.clock,
-        );
-        trace.syscall_spans.push(syscall2);
-
-        // Create OTLP exporter
-        let config = OtlpConfig::new("http://localhost:4317".to_string(), "test".to_string());
-        let mut exporter = OtlpExporter::new(config, None).expect("Failed to create exporter");
-
-        // Export should succeed
-        let result = exporter.export_unified_trace(&trace);
-        assert!(result.is_ok(), "Export should succeed with syscalls");
-    }
-
-    #[test]
-    #[cfg(feature = "otlp")]
-    fn test_export_unified_trace_multi_layer() {
-        use crate::decision_trace::DecisionTrace;
-        use crate::unified_trace::{SyscallSpan, UnifiedTrace};
-        use std::borrow::Cow;
-
-        // Create trace with multiple layers
-        let mut trace = UnifiedTrace::new(1234, "test_program".to_string());
-
-        // Add syscall
-        let syscall = SyscallSpan::new(
-            trace.process_span.span_id,
-            Cow::Borrowed("write"),
-            vec![],
-            1024,
-            2000,
-            300,
-            None,
-            &trace.clock,
-        );
-        trace.syscall_spans.push(syscall);
-
-        // Add GPU kernel
-        let gpu_kernel = GpuKernel {
-            kernel: "matrix_multiply".to_string(),
-            duration_us: 150,
-            backend: "wgpu",
-            workgroup_size: Some("`[256,1,1]`".to_string()),
-            elements: Some(1000000),
-            is_slow: true,
-        };
-        trace.gpu_spans.push(gpu_kernel);
-
-        // Add SIMD block
-        let simd_block = ComputeBlock {
-            operation: "calculate_statistics",
-            duration_us: 75,
-            elements: 50000,
-            is_slow: false,
-        };
-        trace.simd_spans.push(simd_block);
-
-        // Add transpiler decision
-        let decision = DecisionTrace {
-            category: "optimization".to_string(),
-            name: "vectorize_loop".to_string(),
-            input: serde_json::json!({}),
-            result: Some(serde_json::json!("success")),
-            timestamp_us: 1000,
-            source_location: None,
-            decision_id: None,
-        };
-        trace.transpiler_spans.push(decision);
-
-        // Create OTLP exporter
-        let config = OtlpConfig::new("http://localhost:4317".to_string(), "test".to_string());
-        let mut exporter = OtlpExporter::new(config, None).expect("Failed to create exporter");
-
-        // Export should succeed
-        let result = exporter.export_unified_trace(&trace);
-        assert!(result.is_ok(), "Export should succeed with multi-layer trace");
-    }
-
-    #[test]
-    #[cfg(feature = "otlp")]
-    fn test_export_unified_trace_with_gpu_transfers() {
-        use crate::unified_trace::UnifiedTrace;
-
-        // Create trace with GPU memory transfers
-        let mut trace = UnifiedTrace::new(1234, "test_program".to_string());
-
-        // Add GPU memory transfer
-        let transfer = GpuMemoryTransfer::new(
-            "mesh_upload".to_string(),
-            TransferDirection::CpuToGpu,
-            1_048_576, // 1 MB
-            5000,      // 5ms
-            Some("VERTEX".to_string()),
-            100,
-        );
-        trace.gpu_memory_transfers.push(transfer);
-
-        // Create OTLP exporter
-        let config = OtlpConfig::new("http://localhost:4317".to_string(), "test".to_string());
-        let mut exporter = OtlpExporter::new(config, None).expect("Failed to create exporter");
-
-        // Export should succeed
-        let result = exporter.export_unified_trace(&trace);
-        assert!(result.is_ok(), "Export should succeed with GPU memory transfers");
-    }
-
-    #[test]
-    #[cfg(feature = "otlp")]
-    fn test_export_unified_trace_preserves_happens_before() {
-        use crate::unified_trace::{SyscallSpan, UnifiedTrace};
-        use std::borrow::Cow;
-
-        // Create trace with causal relationships
-        let mut trace = UnifiedTrace::new(1234, "test_program".to_string());
-
-        // Add parent syscall (open)
-        let parent = SyscallSpan::new(
-            trace.process_span.span_id,
-            Cow::Borrowed("open"),
-            vec![],
-            3, // fd
-            1000,
-            500,
-            None,
-            &trace.clock,
-        );
-        let parent_span_id = parent.span_id;
-        trace.syscall_spans.push(parent);
-
-        // Add child syscall (read from fd 3)
-        let child = SyscallSpan::new(
-            parent_span_id, // Parent is the open syscall
-            Cow::Borrowed("read"),
-            vec![],
-            512,
-            1500,
-            200,
-            None,
-            &trace.clock,
-        );
-        let child_span_id = child.span_id;
-        trace.syscall_spans.push(child);
-
-        // Verify happens-before relationship exists
-        assert!(
-            trace.happens_before(parent_span_id, child_span_id),
-            "Parent should happen before child"
-        );
-
-        // Create OTLP exporter
-        let config = OtlpConfig::new("http://localhost:4317".to_string(), "test".to_string());
-        let mut exporter = OtlpExporter::new(config, None).expect("Failed to create exporter");
-
-        // Export should succeed and preserve causal ordering
-        let result = exporter.export_unified_trace(&trace);
-        assert!(result.is_ok(), "Export should succeed with happens-before relationships");
-    }
-}
+#[path = "otlp_exporter_tests.rs"]
+mod tests;
