@@ -587,6 +587,18 @@ fn run_validate_subcommand(args: &ValidateArgs) -> i32 {
 
 /// Run the visualize subcommand (Sprint 52-55)
 fn run_visualize_subcommand(args: &VisualizeArgs) -> Result<i32> {
+    // Validate: must have either -p PID or -- COMMAND (same gate as root handler)
+    let has_command = args.command.as_ref().is_some_and(|c| !c.is_empty());
+    if args.pid.is_none() && !has_command {
+        anyhow::bail!(
+            "Must specify either -p PID or command for visualization. \
+             Usage: renacer visualize -p PID or renacer visualize -- COMMAND [ARGS...]"
+        );
+    }
+    if args.pid.is_some() && has_command {
+        anyhow::bail!("Cannot specify both -p PID and command. Choose one.");
+    }
+
     // Build VisualizeConfig from CLI args
     let config = VisualizeConfig {
         tick_rate_ms: args.tick_rate,
@@ -1843,107 +1855,52 @@ mod tests {
     }
 
     // Sprint 56: Metrics and Alerting CLI Tests
-    #[test]
-    fn test_visualize_metrics_flag() {
-        let cli = Cli::parse_from(["renacer", "visualize", "--metrics", "--", "echo", "test"]);
-        if let Some(Commands::Visualize(args)) = cli.subcommand {
-            assert!(args.enable_metrics);
-        } else {
-            panic!("Expected Visualize subcommand");
+
+    /// Parse a visualize CLI invocation and extract VisualizeArgs
+    fn parse_visualize(args: &[&str]) -> VisualizeArgs {
+        let mut full: Vec<&str> = vec!["renacer", "visualize"];
+        full.extend_from_slice(args);
+        let cli = Cli::parse_from(full);
+        match cli.subcommand {
+            Some(Commands::Visualize(a)) => a,
+            _ => panic!("Expected Visualize subcommand"),
         }
     }
 
     #[test]
-    fn test_visualize_metrics_default_false() {
-        let cli = Cli::parse_from(["renacer", "visualize", "--", "echo", "test"]);
-        if let Some(Commands::Visualize(args)) = cli.subcommand {
-            assert!(!args.enable_metrics);
-        } else {
-            panic!("Expected Visualize subcommand");
-        }
+    fn test_visualize_metrics_flag() {
+        assert!(parse_visualize(&["--metrics", "--", "echo", "test"]).enable_metrics);
+    }
+
+    #[test]
+    fn test_visualize_defaults() {
+        let a = parse_visualize(&["--", "echo", "test"]);
+        assert!(!a.enable_metrics);
+        assert!(!a.enable_alerts);
+        assert_eq!(a.alert_latency_threshold, 10000);
+        assert!((a.alert_error_rate - 5.0).abs() < f32::EPSILON);
     }
 
     #[test]
     fn test_visualize_alerts_flag() {
-        let cli = Cli::parse_from(["renacer", "visualize", "--alerts", "--", "echo", "test"]);
-        if let Some(Commands::Visualize(args)) = cli.subcommand {
-            assert!(args.enable_alerts);
-        } else {
-            panic!("Expected Visualize subcommand");
-        }
-    }
-
-    #[test]
-    fn test_visualize_alerts_default_false() {
-        let cli = Cli::parse_from(["renacer", "visualize", "--", "echo", "test"]);
-        if let Some(Commands::Visualize(args)) = cli.subcommand {
-            assert!(!args.enable_alerts);
-        } else {
-            panic!("Expected Visualize subcommand");
-        }
-    }
-
-    #[test]
-    fn test_visualize_alert_latency_threshold_default() {
-        let cli = Cli::parse_from(["renacer", "visualize", "--", "echo", "test"]);
-        if let Some(Commands::Visualize(args)) = cli.subcommand {
-            assert_eq!(args.alert_latency_threshold, 10000);
-        } else {
-            panic!("Expected Visualize subcommand");
-        }
+        assert!(parse_visualize(&["--alerts", "--", "echo", "test"]).enable_alerts);
     }
 
     #[test]
     fn test_visualize_alert_latency_threshold_custom() {
-        let cli = Cli::parse_from([
-            "renacer",
-            "visualize",
-            "--alert-latency-threshold",
-            "5000",
-            "--",
-            "echo",
-            "test",
-        ]);
-        if let Some(Commands::Visualize(args)) = cli.subcommand {
-            assert_eq!(args.alert_latency_threshold, 5000);
-        } else {
-            panic!("Expected Visualize subcommand");
-        }
-    }
-
-    #[test]
-    fn test_visualize_alert_error_rate_default() {
-        let cli = Cli::parse_from(["renacer", "visualize", "--", "echo", "test"]);
-        if let Some(Commands::Visualize(args)) = cli.subcommand {
-            assert!((args.alert_error_rate - 5.0).abs() < f32::EPSILON);
-        } else {
-            panic!("Expected Visualize subcommand");
-        }
+        let a = parse_visualize(&["--alert-latency-threshold", "5000", "--", "echo", "test"]);
+        assert_eq!(a.alert_latency_threshold, 5000);
     }
 
     #[test]
     fn test_visualize_alert_error_rate_custom() {
-        let cli = Cli::parse_from([
-            "renacer",
-            "visualize",
-            "--alert-error-rate",
-            "2.5",
-            "--",
-            "echo",
-            "test",
-        ]);
-        if let Some(Commands::Visualize(args)) = cli.subcommand {
-            assert!((args.alert_error_rate - 2.5).abs() < f32::EPSILON);
-        } else {
-            panic!("Expected Visualize subcommand");
-        }
+        let a = parse_visualize(&["--alert-error-rate", "2.5", "--", "echo", "test"]);
+        assert!((a.alert_error_rate - 2.5).abs() < f32::EPSILON);
     }
 
     #[test]
     fn test_visualize_metrics_and_alerts_combined() {
-        let cli = Cli::parse_from([
-            "renacer",
-            "visualize",
+        let a = parse_visualize(&[
             "--metrics",
             "--alerts",
             "--alert-latency-threshold",
@@ -1954,13 +1911,32 @@ mod tests {
             "echo",
             "test",
         ]);
-        if let Some(Commands::Visualize(args)) = cli.subcommand {
-            assert!(args.enable_metrics);
-            assert!(args.enable_alerts);
-            assert_eq!(args.alert_latency_threshold, 8000);
-            assert!((args.alert_error_rate - 3.0).abs() < f32::EPSILON);
-        } else {
-            panic!("Expected Visualize subcommand");
-        }
+        assert!(a.enable_metrics);
+        assert!(a.enable_alerts);
+        assert_eq!(a.alert_latency_threshold, 8000);
+        assert!((a.alert_error_rate - 3.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn test_visualize_no_pid_no_command_errors() {
+        let args = parse_visualize(&[]);
+        let err = run_visualize_subcommand(&args).unwrap_err();
+        assert!(err.to_string().contains("Must specify either"));
+    }
+
+    #[test]
+    fn test_visualize_both_pid_and_command_errors() {
+        let mut args = parse_visualize(&["--", "echo"]);
+        args.pid = Some(1234); // inject conflict: both pid AND command
+        let err = run_visualize_subcommand(&args).unwrap_err();
+        assert!(err.to_string().contains("Cannot specify both"));
+    }
+
+    #[test]
+    fn test_visualize_empty_command_errors() {
+        let mut args = parse_visualize(&[]);
+        args.command = Some(vec![]); // empty vec treated same as None
+        let err = run_visualize_subcommand(&args).unwrap_err();
+        assert!(err.to_string().contains("Must specify either"));
     }
 }
