@@ -1176,10 +1176,8 @@ mod tests {
     /// F001: attach() returns handle for valid PID
     /// Falsification: attach(valid_pid) returns Err when process exists
     #[test]
+    #[ignore] // Requires CAP_SYS_PTRACE; hangs in CI containers (paiml/renacer#62)
     fn test_f001_attach_valid_pid() {
-        // Use our own PID which we can always attach to (if we have perms)
-        let _pid = std::process::id();
-
         // Skip if we don't have ptrace permissions
         if !is_available() {
             eprintln!("Skipping F001: no ptrace permissions");
