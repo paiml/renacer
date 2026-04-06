@@ -226,6 +226,7 @@ static_assertions::assert_impl_all!(TraceContextError: Send, Sync);
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
 
     // Test 1: Parse valid traceparent
     #[test]
@@ -404,56 +405,45 @@ mod tests {
 
     // Test 19: from_env() with TRACEPARENT set
     #[test]
+    #[serial]
     fn test_from_env_traceparent() {
         std::env::set_var("TRACEPARENT", "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01");
-
-        let ctx = TraceContext::from_env();
-        assert!(ctx.is_some());
-
-        let ctx = ctx.expect("test");
+        let ctx = TraceContext::from_env().expect("TRACEPARENT should parse");
         assert_eq!(ctx.version, 0);
         assert!(ctx.is_sampled());
-
         std::env::remove_var("TRACEPARENT");
     }
 
     // Test 20: from_env() with OTEL_TRACEPARENT set
     #[test]
+    #[serial]
     fn test_from_env_otel_traceparent() {
         std::env::remove_var("TRACEPARENT");
         std::env::set_var(
             "OTEL_TRACEPARENT",
             "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00",
         );
-
-        let ctx = TraceContext::from_env();
-        assert!(ctx.is_some());
-
-        let ctx = ctx.expect("test");
+        let ctx = TraceContext::from_env().expect("OTEL_TRACEPARENT should parse");
         assert_eq!(ctx.version, 0);
         assert!(!ctx.is_sampled());
-
         std::env::remove_var("OTEL_TRACEPARENT");
     }
 
     // Test 21: from_env() with no env var set
     #[test]
+    #[serial]
     fn test_from_env_missing() {
         std::env::remove_var("TRACEPARENT");
         std::env::remove_var("OTEL_TRACEPARENT");
-
-        let ctx = TraceContext::from_env();
-        assert!(ctx.is_none());
+        assert!(TraceContext::from_env().is_none());
     }
 
     // Test 22: from_env() with invalid format
     #[test]
+    #[serial]
     fn test_from_env_invalid_format() {
         std::env::set_var("TRACEPARENT", "INVALID");
-
-        let ctx = TraceContext::from_env();
-        assert!(ctx.is_none());
-
+        assert!(TraceContext::from_env().is_none());
         std::env::remove_var("TRACEPARENT");
     }
 
